@@ -67,7 +67,8 @@ CareerCompass/
 │   │   │   ├── ErrorAlert.jsx              # Dismissible error banner
 │   │   │   ├── ErrorBoundary.jsx           # React error boundary
 │   │   │   ├── LoadingSpinner.jsx          # Full-screen / inline spinner
-│   │   │   ├── Navbar.jsx                  # Navigation bar with auth state
+│   │   │   ├── Navbar.jsx                  # Scroll-aware glassmorphism nav (Framer Motion)
+│   │   │   ├── ProcessingAnimation.jsx     # Animated CV-processing overlay
 │   │   │   ├── ProtectedRoute.jsx          # Auth route guard
 │   │   │   └── SuccessAlert.jsx            # Dismissible success banner
 │   │   ├── hooks/
@@ -83,7 +84,7 @@ CareerCompass/
 │   │   │   ├── Home.jsx                    # Landing / welcome page
 │   │   │   ├── Jobs.jsx                    # Job listings + inline gap analysis + apply button
 │   │   │   ├── Login.jsx                   # Login page
-│   │   │   ├── MarketIntelligence.jsx      # Market trends & trending skills
+│   │   │   ├── MarketIntelligence.jsx      # Market trends & trending skills (route: /market)
 │   │   │   ├── NotFound.jsx                # 404 page
 │   │   │   ├── Profile.jsx                 # User profile management
 │   │   │   └── Register.jsx                # Registration page
@@ -427,9 +428,9 @@ Once all services are started, check the following URLs:
 | Method | Endpoint                 | Auth | Description                                    |
 | ------ | ------------------------ | ---- | ---------------------------------------------- |
 | GET    | `/api/applications`      | ✅   | List all tracked job applications              |
-| POST   | `/api/applications`      | ✅   | Save/update a job application (status + notes) |
+| POST   | `/api/applications`      | ✅   | Save/track a job (updateOrCreate — safe dedup) |
 | GET    | `/api/applications/{id}` | ✅   | Get a specific application with job details    |
-| PUT    | `/api/applications/{id}` | ✅   | Update application status or notes             |
+| PATCH  | `/api/applications/{id}` | ✅   | Update application status or notes             |
 | DELETE | `/api/applications/{id}` | ✅   | Remove application from tracker                |
 
 ### Gap Analysis (Protected)
@@ -699,6 +700,8 @@ curl -X GET http://127.0.0.1:8000/api/gap-analysis/job/1 \
 - [x] **Phase 16: Unified Scraping Management UI** - Integrated Wuzzuf, Adzuna, and Remotive configuration with a new React dashboard UI for seamless remote management of Scraping Sources and dynamic Target Roles.
 - [x] **Phase 17: Job Application Tracker & Recommended Jobs** - Added a full-featured Application Tracker (`ApplicationController`, `Applications.jsx`) with 6 status stages (saved → applied → interviewing → offered → rejected → archived), plus an AI-powered Recommended Jobs endpoint (`GET /api/jobs/recommended`) that matches jobs to user skill profiles.
 - [x] **Phase 18: Personalized Recommended Jobs on Jobs Page** - Added `GET /api/jobs/recommended` endpoint (`JobController::getRecommended`) that reads the user's persisted `job_title`, strips seniority prefixes, LIKE-queries `job_postings`, and returns top 10 matching jobs. Fixed route conflict by adding `->whereNumber('id')` constraint to the public `/jobs/{id}` wildcard. Added `🎯 Recommended For You` horizontal-scroll snap carousel to `Jobs.jsx` with skeleton loaders, apply buttons, and gap analysis integration.
+- [x] **Phase 19: Premium UI Redesign** - Completely overhauled the frontend visual design with Framer Motion animations, scroll-aware glassmorphism Navbar, role-based admin Settings icon, new `ProcessingAnimation.jsx` overlay, renamed `/market-intelligence` route to `/market`, and applied premium Tailwind design tokens across all pages.
+- [x] **Phase 20: Full Frontend Integration & Market Intelligence Dashboard** - Completed end-to-end integration of the Jobs Portal and Applications Tracker: fixed `PUT → PATCH` mismatch in `applicationsAPI`, forwarded `params` in `jobsAPI.getJobs()` to enable search, added per-card **📌 Track** button with toast feedback in `Jobs.jsx`, fixed null-safety and gap-analysis route in `Applications.jsx`, added optimistic status updates and a refresh button. Rebuilt `MarketIntelligence.jsx` as a fully interactive recharts dashboard with animated stat cards, a Top-15 Trending Skills BarChart, filterable skill type pills, a skill card grid with demand progress bars, and a Role Skill Demand section with a searchable results chart and skill-category breakdown. Updated `Navbar.jsx` so the user avatar pill navigates to `/profile` with a hover dropdown (Profile + Logout) and a mobile `View Profile` shortcut.
 
 ### 📈 Market Intelligence System
 
@@ -777,13 +780,14 @@ curl -X GET http://127.0.0.1:8000/api/gap-analysis/job/1 \
 - `Jobs.jsx` - Job listings with inline quick gap analysis and Apply button
 - `GapAnalysis.jsx` - Full detailed gap analysis with priority roadmap
 - `Applications.jsx` - Job Application Tracker with Kanban-style status pipeline
-- `MarketIntelligence.jsx` - Trending skills & market stats
+- `MarketIntelligence.jsx` - Interactive recharts dashboard: stat cards, Top-15 Trending Skills BarChart, skill card grid, Role Skill Demand search with results chart and category breakdown
 - `Profile.jsx` - User profile management
 - `NotFound.jsx` - 404 error page
 
 **Reusable Components:**
 
-- `Navbar.jsx` - Navigation with auth-aware links
+- `Navbar.jsx` - Scroll-aware glassmorphism navigation; user avatar navigates to `/profile` with hover dropdown (Profile + Logout); role-based admin icon; Framer Motion mobile drawer
+- `ProcessingAnimation.jsx` - Animated CV-processing overlay component
 - `ProtectedRoute.jsx` - Redirects unauthenticated users
 - `ErrorAlert.jsx` / `SuccessAlert.jsx` - Dismissible banners
 - `ErrorBoundary.jsx` - Catches and displays React render errors
@@ -827,6 +831,8 @@ curl -X GET http://127.0.0.1:8000/api/gap-analysis/job/1 \
 - **React 19** - Modern UI library with hooks
 - **Vite** - Lightning-fast build tool and dev server
 - **Tailwind CSS 3.4** - Utility-first CSS framework
+- **Framer Motion** - Production-ready animation library (Navbar, page transitions, stat cards)
+- **Recharts 3** - Composable charting library (Market Intelligence BarCharts, RadarCharts)
 - **Axios** - Promise-based HTTP client
 - **React Router DOM 7** - Client-side routing
 - **Lucide React** - Beautiful, consistent icons
@@ -1113,9 +1119,9 @@ Import `CareerCompass.postman_collection.json` into Postman for comprehensive AP
 ---
 
 **Last Updated**: March 2026
-**Project Status**: ✅ **Phase 16 Complete — Job Application Tracker & Recommended Jobs**
-**Components**: Frontend (React 19 + Vite) + Backend API (Laravel 12) + Queue Worker + Scheduler + AI Engine (FastAPI)
+**Project Status**: ✅ **Phase 20 Complete — Full Frontend Integration, Market Intelligence Dashboard & Navbar Profile Link**
+**Components**: Frontend (React 19 + Vite + Framer Motion + Recharts) + Backend API (Laravel 12) + Queue Worker + Scheduler + AI Engine (FastAPI)
 **API Endpoints**: 45+ total (Laravel APIs + Python APIs + Market Intelligence + Admin Source APIs + Application Tracker)
 **Scraping Sources**: Wuzzuf (HTML) • Remotive API (free) • Adzuna US API — all 3 verified with `scrape:test-sources`
-**Key Features**: CV Analysis • Multi-Source Job Scraping • Gap Analysis • Market Intelligence • Skill Importance Ranking • Real-time Polling • Scraping Source Management • Dynamic NLP Extraction
-**Optimizations**: 3x Retry Logic • Memory Chunking • Auto-Polling • Rate Limiting • Scheduler Automation • GapAnalysis Bug Fix • Adzuna UA Spoofing • Env-based Credential Management • On-the-fly Data Creation
+**Key Features**: CV Analysis • Multi-Source Job Scraping • Gap Analysis • Market Intelligence Dashboard • Skill Importance Ranking • Real-time Polling • Scraping Source Management • Dynamic NLP Extraction • Application Tracker • Recommended Jobs • Premium Animated UI • Interactive Recharts Charts
+**Optimizations**: 3x Retry Logic • Memory Chunking • Auto-Polling • Rate Limiting • Scheduler Automation • GapAnalysis Bug Fix • Adzuna UA Spoofing • Env-based Credential Management • On-the-fly Data Creation • PUT→PATCH Fix • Search Params Forwarding • Optimistic UI Updates

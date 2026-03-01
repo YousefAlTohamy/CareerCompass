@@ -1,4 +1,5 @@
 import apiClient from './client';
+import applicationsAPI from './applications';
 
 export const authAPI = {
   register: (data) => apiClient.post('/register', data),
@@ -8,7 +9,11 @@ export const authAPI = {
 };
 
 export const jobsAPI = {
-  getJobs: () => apiClient.get('/jobs'),
+  /**
+   * Fetch jobs, optionally with search/filter params.
+   * @param {Object} params - e.g. { search: 'React' } or { recommended: 1 }
+   */
+  getJobs: (params = {}) => apiClient.get('/jobs', { params }),
   getJobById: (id) => apiClient.get(`/jobs/${id}`),
   getRecommendedJobs: () => apiClient.get('/jobs/recommended'),
   scrapeJobs: () => apiClient.post('/jobs/scrape'),
@@ -43,3 +48,10 @@ export const marketIntelligenceAPI = {
   },
   getSkillDemand: (roleTitle) => apiClient.get(`/market/skill-demand/${encodeURIComponent(roleTitle)}`),
 };
+
+// ── Application Tracker convenience re-exports ──────────────────────────────
+// These named exports allow other files to import directly from 'endpoints.js'
+export const getApplications = () => applicationsAPI.getApplications();
+export const trackApplication = (jobId) => applicationsAPI.trackApplication(jobId);
+export const updateApplicationStatus = (id, status) => applicationsAPI.updateApplicationStatus(id, status);
+export const deleteApplication = (id) => applicationsAPI.deleteApplication(id);
