@@ -45,6 +45,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the applications for the user.
+     */
+    public function applications(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Application::class);
+    }
+    
+    /**
      * The attributes that should be cast.
      *
      * @var array<string, string>

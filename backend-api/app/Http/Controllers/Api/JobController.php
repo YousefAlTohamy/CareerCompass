@@ -104,7 +104,7 @@ class JobController extends Controller
                             ->orWhere('title', 'LIKE', '%' . $cleanTitle . '%');
                     })
                     ->latest()
-                    ->take(10)
+                    ->take(50)
                     ->get();
 
                 Log::info('Recommended jobs fetched for user', [
@@ -113,8 +113,8 @@ class JobController extends Controller
                     'count'    => $jobs->count(),
                 ]);
             } else {
-                // No job_title yet — return latest 10 jobs as default
-                $jobs = Job::with('skills')->latest()->take(10)->get();
+                // No job_title yet — return latest 50 jobs as default
+                $jobs = Job::with('skills')->latest()->take(50)->get();
 
                 Log::info('No job_title for user, returning latest jobs', [
                     'user_id' => $user->id,
@@ -164,7 +164,7 @@ class JobController extends Controller
 
         try {
             $query = $request->input('query');
-            $maxResults = $request->input('max_results', 20);
+            $maxResults = $request->input('max_results', 50);
             $useSamples = $request->input('use_samples', false);
 
             Log::info('Initiating job scraping', [
@@ -505,7 +505,7 @@ class JobController extends Controller
                 $jobs = Job::where('title', 'like', "%{$scrapingJob->job_title}%")
                     ->with('skills')
                     ->latest()
-                    ->take(10)
+                    ->take(50)
                     ->get();
 
                 $response['jobs'] = JobResource::collection($jobs);

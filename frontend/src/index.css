@@ -10,12 +10,10 @@
   }
 
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-      sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    @apply bg-white text-gray-900;
+    @apply bg-light text-slate-900;
   }
 
   #root {
@@ -23,23 +21,11 @@
   }
 
   a {
-    @apply text-white transition-all duration-300;
-  }
-
-  a:hover {
-    @apply opacity-80;
+    @apply transition-all duration-300;
   }
 
   button {
     @apply transition-all duration-300 cursor-pointer;
-  }
-  .Register-btn{
-    color: #09637e;
-    background-color: white;
-    border: 1px solid #ccc;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    transition: all 0.3s ease-in-out;
   }
 }
 
@@ -49,14 +35,22 @@
   }
 
   .btn-primary {
-    @apply px-4 py-2 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition-smooth;
+    @apply px-6 py-3 bg-primary text-white rounded-capsule font-semibold hover:bg-primary-hover shadow-premium hover:shadow-premium-hover transition-smooth active:scale-95 text-center;
   }
 
   .btn-secondary {
-    @apply px-4 py-2 bg-secondary text-white rounded-lg font-medium hover:opacity-90 transition-smooth;
+    @apply px-6 py-3 bg-white text-primary border border-slate-100 rounded-capsule font-semibold hover:bg-slate-50 shadow-premium hover:shadow-premium-hover transition-smooth active:scale-95 text-center;
   }
 
-  .card-base {
-    @apply bg-white rounded-lg shadow-md hover:shadow-lg transition-smooth;
+  .card-premium {
+    @apply bg-white rounded-2xl border border-slate-100 shadow-premium hover:shadow-premium-hover transition-smooth;
+  }
+
+  .glass-card {
+    @apply bg-white/70 backdrop-blur-md border border-white/20 rounded-2xl shadow-premium;
+  }
+
+  .nav-link {
+    @apply text-slate-600 hover:text-primary font-medium transition-smooth;
   }
 }

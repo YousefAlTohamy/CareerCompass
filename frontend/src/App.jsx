@@ -13,6 +13,7 @@ import MarketIntelligence from './pages/MarketIntelligence';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminSources from './pages/AdminSources';
+import Applications from './pages/Applications';
 import './index.css';
 
 function App() {
@@ -20,8 +21,8 @@ function App() {
     <ErrorBoundary>
       <Router>
         <AuthProvider>
-          <div className="min-h-screen bg-gray-50">
-            <Navbar />
+          <Navbar />
+          <div className="min-h-screen bg-gray-50 pt-16"> {/* Added pt-16 for fixed Navbar */}
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<Home />} />
@@ -66,6 +67,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <MarketIntelligence />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/applications"
+                element={
+                  <ProtectedRoute>
+                    <Applications />
                   </ProtectedRoute>
                 }
               />

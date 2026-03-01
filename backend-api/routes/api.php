@@ -74,6 +74,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/market/trending-skills', [MarketIntelligenceController::class, 'getTrendingSkills']);
     Route::get('/market/skill-demand/{roleTitle}', [MarketIntelligenceController::class, 'getSkillDemand']);
 
+    // Job Application Tracker
+    Route::apiResource('applications', \App\Http\Controllers\Api\ApplicationController::class);
+
     // ─── Admin: Scraping Sources Management ───────────────────────────────────
     Route::prefix('admin')->group(function () {
         // Specific routes MUST come before apiResource (wildcards)

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jobsAPI, gapAnalysisAPI } from '../api/endpoints';
+import applicationsAPI from '../api/applications';
 import ErrorAlert from '../components/ErrorAlert';
 import LoadingSpinner from '../components/LoadingSpinner';
 
@@ -21,6 +22,8 @@ export default function Jobs() {
   const [selectedJob, setSelectedJob] = useState(null);
   const [gapAnalysis, setGapAnalysis] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
     loadJobs();
@@ -84,7 +87,23 @@ export default function Jobs() {
 
   const handleJobSelect = (job) => {
     setSelectedJob(job);
+    setSaveSuccess(false);
     analyzeJobGap(job.id);
+  };
+  
+  const handleSaveToTracker = async () => {
+    if (!selectedJob) return;
+    try {
+      setSaving(true);
+      await applicationsAPI.saveJob({ job_id: selectedJob.id, status: 'saved' });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (err) {
+      console.error('Failed to save to tracker:', err);
+      setError('Could not save to tracker. It might already be there.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleViewFullAnalysis = (jobId) => {
@@ -247,6 +266,17 @@ export default function Jobs() {
                       <h3 className="text-3xl font-bold text-gray-900">{selectedJob.title}</h3>
                       <p className="text-xl text-primary mt-1">{selectedJob.company}</p>
                     </div>
+                    <button
+                      onClick={handleSaveToTracker}
+                      disabled={saving || saveSuccess}
+                      className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold transition-all ${
+                        saveSuccess 
+                          ? 'bg-green-500 text-white shadow-green-200' 
+                          : 'bg-primary text-white hover:bg-secondary shadow-indigo-100 hover:shadow-premium'
+                      } disabled:opacity-70`}
+                    >
+                       {saving ? 'Saving...' : saveSuccess ? '✓ Saved' : 'Save to Tracker'}
+                    </button>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-4 mb-6">

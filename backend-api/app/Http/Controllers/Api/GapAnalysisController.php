@@ -164,7 +164,7 @@ class GapAnalysisController extends Controller
                 'data' => [
                     'analyzed_jobs' => count($jobs),
                     'jobs' => $results,
-                    'common_missing_skills' => $missingSkillFrequency->take(10),
+                    'common_missing_skills' => $missingSkillFrequency->take(20),
                     'average_match_percentage' => round($averageMatch, 1),
                     'best_match' => $bestMatch,
                 ],
@@ -237,7 +237,7 @@ class GapAnalysisController extends Controller
                         'important' => $important,
                         'nice_to_have' => $niceToHave,
                     ],
-                    'top_10_skills' => $skillDemand->take(10),
+                    'top_20_skills' => $skillDemand->take(20),
                 ],
             ]);
         } catch (\Exception $e) {
@@ -338,7 +338,7 @@ class GapAnalysisController extends Controller
                     ->orWhere('title', 'LIKE', '%' . $cleanTitle . '%');
             })
             ->latest()
-            ->take(6)
+            ->take(20)
             ->get(['id', 'title', 'company', 'location', 'source', 'url', 'job_type', 'salary_range']);
 
         Log::info('Recommended jobs fetched', [
