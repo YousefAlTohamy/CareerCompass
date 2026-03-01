@@ -502,15 +502,15 @@ erDiagram
         string email
         string job_title "nullable — from CV"
         string password
-        enum role "user,admin"
-        timestamps
+        enum role "user/admin"
+        datetime timestamps
     }
 
     SKILLS {
         int id PK
         string name
-        enum type "technical,soft"
-        timestamps
+        enum type "technical/soft"
+        datetime timestamps
     }
 
     JOBS {
@@ -525,28 +525,28 @@ erDiagram
         string salary_range
         string job_type
         string experience
-        timestamps
+        datetime timestamps
     }
 
     USER_SKILLS {
         int user_id FK
         int skill_id FK
-        timestamps
+        datetime timestamps
     }
 
     JOB_SKILLS {
         int job_id FK
         int skill_id FK
         float importance_score
-        enum importance_category "essential,important,nice_to_have"
+        enum importance_category "essential/important/nice_to_have"
     }
 
     SCRAPING_JOBS {
         int id PK
-        string status "pending,processing,completed,failed"
+        string status "pending/processing/completed/failed"
         int progress
         string error_message
-        timestamps
+        datetime timestamps
     }
 
     JOB_ROLE_STATISTICS {
@@ -555,14 +555,14 @@ erDiagram
         int total_jobs
         json top_skills
         float avg_salary
-        timestamps
+        datetime timestamps
     }
 
     TARGET_JOB_ROLES {
         int id PK
         string name
         boolean is_active
-        timestamps
+        datetime timestamps
     }
 ```
 
