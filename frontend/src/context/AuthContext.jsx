@@ -1,5 +1,6 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useCallback } from 'react';
 import { authAPI } from '../api/endpoints';
+import apiClient from '../api/client';
 
 const AuthContext = createContext();
 
@@ -15,14 +16,19 @@ export const AuthProvider = ({ children }) => {
     }
   });
 
+  /** Persist user (including role) to state + localStorage */
+  const persistUser = useCallback((userData) => {
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+  }, []);
+
   const login = async (email, password) => {
     try {
       const response = await authAPI.login({ email, password });
-      const { user, token } = response.data.data;
+      const { user: userData, token } = response.data.data;
       localStorage.setItem('auth_token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      setUser(user);
-      return user;
+      persistUser(userData); // includes role
+      return userData;
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -32,11 +38,10 @@ export const AuthProvider = ({ children }) => {
   const register = async (data) => {
     try {
       const response = await authAPI.register(data);
-      const { user, token } = response.data.data;
+      const { user: userData, token } = response.data.data;
       localStorage.setItem('auth_token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      setUser(user);
-      return user;
+      persistUser(userData); // includes role
+      return userData;
     } catch (error) {
       console.error('Register error:', error);
       throw error;
@@ -54,8 +59,23 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  /**
+   * Refresh the stored user from GET /api/user.
+   * Useful after profile updates or after role changes.
+   */
+  const refreshUser = useCallback(async () => {
+    try {
+      const response = await apiClient.get('/user');
+      const freshUser = response.data;
+      persistUser(freshUser);
+      return freshUser;
+    } catch (error) {
+      console.error('refreshUser error:', error);
+    }
+  }, [persistUser]);
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout }}>
+    <AuthContext.Provider value={{ user, login, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

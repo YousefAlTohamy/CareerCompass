@@ -10,9 +10,9 @@ import {
   AlertCircle, CheckCircle2, Briefcase, 
   Library, Sparkles, ArrowRight
 } from 'lucide-react';
-import { gapAnalysisAPI } from '../api/endpoints';
-import applicationsAPI from '../api/applications';
-import { useScrapingStatus } from '../hooks/useScrapingStatus';
+import { gapAnalysisAPI } from '../../api/endpoints';
+import applicationsAPI from '../../api/applications';
+import { useScrapingStatus } from '../../hooks/useScrapingStatus';
 
 // ── Premium Match Gauge with Recharts ──────────────────────────────────────
 const PremiumMatchGauge = ({ percentage }) => {

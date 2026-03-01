@@ -11,7 +11,7 @@ import {
     toggleTargetRole,
     deleteTargetRole,
     runFullScraping
-} from '../api/scrapingSources';
+} from '../../api/scrapingSources';
 import { Plus, Play, Trash2, Edit, Activity, ToggleLeft, ToggleRight, X, Save } from 'lucide-react';
 
 const AdminSources = () => {

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+    <!-- Dark navy background circle -->
+    <rect width="24" height="24" rx="6" fill="#0f172a" />
+    <!-- Compass outer circle (white stroke, matches Lucide style) -->
+    <circle cx="12" cy="12" r="8" stroke="#ffffff" stroke-width="1.5" fill="none" />
+    <!-- Compass needle polygon (Lucide Compass exact path) -->
+    <polygon
+        points="16.24,7.76 14.12,14.12 7.76,16.24 9.88,9.88"
+        stroke="#ffffff"
+        stroke-width="1.5"
+        stroke-linejoin="round"
+        stroke-linecap="round"
+        fill="#ffffff"
+        fill-opacity="0.25"
+    />
+</svg>

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, CheckCircle2, TrendingUp, Target, Plus, Search } from 'lucide-react';
-import { cvAPI, gapAnalysisAPI } from '../api/endpoints';
-import ProcessingAnimation from '../components/ProcessingAnimation';
+import { cvAPI, gapAnalysisAPI } from '../../api/endpoints';
+import ProcessingAnimation from '../../components/ProcessingAnimation';
 
 const SkillChip = ({ skill, onRemove }) => (
   <motion.div

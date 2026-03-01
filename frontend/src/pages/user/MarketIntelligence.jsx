@@ -30,7 +30,7 @@ import {
   ChevronRight,
   Star,
 } from "lucide-react";
-import { marketIntelligenceAPI } from "../api/endpoints";
+import { marketIntelligenceAPI } from "../../api/endpoints";
 
 /* ─── Constants ─────────────────────────────────────────────────────────── */
 const PRIMARY = "#6366f1";
