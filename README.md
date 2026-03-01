@@ -9,7 +9,7 @@ CareerCompass is an **advanced AI-powered career development platform** that com
 - **Market Intelligence System**: Automated job scraping with skill importance ranking (Essential/Important/Nice-to-have)
 - **On-Demand Job Data**: Real-time job scraping with background queue processing and live status polling
 - **Smart Gap Analysis**: Priority-based skill roadmap with market demand insights
-- **Modern Architecture**: React frontend, Laravel backend with queue workers, Python AI engine
+- **Modern Architecture**: React frontend, Laravel backend with queue workers, Python AI engine, and Role-Based Access Control (RBAC)
 
 ---
 
@@ -77,16 +77,18 @@ CareerCompass/
 │   │   │   ├── useOnDemandScraping.js      # Trigger on-demand scraping
 │   │   │   └── useScrapingStatus.js        # Poll scraping job status
 │   │   ├── pages/
-│   │   │   ├── AdminSources.jsx            # Admin — scraping source management
-│   │   │   ├── Applications.jsx            # Job Application Tracker (Kanban-style statuses)
-│   │   │   ├── Dashboard.jsx               # Main dashboard
-│   │   │   ├── GapAnalysis.jsx             # Priority-based skill gap analysis
+│   │   │   ├── admin/
+│   │   │   │   └── AdminSources.jsx        # Admin — scraping source management
+│   │   │   ├── user/
+│   │   │   │   ├── Applications.jsx        # Job Application Tracker (Kanban-style statuses)
+│   │   │   │   ├── Dashboard.jsx           # Main dashboard
+│   │   │   │   ├── GapAnalysis.jsx         # Priority-based skill gap analysis
+│   │   │   │   ├── Jobs.jsx                # Job listings + inline gap analysis + apply button
+│   │   │   │   ├── MarketIntelligence.jsx  # Market trends & trending skills (route: /market)
+│   │   │   │   └── Profile.jsx             # User profile management
 │   │   │   ├── Home.jsx                    # Landing / welcome page
-│   │   │   ├── Jobs.jsx                    # Job listings + inline gap analysis + apply button
 │   │   │   ├── Login.jsx                   # Login page
-│   │   │   ├── MarketIntelligence.jsx      # Market trends & trending skills (route: /market)
 │   │   │   ├── NotFound.jsx                # 404 page
-│   │   │   ├── Profile.jsx                 # User profile management
 │   │   │   └── Register.jsx                # Registration page
 │   │   ├── App.jsx                         # Root component + routing
 │   │   └── main.jsx                        # Entry point
@@ -108,6 +110,8 @@ CareerCompass/
 │   │   │   │   ├── GapAnalysisController.php       # Enhanced gap analysis with priorities
 │   │   │   │   ├── MarketIntelligenceController.php # Market statistics & trends
 │   │   │   │   └── TargetJobRoleController.php     # Target job roles management & scraping trigger
+│   │   │   ├── Middleware/
+│   │   │   │   └── IsAdmin.php                     # Role-Based Access Control (RBAC) guard
 │   │   │   ├── Requests/
 │   │   │   │   └── CvUploadRequest.php             # CV validation (5MB PDF)
 │   │   │   └── Resources/
@@ -498,6 +502,7 @@ erDiagram
         string email
         string job_title "nullable — from CV"
         string password
+        enum role "user,admin"
         timestamps
     }
 
@@ -680,7 +685,7 @@ curl -X GET http://127.0.0.1:8000/api/gap-analysis/job/1 \
 
 ## ✨ Features
 
-### ✅ Complete System (Phases 1-18)
+### ✅ Complete System (Phases 1-21)
 
 - [x] **Phase 1: Project Setup** - Git, Laravel, Python structure
 - [x] **Phase 2: Database Design** - Migrations, models, relationships, seeders
@@ -702,6 +707,7 @@ curl -X GET http://127.0.0.1:8000/api/gap-analysis/job/1 \
 - [x] **Phase 18: Personalized Recommended Jobs on Jobs Page** - Added `GET /api/jobs/recommended` endpoint (`JobController::getRecommended`) that reads the user's persisted `job_title`, strips seniority prefixes, LIKE-queries `job_postings`, and returns top 10 matching jobs. Fixed route conflict by adding `->whereNumber('id')` constraint to the public `/jobs/{id}` wildcard. Added `🎯 Recommended For You` horizontal-scroll snap carousel to `Jobs.jsx` with skeleton loaders, apply buttons, and gap analysis integration.
 - [x] **Phase 19: Premium UI Redesign** - Completely overhauled the frontend visual design with Framer Motion animations, scroll-aware glassmorphism Navbar, role-based admin Settings icon, new `ProcessingAnimation.jsx` overlay, renamed `/market-intelligence` route to `/market`, and applied premium Tailwind design tokens across all pages.
 - [x] **Phase 20: Full Frontend Integration & Market Intelligence Dashboard** - Completed end-to-end integration of the Jobs Portal and Applications Tracker: fixed `PUT → PATCH` mismatch in `applicationsAPI`, forwarded `params` in `jobsAPI.getJobs()` to enable search, added per-card **📌 Track** button with toast feedback in `Jobs.jsx`, fixed null-safety and gap-analysis route in `Applications.jsx`, added optimistic status updates and a refresh button. Rebuilt `MarketIntelligence.jsx` as a fully interactive recharts dashboard with animated stat cards, a Top-15 Trending Skills BarChart, filterable skill type pills, a skill card grid with demand progress bars, and a Role Skill Demand section with a searchable results chart and skill-category breakdown. Updated `Navbar.jsx` so the user avatar pill navigates to `/profile` with a hover dropdown (Profile + Logout) and a mobile `View Profile` shortcut.
+- [x] **Phase 21: Security, Structure & Branding Updates** - Implemented robust Role-Based Access Control (RBAC) securely segregating admin utilities and user areas. Restructured frontend pages into dedicated `/admin` and `/user` directories for a scalable architecture. Enhanced backend API validations for improved data integrity, and updated site branding with a custom SVG favicon and appropriate document titles.
 
 ### 📈 Market Intelligence System
 
@@ -805,6 +811,8 @@ curl -X GET http://127.0.0.1:8000/api/gap-analysis/job/1 \
 
 ### 🔒 Security Features
 
+- **Role-Based Access Control (RBAC)**: Segregated functionalities using robust middleware (`IsAdmin`) to protect admin endpoints and frontend routes based on user role.
+- **Strict Validations**: Complete data validation using Laravel FormRequests for both user actions and admin scraping configs to maintain strict data integrity.
 - **SQL Injection Prevention**: Uses Laravel's Eloquent ORM and parameterized queries
 - **Race Condition Handling**: `withoutOverlapping()` for scheduled tasks + DB transactions
 - **Input Sanitization**: All user inputs validated via Laravel Form Requests
@@ -1119,9 +1127,9 @@ Import `CareerCompass.postman_collection.json` into Postman for comprehensive AP
 ---
 
 **Last Updated**: March 2026
-**Project Status**: ✅ **Phase 20 Complete — Full Frontend Integration, Market Intelligence Dashboard & Navbar Profile Link**
+**Project Status**: ✅ **Phase 21 Complete — Security, Structure & Branding Updates**
 **Components**: Frontend (React 19 + Vite + Framer Motion + Recharts) + Backend API (Laravel 12) + Queue Worker + Scheduler + AI Engine (FastAPI)
 **API Endpoints**: 45+ total (Laravel APIs + Python APIs + Market Intelligence + Admin Source APIs + Application Tracker)
 **Scraping Sources**: Wuzzuf (HTML) • Remotive API (free) • Adzuna US API — all 3 verified with `scrape:test-sources`
-**Key Features**: CV Analysis • Multi-Source Job Scraping • Gap Analysis • Market Intelligence Dashboard • Skill Importance Ranking • Real-time Polling • Scraping Source Management • Dynamic NLP Extraction • Application Tracker • Recommended Jobs • Premium Animated UI • Interactive Recharts Charts
+**Key Features**: Role-Based Access Control (RBAC) • CV Analysis • Multi-Source Job Scraping • Gap Analysis • Market Intelligence Dashboard • Skill Importance Ranking • Real-time Polling • Scraping Source Management • Dynamic NLP Extraction • Application Tracker • Recommended Jobs • Premium Animated UI • Interactive Recharts Charts
 **Optimizations**: 3x Retry Logic • Memory Chunking • Auto-Polling • Rate Limiting • Scheduler Automation • GapAnalysis Bug Fix • Adzuna UA Spoofing • Env-based Credential Management • On-the-fly Data Creation • PUT→PATCH Fix • Search Params Forwarding • Optimistic UI Updates
