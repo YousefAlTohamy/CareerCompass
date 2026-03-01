@@ -73,22 +73,32 @@ export default function Navbar() {
                     </Link>
                   )}
                   <div className="group relative">
-                    <button className="flex items-center gap-3 p-1 pr-4 bg-white border border-slate-100 rounded-capsule shadow-sm hover:shadow-premium transition-all">
+                    <Link
+                      to="/profile"
+                      className="flex items-center gap-3 p-1 pr-4 bg-white border border-slate-100 rounded-capsule shadow-sm hover:shadow-premium transition-all"
+                    >
                        <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-white font-black text-xs">
                           {user.name.charAt(0).toUpperCase()}
                        </div>
                        <span className="text-sm font-bold text-slate-700">{user.name}</span>
-                    </button>
-                    {/* Dropdown would go here if needed, keeping it simple for now */}
-                    <button 
-                       onClick={handleLogout}
-                       className="absolute right-0 top-full mt-2 opacity-0 group-hover:opacity-100 transition-all pointer-events-none group-hover:pointer-events-auto bg-white border border-slate-100 shadow-premium-hover rounded-xl p-2 min-w-[120px]"
-                    >
-                      <div className="flex items-center gap-2 px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg text-sm font-bold w-full transition-colors">
+                    </Link>
+                    {/* Hover dropdown — no mt gap so mouse doesn't leave the group */}
+                    <div className="absolute right-0 top-full opacity-0 group-hover:opacity-100 transition-all pointer-events-none group-hover:pointer-events-auto bg-white border border-slate-100 shadow-premium-hover rounded-xl min-w-[140px] z-50 pt-2 pb-1 overflow-hidden">
+                      <Link
+                        to="/profile"
+                        className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 rounded-lg text-sm font-bold w-full transition-colors"
+                      >
+                        <User size={14} />
+                        Profile
+                      </Link>
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-2 px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg text-sm font-bold w-full transition-colors"
+                      >
                         <LogOut size={14} />
                         Logout
-                      </div>
-                    </button>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </>
@@ -140,12 +150,15 @@ export default function Navbar() {
                     </Link>
                   ))}
                   <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
-                     <div className="flex items-center gap-2">
+                     <Link to="/profile" onClick={() => setIsOpen(false)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                         <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-white font-black">
                            {user.name.charAt(0).toUpperCase()}
                         </div>
-                        <span className="font-bold text-slate-900">{user.name}</span>
-                     </div>
+                        <div>
+                          <span className="font-bold text-slate-900 block">{user.name}</span>
+                          <span className="text-xs text-slate-400">View Profile</span>
+                        </div>
+                     </Link>
                      <button onClick={handleLogout} className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors">
                         <LogOut size={20} />
                      </button>
