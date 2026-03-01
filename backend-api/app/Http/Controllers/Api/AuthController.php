@@ -12,20 +12,39 @@ use Illuminate\Validation\ValidationException;
 class AuthController extends Controller
 {
     /**
-     * Register a new user.
+     * Register a new user with strict validation.
      */
     public function register(Request $request): JsonResponse
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
+        $request->validate(
+            [
+                'name'     => 'required|string|max:255',
+                'email'    => [
+                    'required',
+                    'string',
+                    'email:rfc,dns',
+                    'max:255',
+                    'unique:users',
+                    'regex:/^[a-zA-Z0-9._%+\-]+@(gmail\.com|yahoo\.com|outlook\.com|hotmail\.com|icloud\.com)$/i',
+                ],
+                'password' => [
+                    'required',
+                    'string',
+                    'min:8',
+                    'regex:/^(?=.*[A-Z])(?=.*\d)[A-Za-z\d@&_\-]+$/',
+                ],
+            ],
+            [
+                'email.regex'    => 'Only Gmail, Yahoo, Outlook, Hotmail, or iCloud email addresses are accepted.',
+                'password.regex' => 'Password must be at least 8 characters and contain at least one uppercase letter and one number. Only these special characters are allowed: @ & _ -',
+            ]
+        );
 
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
+            'name'     => $request->name,
+            'email'    => $request->email,
             'password' => Hash::make($request->password),
+            'role'     => 'user',
         ]);
 
         $token = $user->createToken('auth-token')->plainTextToken;
@@ -33,11 +52,12 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'User registered successfully',
-            'data' => [
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
+            'data'    => [
+                'user'  => [
+                    'id'    => $user->id,
+                    'name'  => $user->name,
                     'email' => $user->email,
+                    'role'  => $user->role,
                 ],
                 'token' => $token,
             ],
@@ -50,7 +70,7 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $request->validate([
-            'email' => 'required|email',
+            'email'    => 'required|email',
             'password' => 'required',
         ]);
 
@@ -62,7 +82,7 @@ class AuthController extends Controller
             ]);
         }
 
-        // Revoke old tokens (optional)
+        // Revoke old tokens
         $user->tokens()->delete();
 
         $token = $user->createToken('auth-token')->plainTextToken;
@@ -70,11 +90,12 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Login successful',
-            'data' => [
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
+            'data'    => [
+                'user'  => [
+                    'id'    => $user->id,
+                    'name'  => $user->name,
                     'email' => $user->email,
+                    'role'  => $user->role,
                 ],
                 'token' => $token,
             ],

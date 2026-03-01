@@ -78,7 +78,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('applications', \App\Http\Controllers\Api\ApplicationController::class);
 
     // ─── Admin: Scraping Sources Management ───────────────────────────────────
-    Route::prefix('admin')->group(function () {
+    // Requires both authentication AND admin role
+    Route::middleware('admin')->prefix('admin')->group(function () {
         // Specific routes MUST come before apiResource (wildcards)
         Route::patch('scraping-sources/{scrapingSource}/toggle', [ScrapingSourceController::class, 'toggleStatus']);
         Route::post('scraping-sources/test', [ScrapingSourceController::class, 'test']);

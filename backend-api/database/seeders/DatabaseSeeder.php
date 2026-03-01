@@ -27,6 +27,9 @@ class DatabaseSeeder extends Seeder
         // Seed default target job roles
         $this->call(TargetJobRoleSeeder::class);
 
+        // Seed admin user account
+        $this->call(AdminUserSeeder::class);
+
         // User::factory(10)->create();
 
         User::factory()->create([

@@ -2,18 +2,25 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import Navbar from './components/Navbar';
+import ProtectedRoute from './components/ProtectedRoute';
+
+// ── Public / Auth pages ──────────────────────────────────────────────────────
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
-import Jobs from './pages/Jobs';
-import GapAnalysis from './pages/GapAnalysis';
-import Profile from './pages/Profile';
-import MarketIntelligence from './pages/MarketIntelligence';
 import NotFound from './pages/NotFound';
-import ProtectedRoute from './components/ProtectedRoute';
-import AdminSources from './pages/AdminSources';
-import Applications from './pages/Applications';
+
+// ── User pages ───────────────────────────────────────────────────────────────
+import Dashboard from './pages/user/Dashboard';
+import Jobs from './pages/user/Jobs';
+import GapAnalysis from './pages/user/GapAnalysis';
+import Profile from './pages/user/Profile';
+import MarketIntelligence from './pages/user/MarketIntelligence';
+import Applications from './pages/user/Applications';
+
+// ── Admin pages ──────────────────────────────────────────────────────────────
+import AdminSources from './pages/admin/AdminSources';
+
 import './index.css';
 
 function App() {
@@ -22,14 +29,14 @@ function App() {
       <Router>
         <AuthProvider>
           <Navbar />
-          <div className="min-h-screen bg-gray-50 pt-16"> {/* Added pt-16 for fixed Navbar */}
+          <div className="min-h-screen bg-gray-50 pt-16">
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
 
-              {/* Protected Routes */}
+              {/* ── Protected User Routes ─────────────────────────────────── */}
               <Route
                 path="/dashboard"
                 element={
@@ -79,11 +86,11 @@ function App() {
                 }
               />
 
-              {/* Admin Routes */}
+              {/* ── Protected Admin Routes ───────────────────────────────── */}
               <Route
                 path="/admin/scraping-sources"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requireAdmin>
                     <AdminSources />
                   </ProtectedRoute>
                 }

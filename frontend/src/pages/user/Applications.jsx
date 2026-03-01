@@ -14,8 +14,8 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import applicationsAPI from '../api/applications';
-import ProcessingAnimation from '../components/ProcessingAnimation';
+import applicationsAPI from '../../api/applications';
+import ProcessingAnimation from '../../components/ProcessingAnimation';
 
 /* ─── Status configuration ───────────────────────────────────────────────── */
 const STATUS_CONFIG = {

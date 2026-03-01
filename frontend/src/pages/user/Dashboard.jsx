@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, CheckCircle2, TrendingUp, Target, Plus, Search } from 'lucide-react';
-import { cvAPI, gapAnalysisAPI } from '../api/endpoints';
-import ProcessingAnimation from '../components/ProcessingAnimation';
+import { cvAPI, gapAnalysisAPI } from '../../api/endpoints';
+import ProcessingAnimation from '../../components/ProcessingAnimation';
 
 const SkillChip = ({ skill, onRemove }) => (
   <motion.div
@@ -262,7 +262,7 @@ export default function Dashboard() {
                     <span className="font-bold text-slate-700 group-hover:text-primary">Browse Jobs</span>
                     <Search size={16} className="text-slate-400 group-hover:text-primary" />
                   </a>
-                  <a href="/market-intelligence" className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-all group">
+                  <a href="/market" className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-all group">
                     <span className="font-bold text-slate-700 group-hover:text-primary">Market Trends</span>
                     <TrendingUp size={16} className="text-slate-400 group-hover:text-primary" />
                   </a>

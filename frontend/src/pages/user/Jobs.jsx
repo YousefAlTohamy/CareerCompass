@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { jobsAPI, gapAnalysisAPI } from '../api/endpoints';
-import applicationsAPI from '../api/applications';
-import ErrorAlert from '../components/ErrorAlert';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { jobsAPI, gapAnalysisAPI } from '../../api/endpoints';
+import applicationsAPI from '../../api/applications';
+import ErrorAlert from '../../components/ErrorAlert';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 /* ─── Simple toast (no external lib needed) ──────────────────────────────── */
 function Toast({ toast, onClose }) {
