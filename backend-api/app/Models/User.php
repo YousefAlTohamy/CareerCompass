@@ -23,6 +23,7 @@ class User extends Authenticatable
         'email',
         'password',
         'job_title',
+        'role',
     ];
 
     /**
@@ -51,7 +52,7 @@ class User extends Authenticatable
     {
         return $this->hasMany(Application::class);
     }
-    
+
     /**
      * The attributes that should be cast.
      *
