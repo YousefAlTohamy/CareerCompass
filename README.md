@@ -10,6 +10,8 @@ CareerCompass is an **advanced AI-powered career development platform** that com
 - **On-Demand Job Data**: Real-time job scraping with background queue processing and live status polling
 - **Smart Gap Analysis**: Priority-based skill roadmap with market demand insights
 - **Modern Architecture**: React frontend, Laravel backend with queue workers, Python AI engine, and Role-Based Access Control (RBAC)
+- **Job Application Tracker**: Kanban-style lifecycle visualization for tracked applications
+- **Strict Routing Architecture**: Split frontend routing ensuring rigorous role-based feature segregation
 
 ---
 
@@ -39,15 +41,15 @@ graph TB
 
 ### Components
 
-| Component        | Technology      | Port | Purpose                                           |
-| ---------------- | --------------- | ---- | ------------------------------------------------- |
-| **Frontend**     | React 19 + Vite | 5173 | User interface, dashboard, authentication         |
-| **Backend API**  | Laravel 12      | 8000 | User management, authentication, business logic   |
-| **Queue Worker** | Laravel Queue   | -    | Background processing for scraping & calculations |
-| **AI Engine**    | Python/FastAPI  | 8001 | CV parsing, skill extraction, job scraping        |
-| **Database**     | MySQL           | 3306 | Data persistence                                  |
-| **Cache/Queue**  | Redis (opt)     | 6379 | Fast caching and queue management (production)    |
-| **Scheduler**    | Laravel Cron    | -    | Automated market data updates (every 48 hours)    |
+| Component        | Technology                 | Port | Purpose                                           |
+| ---------------- | -------------------------- | ---- | ------------------------------------------------- |
+| **Frontend**     | React 19 + Vite + Recharts | 5173 | User interface, dashboard, authentication         |
+| **Backend API**  | Laravel 12 (IsAdmin)       | 8000 | User management, authentication, business logic   |
+| **Queue Worker** | Laravel Queue              | -    | Background processing for scraping & calculations |
+| **AI Engine**    | Python/FastAPI             | 8001 | CV parsing, skill extraction, job scraping        |
+| **Database**     | MySQL                      | 3306 | Data persistence                                  |
+| **Cache/Queue**  | Redis (opt)                | 6379 | Fast caching and queue management (production)    |
+| **Scheduler**    | Laravel Cron               | -    | Automated market data updates (every 48 hours)    |
 
 ---
 
@@ -61,6 +63,8 @@ CareerCompass/
 │   │   │   ├── client.js                   # Axios client (base URL, auth headers)
 │   │   │   ├── endpoints.js                # All API endpoint definitions
 │   │   │   └── scrapingSources.js          # Admin scraping sources API helpers
+│   │   ├── assets/
+│   │   │   └── react.svg                   # Default SVG asset
 │   │   ├── components/
 │   │   │   ├── Button.jsx                  # Reusable button component
 │   │   │   ├── Card.jsx                    # Reusable card wrapper
@@ -70,7 +74,9 @@ CareerCompass/
 │   │   │   ├── Navbar.jsx                  # Scroll-aware glassmorphism nav (Framer Motion)
 │   │   │   ├── ProcessingAnimation.jsx     # Animated CV-processing overlay
 │   │   │   ├── ProtectedRoute.jsx          # Auth route guard
-│   │   │   └── SuccessAlert.jsx            # Dismissible success banner
+│   │   │   ├── SuccessAlert.jsx            # Dismissible success banner
+│   │   ├── context/
+│   │   │   └── AuthContext.jsx             # React Context for authentication state
 │   │   ├── hooks/
 │   │   │   ├── useAsync.js                 # Generic async state handler
 │   │   │   ├── useAuthHandler.js           # Auth token management
@@ -90,8 +96,12 @@ CareerCompass/
 │   │   │   ├── Login.jsx                   # Login page
 │   │   │   ├── NotFound.jsx                # 404 page
 │   │   │   └── Register.jsx                # Registration page
+│   │   ├── services/
+│   │   │   └── storageService.js           # LocalStorage wrapper (tokens, user sync)
 │   │   ├── App.jsx                         # Root component + routing
-│   │   └── main.jsx                        # Entry point
+│   │   ├── App.css                         # Root component styles
+│   │   ├── main.jsx                        # Entry point
+│   │   └── index.css                       # Global Tailwind imports
 │   ├── public/                             # Static assets
 │   ├── package.json                        # NPM dependencies
 │   ├── vite.config.js                      # Vite configuration
@@ -103,20 +113,25 @@ CareerCompass/
 │   ├── app/
 │   │   ├── Http/
 │   │   │   ├── Controllers/Api/
+│   │   │   │   ├── Admin/
+│   │   │   │   │   ├── ScrapingSourceController.php    # Admin — source management
+│   │   │   │   │   └── TargetJobRoleController.php     # Admin — target roles / triggers
 │   │   │   │   ├── AuthController.php              # Registration, login, logout
 │   │   │   │   ├── ApplicationController.php       # Job Application Tracker (CRUD)
 │   │   │   │   ├── CvController.php                # CV upload & analysis
 │   │   │   │   ├── JobController.php               # Job browsing, scraping, on-demand, recommended
 │   │   │   │   ├── GapAnalysisController.php       # Enhanced gap analysis with priorities
 │   │   │   │   ├── MarketIntelligenceController.php # Market statistics & trends
-│   │   │   │   └── TargetJobRoleController.php     # Target job roles management & scraping trigger
+│   │   │   │   └── ScrapingSourceController.php    # Public facing source read endpoints
 │   │   │   ├── Middleware/
 │   │   │   │   └── IsAdmin.php                     # Role-Based Access Control (RBAC) guard
 │   │   │   ├── Requests/
-│   │   │   │   └── CvUploadRequest.php             # CV validation (5MB PDF)
+│   │   │   │   ├── CvUploadRequest.php             # CV validation (5MB PDF)
+│   │   │   │   └── StoreScrapingSourceRequest.php  # Scraping source validation
 │   │   │   └── Resources/
 │   │   │       ├── GapAnalysisResource.php         # Gap analysis JSON formatting
 │   │   │       ├── JobResource.php                 # Job JSON formatting
+│   │   │       ├── ScrapingSourceResource.php      # Source config JSON formatting
 │   │   │       └── SkillResource.php               # Skill JSON formatting
 │   │   ├── Jobs/
 │   │   │   ├── ProcessMarketScraping.php           # Automated market data scraping
@@ -132,7 +147,8 @@ CareerCompass/
 │   │       ├── JobRoleStatistic.php                # Market statistics per role
 │   │       ├── ScrapingJob.php                     # Scraping job tracking
 │   │       ├── ScrapingSource.php                  # Scraping source config model
-│   │       └── TargetJobRole.php                   # Target job role config model
+│   │       ├── TargetJobRole.php                   # Target job role config model
+│   │       └── Application.php                     # Job Application model
 │   ├── database/
 │   │   ├── migrations/
 │   │   │   ├── *_create_skills_table.php
@@ -144,8 +160,11 @@ CareerCompass/
 │   │   │   ├── *_create_scraping_sources_table.php
 │   │   │   ├── *_add_source_id_to_job_postings.php # Adds scraping_source_id FK
 │   │   │   ├── *_create_target_job_roles_table.php # Dynamic job roles table
-│   │   │   └── *_create_user_skills_table.php
+│   │   │   ├── *_create_user_skills_table.php
+│   │   │   ├── *_create_applications_table.php     # Job applications tracking
+│   │   │   └── *_add_role_to_users_table.php       # RBAC role enum
 │   │   └── seeders/
+│   │       ├── AdminUserSeeder.php                 # Seeds default admin account
 │   │       ├── SkillSeeder.php                     # 84 predefined skills
 │   │       ├── ScrapingSourceSeeder.php            # 3 active scraping sources
 │   │       └── TargetJobRoleSeeder.php             # Default target job roles
@@ -156,6 +175,7 @@ CareerCompass/
 │
 ├── ai-engine/                # Python FastAPI Service
 │   ├── .env                                # Adzuna API credentials (not committed)
+│   ├── .gitignore                          # Git ignored files for Python
 │   ├── main.py                             # FastAPI app entry point
 │   ├── parser.py                           # PDF text extraction
 │   ├── extractor.py                        # Enhanced skill extraction (NLP + fuzzy)
@@ -163,7 +183,8 @@ CareerCompass/
 │   ├── api_fetcher.py                      # Remotive & Adzuna US API fetchers
 │   ├── html_scraper.py                     # Wuzzuf HTML scraper (undetected-chromedriver)
 │   ├── test_scraper.py                     # /test-source FastAPI router
-│   └── requirements.txt                    # Python dependencies
+│   ├── requirements.txt                    # Python dependencies
+│   └── README.md                           # AI engine specialized documentation
 │
 ├── docs/
 │   ├── FRONTEND_INTEGRATION.md             # React components guide
@@ -268,6 +289,9 @@ php artisan migrate
 
 # Seed with 84 predefined skills
 php artisan db:seed --class=SkillSeeder
+
+# Seed default admin account
+php artisan db:seed --class=AdminUserSeeder
 
 # Or run both at once
 php artisan migrate:fresh --seed
@@ -394,6 +418,8 @@ Once all services are started, check the following URLs:
 | AI Engine   | http://127.0.0.1:8001            | `{"message": "ok"}`     |
 | AI Engine   | http://127.0.0.1:8001/docs       | Swagger UI              |
 
+> **Tip**: After logging in, you can access distinct dashboard views at `/user/dashboard` and the admin portal at `/admin/` (requires Admin Role seeded via `AdminUserSeeder`).
+
 ---
 
 ## 🔌 API Endpoints
@@ -405,6 +431,8 @@ Once all services are started, check the following URLs:
 | GET    | `/api/health`   | Health check (version info) |
 | POST   | `/api/register` | Create new user account     |
 | POST   | `/api/login`    | Login and get token         |
+
+> **Note**: Incoming payloads for registration and profile updates are guarded by strict Regex Validations for data integrity.
 
 ### User & Skills (Protected)
 
@@ -464,10 +492,10 @@ Once all services are started, check the following URLs:
 | DELETE | `/api/admin/scraping-sources/{id}`        | ✅   | Delete a source                  |
 | PATCH  | `/api/admin/scraping-sources/{id}/toggle` | ✅   | Toggle active/inactive status    |
 | POST   | `/api/admin/scraping-sources/test`        | ✅   | Run diagnostics on all sources   |
-| GET    | `/api/admin/job-roles`                    | ✅   | List all target job roles        |
-| POST   | `/api/admin/job-roles`                    | ✅   | Create a new target role         |
-| PATCH  | `/api/admin/job-roles/{id}/toggle`        | ✅   | Toggle target role active status |
-| DELETE | `/api/admin/job-roles/{id}`               | ✅   | Delete a target role             |
+| GET    | `/api/admin/target-roles`                 | ✅   | List all target job roles        |
+| POST   | `/api/admin/target-roles`                 | ✅   | Create a new target role         |
+| PATCH  | `/api/admin/target-roles/{id}/toggle`     | ✅   | Toggle target role active status |
+| DELETE | `/api/admin/target-roles/{id}`            | ✅   | Delete a target role             |
 | POST   | `/api/admin/scraping/run-full`            | ✅   | Trigger full market scraping     |
 
 ### AI Engine Endpoints
@@ -494,7 +522,10 @@ erDiagram
     SKILLS ||--o{ JOB_SKILLS : belongs_to
     JOBS ||--o{ JOB_SKILLS : requires
     JOBS ||--o{ SCRAPING_JOBS : tracked_by
+    JOBS ||--o{ APPLICATIONS : applied_to
+    JOBS }o--|| SCRAPING_SOURCES : scraped_from
     JOB_ROLE_STATISTICS }o--|| JOBS : aggregates
+    USERS ||--o{ APPLICATIONS : makes
 
     USERS {
         int id PK
@@ -564,7 +595,32 @@ erDiagram
         boolean is_active
         datetime timestamps
     }
+
+    SCRAPING_SOURCES {
+        int id PK
+        string name
+        string endpoint
+        enum type "api/html"
+        enum status "active/inactive"
+        json headers "nullable"
+        json params "nullable"
+        datetime timestamps
+    }
+
+    APPLICATIONS {
+        int id PK
+        int user_id FK
+        int job_id FK
+        enum status "saved/applied/interviewing/offered/rejected/archived"
+        text notes "nullable"
+        timestamp applied_at "nullable"
+        datetime timestamps
+    }
 ```
+
+### Role Management
+
+- Standard **admin** roles and foundational accounts are initialized specifically through the `AdminUserSeeder`.
 
 ### Skills Management
 
@@ -637,6 +693,22 @@ sequenceDiagram
     Laravel-->>User: {status: "completed"} → frontend re-fetches analysis
 ```
 
+### Application Tracker Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Laravel
+    participant Database
+
+    User->>Laravel: POST /api/applications (Save Job)
+    Laravel->>Database: Match/Create Job & Sync Status
+    Laravel-->>User: Success + Application Tracked
+    User->>Laravel: PATCH /api/applications/{id}
+    Laravel->>Database: Update Status (saved, applied, interviewing, offered, rejected, archived)
+    Laravel-->>User: Updated Status
+```
+
 ---
 
 ## 🧪 Testing
@@ -679,6 +751,10 @@ curl -X POST http://127.0.0.1:8000/api/login \
 # Run gap analysis for job ID 1
 curl -X GET http://127.0.0.1:8000/api/gap-analysis/job/1 \
   -H "Authorization: Bearer <token>"
+
+# Test RBAC Protection (Should return 403 Forbidden for non-admins)
+curl -X GET http://127.0.0.1:8000/api/admin/scraping-sources \
+  -H "Authorization: Bearer <standard_user_token>"
 ```
 
 ---
@@ -708,6 +784,9 @@ curl -X GET http://127.0.0.1:8000/api/gap-analysis/job/1 \
 - [x] **Phase 19: Premium UI Redesign** - Completely overhauled the frontend visual design with Framer Motion animations, scroll-aware glassmorphism Navbar, role-based admin Settings icon, new `ProcessingAnimation.jsx` overlay, renamed `/market-intelligence` route to `/market`, and applied premium Tailwind design tokens across all pages.
 - [x] **Phase 20: Full Frontend Integration & Market Intelligence Dashboard** - Completed end-to-end integration of the Jobs Portal and Applications Tracker: fixed `PUT → PATCH` mismatch in `applicationsAPI`, forwarded `params` in `jobsAPI.getJobs()` to enable search, added per-card **📌 Track** button with toast feedback in `Jobs.jsx`, fixed null-safety and gap-analysis route in `Applications.jsx`, added optimistic status updates and a refresh button. Rebuilt `MarketIntelligence.jsx` as a fully interactive recharts dashboard with animated stat cards, a Top-15 Trending Skills BarChart, filterable skill type pills, a skill card grid with demand progress bars, and a Role Skill Demand section with a searchable results chart and skill-category breakdown. Updated `Navbar.jsx` so the user avatar pill navigates to `/profile` with a hover dropdown (Profile + Logout) and a mobile `View Profile` shortcut.
 - [x] **Phase 21: Security, Structure & Branding Updates** - Implemented robust Role-Based Access Control (RBAC) securely segregating admin utilities and user areas. Restructured frontend pages into dedicated `/admin` and `/user` directories for a scalable architecture. Enhanced backend API validations for improved data integrity, and updated site branding with a custom SVG favicon and appropriate document titles.
+  - **Application Tracker**: Full Kanban 6-stage lifecycle (saved, applied, interviewing, offered, rejected, archived).
+  - **Visualization**: `recharts` integration driving the Market Intelligence dashboard.
+  - **Strict Regex Integrities**: Backend payload validation for robust data integrity boundaries.
 
 ### 📈 Market Intelligence System
 
@@ -938,6 +1017,11 @@ php artisan route:clear
 composer dump-autoload
 ```
 
+### 403 Forbidden on Admin APIs / Routes
+
+- Ensure you have seeded the admin role via `php artisan db:seed --class=AdminUserSeeder`.
+- Ensure you are logging in with appropriately seeded credentials to access `/admin/` frontend boundaries.
+
 ### Gap Analysis Returns 500 Error
 
 - Make sure `GapAnalysisResource.php` uses the `toArray_()` helper (not `SkillResource::collection()`)
@@ -1074,6 +1158,7 @@ cp .env.example .env
 # Edit .env with your database credentials
 php artisan key:generate
 php artisan migrate:fresh --seed
+# (Optional) Run `php artisan db:seed --class=AdminUserSeeder` for admin access
 
 # 4. Start all services with one command!
 cd ..
@@ -1101,6 +1186,7 @@ cp .env.example .env
 # Edit .env with database credentials
 php artisan key:generate
 php artisan migrate:fresh --seed
+# (Optional) Run `php artisan db:seed --class=AdminUserSeeder` for admin access
 cd ..
 
 # 4. Start services (4 terminals)
