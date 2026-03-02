@@ -13,12 +13,14 @@ The Backend API is a Laravel 12-based RESTful service that handles user authenti
 - **User Authentication** - Registration, login, logout with Sanctum tokens
 - **CV Upload & Analysis** - Upload PDFs and extract skills via AI Engine
 - **Skill Management** - Dynamic NLP skill extraction and on-the-fly creation
-- **Job Management** - Browse, view, and trigger multi-source job scraping
+- **Job Management & Recommendations** - Browse, view, trigger multi-source job scraping, and request AI-powered customized matches.
+- **Application Tracker** - Full CRUD API managing the application lifecycle pipe.
 - **Queue Workers** - Background processing for on-demand & scheduled scraping
 - **Scheduled Tasks** - Automated market data updates every 48 hours
 - **Gap Analysis** - Calculate skill gaps with market-driven priority categorization
 - **Market Intelligence** - Market demand, trending skills, and role statistics
 - **Admin Dashboard APIs** - Manage Scraping Sources and Target Job Roles dynamically
+- **Strict Role-Based Validation (RBAC)** - Segregates `/user/*` endpoints from `/admin/*` via Middleware rules.
 - **RESTful API** - 40+ fully documented endpoints
 - **MySQL Database** - Complex relational schema with built-in migrations
 - **CORS Enabled** - Ready for frontend integration
@@ -32,34 +34,45 @@ backend-api/
 ├── app/
 │   ├── Http/
 │   │   ├── Controllers/Api/
-│   │   │   ├── AuthController.php          # Registration, login, logout
-│   │   │   ├── CvController.php            # CV upload & skill management
-│   │   │   ├── JobController.php           # Job browsing & scraping
-│   │   │   └── GapAnalysisController.php   # Gap analysis & recommendations
-│   │   ├── Requests/
-│   │   │   └── CvUploadRequest.php         # CV validation rules
-│   │       ├── resources/
-│   │       ├── User.php                        # User model
-│   │       ├── Skill.php                       # Skill model (Dynamic)
-│   │       ├── Job.php                         # Job model
-│   │       ├── ScrapingJob.php                 # Background scraping tasks
-│   │       ├── ScrapingSource.php              # Dynamic API/HTML scraping sources
-│   │       ├── TargetJobRole.php               # Dynamic target roles for scheduled scraping
-│   │       └── JobRoleStatistic.php            # Cache for market statistics
+│   │   │   ├── Admin/
+│   │   │   │   ├── ScrapingSourceController.php # Admin dashboard config controller
+│   │   │   │   └── TargetJobRoleController.php  # Admin scheduled target config
+│   │   │   ├── ApplicationController.php        # Track user's applied jobs
+│   │   │   ├── AuthController.php               # Login, Register, Logout
+│   │   │   ├── CvController.php                 # PDF Analysis
+│   │   │   ├── GapAnalysisController.php        # Job matcher
+│   │   │   ├── JobController.php                # Fetchings and Triggers
+│   │   │   ├── MarketIntelligenceController.php # Aggregations
+│   │   │   └── ScrapingSourceController.php     # Public sources config read
+│   │   ├── Middleware/
+│   │   │   └── IsAdmin.php                      # RBAC Enum verifications
+│   │   ├── Requests/                            # Validation requests
+│   │   │   ├── CvUploadRequest.php
+│   │   │   └── StoreScrapingSourceRequest.php
+│   │   └── Resources/                           # API mapping responses
+│   │       └── ScrapingSourceResource.php
+│   ├── Models/
+│   │   ├── Application.php                      # Application Tracker model
+│   │   ├── Job.php                              # Core Job posting
+│   │   ├── JobRoleStatistic.php                 # Aggregate caching
+│   │   ├── ScrapingJob.php                      # Running scraper task states
+│   │   ├── ScrapingSource.php                   # Scraper definitions
+│   │   ├── Skill.php                            # Individual capabilities
+│   │   ├── TargetJobRole.php                    # Base roles for generic fetching
+│   │   └── User.php                             # Authenticated account with string enum Role
 │   ├── Jobs/
-│   │   ├── ProcessMarketScraping.php           # Automated scheduled scraping
-│   │   └── ProcessOnDemandJobScraping.php      # On-demand scraping triggered by user
-│   ├── Console/Commands/
-│   │   ├── ScrapeJobs.php                      # Manual dispatch command
-│   │   ├── TestScrapingSources.php             # Admin diagnosis command
-│   │   └── CalculateSkillImportance.php        # Daily statistics aggregate command
+│   │   ├── ProcessMarketScraping.php            # Automated scheduled execution
+│   │   └── ProcessOnDemandJobScraping.php       # Live synchronous fetching via ID
 ├── database/
-│   ├── migrations/                         # Database schema (Jobs, Skills, Sources, Roles)
+│   ├── migrations/                         # Database schema records
 │   └── seeders/
-│       └── SkillSeeder.php                 # Initial 84 predefined skills
+│       ├── AdminUserSeeder.php             # Bootstraps initial 'admin' permissions
+│       ├── ScrapingSourceSeeder.php        # Sets up default scraping scripts
+│       ├── SkillSeeder.php                 # Initial 84 technical skills
+│       └── TargetJobRoleSeeder.php         # Sets up broad targets
 ├── routes/
-│   ├── api.php                             # 40+ API endpoints
-│   └── console.php                         # Scheduled tasks configuration
+│   ├── api.php                             # Unified REST routes
+│   └── console.php                         # Scheduled Cron executions
 ├── config/
 │   └── cors.php                            # CORS configuration
 ├── .env.example                            # Environment template
@@ -159,13 +172,14 @@ php artisan migrate:fresh --seed
 
 **Database Tables Created:**
 
-- `users` - User accounts
+- `users` - User accounts (Including Enum 'Role': admin or user)
 - `skills` - Technical & soft skills (Dynamically expanded via AI Engine NLP)
 - `jobs` - Job listings (from multi-source hybrid scraping)
 - `scraping_sources` - Configurable multi-source integrations (Wuzzuf, Adzuna, Remotive)
 - `target_job_roles` - Roles targeted dynamically by the scheduled market scraper
 - `scraping_jobs` - Status tracker for background queued scrapers
 - `job_role_statistics` - Pre-calculated market intelligence caching
+- `applications` - Tracks the job lifecycle inside user funnels (Saved -> Applied -> Offer -> Rejected)
 - `user_skills` - User-skill relationships
 - `job_skills` - Job-skill relationships (with importance_score)
 - `personal_access_tokens` - Sanctum authentication tokens
@@ -594,7 +608,46 @@ Content-Type: application/json
 
 ---
 
-#### 12. Check Scraping Status (Protected)
+#### 12. Recommended Jobs (Protected)
+
+**GET** `/api/jobs/recommended`
+
+Return a set of Jobs fetched exclusively based on matching the User-CV `job_title` fields tightly.
+
+**Headers:**
+
+```
+Authorization: Bearer {your_token}
+```
+
+**Response (200 OK):**
+
+```json
+{
+    "success": true,
+    "count": 10,
+    "user_title": "Frontend Developer",
+    "data": [{ "id": 1, "title": "Frontend React Dev..." }]
+}
+```
+
+---
+
+#### 13. Application Tracker (Protected)
+
+**GET POST PUT DELETE** `/api/applications/...`
+
+Creates or updates a user tracking pipeline for standard job applications. Includes enums matching statuses: `saved`, `applied`, `interviewing`, `offered`, `rejected`, `archived`.
+
+**Headers:**
+
+```
+Authorization: Bearer {your_token}
+```
+
+---
+
+#### 14. Check Scraping Status (Protected)
 
 **GET** `/api/scraping-status/{jobId}`
 
@@ -885,6 +938,8 @@ Check if the API is running.
 - `name` - User's full name
 - `email` - Unique email address
 - `password` - Hashed password
+- `role` - Access privilege enum: 'user', 'admin'
+- `job_title` - Inferred job title string mapped from the CV PDF.
 - `timestamps` - created_at, updated_at
 
 ### Skills Table (Dynamic)
@@ -977,11 +1032,12 @@ Import the **CareerCompass.postman_collection.json** file (in project root) into
 ## 🔒 Security Features
 
 - **SQL Injection Prevention**: Uses Laravel's Eloquent ORM and parameterized queries to prevent SQL injection attacks.
+- **Role-Based Access Control (RBAC)**: Deep-level `IsAdmin` middlewares block out user-level authorization tokens mapping directly to administrative source APIs.
 - **Race Condition Handling**: Implemented `withoutOverlapping()` for scheduled tasks and database transactions for critical operations.
-- **Input Sanitization**: All user inputs are validated and sanitized using Laravel's Form Requests.
-- **XSS Protection**: React automatically escapes content, and Laravel's Blade engine provides additional XSS protection.
-- **Secure Authentication**: Uses Laravel Sanctum for secure, token-based API authentication.
-- **Rate Limiting**: API endpoints are rate-limited to prevent abuse and DoS attacks.
+- **Input Sanitization**: All user inputs are strictly validated through dedicated Laravel `App\Http\Requests\` FormRequests heavily relying on dynamic regex mapping and string constraints.
+- **XSS Protection**: React automatically escapes frontend content, while Laravel's Backend guarantees no inner-HTML injections within string validations.
+- **Secure Authentication**: Uses Laravel Sanctum for secure, token-based API authentication headers mapping globally.
+- **Rate Limiting**: Critical endpoints dynamically rate limit to prevent heavy multi-threaded scrapping DoS strikes.
 
 ---
 
@@ -1257,7 +1313,7 @@ CareerCompass Team - Graduation Project 2026
 
 ---
 
-**Last Updated**: February 2026  
-**Version**: 1.1.0  
-**Status**: ✅ Phase 14 Complete (Dynamic Roles, Scraping Sources, NLP Skill Creation)  
-**API Endpoints**: 40+ total
+**Last Updated**: March 2026  
+**Version**: 1.2.0  
+**Status**: ✅ Phase 21 Complete (Security, Application Tracker, API Expansion)  
+**API Endpoints**: 50+ total
