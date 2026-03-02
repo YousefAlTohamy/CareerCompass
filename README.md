@@ -787,6 +787,7 @@ curl -X GET http://127.0.0.1:8000/api/admin/scraping-sources \
   - **Application Tracker**: Full Kanban 6-stage lifecycle (saved, applied, interviewing, offered, rejected, archived).
   - **Visualization**: `recharts` integration driving the Market Intelligence dashboard.
   - **Strict Regex Integrities**: Backend payload validation for robust data integrity boundaries.
+- [x] **Phase 22: Comprehensive API Documentation Update** - Performed a 360-degree deep scan across all microservices (Laravel Backend, Python AI Engine, React Frontend) and comprehensively updated the `CareerCompass.postman_collection.json`. Added new endpoints for Recommended Jobs, Advanced CV Parsing, Target Roles Admin CRUD, and the complete Job Application Tracker lifecycle, ensuring perfectly aligned payloads, parameters, and authentication headers.
 
 ### 📈 Market Intelligence System
 
