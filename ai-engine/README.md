@@ -30,6 +30,7 @@ The AI Engine is a FastAPI-based microservice that provides intelligent CV analy
 ```
 ai-engine/
 ├── .env                 # API credentials (e.g., ADZUNA_APP_ID/KEY)
+├── .gitignore           # Python ignored files
 ├── main.py              # FastAPI application & API endpoints
 ├── parser.py            # PDF text extraction using PDFMiner
 ├── extractor.py         # Skill extraction (fuzzy + NLP)
@@ -39,6 +40,7 @@ ai-engine/
 ├── test_engine.py       # Unit tests for CV analysis
 ├── test_scraper.py      # /test-source FastAPI router and tester
 ├── requirements.txt     # Python dependencies
+├── README.md            # AI Engine documentation
 └── venv/                # Virtual environment (created during setup)
 ```
 
@@ -746,6 +748,6 @@ CareerCompass Team - Graduation Project 2026
 
 ---
 
-**Last Updated**: February 2026  
-**Version**: 1.1.0  
-**Status**: ✅ Production Ready (with NLP capabilities)
+**Last Updated**: March 2026  
+**Version**: 1.2.0  
+**Status**: ✅ Production Ready (with NLP capabilities, Phase 21 Compliant)

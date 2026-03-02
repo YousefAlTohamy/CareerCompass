@@ -1,6 +1,6 @@
 # CareerCompass Frontend 💻
 
-> **React 19 + Vite** - Modern UI for career skill gap analysis and job matching
+> **React 19 + Vite + Recharts + Framer Motion** - Modern UI for career skill gap analysis, job matching, and application tracking
 
 ## 📋 Overview
 
@@ -10,15 +10,16 @@ The CareerCompass frontend is a modern, responsive React application built with 
 
 ## ✨ Features
 
-- **Modern UI/UX** - Clean, responsive design with Tailwind CSS
+- **Modern UI/UX** - Clean, responsive design with Tailwind CSS and Framer Motion
 - **JWT Authentication** - Secure login/register with token-based auth
 - **CV Upload** - Drag-and-drop PDF upload with instant skill extraction
-- **Job Browsing** - Search, filter, and paginate through job listings
-- **Gap Analysis** - Visual skill gap analysis with match percentages
-- **Market Intelligence** - View job market trends and skill demand statistics
+- **Job Browsing & Recommendations** - Discover jobs with an AI-powered personalized suggestions carousel
+- **Gap Analysis** - Visual skill gap analysis with priority roadmaps and match percentages
+- **Market Intelligence** - View job market trends, top skills, and demand charts powered by Recharts
+- **Application Tracker** - Kanban-style lifecycle visualization tracking applied jobs
 - **Profile Management** - View and manage skills, update profile
 - **Admin Dashboard** - Manage dynamic scraping sources and target job roles
-- **Protected Routes** - Automatic redirect for unauthenticated users
+- **Strict Role-Based Routing** - Safe segregation between `/user/*` features and `/admin/*` portals
 - **Error Handling** - Comprehensive error boundaries and user feedback
 - **Responsive Design** - Mobile-first, works on all screen sizes
 - **Fast Development** - Hot Module Replacement (HMR) with Vite
@@ -37,31 +38,38 @@ frontend/
 │   │   ├── scrapingSources.js       # Admin API helpers for sources/roles
 │   │   └── endpoints.js             # API endpoint definitions
 │   ├── assets/                      # Images, fonts, etc.
+│   │   └── react.svg                # Default SVG asset
 │   ├── components/                  # Reusable UI components
 │   │   ├── Button.jsx               # Custom button component
 │   │   ├── Card.jsx                 # Card container
 │   │   ├── ErrorAlert.jsx           # Error message display
 │   │   ├── ErrorBoundary.jsx        # React error boundary
 │   │   ├── LoadingSpinner.jsx       # Loading indicator
-│   │   ├── Navbar.jsx               # Navigation bar
+│   │   ├── Navbar.jsx               # Scroll-aware glassmorphism nav (Framer Motion)
+│   │   ├── ProcessingAnimation.jsx  # Animated CV-processing overlay
 │   │   ├── ProtectedRoute.jsx       # Auth route wrapper
 │   │   └── SuccessAlert.jsx         # Success message display
 │   ├── context/
 │   │   └── AuthContext.jsx          # Global auth state
 │   ├── hooks/                       # Custom React hooks
-│   │   ├── useAuth.js               # Authentication hook
-│   │   └── useLocalStorage.js       # LocalStorage hook
+│   │   ├── useAsync.js              # Generic async state handler
+│   │   ├── useAuthHandler.js        # Auth token management
+│   │   ├── useOnDemandScraping.js   # Trigger on-demand scraping hook
+│   │   └── useScrapingStatus.js     # Poll scraping job status hook
 │   ├── pages/                       # Page components (routes)
 │   │   ├── Home.jsx                 # Landing page
 │   │   ├── Login.jsx                # Login page
 │   │   ├── Register.jsx             # Registration page
-│   │   ├── Dashboard.jsx            # User dashboard
-│   │   ├── AdminSources.jsx         # Admin - Scraping sources & roles management
-│   │   ├── Jobs.jsx                 # Job listings
-│   │   ├── GapAnalysis.jsx          # Skill gap analysis
-│   │   ├── MarketIntelligence.jsx   # Market trends & stats
-│   │   ├── Profile.jsx              # User profile & skills
-│   │   └── NotFound.jsx             # 404 page
+│   │   ├── NotFound.jsx             # 404 error page
+│   │   ├── admin/
+│   │   │   └── AdminSources.jsx     # Admin - Scraping sources & roles management
+│   │   └── user/
+│   │       ├── Applications.jsx     # Job Application Tracker
+│   │       ├── Dashboard.jsx        # User dashboard
+│   │       ├── GapAnalysis.jsx      # Skill gap analysis
+│   │       ├── Jobs.jsx             # Job listings & Recommended jobs
+│   │       ├── MarketIntelligence.jsx # Market trends & interactive stats
+│   │       └── Profile.jsx          # User profile & skills
 │   ├── services/
 │   │   └── storageService.js        # LocalStorage wrapper
 │   ├── App.jsx                      # Main app component
@@ -173,14 +181,17 @@ The dev server features:
 
 ### Protected Routes (Authentication Required)
 
-| Route                  | Page               | Description                         |
-| ---------------------- | ------------------ | ----------------------------------- |
-| `/dashboard`           | Dashboard          | User dashboard with quick actions   |
-| `/admin/sources`       | AdminSources       | Manage scraping sources & job roles |
-| `/jobs`                | Jobs               | Browse and search job listings      |
-| `/gap-analysis/:jobId` | GapAnalysis        | Analyze skill gap for specific job  |
-| `/market-intelligence` | MarketIntelligence | View market trends and statistics   |
-| `/profile`             | Profile            | User profile and skill management   |
+| Route                       | Page               | Description                         |
+| --------------------------- | ------------------ | ----------------------------------- |
+| Route                       | Page               | Description                         |
+| ----------------------      | ------------------ | ----------------------------------- |
+| `/user/dashboard`           | Dashboard          | User dashboard with quick actions   |
+| `/user/jobs`                | Jobs               | Browse and search job listings      |
+| `/user/applications`        | Applications       | Job application pipeline tracker    |
+| `/user/gap-analysis/:jobId` | GapAnalysis        | Analyze skill gap for specific job  |
+| `/user/market`              | MarketIntelligence | View interactive market trends      |
+| `/user/profile`             | Profile            | User profile and skill management   |
+| `/admin/sources`            | AdminSources       | Manage scraping sources & job roles |
 
 ### Error Routes
 
@@ -196,10 +207,11 @@ The dev server features:
 
 #### `Navbar.jsx`
 
-- Responsive navigation bar
+- Scroll-aware glassmorphism navigation (powered by Framer Motion)
 - Shows different links for authenticated/unauthenticated users
-- Mobile menu with hamburger icon
-- Logout functionality
+- Mobile menu with Framer Motion drawer
+- User avatar navigates to `/user/profile` with a hover dropdown (Profile + Logout)
+- Distinct `Settings` icon visibility strictly for Administrator roles
 
 #### `ProtectedRoute.jsx`
 
@@ -232,9 +244,23 @@ Container component for consistent styling across the app.
 
 Loading indicator used during async operations.
 
-#### `ErrorAlert.jsx` & `SuccessAlert.jsx`
-
 User feedback components for displaying messages.
+
+#### `ProcessingAnimation.jsx`
+
+Animated full-screen or boxed overlay utilizing CSS transitions to map the steps of CV uploading, text extraction, and skill AI parsing visually to the user.
+
+---
+
+## 🎣 Custom Hooks
+
+| Hook                  | Purpose                                                                                 |
+| --------------------- | --------------------------------------------------------------------------------------- |
+| `useAuthHandler`      | Manages login tokens locally and configures axios headers implicitly                    |
+| `useAsync`            | A robust generic wrapper capturing state limits like (loading / data / error) safely    |
+| `useOnDemandScraping` | Encapsulates trigger and API response states for demanding live jobs specifically       |
+| `useScrapingStatus`   | Configures polling mechanisms that check backend every 3s continuously until completion |
+| `useAuth`             | Wrapper accessing the `AuthContext` to evaluate user presence seamlessly                |
 
 ---
 
@@ -353,26 +379,28 @@ const response = await jobsAPI.scrapeJobs();
 
 ### API Endpoints Used
 
-| Endpoint                        | Method | Purpose                                     |
-| ------------------------------- | ------ | ------------------------------------------- |
-| `/register`                     | POST   | Create account                              |
-| `/login`                        | POST   | Authenticate user                           |
-| `/logout`                       | POST   | Logout user                                 |
-| `/user`                         | GET    | Get current user                            |
-| `/upload-cv`                    | POST   | Upload & analyze CV                         |
-| `/user/skills`                  | GET    | Get user's skills                           |
-| `/user/skills/{id}`             | DELETE | Remove skill                                |
-| `/jobs`                         | GET    | Browse jobs                                 |
-| `/jobs/{id}`                    | GET    | Get job details                             |
-| `/jobs/scrape`                  | POST   | Scrape new jobs                             |
-| `/jobs/scrape-if-missing`       | POST   | On-demand job scraping                      |
-| `/gap-analysis/job/{id}`        | GET    | Analyze gap for job                         |
-| `/gap-analysis/recommendations` | GET    | Get recommendations                         |
-| `/market/overview`              | GET    | Market statistics                           |
-| `/market/trending-skills`       | GET    | Trending skills analysis                    |
-| `/admin/scraping-sources`       | \*     | CRUD operations for active scraping sources |
-| `/admin/job-roles`              | \*     | CRUD operations for target job roles        |
-| `/admin/scraping/run-full`      | POST   | Manually trigger global market sync         |
+| Endpoint                        | Method   | Purpose                                     |
+| ------------------------------- | -------- | ------------------------------------------- |
+| `/register`                     | POST     | Create account                              |
+| `/login`                        | POST     | Authenticate user                           |
+| `/logout`                       | POST     | Logout user                                 |
+| `/user`                         | GET      | Get current user                            |
+| `/upload-cv`                    | POST     | Upload & analyze CV                         |
+| `/user/skills`                  | GET      | Get user's skills                           |
+| `/user/skills/{id}`             | DELETE   | Remove skill                                |
+| `/jobs`                         | GET      | Browse jobs                                 |
+| `/jobs/{id}`                    | GET      | Get job details                             |
+| `/jobs/scrape`                  | POST     | Scrape new jobs                             |
+| `/jobs/recommended`             | GET      | Request highly personalized job matches     |
+| `/jobs/scrape-if-missing`       | POST     | On-demand job scraping                      |
+| `/applications`                 | \*(CRUD) | Application tracker sync functions          |
+| `/gap-analysis/job/{id}`        | GET      | Analyze gap for job                         |
+| `/gap-analysis/recommendations` | GET      | Get recommendations                         |
+| `/market/overview`              | GET      | Market statistics                           |
+| `/market/trending-skills`       | GET      | Trending skills analysis                    |
+| `/admin/scraping-sources`       | \*       | CRUD operations for active scraping sources |
+| `/admin/job-roles`              | \*       | CRUD operations for target job roles        |
+| `/admin/scraping/run-full`      | POST     | Manually trigger global market sync         |
 
 ---
 
@@ -724,6 +752,8 @@ server {
 | Vite             | 7.3.1   | Build tool & dev server |
 | React Router DOM | 7.13.0  | Client-side routing     |
 | Tailwind CSS     | 3.4.1   | Utility-first CSS       |
+| Framer Motion    | 12.4.7  | Premium UI Animations   |
+| Recharts         | 2.15.1  | SVG Data visualization  |
 | Axios            | 1.13.5  | HTTP client             |
 | Lucide React     | 0.563.0 | Icon library            |
 | ESLint           | 9.39.1  | Code linting            |
@@ -775,7 +805,7 @@ CareerCompass Team - Graduation Project 2026
 
 ---
 
-**Last Updated**: February 2026  
-**Version**: 1.1.0  
-**Status**: ✅ Phase 14 Complete (Admin Dashboard for Scraping Sources & Roles)  
+**Last Updated**: March 2026  
+**Version**: 1.2.0  
+**Status**: ✅ Phase 21 Complete (Security, Structure & Branding Updates)  
 **Node Version**: 18+
