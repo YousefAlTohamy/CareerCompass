@@ -161,36 +161,65 @@ export default function Dashboard() {
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="card-premium p-10 bg-gradient-to-br from-white to-slate-50"
+              className={`card-premium p-8 bg-gradient-to-br from-white to-slate-50 border-2 ${
+                skills.length > 0 ? 'border-emerald-100/50' : 'border-transparent'
+              }`}
             >
-              <div className="flex items-center gap-4 mb-8">
-                <div className="w-12 h-12 bg-primary/5 rounded-2xl flex items-center justify-center text-primary">
-                  <Upload size={24} />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-slate-900">Optimize Your Resume</h2>
-                  <p className="text-sm text-slate-500 font-medium">Extract skills and identify hidden potential.</p>
-                </div>
-              </div>
-
-
-
-              <label className="group block relative cursor-pointer">
-                <input
-                  type="file"
-                  accept=".pdf"
-                  onChange={handleCVUpload}
-                  disabled={uploading}
-                  className="hidden"
-                />
-                <div className="border-2 border-dashed border-slate-200 rounded-2xl p-12 text-center group-hover:border-primary group-hover:bg-white transition-all duration-300">
-                  <div className="w-16 h-16 bg-slate-50 group-hover:bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors">
-                    <Upload className="text-slate-400 group-hover:text-primary transition-colors" size={28} />
+              {skills.length > 0 ? (
+                /* Compact Active State */
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500 shadow-sm">
+                      <CheckCircle2 size={24} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-xl font-bold text-slate-900">Resume Data Active</h2>
+                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase rounded-md tracking-wider">Scanned</span>
+                      </div>
+                      <p className="text-xs text-slate-500 font-medium">Your profile is synced with your latest professional data.</p>
+                    </div>
                   </div>
-                  <h3 className="text-lg font-bold text-slate-700">Drop your resume here or <span className="text-primary underline decoration-primary/30 underline-offset-4">browse</span></h3>
-                  <p className="text-slate-400 text-sm mt-2">Maximum file size: 5MB (PDF only)</p>
+                  
+                  <label className="shrink-0 cursor-pointer group">
+                    <input type="file" accept=".pdf" onChange={handleCVUpload} disabled={uploading} className="hidden" />
+                    <div className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 rounded-xl text-slate-600 font-bold text-sm hover:border-primary hover:text-primary transition-all shadow-sm">
+                      <Upload size={16} />
+                      Update Resume
+                    </div>
+                  </label>
                 </div>
-              </label>
+              ) : (
+                /* Full Upload State */
+                <>
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="w-12 h-12 bg-primary/5 rounded-2xl flex items-center justify-center text-primary">
+                      <Upload size={24} />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-slate-900">Optimize Your Resume</h2>
+                      <p className="text-sm text-slate-500 font-medium">Extract skills and identify hidden potential.</p>
+                    </div>
+                  </div>
+
+                  <label className="group block relative cursor-pointer">
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={handleCVUpload}
+                      disabled={uploading}
+                      className="hidden"
+                    />
+                    <div className="border-2 border-dashed border-slate-200 rounded-2xl p-12 text-center group-hover:border-primary group-hover:bg-white transition-all duration-300">
+                      <div className="w-16 h-16 bg-slate-50 group-hover:bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors">
+                        <Upload className="text-slate-400 group-hover:text-primary transition-colors" size={28} />
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-700">Drop your resume here or <span className="text-primary underline decoration-primary/30 underline-offset-4">browse</span></h3>
+                      <p className="text-slate-400 text-sm mt-2">Maximum file size: 5MB (PDF only)</p>
+                    </div>
+                  </label>
+                </>
+              )}
             </motion.div>
 
             {/* Skills Dashboard */}
