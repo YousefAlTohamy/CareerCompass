@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, CheckCircle2, TrendingUp, Target, Plus, Search } from 'lucide-react';
 import { cvAPI, gapAnalysisAPI } from '../../api/endpoints';
 import ProcessingAnimation from '../../components/ProcessingAnimation';
+import Swal from 'sweetalert2';
 
 const SkillChip = ({ skill, onRemove }) => (
   <motion.div
@@ -82,15 +83,21 @@ export default function Dashboard() {
       setUploading(true);
       setMessage({ type: '', text: '' });
       await cvAPI.uploadCV(formData);
-      setMessage({ type: 'success', text: 'CV optimized! Skills extracted and profile updated.' });
+      Swal.fire({
+        icon: 'success',
+        title: 'CV Optimized!',
+        text: 'Skills extracted and profile updated.',
+        confirmButtonColor: '#6366f1',
+      });
       await loadSkills();
       await loadRecommendations();
-      setTimeout(() => setMessage({ type: '', text: '' }), 5000);
     } catch (error) {
       console.error('CV upload error:', error);
-      setMessage({ 
-        type: 'error', 
-        text: error.response?.data?.message || 'Failed to analyze CV' 
+      Swal.fire({
+        icon: 'error',
+        title: 'Upload Failed',
+        text: error.response?.data?.message || 'Failed to analyze CV',
+        confirmButtonColor: '#6366f1',
       });
     } finally {
       setUploading(false);
@@ -98,11 +105,36 @@ export default function Dashboard() {
   };
 
   const removeSkill = async (skillId) => {
+    const result = await Swal.fire({
+      title: 'Remove skill?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#6366f1',
+      cancelButtonColor: '#f43f5e',
+      confirmButtonText: 'Yes, remove it',
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       await cvAPI.removeSkill(skillId);
       setSkills(prev => prev.filter(s => s.id !== skillId));
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Skill removed',
+        showConfirmButton: false,
+        timer: 2000,
+        timerProgressBar: true,
+      });
     } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to remove skill' });
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to remove skill',
+        confirmButtonColor: '#6366f1',
+      });
     }
   };
 
@@ -141,20 +173,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {message.text && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`mb-6 p-4 rounded-xl border flex items-center gap-3 ${
-                    message.type === 'error' 
-                      ? 'bg-red-50 border-red-100 text-red-700' 
-                      : 'bg-emerald-50 border-emerald-100 text-emerald-700'
-                  }`}
-                >
-                  <CheckCircle2 size={18} />
-                  <span className="font-semibold text-sm">{message.text}</span>
-                </motion.div>
-              )}
+
 
               <label className="group block relative cursor-pointer">
                 <input

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI } from '../../api/endpoints';
+import Swal from 'sweetalert2';
 
 export default function Profile() {
   const { user, logout } = useAuth();
@@ -47,12 +48,39 @@ export default function Profile() {
       setError('Failed to save profile');
     } finally {
       setSaving(false);
+      if (!error) {
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'Profile updated successfully',
+          showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true,
+        });
+      }
     }
   };
 
   const handleLogout = async () => {
-    await logout();
-    navigate('/login');
+    const result = await Swal.fire({
+      title: 'Logout?',
+      text: "Are you sure you want to sign out?",
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#6366f1',
+      cancelButtonColor: '#f43f5e',
+      confirmButtonText: 'Yes, logout',
+      customClass: {
+        confirmButton: 'rounded-xl font-bold px-6 py-3',
+        cancelButton: 'rounded-xl font-bold px-6 py-3'
+      }
+    });
+
+    if (result.isConfirmed) {
+      await logout();
+      navigate('/login');
+    }
   };
 
   if (loading) {

@@ -59,7 +59,10 @@ const LearningResource = ({ skill }) => {
         {providers.map(p => (
           <a
             key={p.name}
-            href={`https://www.udemy.com/courses/search/?q=${encodeURIComponent(skill)}`}
+            href={p.name === 'Coursera' 
+              ? `https://www.coursera.org/courses?query=${encodeURIComponent(skill)}`
+              : `https://www.udemy.com/courses/search/?q=${encodeURIComponent(skill)}`
+            }
             target="_blank"
             rel="noopener noreferrer"
             className={`w-8 h-8 ${p.color} text-white rounded-lg flex items-center justify-center text-xs font-black hover:scale-110 transition-transform`}

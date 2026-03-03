@@ -16,6 +16,7 @@ import {
 import { Link } from 'react-router-dom';
 import applicationsAPI from '../../api/applications';
 import ProcessingAnimation from '../../components/ProcessingAnimation';
+import Swal from 'sweetalert2';
 
 /* ─── Status configuration ───────────────────────────────────────────────── */
 const STATUS_CONFIG = {
@@ -61,6 +62,16 @@ export default function Applications() {
     );
     try {
       await applicationsAPI.updateApplicationStatus(id, newStatus);
+      const statusLabel = STATUS_CONFIG[newStatus]?.label || newStatus;
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Status updated to ${statusLabel}`,
+        showConfirmButton: false,
+        timer: 2000,
+        timerProgressBar: true,
+      });
     } catch (err) {
       console.error('Failed to update status:', err);
       // Rollback on error
@@ -71,15 +82,49 @@ export default function Applications() {
 
   /* ─── Delete ─────────────────────────────────────────────────────── */
   const deleteApplication = async (id) => {
-    if (!window.confirm('Remove this job from your tracker?')) return;
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "Remove this job from your tracker?",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#6366f1',
+      cancelButtonColor: '#f43f5e',
+      confirmButtonText: 'Yes, remove it!',
+      cancelButtonText: 'Cancel',
+      background: '#ffffff',
+      borderRadius: '1.25rem',
+      customClass: {
+        title: 'font-black text-slate-800',
+        content: 'font-medium text-slate-600',
+        confirmButton: 'rounded-xl font-bold px-6 py-3',
+        cancelButton: 'rounded-xl font-bold px-6 py-3'
+      }
+    });
+
+    if (!result.isConfirmed) return;
+
     // Optimistic removal
     setApplications((prev) => prev.filter((app) => app.id !== id));
     try {
       await applicationsAPI.deleteApplication(id);
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Removed from tracker',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+      });
     } catch (err) {
       console.error('Failed to delete application:', err);
       loadApplications();
-      setError('Failed to remove application. Please try again.');
+      Swal.fire({
+        icon: 'error',
+        title: 'Oops...',
+        text: 'Failed to remove application. Please try again.',
+        confirmButtonColor: '#6366f1',
+      });
     }
   };
 
