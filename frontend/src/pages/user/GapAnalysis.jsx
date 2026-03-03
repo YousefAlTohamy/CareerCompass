@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  RadialBarChart, RadialBar, ResponsiveContainer, 
-  BarChart, Bar, XAxis, YAxis, Tooltip, Cell 
+import {
+  RadialBarChart, RadialBar, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, Tooltip, Cell
 } from 'recharts';
-import { 
-  ChevronLeft, ExternalLink, GraduationCap, 
-  AlertCircle, CheckCircle2, Briefcase, 
-  Library, Sparkles, ArrowRight
+import {
+  TrendingUp, Target, Award, CheckCircle2, AlertCircle, ChevronRight, Sparkles, Zap,
+  ChevronLeft, ExternalLink, GraduationCap,
+  Briefcase, Library, ArrowRight
 } from 'lucide-react';
+import TypingEffect from '../../components/TypingEffect';
 import { gapAnalysisAPI } from '../../api/endpoints';
 import applicationsAPI from '../../api/applications';
 import { useScrapingStatus } from '../../hooks/useScrapingStatus';
@@ -18,12 +19,12 @@ import { useScrapingStatus } from '../../hooks/useScrapingStatus';
 const PremiumMatchGauge = ({ percentage }) => {
   const data = [{ name: 'Match', value: percentage, fill: '#6366f1' }];
   const color = percentage >= 75 ? '#10b981' : percentage >= 50 ? '#f59e0b' : '#ef4444';
-  
+
   return (
     <div className="relative w-48 h-48 flex items-center justify-center">
       <ResponsiveContainer width="100%" height="100%">
-        <RadialBarChart 
-          cx="50%" cy="50%" innerRadius="70%" outerRadius="100%" 
+        <RadialBarChart
+          cx="50%" cy="50%" innerRadius="70%" outerRadius="100%"
           barSize={15} data={data} startAngle={90} endAngle={90 - (3.6 * percentage)}
         >
           <RadialBar background dataKey="value" cornerRadius={10}>
@@ -45,7 +46,7 @@ const LearningResource = ({ skill }) => {
     { name: 'Udemy', color: 'bg-[#A435F0]', icon: 'U' },
     { name: 'Coursera', color: 'bg-[#0056D2]', icon: 'C' }
   ];
-  
+
   return (
     <div className="flex items-center gap-4 bg-slate-50 border border-slate-100 p-4 rounded-2xl hover:bg-white hover:shadow-premium transition-all group">
       <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary">
@@ -59,7 +60,10 @@ const LearningResource = ({ skill }) => {
         {providers.map(p => (
           <a
             key={p.name}
-            href={`https://www.udemy.com/courses/search/?q=${encodeURIComponent(skill)}`}
+            href={p.name === 'Coursera'
+              ? `https://www.coursera.org/courses?query=${encodeURIComponent(skill)}`
+              : `https://www.udemy.com/courses/search/?q=${encodeURIComponent(skill)}`
+            }
             target="_blank"
             rel="noopener noreferrer"
             className={`w-8 h-8 ${p.color} text-white rounded-lg flex items-center justify-center text-xs font-black hover:scale-110 transition-transform`}
@@ -128,6 +132,25 @@ export default function GapAnalysis() {
 
   useEffect(() => { loadAnalysis(); }, [jobId]);
 
+  if (loading || (status === 'processing' && !analysis)) {
+    return (
+      <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto space-y-10">
+          <div className="h-8 w-48 bg-slate-200 animate-pulse rounded-lg mb-8" />
+          <div className="grid lg:grid-cols-12 gap-10">
+            <div className="lg:col-span-8">
+              <div className="h-64 bg-white rounded-2xl shadow-premium animate-pulse" />
+            </div>
+            <div className="lg:col-span-4">
+              <div className="h-64 bg-white rounded-2xl shadow-premium animate-pulse" />
+            </div>
+          </div>
+          <div className="h-96 bg-white rounded-2xl shadow-premium animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
   if (scrapingJobId) {
     return (
       <div className="min-h-screen bg-primary flex items-center justify-center p-6 text-center">
@@ -154,25 +177,35 @@ export default function GapAnalysis() {
 
   return (
     <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="max-w-7xl mx-auto"
       >
-        <button 
-          onClick={() => navigate('/jobs')}
-          className="flex items-center gap-2 text-slate-500 hover:text-primary font-bold mb-8 transition-colors group"
-        >
-          <ChevronLeft className="group-hover:-translate-x-1 transition-transform" />
-          Back to Career Map
-        </button>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 no-print">
+          <button 
+            onClick={() => navigate('/jobs')}
+            className="flex items-center gap-2 text-slate-500 hover:text-primary font-bold transition-colors group"
+          >
+            <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+            Back to Opportunities
+          </button>
+          
+          <button
+            onClick={() => window.print()}
+            className="btn-secondary px-6 py-2.5 flex items-center gap-2 text-sm"
+          >
+            <span>🖨️</span>
+            Download Report (PDF)
+          </button>
+        </div>
 
         <div className="grid lg:grid-cols-12 gap-10">
           {/* Dashboard Left: Score & Overview */}
           <div className="lg:col-span-8 space-y-10">
             <div className="card-premium p-10 relative overflow-hidden">
                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2" />
-               
+
                <div className="flex flex-col md:flex-row items-center gap-12 relative z-10">
                   <PremiumMatchGauge percentage={matchPct} />
                   <div className="flex-1 space-y-6">
@@ -182,7 +215,7 @@ export default function GapAnalysis() {
                       </h1>
                       <p className="text-xl font-bold text-slate-400 italic font-serif">{analysis.job?.company}</p>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-4">
                        <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100/50">
                           <p className="text-[10px] font-black uppercase text-emerald-600 tracking-widest mb-1">Your Edge</p>
@@ -249,6 +282,24 @@ export default function GapAnalysis() {
                       <GraduationCap size={20} />
                    </div>
                    <h3 className="text-xl font-bold text-primary">Bridge the Gap</h3>
+                </div>
+                <div className="space-y-4 mb-8">
+                  {analysis.recommendations.map((rec, idx) => (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1 * idx }}
+                      className="flex items-start gap-4 p-5 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-premium transition-all"
+                    >
+                      <div className="w-8 h-8 bg-primary/5 rounded-xl flex items-center justify-center shrink-0 text-primary">
+                        <Zap size={16} />
+                      </div>
+                      <p className="text-slate-700 font-medium leading-relaxed">
+                        <TypingEffect text={rec} speed={20} />
+                      </p>
+                    </motion.div>
+                  ))}
                 </div>
                 <p className="text-sm text-slate-500 mb-8 font-medium leading-relaxed">
                   Our AI matched these courses to help you rank <b>90%+</b> for this specific role.

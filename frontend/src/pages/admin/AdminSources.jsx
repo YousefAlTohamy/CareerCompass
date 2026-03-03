@@ -13,6 +13,7 @@ import {
     runFullScraping
 } from '../../api/scrapingSources';
 import { Plus, Play, Trash2, Edit, Activity, ToggleLeft, ToggleRight, X, Save } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 const AdminSources = () => {
     const [sources, setSources] = useState([]);
@@ -72,13 +73,34 @@ const AdminSources = () => {
     };
 
     const handleRunScraping = async () => {
-        if (!window.confirm("Start full background scraping? This may take a while.")) return;
+        const result = await Swal.fire({
+            title: 'Run Full Scraping?',
+            text: "Start full background scraping? This may take a while.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#6366f1',
+            cancelButtonColor: '#f43f5e',
+            confirmButtonText: 'Yes, start now!'
+        });
+        
+        if (!result.isConfirmed) return;
+        
         try {
             await runFullScraping();
-            alert("Background scraping has started successfully.");
+            Swal.fire({
+                icon: 'success',
+                title: 'Started',
+                text: 'Background scraping has started successfully.',
+                confirmButtonColor: '#6366f1',
+            });
         } catch (error) {
             console.error(error);
-            alert("Failed to start scraping.");
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to start scraping.',
+                confirmButtonColor: '#6366f1',
+            });
         }
     };
 
@@ -91,7 +113,12 @@ const AdminSources = () => {
             setNewRoleName('');
         } catch (error) {
             console.error(error);
-            alert("Failed to add role");
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to add role',
+                confirmButtonColor: '#6366f1',
+            });
         }
     };
 
@@ -107,13 +134,38 @@ const AdminSources = () => {
     };
 
     const handleDeleteRole = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this role?")) return;
+        const result = await Swal.fire({
+            title: 'Delete Role?',
+            text: "Are you sure you want to delete this role?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#6366f1',
+            cancelButtonColor: '#f43f5e',
+            confirmButtonText: 'Yes, delete it'
+        });
+
+        if (!result.isConfirmed) return;
+
         try {
             await deleteTargetRole(id);
             setRoles(roles.filter(r => r.id !== id));
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Role deleted',
+                showConfirmButton: false,
+                timer: 2000,
+                timerProgressBar: true,
+            });
         } catch (error) {
             console.error(error);
-            alert("Failed to delete role");
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to delete role',
+                confirmButtonColor: '#6366f1',
+            });
         }
     };
 
@@ -129,13 +181,38 @@ const AdminSources = () => {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this source?")) return;
+        const result = await Swal.fire({
+            title: 'Delete Source?',
+            text: "Are you sure you want to delete this source?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#6366f1',
+            cancelButtonColor: '#f43f5e',
+            confirmButtonText: 'Yes, delete it'
+        });
+
+        if (!result.isConfirmed) return;
+
         try {
             await deleteSource(id);
             setSources(sources.filter(s => s.id !== id));
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Source deleted',
+                showConfirmButton: false,
+                timer: 2000,
+                timerProgressBar: true,
+            });
         } catch (error) {
             console.error(error);
-            alert("Failed to delete source");
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to delete source',
+                confirmButtonColor: '#6366f1',
+            });
         }
     };
 
@@ -187,7 +264,12 @@ const AdminSources = () => {
             setIsModalOpen(false);
         } catch (error) {
             console.error("Save error:", error);
-            alert("Failed to save source. Check console for details (likely JSON parse error).");
+            Swal.fire({
+                icon: 'error',
+                title: 'Save Failed',
+                text: 'Failed to save source. Check console for details (likely JSON parse error).',
+                confirmButtonColor: '#6366f1',
+            });
         }
     };
 

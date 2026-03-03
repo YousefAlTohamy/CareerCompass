@@ -35,11 +35,11 @@
   }
 
   .btn-primary {
-    @apply px-6 py-3 bg-primary text-white rounded-capsule font-semibold hover:bg-primary-hover shadow-premium hover:shadow-premium-hover transition-smooth active:scale-95 text-center;
+    @apply px-6 py-3 bg-primary text-white rounded-capsule font-semibold hover:bg-primary-hover shadow-premium hover:shadow-premium-hover transition-smooth active:scale-95 text-center flex items-center justify-center gap-2;
   }
 
   .btn-secondary {
-    @apply px-6 py-3 bg-white text-primary border border-slate-100 rounded-capsule font-semibold hover:bg-slate-50 shadow-premium hover:shadow-premium-hover transition-smooth active:scale-95 text-center;
+    @apply px-6 py-3 bg-white text-primary border border-slate-100 rounded-capsule font-semibold hover:bg-slate-50 shadow-premium hover:shadow-premium-hover transition-smooth active:scale-95 text-center flex items-center justify-center gap-2;
   }
 
   .card-premium {
@@ -51,6 +51,39 @@
   }
 
   .nav-link {
-    @apply text-slate-600 hover:text-primary font-medium transition-smooth;
+    @apply text-slate-600 hover:text-primary font-medium transition-smooth relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-primary after:transition-all hover:after:w-full;
+  }
+}
+
+/* ── Print Styles for PDF Export ────────────────────────────────────────── */
+@media print {
+  nav, .no-print, button, .btn-primary, .btn-secondary {
+    display: none !important;
+  }
+  
+  body {
+    background: white !important;
+    padding: 0 !important;
+  }
+
+  .min-h-screen {
+    min-height: auto !important;
+    background: white !important;
+  }
+
+  .card-premium {
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+  
+  .max-w-7xl {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  h1, h2, h3 {
+    color: black !important;
   }
 }
