@@ -1,7 +1,9 @@
 # Smart AI Scraper Engine
 
 > **Phase 1 — Core Architecture & Design Patterns (Strategy + Factory)**  
-> **Phase 2 — Smart DOM Analysis (Text Density Heuristics & Semantic Proximity)**
+> **Phase 2 — Smart DOM Analysis (Text Density Heuristics & Semantic Proximity)**  
+> **Phase 3 — Data Normalization Pipeline (Bloom Filter, Regex FSM, DP Levenshtein)**  
+> **Phase 4 — AI & Mathematical Matching Engine (TF-IDF, Cosine Similarity, NER)**
 
 A highly scalable, generic web-scraping engine built with advanced software-engineering principles. The engine is designed to be **technology-agnostic**: adding a new data-source type (XML, GraphQL, browser-rendered SPA, …) requires zero changes to existing code — only a new strategy class and one line in the factory registry.
 
@@ -20,9 +22,17 @@ A highly scalable, generic web-scraping engine built with advanced software-engi
    - [DFS Density Traversal](#dfs-density-traversal)
    - [Semantic Proximity](#semantic-proximity)
    - [Phase 2 Quick-Start](#phase-2-quick-start)
-5. [Installation](#installation)
-6. [Testing](#testing)
-7. [Roadmap](#roadmap)
+5. [Phase 3: Data Normalization Pipeline](#phase-3-data-normalization-pipeline)
+   - [SHA-256 + Bloom Filter Deduplication](#sha-256--bloom-filter-deduplication-pipelinededuplicatorpy)
+   - [Regex FSM Cleaners](#regex-fsm-cleaners-pipelinecleanerspy)
+   - [Levenshtein DP Fuzzy Matcher](#levenshtein-dp-fuzzy-matcher-pipelinefuzzy_matcherpy)
+6. [Phase 4: AI & Mathematical Matching Engine](#phase-4-ai--mathematical-matching-engine)
+   - [Heuristic CV Segmentation](#heuristic-cv-segmentation-aisegmentationpy)
+   - [TF-IDF Matching Engine](#tf-idf-matching-engine-aimatcherpy)
+   - [Custom Skill Extraction](#custom-skill-extraction-aioner_extractorpy)
+7. [Installation](#installation)
+8. [Testing](#testing)
+9. [Roadmap](#roadmap)
 
 ---
 
@@ -436,6 +446,94 @@ are_skills_similar("React.js", "ReactJS")    # → True   (score ≥ 0.8 thresho
 are_skills_similar("Python", "Java")         # → False
 ```
 
+| `test_ai.py` | `TestHeuristicSegmenter` | Section detection, ALL-CAPS headers, edge cases |
+| `test_ai.py` | `TestTokenize` | Stop-word removal, punctuation, min-length |
+| `test_ai.py` | `TestComputeTF` | Formula correctness, sum-to-1, empty input |
+| `test_ai.py` | `TestComputeIDF` | Rare > common IDF, smoothed formula |
+| `test_ai.py` | `TestVectorize` | OOV exclusion, TF × IDF product |
+| `test_ai.py` | `TestCosineSimilarity` | Identical=1.0, orthogonal=0.0, symmetry, bounds |
+| `test_ai.py` | `TestMatchScore` | End-to-end identical/unrelated/related texts |
+| `test_ai.py` | `TestCustomSkillExtractor` | Single/multi-word, longest-match, dedup, ordering |
+
+---
+
+## Phase 4: AI & Mathematical Matching Engine
+
+**Files:** `ai/segmentation.py` · `ai/matcher.py` · `ai/ner_extractor.py`
+
+Phase 4 introduces the core intelligence: a pure-mathematical matching engine and heuristic NLP segmentation — with **zero black-box ML libraries** for the core math.
+
+---
+
+### Heuristic CV Segmentation (`ai/segmentation.py`)
+
+> **CS Concept:** O(n) single-pass state machine over document lines.
+
+`HeuristicSegmenter.segment_cv` scans the CV line-by-line. At each line it either:
+
+- **Transitions state** → detects a section header via pre-compiled regex patterns per canonical section (`summary`, `experience`, `education`, `skills`, `certifications`, `projects`, …)
+- **Accumulates content** → appends the line to the current section bucket
+
+Header detection uses two layers:
+
+1. **Pre-compiled regex patterns** — keyword families per section (e.g., `experience|work history|employment|career history|…`)
+2. **ALL-CAPS fallback** — entirely uppercase short lines are tested even if they use unusual phrasing
+
+```python
+segmenter = HeuristicSegmenter()
+sections = segmenter.segment_cv(raw_cv_text)
+print(sections["experience"])   # → job history text
+print(sections["skills"])       # → skills list
+```
+
+---
+
+### TF-IDF Matching Engine (`ai/matcher.py`)
+
+> **CS Concepts:** Information Retrieval (TF-IDF, Sparck Jones 1972) + Linear Algebra (Cosine Similarity). Zero numpy, zero scikit-learn.
+
+| Step | Function            | Formula                                       | Complexity |
+| ---- | ------------------- | --------------------------------------------- | ---------- |
+| 1    | `tokenize`          | lowercase + split on `\W+` + stop-word filter | O(n)       |
+| 2    | `compute_tf`        | count(t, d) / total_tokens                    | O(n)       |
+| 3    | `compute_idf`       | log(D / (1 + df(t)))                          | O(D × n)   |
+| 4    | `vectorize`         | TF(t,d) × IDF(t) per vocab term               | O(V)       |
+| 5    | `cosine_similarity` | (v₁·v₂) / (‖v₁‖×‖v₂‖)                         | O(V)       |
+
+```python
+# Full pipeline in one call
+score = match_score(cv_text, job_description_text)
+# 0.0 = no overlap  |  1.0 = identical term distribution
+
+# Or step-by-step:
+idf   = compute_idf([cv_text, job_text])
+cv_v  = vectorize(cv_text, idf)
+job_v = vectorize(job_text, idf)
+score = cosine_similarity(cv_v, job_v)   # → e.g. 0.72
+```
+
+**Why TF-IDF beats raw keyword counting:**
+TF-IDF down-weights terms like "experience" or "developer" that appear in nearly every document — ensuring common words don't dominate the similarity score.
+
+---
+
+### Custom Skill Extraction (`ai/ner_extractor.py`)
+
+> **CS Concept:** Longest-match-first lexicon scanning (equivalent to prefix-trie traversal, O(L) per position).
+
+Hybrid extraction, two layers:
+
+1. **Lexicon** — 150+ skills across 7 categories (languages, frameworks, databases, cloud, AI/ML, tools, methodologies). Multi-word skills (`machine learning`, `react native`) are matched **longest-first** to avoid partial matches.
+2. **spaCy Entity Ruler** (optional) — custom `SKILL` label patterns added _before_ spaCy's default NER. Gracefully absent when spaCy is not installed.
+
+```python
+extractor = CustomSkillExtractor()
+skills = extractor.extract_skills(
+    "5+ years Python, React Native, PostgreSQL, Docker, and AWS"
+)
+# → ['python', 'react native', 'postgresql', 'docker', 'aws']
+```
+
 ---
 
 ## Roadmap
@@ -445,6 +543,7 @@ are_skills_similar("Python", "Java")         # → False
 | ✅ **1** | Strategy + Factory patterns, `BaseScraper`, HTML & API strategies, full test suite |
 | ✅ **2** | DOM DFS Text-Density walker, Semantic Proximity salary extraction, heuristic tests |
 | ✅ **3** | SHA-256 + Bloom Filter dedup, Regex cleaners, DP Levenshtein fuzzy matcher         |
-| 🔲 **4** | Observer Pattern for pipeline events (pre-fetch, post-parse, on-error hooks)       |
-| 🔲 **5** | Async rate-limiting, retry with exponential back-off, proxy rotation               |
-| 🔲 **6** | REST API wrapper (FastAPI) exposing the engine as a service                        |
+| ✅ **4** | TF-IDF + Cosine Similarity engine, Heuristic CV segmenter, Custom NER extractor    |
+| 🔲 **5** | Observer Pattern for pipeline events (pre-fetch, post-parse, on-error hooks)       |
+| 🔲 **6** | Async rate-limiting, retry with exponential back-off, proxy rotation               |
+| 🔲 **7** | REST API wrapper (FastAPI) exposing the engine as a service                        |
