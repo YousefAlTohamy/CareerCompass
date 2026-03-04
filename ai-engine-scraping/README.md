@@ -38,13 +38,13 @@ A highly scalable, generic web-scraping engine built with advanced software-engi
 
 ## Project Overview
 
-| Attribute     | Detail                                                                    |
-| ------------- | ------------------------------------------------------------------------- |
-| **Language**  | Python 3.11+                                                              |
-| **Async I/O** | `aiohttp` — non-blocking HTTP from day one                                |
-| **Patterns**  | Strategy, Factory (Phase 1) · Observer, Chain of Responsibility (planned) |
-| **Testing**   | `pytest` + `pytest-asyncio`; all network I/O is mocked                    |
-| **Goal**      | A drop-in AI scraping library usable by any Python project                |
+| Attribute     | Detail                                                              |
+| ------------- | ------------------------------------------------------------------- |
+| **Language**  | Python 3.11+                                                        |
+| **Async I/O** | `aiohttp` — non-blocking HTTP from day one                          |
+| **Patterns**  | Strategy, Factory · Bloom Filter, TF-IDF, DP Levenshtein, Regex FSM |
+| **Testing**   | `pytest` + `pytest-asyncio`; all network I/O is mocked              |
+| **Goal**      | A drop-in AI scraping library usable by any Python project          |
 
 ---
 
@@ -67,10 +67,24 @@ ai-engine-scraping/
 │   ├── __init__.py
 │   └── scraper_factory.py       # Factory: maps type strings → concrete strategies
 │
+├── pipeline/                    # Phase 3: Data Normalization Pipeline
+│   ├── __init__.py
+│   ├── deduplicator.py          # BloomFilter (scratch) + JobDeduplicator (SHA-256)
+│   ├── cleaners.py              # clean_text, remove_noise, extract_salary, extract_experience
+│   └── fuzzy_matcher.py         # DP Levenshtein distance + are_skills_similar
+│
+├── ai/                          # Phase 4: AI & Mathematical Matching Engine
+│   ├── __init__.py
+│   ├── segmentation.py          # HeuristicSegmenter — O(n) CV section parser
+│   ├── matcher.py               # TF-IDF + Cosine Similarity (pure Python, no NumPy)
+│   └── ner_extractor.py         # CustomSkillExtractor — lexicon + optional spaCy ruler
+│
 ├── tests/
 │   ├── __init__.py
-│   ├── test_architecture.py     # Phase 1: Factory, ABC, fetch_content tests
-│   └── test_heuristics.py       # Phase 2: Density, DFS, Semantic Proximity tests
+│   ├── test_architecture.py     # Phase 1: Factory, ABC, fetch_content tests (21 tests)
+│   ├── test_heuristics.py       # Phase 2: Density, DFS, Semantic Proximity tests (21 tests)
+│   ├── test_pipeline.py         # Phase 3: Dedup, cleaners, fuzzy matcher tests (65 tests)
+│   └── test_ai.py               # Phase 4: Segmenter, TF-IDF, NER tests (49 tests)
 │
 ├── requirements.txt
 └── README.md
@@ -171,57 +185,6 @@ async def main():
         print(e)  # Unknown source type: 'graphql'. Supported types are: ['api', 'html'].
 
 asyncio.run(main())
-```
-
----
-
-## Installation
-
-```bash
-# 1. Navigate into the project directory
-cd ai-engine-scraping
-
-# 2. (Recommended) Create & activate a virtual environment
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# macOS / Linux
-source .venv/bin/activate
-
-# 3. Install dependencies
-pip install -r requirements.txt
-```
-
----
-
-## Testing
-
-All tests use `pytest` with the `pytest-asyncio` plugin. **No real network calls are made** — all HTTP I/O is mocked with `unittest.mock`.
-
-```bash
-# Run the full test suite from the ai-engine-scraping/ directory
-pytest tests/ -v
-```
-
-### What is tested
-
-| Test Class                   | Coverage                                                                                                             |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `TestScraperFactory`         | Correct type instantiation, case-insensitivity, `ValueError` on unknown/empty types, new-instance-per-call guarantee |
-| `TestBaseScraperAbstraction` | Direct instantiation raises `TypeError`, incomplete subclass raises `TypeError`, complete subclass works             |
-| `TestFetchContent`           | Success path, HTTP 4xx/5xx error, timeout, connection error, unexpected exception                                    |
-| `TestHtmlSmartScraper`       | End-to-end `scrape()` success and error result structures                                                            |
-| `TestJsonApiScraper`         | End-to-end `scrape()` with valid JSON, invalid JSON body                                                             |
-
-Expected output:
-
-```
-collected 19 items
-
-tests/test_architecture.py::TestScraperFactory::test_get_scraper_html_returns_html_scraper PASSED
-tests/test_architecture.py::TestScraperFactory::test_get_scraper_api_returns_json_api_scraper PASSED
-...
-19 passed in 0.XXs
 ```
 
 ---
@@ -356,16 +319,35 @@ pytest tests/ -v
 | `test_heuristics.py`   | `TestFindHighestDensityNode` | DFS picks correct div by density, ignores noise    |
 | `test_heuristics.py`   | `TestExtractSemanticSibling` | All 4 HTML patterns + synonyms + edge cases        |
 | `test_heuristics.py`   | `TestIntegration`            | End-to-end on realistic job-listing HTML           |
+| `test_pipeline.py`     | `TestJobDeduplicator`        | SHA-256 determinism, normalisation, dedup flow     |
+| `test_pipeline.py`     | `TestBloomFilter`            | No false negatives, sizing, FPR                    |
+| `test_pipeline.py`     | `TestCleanText`              | HTML stripping, entity unescaping, whitespace      |
+| `test_pipeline.py`     | `TestRemoveNoise`            | Noise word removal, punctuation cleanup            |
+| `test_pipeline.py`     | `TestExtractSalary`          | k-multiplier, 5 currency codes, range & single     |
+| `test_pipeline.py`     | `TestExtractExperience`      | Range, min-only, at-least, single, empty           |
+| `test_pipeline.py`     | `TestLevenshteinDistance`    | Known distances, symmetry, triangle inequality     |
+| `test_pipeline.py`     | `TestSimilarityScore`        | Bounds, identical, asymmetric pairs                |
+| `test_pipeline.py`     | `TestAreSkillsSimilar`       | React.js/ReactJS, threshold, invalid input         |
+| `test_ai.py`           | `TestHeuristicSegmenter`     | Section detection, ALL-CAPS headers, edge cases    |
+| `test_ai.py`           | `TestTokenize`               | Stop-word removal, punctuation, min-length         |
+| `test_ai.py`           | `TestComputeTF`              | Formula correctness, sum-to-1, empty input         |
+| `test_ai.py`           | `TestComputeIDF`             | Rare > common IDF, smoothed formula                |
+| `test_ai.py`           | `TestVectorize`              | OOV exclusion, TF × IDF product                    |
+| `test_ai.py`           | `TestCosineSimilarity`       | Identical=1.0, orthogonal=0.0, symmetry, bounds    |
+| `test_ai.py`           | `TestMatchScore`             | End-to-end identical/unrelated/related texts       |
+| `test_ai.py`           | `TestCustomSkillExtractor`   | Single/multi-word, longest-match, dedup, ordering  |
 
-| `test_pipeline.py` | `TestJobDeduplicator` | SHA-256 determinism, normalisation, dedup flow |
-| `test_pipeline.py` | `TestBloomFilter` | No false negatives, sizing, FPR |
-| `test_pipeline.py` | `TestCleanText` | HTML stripping, entity unescaping, whitespace |
-| `test_pipeline.py` | `TestRemoveNoise` | Noise word removal, punctuation cleanup |
-| `test_pipeline.py` | `TestExtractSalary` | k-multiplier, 5 currency codes, range & single |
-| `test_pipeline.py` | `TestExtractExperience` | Range, min-only, at-least, single, empty |
-| `test_pipeline.py` | `TestLevenshteinDistance` | Known distances, symmetry, triangle inequality |
-| `test_pipeline.py` | `TestSimilarityScore` | Bounds, identical, asymmetric pairs |
-| `test_pipeline.py` | `TestAreSkillsSimilar` | React.js/ReactJS, threshold, invalid input |
+Expected output:
+
+```
+collected 156 items
+
+tests/test_architecture.py::... PASSED
+tests/test_heuristics.py::...  PASSED
+tests/test_pipeline.py::...    PASSED
+tests/test_ai.py::...          PASSED
+156 passed in ~0.5s
+```
 
 ---
 
@@ -445,15 +427,6 @@ similarity_score("React.js", "ReactJS")      # → 0.625  (= 1 - 3/8)
 are_skills_similar("React.js", "ReactJS")    # → True   (score ≥ 0.8 threshold)
 are_skills_similar("Python", "Java")         # → False
 ```
-
-| `test_ai.py` | `TestHeuristicSegmenter` | Section detection, ALL-CAPS headers, edge cases |
-| `test_ai.py` | `TestTokenize` | Stop-word removal, punctuation, min-length |
-| `test_ai.py` | `TestComputeTF` | Formula correctness, sum-to-1, empty input |
-| `test_ai.py` | `TestComputeIDF` | Rare > common IDF, smoothed formula |
-| `test_ai.py` | `TestVectorize` | OOV exclusion, TF × IDF product |
-| `test_ai.py` | `TestCosineSimilarity` | Identical=1.0, orthogonal=0.0, symmetry, bounds |
-| `test_ai.py` | `TestMatchScore` | End-to-end identical/unrelated/related texts |
-| `test_ai.py` | `TestCustomSkillExtractor` | Single/multi-word, longest-match, dedup, ordering |
 
 ---
 
