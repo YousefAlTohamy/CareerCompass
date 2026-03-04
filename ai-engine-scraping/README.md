@@ -3,7 +3,8 @@
 > **Phase 1 — Core Architecture & Design Patterns (Strategy + Factory)**  
 > **Phase 2 — Smart DOM Analysis (Text Density Heuristics & Semantic Proximity)**  
 > **Phase 3 — Data Normalization Pipeline (Bloom Filter, Regex FSM, DP Levenshtein)**  
-> **Phase 4 — AI & Mathematical Matching Engine (TF-IDF, Cosine Similarity, NER)**
+> **Phase 4 — AI & Mathematical Matching Engine (TF-IDF, Cosine Similarity, NER)**  
+> **Phase 5 — Performance, Memory Management & Evasion (Token Bucket, Async Generator, DLQ)**
 
 A highly scalable, generic web-scraping engine built with advanced software-engineering principles. The engine is designed to be **technology-agnostic**: adding a new data-source type (XML, GraphQL, browser-rendered SPA, …) requires zero changes to existing code — only a new strategy class and one line in the factory registry.
 
@@ -30,9 +31,13 @@ A highly scalable, generic web-scraping engine built with advanced software-engi
    - [Heuristic CV Segmentation](#heuristic-cv-segmentation-aisegmentationpy)
    - [TF-IDF Matching Engine](#tf-idf-matching-engine-aimatcherpy)
    - [Custom Skill Extraction](#custom-skill-extraction-aioner_extractorpy)
-7. [Installation](#installation)
+7. [Phase 5: Performance, Memory & Evasion](#phase-5-performance-memory-management--evasion)
+   - [Token Bucket Rate Limiter](#token-bucket-rate-limiter-corehttp_clientpy)
+   - [Dead Letter Queue](#dead-letter-queue-coredlqpy)
+   - [Async Generator Pipeline](#async-generator-pipeline-coreenginepy)
 8. [Testing](#testing)
-9. [Roadmap](#roadmap)
+9. [Installation](#installation)
+10. [Roadmap](#roadmap)
 
 ---
 
@@ -56,7 +61,10 @@ ai-engine-scraping/
 ├── core/
 │   ├── __init__.py
 │   ├── base_scraper.py          # Abstract Strategy interface + shared fetch_content()
-│   └── heuristics.py            # Phase 2: Text Density, DFS traversal, Semantic Proximity
+│   ├── heuristics.py            # Phase 2: Text Density, DFS traversal, Semantic Proximity
+│   ├── http_client.py           # Phase 5: SmartAsyncClient (Token Bucket + Backoff + UA)
+│   ├── dlq.py                   # Phase 5: Dead Letter Queue for failed URL tracking
+│   └── engine.py                # Phase 5: ScrapingEngine — stream_jobs async generator
 │
 ├── strategies/
 │   ├── __init__.py
@@ -84,7 +92,8 @@ ai-engine-scraping/
 │   ├── test_architecture.py     # Phase 1: Factory, ABC, fetch_content tests (21 tests)
 │   ├── test_heuristics.py       # Phase 2: Density, DFS, Semantic Proximity tests (21 tests)
 │   ├── test_pipeline.py         # Phase 3: Dedup, cleaners, fuzzy matcher tests (65 tests)
-│   └── test_ai.py               # Phase 4: Segmenter, TF-IDF, NER tests (49 tests)
+│   ├── test_ai.py               # Phase 4: Segmenter, TF-IDF, NER tests (49 tests)
+│   └── test_performance.py      # Phase 5: TokenBucket, DLQ, engine streaming (30 tests)
 │
 ├── requirements.txt
 └── README.md
@@ -278,79 +287,6 @@ asyncio.run(main())
 
 ---
 
-## Installation
-
-```bash
-# 1. Navigate into the project directory
-cd ai-engine-scraping
-
-# 2. (Recommended) Create & activate a virtual environment
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# macOS / Linux
-source .venv/bin/activate
-
-# 3. Install dependencies
-pip install -r requirements.txt
-```
-
----
-
-## Testing
-
-All tests use `pytest` with the `pytest-asyncio` plugin. **No real network calls are made** — all HTTP I/O is mocked with `unittest.mock`, and all heuristic tests use inline HTML strings.
-
-```bash
-# Run the full test suite from the ai-engine-scraping/ directory
-pytest tests/ -v
-```
-
-### What is tested
-
-| Test File              | Test Class                   | Coverage                                           |
-| ---------------------- | ---------------------------- | -------------------------------------------------- |
-| `test_architecture.py` | `TestScraperFactory`         | Factory dispatch, case-insensitivity, `ValueError` |
-| `test_architecture.py` | `TestBaseScraperAbstraction` | ABC enforcement                                    |
-| `test_architecture.py` | `TestFetchContent`           | Success, HTTP error, timeout, connection error     |
-| `test_architecture.py` | `TestHtmlSmartScraper`       | End-to-end success/error                           |
-| `test_architecture.py` | `TestJsonApiScraper`         | Valid + invalid JSON                               |
-| `test_heuristics.py`   | `TestGetTextDensity`         | Density formula, leaf nodes, noisy nodes           |
-| `test_heuristics.py`   | `TestFindHighestDensityNode` | DFS picks correct div by density, ignores noise    |
-| `test_heuristics.py`   | `TestExtractSemanticSibling` | All 4 HTML patterns + synonyms + edge cases        |
-| `test_heuristics.py`   | `TestIntegration`            | End-to-end on realistic job-listing HTML           |
-| `test_pipeline.py`     | `TestJobDeduplicator`        | SHA-256 determinism, normalisation, dedup flow     |
-| `test_pipeline.py`     | `TestBloomFilter`            | No false negatives, sizing, FPR                    |
-| `test_pipeline.py`     | `TestCleanText`              | HTML stripping, entity unescaping, whitespace      |
-| `test_pipeline.py`     | `TestRemoveNoise`            | Noise word removal, punctuation cleanup            |
-| `test_pipeline.py`     | `TestExtractSalary`          | k-multiplier, 5 currency codes, range & single     |
-| `test_pipeline.py`     | `TestExtractExperience`      | Range, min-only, at-least, single, empty           |
-| `test_pipeline.py`     | `TestLevenshteinDistance`    | Known distances, symmetry, triangle inequality     |
-| `test_pipeline.py`     | `TestSimilarityScore`        | Bounds, identical, asymmetric pairs                |
-| `test_pipeline.py`     | `TestAreSkillsSimilar`       | React.js/ReactJS, threshold, invalid input         |
-| `test_ai.py`           | `TestHeuristicSegmenter`     | Section detection, ALL-CAPS headers, edge cases    |
-| `test_ai.py`           | `TestTokenize`               | Stop-word removal, punctuation, min-length         |
-| `test_ai.py`           | `TestComputeTF`              | Formula correctness, sum-to-1, empty input         |
-| `test_ai.py`           | `TestComputeIDF`             | Rare > common IDF, smoothed formula                |
-| `test_ai.py`           | `TestVectorize`              | OOV exclusion, TF × IDF product                    |
-| `test_ai.py`           | `TestCosineSimilarity`       | Identical=1.0, orthogonal=0.0, symmetry, bounds    |
-| `test_ai.py`           | `TestMatchScore`             | End-to-end identical/unrelated/related texts       |
-| `test_ai.py`           | `TestCustomSkillExtractor`   | Single/multi-word, longest-match, dedup, ordering  |
-
-Expected output:
-
-```
-collected 156 items
-
-tests/test_architecture.py::... PASSED
-tests/test_heuristics.py::...  PASSED
-tests/test_pipeline.py::...    PASSED
-tests/test_ai.py::...          PASSED
-156 passed in ~0.5s
-```
-
----
-
 ## Phase 3: Data Normalization Pipeline
 
 **Files:** `pipeline/deduplicator.py` · `pipeline/cleaners.py` · `pipeline/fuzzy_matcher.py`
@@ -509,6 +445,182 @@ skills = extractor.extract_skills(
 
 ---
 
+## Phase 5: Performance, Memory Management & Evasion
+
+**Files:** `core/http_client.py` · `core/dlq.py` · `core/engine.py`
+
+Phase 5 completes the engine by adding resilience, politeness, and O(1) memory streaming.
+
+---
+
+### Token Bucket Rate Limiter (`core/http_client.py`)
+
+> **CS Concept:** Token Bucket traffic-shaping algorithm (RFC 4115) — O(1) per request.
+
+The `SmartAsyncClient` combines three evasion & reliability mechanisms:
+
+| Mechanism               | Algorithm                                                   | Purpose                                            |
+| ----------------------- | ----------------------------------------------------------- | -------------------------------------------------- |
+| **Token Bucket**        | Lazy refill: `tokens += elapsed × rate`, capped at capacity | Smooth request rate — prevents bursting            |
+| **Exponential Backoff** | `delay = min(base × 2ⁿ, max) + jitter`                      | Handles 429 / 5xx gracefully; jitter prevents herd |
+| **User-Agent Rotation** | `random.choice(8 real browser UA strings)`                  | Reduces WAF fingerprint signal                     |
+
+```python
+async with SmartAsyncClient(rate=2.0, max_retries=4) as client:
+    html = await client.get("https://jobs.example.com/123")
+    # → automatically rate-limited, retried on 429, UA rotated
+```
+
+Backoff formula: `delay = min(1.0 × 2ⁿ, 60) + U(0, 1)` seconds per attempt — capped at 60 s to prevent unbounded waits.
+
+---
+
+### Dead Letter Queue (`core/dlq.py`)
+
+> **CS Concept:** Fault-tolerance pattern from distributed systems (AWS SQS, Kafka). No URL is ever silently lost.
+
+Failed URLs are stored as `FailedTask` records with:
+
+- `url`, `error`, `attempts`, `first_failed_at`, `last_failed_at`
+- Idempotent `add_failure` — same URL fails again → increments counter, not duplicate
+- `get_retryable()` — returns tasks below `max_attempts` threshold
+- `get_permanently_failed()` — tasks for human review / persistent logging
+- `asyncio.Lock` ensures concurrent coroutine safety
+
+```python
+dlq = DeadLetterQueue(max_attempts=3)
+await dlq.add_failure("https://example.com/job/1", "HTTP 503")
+print(dlq.summary)
+# → {'total': 1, 'retryable': 1, 'permanently_failed': 0}
+
+for task in await dlq.get_retryable():
+    # re-queue task.url into the scraper
+    ...
+```
+
+---
+
+### Async Generator Pipeline (`core/engine.py`)
+
+> **CS Concept:** Asynchronous Generator (PEP 525) — O(1) memory footprint regardless of dataset size.
+
+`ScrapingEngine.stream_jobs` is declared with `async def … yield`. This fuses a coroutine with a generator:
+
+| Property             | Bulk `return list`                    | `async def … yield`          |
+| -------------------- | ------------------------------------- | ---------------------------- |
+| Memory               | O(N) — all jobs in RAM simultaneously | **O(1)** — one job at a time |
+| First result latency | Must finish all URLs first            | Immediately after first URL  |
+| Back-pressure        | None                                  | Automatic (consumer pulls)   |
+
+The engine orchestrates the **full 5-phase pipeline** per URL:
+
+```
+URL → SmartAsyncClient.get()   [Phase 5: rate-limited, retrying]
+    → HtmlSmartScraper.scrape()  [Phase 2: DOM heuristics]
+    → clean + extract_salary()   [Phase 3: Regex FSM]
+    → JobDeduplicator            [Phase 3: SHA-256 + Bloom Filter]
+    → CustomSkillExtractor       [Phase 4: NER lexicon]
+    → match_score()              [Phase 4: TF-IDF cosine]
+    → yield job_dict             [Phase 5: O(1) stream]
+    → DLQ on failure             [Phase 5: fault tolerance]
+```
+
+```python
+engine = ScrapingEngine(rate=3.0, reference_text="Python Django REST API")
+
+async for job in engine.stream_jobs(url_list):
+    await save_to_database(job)       # processed one at a time — O(1) memory
+    print(job["title"], job["match_score"])  # TF-IDF relevance score
+
+# After the run
+print(engine.dlq.summary)            # inspect failures
+retryable = await engine.dlq.get_retryable()  # re-queue for retry
+```
+
+---
+
+## Testing
+
+All tests use `pytest` with the `pytest-asyncio` plugin. **No real network calls are made** — all HTTP I/O is mocked with `unittest.mock`, and all heuristic tests use inline HTML strings.
+
+```bash
+# Run the full test suite from the ai-engine-scraping/ directory
+pytest tests/ -v
+```
+
+### What is tested
+
+| Test File              | Test Class                   | Coverage                                            |
+| ---------------------- | ---------------------------- | --------------------------------------------------- |
+| `test_architecture.py` | `TestScraperFactory`         | Factory dispatch, case-insensitivity, `ValueError`  |
+| `test_architecture.py` | `TestBaseScraperAbstraction` | ABC enforcement                                     |
+| `test_architecture.py` | `TestFetchContent`           | Success, HTTP error, timeout, connection error      |
+| `test_architecture.py` | `TestHtmlSmartScraper`       | End-to-end success/error                            |
+| `test_architecture.py` | `TestJsonApiScraper`         | Valid + invalid JSON                                |
+| `test_heuristics.py`   | `TestGetTextDensity`         | Density formula, leaf nodes, noisy nodes            |
+| `test_heuristics.py`   | `TestFindHighestDensityNode` | DFS picks correct div by density, ignores noise     |
+| `test_heuristics.py`   | `TestExtractSemanticSibling` | All 4 HTML patterns + synonyms + edge cases         |
+| `test_heuristics.py`   | `TestIntegration`            | End-to-end on realistic job-listing HTML            |
+| `test_pipeline.py`     | `TestJobDeduplicator`        | SHA-256 determinism, normalisation, dedup flow      |
+| `test_pipeline.py`     | `TestBloomFilter`            | No false negatives, sizing, FPR                     |
+| `test_pipeline.py`     | `TestCleanText`              | HTML stripping, entity unescaping, whitespace       |
+| `test_pipeline.py`     | `TestRemoveNoise`            | Noise word removal, punctuation cleanup             |
+| `test_pipeline.py`     | `TestExtractSalary`          | k-multiplier, 5 currency codes, range & single      |
+| `test_pipeline.py`     | `TestExtractExperience`      | Range, min-only, at-least, single, empty            |
+| `test_pipeline.py`     | `TestLevenshteinDistance`    | Known distances, symmetry, triangle inequality      |
+| `test_pipeline.py`     | `TestSimilarityScore`        | Bounds, identical, asymmetric pairs                 |
+| `test_pipeline.py`     | `TestAreSkillsSimilar`       | React.js/ReactJS, threshold, invalid input          |
+| `test_ai.py`           | `TestHeuristicSegmenter`     | Section detection, ALL-CAPS headers, edge cases     |
+| `test_ai.py`           | `TestTokenize`               | Stop-word removal, punctuation, min-length          |
+| `test_ai.py`           | `TestComputeTF`              | Formula correctness, sum-to-1, empty input          |
+| `test_ai.py`           | `TestComputeIDF`             | Rare > common IDF, smoothed formula                 |
+| `test_ai.py`           | `TestVectorize`              | OOV exclusion, TF × IDF product                     |
+| `test_ai.py`           | `TestCosineSimilarity`       | Identical=1.0, orthogonal=0.0, symmetry, bounds     |
+| `test_ai.py`           | `TestMatchScore`             | End-to-end identical/unrelated/related texts        |
+| `test_ai.py`           | `TestCustomSkillExtractor`   | Single/multi-word, longest-match, dedup, ordering   |
+| `test_performance.py`  | `TestTokenBucket`            | Immediate acquire, invalid rate, capacity, burst    |
+| `test_performance.py`  | `TestSmartAsyncClient`       | UA rotation, 429 backoff sequence, retry exhaustion |
+| `test_performance.py`  | `TestDeadLetterQueue`        | CRUD, idempotency, filtering, concurrent safety     |
+| `test_performance.py`  | `TestScrapingEngine`         | Async generator type, lazy yield, DLQ path, dedup   |
+
+Expected output:
+
+```
+collected 186 items
+
+tests/test_architecture.py::... PASSED
+tests/test_heuristics.py::...  PASSED
+tests/test_pipeline.py::...    PASSED
+tests/test_ai.py::...          PASSED
+tests/test_performance.py::... PASSED
+186 passed in ~1.6s
+```
+
+---
+
+## Installation
+
+```bash
+# 1. Navigate into the project directory
+cd ai-engine-scraping
+
+# 2. (Recommended) Create & activate a virtual environment
+python -m venv .venv
+# Windows
+.venv\Scripts\activate
+# macOS / Linux
+source .venv/bin/activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. (Optional) Install spaCy for enhanced NER in Phase 4
+pip install spacy
+python -m spacy download en_core_web_sm
+```
+
+---
+
 ## Roadmap
 
 | Phase    | Feature                                                                            |
@@ -517,6 +629,4 @@ skills = extractor.extract_skills(
 | ✅ **2** | DOM DFS Text-Density walker, Semantic Proximity salary extraction, heuristic tests |
 | ✅ **3** | SHA-256 + Bloom Filter dedup, Regex cleaners, DP Levenshtein fuzzy matcher         |
 | ✅ **4** | TF-IDF + Cosine Similarity engine, Heuristic CV segmenter, Custom NER extractor    |
-| 🔲 **5** | Observer Pattern for pipeline events (pre-fetch, post-parse, on-error hooks)       |
-| 🔲 **6** | Async rate-limiting, retry with exponential back-off, proxy rotation               |
-| 🔲 **7** | REST API wrapper (FastAPI) exposing the engine as a service                        |
+| ✅ **5** | Token Bucket rate limiter, Exponential Backoff, Dead Letter Queue, async generator |
