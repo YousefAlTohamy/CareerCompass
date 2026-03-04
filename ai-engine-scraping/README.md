@@ -347,6 +347,95 @@ pytest tests/ -v
 | `test_heuristics.py`   | `TestExtractSemanticSibling` | All 4 HTML patterns + synonyms + edge cases        |
 | `test_heuristics.py`   | `TestIntegration`            | End-to-end on realistic job-listing HTML           |
 
+| `test_pipeline.py` | `TestJobDeduplicator` | SHA-256 determinism, normalisation, dedup flow |
+| `test_pipeline.py` | `TestBloomFilter` | No false negatives, sizing, FPR |
+| `test_pipeline.py` | `TestCleanText` | HTML stripping, entity unescaping, whitespace |
+| `test_pipeline.py` | `TestRemoveNoise` | Noise word removal, punctuation cleanup |
+| `test_pipeline.py` | `TestExtractSalary` | k-multiplier, 5 currency codes, range & single |
+| `test_pipeline.py` | `TestExtractExperience` | Range, min-only, at-least, single, empty |
+| `test_pipeline.py` | `TestLevenshteinDistance` | Known distances, symmetry, triangle inequality |
+| `test_pipeline.py` | `TestSimilarityScore` | Bounds, identical, asymmetric pairs |
+| `test_pipeline.py` | `TestAreSkillsSimilar` | React.js/ReactJS, threshold, invalid input |
+
+---
+
+## Phase 3: Data Normalization Pipeline
+
+**Files:** `pipeline/deduplicator.py` · `pipeline/cleaners.py` · `pipeline/fuzzy_matcher.py`
+
+Phase 3 applies the **"Garbage In, Garbage Out"** principle: raw scraped data is normalised, deduplicated, and enriched before being stored or passed to any AI model.
+
+---
+
+### SHA-256 + Bloom Filter Deduplication (`pipeline/deduplicator.py`)
+
+> **CS Concepts:** Cryptographic Hashing (SHA-256) + Probabilistic Set Membership (Bloom Filter)
+
+**Why two layers?**
+
+| Layer                  | Mechanism                           | Time            | Guarantees               |
+| ---------------------- | ----------------------------------- | --------------- | ------------------------ |
+| Bloom Filter           | k prime-seeded hash fns → bit array | O(k) ≈ **O(1)** | **Zero false negatives** |
+| Exact set (`set[str]`) | Python hash table                   | O(1) avg        | **Zero false positives** |
+
+The Bloom Filter acts as a _cheap guard_ — it instantly rules out items that are definitely new. Only when it says "maybe" does the engine do an exact set lookup.
+
+```python
+# Canonical fingerprint — normalises case + whitespace before hashing
+hash = JobDeduplicator.generate_hash("  Python Dev  ", "Google", "Cairo")
+# → sha256("python dev|google|cairo") = 64-char hex
+
+if not dedup.is_duplicate(hash):
+    dedup.mark_seen(hash)
+    # → store job
+```
+
+Optimal Bloom Filter sizing:
+
+```
+m (bits) = -n × ln(p) / (ln 2)²     # bit-array size
+k (fns)  = (m / n) × ln 2           # hash function count
+```
+
+For 10,000 items at 1% FPR: m ≈ 95,850 bits (12 KB), k = 7 hash functions.
+
+---
+
+### Regex FSM Cleaners (`pipeline/cleaners.py`)
+
+> **CS Concept:** Finite State Machine — Python's `re` module compiles patterns into a DFA, giving O(n) matching with no backtracking.
+
+| Function             | Input Example                   | Output Example                                |
+| -------------------- | ------------------------------- | --------------------------------------------- |
+| `clean_text`         | `"<p>Python &amp; Django</p>"`  | `"Python & Django"`                           |
+| `remove_noise`       | `"Urgent: Python Dev (Remote)"` | `"Python Dev"`                                |
+| `extract_salary`     | `"10k - 12k USD"`               | `{min: 10000, max: 12000, currency: "USD"}`   |
+| `extract_salary`     | `"$130,000 - $160,000"`         | `{min: 130000, max: 160000, currency: "USD"}` |
+| `extract_experience` | `"3-5 yrs"`                     | `{min_exp: 3, max_exp: 5}`                    |
+| `extract_experience` | `"+3 years"`                    | `{min_exp: 3, max_exp: None}`                 |
+
+`extract_salary` handles 5 currency codes (USD, GBP, EUR, EGP, SAR…), `k`-multiplier (`10k` → `10000`), comma-formatted numbers, and synonym separators (`-`, `to`).
+
+---
+
+### Levenshtein DP Fuzzy Matcher (`pipeline/fuzzy_matcher.py`)
+
+> **CS Concept:** Dynamic Programming — O(m×n) 2D matrix, zero external libraries.
+
+Recurrence:
+
+```
+if s1[i-1] == s2[j-1]:  dp[i][j] = dp[i-1][j-1]
+else:                    dp[i][j] = 1 + min(delete, insert, substitute)
+```
+
+```python
+levenshtein_distance("React.js", "ReactJS")  # → 3
+similarity_score("React.js", "ReactJS")      # → 0.625  (= 1 - 3/8)
+are_skills_similar("React.js", "ReactJS")    # → True   (score ≥ 0.8 threshold)
+are_skills_similar("Python", "Java")         # → False
+```
+
 ---
 
 ## Roadmap
@@ -355,7 +444,7 @@ pytest tests/ -v
 | -------- | ---------------------------------------------------------------------------------- |
 | ✅ **1** | Strategy + Factory patterns, `BaseScraper`, HTML & API strategies, full test suite |
 | ✅ **2** | DOM DFS Text-Density walker, Semantic Proximity salary extraction, heuristic tests |
-| 🔲 **3** | AI-powered field extraction (OpenAI / local LLM integration)                       |
+| ✅ **3** | SHA-256 + Bloom Filter dedup, Regex cleaners, DP Levenshtein fuzzy matcher         |
 | 🔲 **4** | Observer Pattern for pipeline events (pre-fetch, post-parse, on-error hooks)       |
 | 🔲 **5** | Async rate-limiting, retry with exponential back-off, proxy rotation               |
 | 🔲 **6** | REST API wrapper (FastAPI) exposing the engine as a service                        |
