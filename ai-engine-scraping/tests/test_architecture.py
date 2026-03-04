@@ -293,7 +293,9 @@ class TestHtmlSmartScraper:
 
     @pytest.mark.asyncio
     async def test_scrape_returns_correct_structure_on_success(self):
-        """scrape() must return a dict with type='html' and status='success'."""
+        """scrape() must return a dict with type='html' and status='success'.
+        Phase 2 response shape: description + salary_hint keys.
+        """
         html_body = "<html><body><h1>Test</h1></body></html>"
 
         mock_response = _make_mock_response(status=200, text_body=html_body)
@@ -309,12 +311,14 @@ class TestHtmlSmartScraper:
 
         assert result["type"] == "html"
         assert result["status"] == "success"
-        assert result["content"] == html_body
+        # Phase 2 keys — description may be None for a trivial HTML snippet
+        assert "description" in result
+        assert "salary_hint" in result
         assert result["url"] == "https://example.com"
 
     @pytest.mark.asyncio
     async def test_scrape_returns_error_structure_on_failure(self):
-        """scrape() must return status='error' and include 'error' key on failure."""
+        """scrape() must return status='error' when fetch_content raises."""
         http_err = aiohttp.ClientResponseError(
             request_info=MagicMock(), history=(), status=500, message="Server Error"
         )
@@ -330,7 +334,8 @@ class TestHtmlSmartScraper:
             result = await scraper.scrape("https://example.com")
 
         assert result["status"] == "error"
-        assert result["content"] is None
+        assert result["description"] is None
+        assert result["salary_hint"] is None
         assert "error" in result
 
 
