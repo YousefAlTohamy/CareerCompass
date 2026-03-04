@@ -21,6 +21,14 @@
 /ai-engine/env/
 /ai-engine/.pytest_cache/
 
+# AI Engine v2
+/ai-engine-v2/__pycache__/
+/ai-engine-v2/*.py[cod]
+/ai-engine-v2/venv/
+/ai-engine-v2/env/
+/ai-engine-v2/.pytest_cache/
+/ai-engine-v2/models/
+
 # IDEs
 .vscode/
 .idea/

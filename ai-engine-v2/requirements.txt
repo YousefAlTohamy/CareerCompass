@@ -1,0 +1,22 @@
+fastapi==0.109.2
+uvicorn==0.27.1
+python-multipart==0.0.9
+pydantic==2.6.1
+
+# Layer 1: Understanding & OCR
+PyMuPDF==1.25.3
+easyocr==1.7.1
+python-docx==1.1.0
+opencv-python-headless==4.9.0.80
+transformers==4.37.2
+torch==2.5.1 --index-url https://download.pytorch.org/whl/cu124
+sentencepiece==0.1.99
+
+# Layer 2 & 3: Classification & Matching
+sentence-transformers==2.3.1
+scikit-learn==1.4.1.post1
+
+# Utilities
+python-dotenv==1.0.1
+numpy==1.26.4
+pandas==2.2.0
