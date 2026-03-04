@@ -1,0 +1,109 @@
+# 🧭 CareerCompass: AI Engine Implementation Plan
+
+This plan details the transition of the `ai-engine` from a basic keyword-matching script into a true **3-Layer AI Intelligence System**. This architecture demonstrates deep Machine Learning knowledge suitable for a Computer Science graduation project.
+
+---
+
+## 🏗️ The 3-Layer Architecture
+
+### Layer 1: CV Understanding Engine (The Foundation)
+**Goal:** Extract structured data from unstructured inputs (PDF, DOCX, Image).
+
+#### Proposed Changes
+- **[NEW] Preprocessing Pipeline**:
+  - `python-docx` for `.docx` files.
+  - `pdfminer.six` or `PyMuPDF` for standard PDFs.
+  - **EasyOCR** or **Tesseract** for Image-based PDFs or raw images.
+- **[MODIFY] [extractor.py](file:///e:/flutter_projects/Graduation-project/ai-engine/extractor.py) (NER Integration)**:
+  - Replace the fuzzy string matching with a custom-trained **NER (Named Entity Recognition)** model.
+  - **Model:** Fine-tune `DistilBERT` or `RoBERTa` using the BIO tagging format (Begin, Inside, Outside).
+  - **Dataset:** [JobStack NER](https://huggingface.co/datasets/jjzha/jobstack_ner) or similar datasets containing annotated CVs.
+  - **Output:** Structured JSON containing [job_title](file:///e:/flutter_projects/Graduation-project/ai-engine/extractor.py#334-373), [experience_years](file:///e:/flutter_projects/Graduation-project/ai-engine/extractor.py#384-434), [skills](file:///e:/flutter_projects/Graduation-project/ai-engine/main.py#55-64), and `education`.
+
+---
+
+### Layer 2: CV Classification (The Intelligent Router)
+**Goal:** Determine the primary professional domain (e.g., Backend, Data Science) based on the extracted data.
+
+#### Proposed Changes
+- **[NEW] `classifier.py`**:
+  - Implement a **Multi-Class Classifier**.
+  - **Model:** A specialized `RoBERTa` classification head, trained to ingest the combined JSON text from Layer 1.
+  - **Output:** A probability distribution matrix (e.g., `{"Backend Developer": 0.85, "Frontend Developer": 0.10}`).
+  - **Why it's CS:** Demonstrates Supervised Learning, handling class imbalances, and utilizing Confusion Matrices for evaluation.
+
+---
+
+### Layer 3: Intelligent Matching & Recommendation
+**Goal:** Compute the semantic overlap between a user's CV and real-time scraped jobs, avoiding brittle exact-word matches.
+
+#### Proposed Changes
+- **[NEW] `recommender.py`**:
+  - Implement **Semantic Similarity** scoring.
+  - **Model:** Convert CV text and Job Descriptions into vector embeddings using `Sentence-BERT` (e.g., `all-MiniLM-L6-v2` for speed).
+  - **Logic:** `Final Score = (Cosine Similarity of Embeddings * 0.7) + (Exact Skill Overlap * 0.3)`.
+  - **Knowledge Graph (Advanced)**: Implement a graph-based proximity score. If a user has "React", a job needing "Vue" gets a partial score because they are close nodes in the graph.
+
+---
+
+## ⚙️ System Integration Architecture
+
+The components will be integrated via the existing FastAPI service:
+
+```mermaid
+graph TD
+    subgraph Frontend "Frontend (React/Vite)"
+        UI[User Uploads CV]
+    end
+
+    subgraph Backend "Backend (Laravel)"
+        API[API Gateway]
+        Q[Redis Job Queue]
+    end
+
+    subgraph AIEngine "Python AI Service (FastAPI)"
+        direction TB
+        Main[main.py Router]
+        
+        subgraph L1 "Layer 1: Understanding"
+            OCR[OCR / PDF Miner]
+            NER[NER Transformer]
+        end
+        
+        subgraph L2 "Layer 2: Classification"
+            CLS[Domain Classifier]
+        end
+        
+        subgraph L3 "Layer 3: Matching"
+            EMB[Sentence-BERT]
+            SIM[Cosine Similarity]
+        end
+    end
+
+    UI --> API
+    API --> Main
+    Main --> OCR
+    OCR --> NER
+    NER --> CLS
+    CLS --> EMB
+    EMB --> SIM
+    SIM -- Returns Structured JSON --> API
+```
+
+---
+
+## 📅 Verification & Scientific Evaluation Plan
+
+To prove the validity of the models for the graduation committee:
+
+### 1. Training Metrics
+- **Layer 1 (NER):** Track Precision, Recall, and **F1-Score** on a 20% validation split.
+- **Layer 2 (Classifier):** Present a **Confusion Matrix** to show accuracy across different job categories.
+
+### 2. Matching Metrics
+- **Layer 3 (Matching):** Implement **Mean Reciprocal Rank (MRR)**. If we feed a CV for a known Backend Developer, the system's top recommendation *must* be a Backend job.
+
+### 3. Practical Testing
+- Scrape 100 new, unseen jobs.
+- Feed 5 diverse test CVs into the pipeline.
+- Manually review the output JSON for extraction accuracy and matching scores.
