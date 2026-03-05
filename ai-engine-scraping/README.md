@@ -14,30 +14,34 @@ A highly scalable, generic web-scraping engine built with advanced software-engi
 
 1. [Project Overview](#project-overview)
 2. [Directory Structure](#directory-structure)
-3. [Phase 1: Architecture](#phase-1-architecture)
+3. [System Architecture Diagrams](#system-architecture-diagrams)
+   - [Design Patterns — OOP Architecture](#1-design-patterns--oop-architecture)
+   - [Data Streaming & Normalization Pipeline](#2-data-streaming--normalization-pipeline)
+   - [AI Mathematical Matching Engine](#3-ai-mathematical-matching-engine)
+4. [Phase 1: Architecture](#phase-1-architecture)
    - [Strategy Pattern](#strategy-pattern)
    - [Factory Pattern](#factory-pattern)
    - [Quick-Start Code Snippet](#quick-start-code-snippet)
-4. [Phase 2: Smart DOM Analysis](#phase-2-smart-dom-analysis)
+5. [Phase 2: Smart DOM Analysis](#phase-2-smart-dom-analysis)
    - [Text Density Heuristic](#text-density-heuristic)
    - [DFS Density Traversal](#dfs-density-traversal)
    - [Semantic Proximity](#semantic-proximity)
    - [Phase 2 Quick-Start](#phase-2-quick-start)
-5. [Phase 3: Data Normalization Pipeline](#phase-3-data-normalization-pipeline)
+6. [Phase 3: Data Normalization Pipeline](#phase-3-data-normalization-pipeline)
    - [SHA-256 + Bloom Filter Deduplication](#sha-256--bloom-filter-deduplication-pipelinededuplicatorpy)
    - [Regex FSM Cleaners](#regex-fsm-cleaners-pipelinecleanerspy)
    - [Levenshtein DP Fuzzy Matcher](#levenshtein-dp-fuzzy-matcher-pipelinefuzzy_matcherpy)
-6. [Phase 4: AI & Mathematical Matching Engine](#phase-4-ai--mathematical-matching-engine)
+7. [Phase 4: AI & Mathematical Matching Engine](#phase-4-ai--mathematical-matching-engine)
    - [Heuristic CV Segmentation](#heuristic-cv-segmentation-aisegmentationpy)
    - [TF-IDF Matching Engine](#tf-idf-matching-engine-aimatcherpy)
    - [Custom Skill Extraction](#custom-skill-extraction-aioner_extractorpy)
-7. [Phase 5: Performance, Memory & Evasion](#phase-5-performance-memory-management--evasion)
+8. [Phase 5: Performance, Memory & Evasion](#phase-5-performance-memory-management--evasion)
    - [Token Bucket Rate Limiter](#token-bucket-rate-limiter-corehttp_clientpy)
    - [Dead Letter Queue](#dead-letter-queue-coredlqpy)
    - [Async Generator Pipeline](#async-generator-pipeline-coreenginepy)
-8. [Testing](#testing)
-9. [Installation](#installation)
-10. [Roadmap](#roadmap)
+9. [Testing](#testing)
+10. [Installation](#installation)
+11. [Roadmap](#roadmap)
 
 ---
 
@@ -50,6 +54,90 @@ A highly scalable, generic web-scraping engine built with advanced software-engi
 | **Patterns**  | Strategy, Factory · Bloom Filter, TF-IDF, DP Levenshtein, Regex FSM |
 | **Testing**   | `pytest` + `pytest-asyncio`; all network I/O is mocked              |
 | **Goal**      | A drop-in AI scraping library usable by any Python project          |
+
+---
+
+## System Architecture Diagrams
+
+### 1. Design Patterns — OOP Architecture
+
+> How the **Strategy** and **Factory** patterns combine to form a plug-in, technology-agnostic scraping core.
+
+```mermaid
+classDiagram
+    direction TB
+    class ScraperFactory {
+        +get_scraper(source_type: str) BaseScraper
+    }
+    class BaseScraper {
+        <<Abstract>>
+        +fetch_content(url, session)
+        +scrape(url)*
+    }
+    class HtmlSmartScraper {
+        +scrape(url)
+        -DOM_DFS_Traversal()
+        -Text_Density_Heuristic()
+    }
+    class JsonApiScraper {
+        +scrape(url)
+    }
+    ScraperFactory ..> BaseScraper : Instantiates
+    BaseScraper <|-- HtmlSmartScraper : Inherits
+    BaseScraper <|-- JsonApiScraper : Inherits
+```
+
+---
+
+### 2. Data Streaming & Normalization Pipeline
+
+> End-to-end data flow from an external trigger to the database, showing every processing stage.
+
+```mermaid
+graph TD
+    A[Laravel / Trigger] -->|Queue| B(ScrapingEngine)
+    B --> C{ScraperFactory}
+    C -->|HTML Site| D[HtmlSmartScraper]
+    C -->|API Source| E[JsonApiScraper]
+
+    D --> F[DOM DFS & Heuristics]
+    E --> G[JSON Parser]
+
+    F --> H[Data Pipeline]
+    G --> H
+
+    subgraph "Data Normalization & Evasion"
+        H --> I[Regex Cleaners & FSM]
+        I --> J["Bloom Filter & SHA-256 Deduplication"]
+        J --> K[Fuzzy Matcher / Levenshtein]
+    end
+
+    K --> L(("Async Yield / Generator"))
+    L -->|O(1) Memory| M[(Laravel Database)]
+```
+
+---
+
+### 3. AI Mathematical Matching Engine
+
+> The TF-IDF vectorization and Cosine Similarity pipeline that produces a relevance score between a CV and a job posting.
+
+```mermaid
+sequenceDiagram
+    participant CV as User CV
+    participant Seg as Heuristic Segmenter
+    participant TFIDF as TF-IDF Vectorizer
+    participant Math as Cosine Similarity Engine
+    participant Job as Job Posting
+
+    CV->>Seg: Raw Text Upload
+    Seg->>TFIDF: Extracted Skills & Experience Blocks
+    Job->>TFIDF: Job Requirements
+    TFIDF->>Math: CV Vector (V1)
+    TFIDF->>Math: Job Vector (V2)
+    Note over Math: Dot Product / (||V1|| * ||V2||)
+    Math-->>CV: Match Percentage (0.0 - 1.0)
+```
 
 ---
 
