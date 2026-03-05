@@ -21,6 +21,7 @@ ai-hybrid-orchestrator/
 ├── contact_extractor.py     # Regex contact info extractor (email, phone, LinkedIn, GitHub, location)
 ├── hybrid_runner.py         # Standalone CLI pipeline runner (for testing)
 ├── main_api.py              # FastAPI gateway — 3 endpoints consumed by Laravel
+├── test_api.py              # End-to-end test runner using FastAPI TestClient (5 test groups)
 ├── hybrid_output.txt        # Output from last CLI test run
 └── README.md                # This file
 ```
@@ -222,11 +223,33 @@ Final Score = (Semantic Score × 60%) + (TF-IDF Score × 40%)
 
 ## Namespace Isolation
 
-Both engines expose a top-level `core/` package. Resolved by:
+Both engines expose a top-level `core/` package. Resolved in both `main_api.py` and `test_api.py` by:
 
-1. Loading **ai-cv-analyzer** first (only its root on `sys.path`, `core.*` wiped from `sys.modules`)
-2. Then loading **ai-job-miner** exclusively for `core.engine` + `ai.matcher`
-3. Both roots restored to `sys.path` for runtime intra-package imports
+1. **`_wipe_core()`** — removes all `core` and `core.*` entries from `sys.modules`
+2. **`_set_path_exclusive(root)`** — rebuilds `sys.path` with only `root` as the active engine
+3. Load **ai-cv-analyzer** exclusively first → its `core` wins
+4. Call `_wipe_core()` again → wipe cv-analyzer's `core.*` from the cache
+5. Load **ai-job-miner** exclusively → `core.engine` is re-discovered cleanly
+6. Restore both roots to `sys.path` for runtime intra-package imports
+
+---
+
+## Testing — `test_api.py`
+
+```bash
+cd ai-hybrid-orchestrator
+python test_api.py
+```
+
+`TestClient` is used as a **context manager** (`with TestClient(app) as client:`) to trigger the FastAPI `lifespan` event — this is what loads the 3 AI model singletons before any endpoint is called.
+
+| Test Group                                   | What is verified                                                                                                                                  |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Test 0** — `GET /`                         | Health check returns `{"status": "operational"}`                                                                                                  |
+| **Test 1** — `POST /api/v1/parse-cv`         | Runs against `ai-cv-analyzer/test.pdf` — checks all keys: `skills`, `domain`, `domain_confidence`, `contact_info` (5 fields), `extraction_method` |
+| **Test 2** — `POST /api/v1/scrape-on-demand` | Hits Remotive API — checks `jobs` list returned                                                                                                   |
+| **Test 3** — `POST /api/v1/hybrid-match`     | Dummy backend engineer CV vs JD — checks `hybrid_match_score`, `semantic_score`, `tfidf_score`, `missing_skills`, `formula`                       |
+| **Test 4** — Validation guards               | 4a: `.txt` → 422 · 4b: `ftp://` → 422 · 4c: blank `cv_text` → 422                                                                                 |
 
 ---
 

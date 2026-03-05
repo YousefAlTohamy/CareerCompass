@@ -31,30 +31,50 @@ _ROOT             = Path(__file__).resolve().parent.parent
 _JOB_MINER_ROOT   = _ROOT / "ai-job-miner"
 _CV_ANALYZER_ROOT = _ROOT / "ai-cv-analyzer"
 
-# Wipe any cached 'core' entries first, then load cv-analyzer's core
-_keys = [k for k in sys.modules if k == "core" or k.startswith("core.")]
-for k in _keys:
-    del sys.modules[k]
 
-# 1️⃣ Load cv-analyzer exclusively so its `core` wins
-if str(_CV_ANALYZER_ROOT) not in sys.path:
-    sys.path.insert(0, str(_CV_ANALYZER_ROOT))
+def _wipe_core() -> None:
+    """Remove all 'core' and 'core.*' entries from sys.modules."""
+    for key in [k for k in sys.modules if k == "core" or k.startswith("core.")]:
+        del sys.modules[key]
+
+
+def _set_path_exclusive(root: Path) -> None:
+    """Put `root` at the front of sys.path, removing the other engine root."""
+    other = _CV_ANALYZER_ROOT if root == _JOB_MINER_ROOT else _JOB_MINER_ROOT
+    # Remove both engine roots, then re-insert only `root`
+    sys.path[:] = [str(root)] + [
+        p for p in sys.path if p not in (str(_CV_ANALYZER_ROOT), str(_JOB_MINER_ROOT))
+    ]
+
+
+# ── Phase 1: load ai-cv-analyzer exclusively ─────────────────────────────────
+_wipe_core()
+_set_path_exclusive(_CV_ANALYZER_ROOT)
 
 from core.layer1_understanding.universal_extractor import process_document      # noqa: E402
 from core.layer1_understanding.ner_engine          import SkillNEREngine        # noqa: E402
 from core.layer2_classification.classifier         import CVDomainClassifier    # noqa: E402
 from core.layer3_matching.similarity               import IntelligentMatcher    # noqa: E402
 
-# 2️⃣ Load job-miner exclusively (different sub-packages won't collide with cv-analyzer's core)
-if str(_JOB_MINER_ROOT) not in sys.path:
-    sys.path.insert(0, str(_JOB_MINER_ROOT))
+# ── Phase 2: load ai-job-miner exclusively ───────────────────────────────────
+# CRITICAL: wipe cv-analyzer's core.* before importing job-miner's core.engine
+_wipe_core()
+_set_path_exclusive(_JOB_MINER_ROOT)
 
 from core.engine import ScrapingEngine   # noqa: E402
 from ai.matcher  import match_score      # noqa: E402
 
-# 3️⃣ Local orchestrator utilities
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+# ── Phase 3: restore both roots for intra-package runtime imports ─────────────
+for _p in (_CV_ANALYZER_ROOT, _JOB_MINER_ROOT):
+    if str(_p) not in sys.path:
+        sys.path.append(str(_p))
+
+# ── Local orchestrator utilities ─────────────────────────────────────────────
+_ORCH_ROOT = Path(__file__).resolve().parent
+if str(_ORCH_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ORCH_ROOT))
 from contact_extractor import extract_contacts   # noqa: E402
+
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(

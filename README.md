@@ -218,6 +218,7 @@ CareerCompass/
 │   ├── contact_extractor.py               # Regex: email, phone, LinkedIn, GitHub, location
 │   ├── hybrid_runner.py                   # CLI runner for local testing
 │   ├── main_api.py                        # FastAPI: /parse-cv, /scrape-on-demand, /hybrid-match
+│   ├── test_api.py                        # End-to-end TestClient runner (5 test groups, EXIT 0 ✅)
 │   └── README.md
 │
 ├── docs/

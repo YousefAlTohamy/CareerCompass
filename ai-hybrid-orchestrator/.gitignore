@@ -1,0 +1,28 @@
+# ── Python Cache ─────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+
+# ── Test / Run Output ─────────────────────────────────────────────────
+hybrid_output.txt
+*.txt
+
+# ── Virtual Environment (if one is ever created here) ─────────────────
+venv/
+.venv/
+env/
+
+# ── Environment Variables ─────────────────────────────────────────────
+.env
+.env.*
+
+# ── OS / Editor Junk ──────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ── Build / Dist ──────────────────────────────────────────────────────
+dist/
+build/
+*.egg-info/
