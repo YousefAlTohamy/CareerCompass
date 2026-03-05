@@ -1,0 +1,41 @@
+# ── Virtual Environment ──────────────────────────────────────────────
+venv/
+.venv/
+env/
+
+# ── Python Cache ─────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+
+# ── Jupyter Notebooks ────────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ── ML Model Weights (large binary files — download via HuggingFace) ─
+models/ner_weights/
+models/sent_bert/
+models/class_weights/
+# Keep the models/ directory itself (not ignored) so the folder exists
+!models/.gitkeep
+
+# ── Test / Scratch Files ─────────────────────────────────────────────
+test.pdf
+*.pdf
+*.docx
+*.png
+*.jpg
+
+# ── Environment Variables ────────────────────────────────────────────
+.env
+.env.*
+
+# ── OS / Editor Junk ─────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ── Build / Dist ─────────────────────────────────────────────────────
+dist/
+build/
+*.egg-info/
