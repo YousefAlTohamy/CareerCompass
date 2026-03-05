@@ -146,7 +146,7 @@ sequenceDiagram
 ## Directory Structure
 
 ```
-ai-engine-scraping/
+ai-job-miner/
 │
 ├── core/
 │   ├── __init__.py
@@ -678,7 +678,7 @@ retryable = await engine.dlq.get_retryable()  # re-queue for retry
 All tests use `pytest` with the `pytest-asyncio` plugin. **No real network calls are made** — all HTTP I/O is mocked with `unittest.mock`, and all heuristic tests use inline HTML strings.
 
 ```bash
-# Run the full test suite from the ai-engine-scraping/ directory
+# Run the full test suite from the ai-job-miner/ directory
 pytest tests/ -v
 ```
 
@@ -736,7 +736,7 @@ tests/test_performance.py::... PASSED
 
 ```bash
 # 1. Navigate into the project directory
-cd ai-engine-scraping
+cd ai-job-miner
 
 # 2. (Recommended) Create & activate a virtual environment
 python -m venv .venv
@@ -757,10 +757,13 @@ python -m spacy download en_core_web_sm
 
 ## Roadmap
 
-| Phase    | Feature                                                                            |
-| -------- | ---------------------------------------------------------------------------------- |
-| ✅ **1** | Strategy + Factory patterns, `BaseScraper`, HTML & API strategies, full test suite |
-| ✅ **2** | DOM DFS Text-Density walker, Semantic Proximity salary extraction, heuristic tests |
-| ✅ **3** | SHA-256 + Bloom Filter dedup, Regex cleaners, DP Levenshtein fuzzy matcher         |
-| ✅ **4** | TF-IDF + Cosine Similarity engine, Heuristic CV segmenter, Custom NER extractor    |
-| ✅ **5** | Token Bucket rate limiter, Exponential Backoff, Dead Letter Queue, async generator |
+| Phase      | Feature                                                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------ |
+| ✅ **1**   | Strategy + Factory patterns, `BaseScraper`, HTML & API strategies, full test suite               |
+| ✅ **2**   | DOM DFS Text-Density walker, Semantic Proximity salary + location extraction, heuristic tests    |
+| ✅ **3**   | SHA-256 + Bloom Filter dedup, Regex cleaners, DP Levenshtein fuzzy matcher                       |
+| ✅ **4**   | TF-IDF + Cosine Similarity engine, Heuristic CV segmenter, Custom NER extractor                  |
+| ✅ **5**   | Token Bucket rate limiter, Exponential Backoff, Dead Letter Queue, async generator               |
+| ✅ **5.5** | IE enhancements — `title` (`<h1>`), `location`, `job_type`, `work_model`, `working_hours` fields |
+| ✅ **6**   | Hybrid Orchestrator — Facade combining `ai-job-miner` + `ai-cv-analyzer` with weighted scoring   |
+| 🔜 **7**   | REST API wrapper (FastAPI) for Laravel integration                                               |
