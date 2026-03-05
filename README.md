@@ -24,16 +24,22 @@ graph TB
     Laravel --> Queue[Queue Worker<br/>Background Jobs]
     Laravel --> MySQL[(MySQL<br/>Database)]
     Laravel --> Redis[(Redis Cache<br/>& Queues)]
-    Laravel <--> AI[Python AI Engine<br/>Port 8001]
-    AI --> Wuzzuf[🌐 Wuzzuf.net<br/>HTML Scraper]
-    AI --> Remotive[🌐 Remotive API<br/>Remote Jobs]
-    AI --> Adzuna[🌐 Adzuna US API<br/>Tech Jobs]
+    Laravel <--> LegacyAI[Python AI Engine<br/>Port 8001]
+    Laravel <--> Gateway[AI Gateway<br/>Port 8000]
+    Gateway --> JobMiner[ai-job-miner<br/>5-phase Scraper]
+    Gateway --> CVAnalyzer[ai-cv-analyzer<br/>3-layer ML]
+    LegacyAI --> Wuzzuf[🌐 Wuzzuf.net]
+    LegacyAI --> Remotive[🌐 Remotive API]
+    LegacyAI --> Adzuna[🌐 Adzuna US API]
     Queue --> Laravel
     Scheduler[Laravel Scheduler<br/>Automated Tasks] --> Queue
 
     style Frontend fill:#61dafb
     style Laravel fill:#ff2d20
-    style AI fill:#3776ab
+    style LegacyAI fill:#3776ab
+    style Gateway fill:#6c3483
+    style JobMiner fill:#1e8449
+    style CVAnalyzer fill:#2e86c1
     style MySQL fill:#4479a1
     style Redis fill:#dc382d
     style Queue fill:#00d084
@@ -41,15 +47,18 @@ graph TB
 
 ### Components
 
-| Component        | Technology                 | Port | Purpose                                           |
-| ---------------- | -------------------------- | ---- | ------------------------------------------------- |
-| **Frontend**     | React 19 + Vite + Recharts | 5173 | User interface, dashboard, authentication         |
-| **Backend API**  | Laravel 12 (IsAdmin)       | 8000 | User management, authentication, business logic   |
-| **Queue Worker** | Laravel Queue              | -    | Background processing for scraping & calculations |
-| **AI Engine**    | Python/FastAPI             | 8001 | CV parsing, skill extraction, job scraping        |
-| **Database**     | MySQL                      | 3306 | Data persistence                                  |
-| **Cache/Queue**  | Redis (opt)                | 6379 | Fast caching and queue management (production)    |
-| **Scheduler**    | Laravel Cron               | -    | Automated market data updates (every 48 hours)    |
+| Component            | Technology                 | Port | Purpose                                                      |
+| -------------------- | -------------------------- | ---- | ------------------------------------------------------------ |
+| **Frontend**         | React 19 + Vite + Recharts | 5173 | User interface, dashboard, authentication                    |
+| **Backend API**      | Laravel 12 (IsAdmin)       | 8000 | User management, authentication, business logic              |
+| **Queue Worker**     | Laravel Queue              | -    | Background processing for scraping & calculations            |
+| **Legacy AI Engine** | Python/FastAPI             | 8001 | CV parsing, skill extraction, job scraping (Phases 1–22)     |
+| **AI Gateway**       | Python/FastAPI             | 8000 | Hybrid orchestrator: CV parse + scraping + semantic matching |
+| **ai-job-miner**     | Python (async)             | -    | 5-phase heuristic scraper + TF-IDF engine                    |
+| **ai-cv-analyzer**   | Python Transformers        | -    | BERT NER + BART-MNLI classifier + MiniLM semantic embedder   |
+| **Database**         | MySQL                      | 3306 | Data persistence                                             |
+| **Cache/Queue**      | Redis (opt)                | 6379 | Fast caching and queue management (production)               |
+| **Scheduler**        | Laravel Cron               | -    | Automated market data updates (every 48 hours)               |
 
 ---
 
@@ -173,18 +182,43 @@ CareerCompass/
 │   │   └── console.php                             # Scheduler configuration
 │   └── TESTING.md                          # API testing guide
 │
-├── ai-engine/                # Python FastAPI Service
+├── ai-engine/                # Legacy Python FastAPI Service (Phases 1–22)
 │   ├── .env                                # Adzuna API credentials (not committed)
-│   ├── .gitignore                          # Git ignored files for Python
-│   ├── main.py                             # FastAPI app entry point
+│   ├── .gitignore
+│   ├── main.py                             # FastAPI entry point (port 8001)
 │   ├── parser.py                           # PDF text extraction
-│   ├── extractor.py                        # Enhanced skill extraction (NLP + fuzzy)
+│   ├── extractor.py                        # Skill extraction (NLP + fuzzy)
 │   ├── scraper.py                          # Job dispatch + frequency analysis
 │   ├── api_fetcher.py                      # Remotive & Adzuna US API fetchers
-│   ├── html_scraper.py                     # Wuzzuf HTML scraper (undetected-chromedriver)
+│   ├── html_scraper.py                     # Wuzzuf HTML scraper
 │   ├── test_scraper.py                     # /test-source FastAPI router
-│   ├── requirements.txt                    # Python dependencies
-│   └── README.md                           # AI engine specialized documentation
+│   ├── requirements.txt
+│   └── README.md
+│
+├── ai-job-miner/             # Phase 6: Heuristic Scraping Engine (5 phases)
+│   ├── core/                               # Engine core (http_client, dlq, engine, heuristics)
+│   ├── strategies/                         # HtmlSmartScraper + JsonApiScraper
+│   ├── factories/                          # ScraperFactory
+│   ├── pipeline/                           # Bloom filter dedup + Regex cleaners + Levenshtein
+│   ├── ai/                                 # TF-IDF matcher + NER extractor + segmenter
+│   ├── tests/                              # 186 pytest tests (fully mocked)
+│   ├── run_engine.py                       # Local microservice test runner
+│   └── README.md
+│
+├── ai-cv-analyzer/           # Phase 6: 3-Layer ML CV Analysis Engine
+│   ├── core/
+│   │   ├── layer1_understanding/           # text_parser, ocr_pipeline, ner_engine, universal_extractor
+│   │   ├── layer2_classification/          # BART-MNLI zero-shot domain classifier
+│   │   └── layer3_matching/               # MiniLM embedder + IntelligentMatcher
+│   ├── models/                             # Fine-tuned NER weights (git-ignored)
+│   ├── main.py                             # FastAPI gateway (port 8002)
+│   └── README.md
+│
+├── ai-hybrid-orchestrator/   # Phase 6: Facade + FastAPI Gateway (port 8000)
+│   ├── contact_extractor.py               # Regex: email, phone, LinkedIn, GitHub, location
+│   ├── hybrid_runner.py                   # CLI runner for local testing
+│   ├── main_api.py                        # FastAPI: /parse-cv, /scrape-on-demand, /hybrid-match
+│   └── README.md
 │
 ├── docs/
 │   ├── FRONTEND_INTEGRATION.md             # React components guide
@@ -498,18 +532,27 @@ Once all services are started, check the following URLs:
 | DELETE | `/api/admin/target-roles/{id}`            | ✅   | Delete a target role             |
 | POST   | `/api/admin/scraping/run-full`            | ✅   | Trigger full market scraping     |
 
-### AI Engine Endpoints
+### Legacy AI Engine Endpoints (Port 8001)
 
-| Method | Endpoint              | Description                                                            |
-| ------ | --------------------- | ---------------------------------------------------------------------- |
-| GET    | `/`                   | Health check                                                           |
-| GET    | `/skills`             | List all predefined skills                                             |
-| POST   | `/analyze`            | Analyze CV and extract skills                                          |
-| POST   | `/parse-cv`           | **Phase 1** — Extract job_title, experience_years, and skills from PDF |
-| POST   | `/extract-text`       | Extract raw text from PDF                                              |
-| POST   | `/scrape-jobs`        | Dispatch scraping across active sources                                |
-| GET    | `/scrape-jobs/status` | Scraper service status                                                 |
-| POST   | `/test-source`        | Probe a single source (used by Artisan)                                |
+| Method | Endpoint              | Description                                              |
+| ------ | --------------------- | -------------------------------------------------------- |
+| GET    | `/`                   | Health check                                             |
+| GET    | `/skills`             | List all predefined skills                               |
+| POST   | `/analyze`            | Analyze CV and extract skills                            |
+| POST   | `/parse-cv`           | Extract job_title, experience_years, and skills from PDF |
+| POST   | `/extract-text`       | Extract raw text from PDF                                |
+| POST   | `/scrape-jobs`        | Dispatch scraping across active sources                  |
+| GET    | `/scrape-jobs/status` | Scraper service status                                   |
+| POST   | `/test-source`        | Probe a single source (used by Artisan)                  |
+
+### AI Gateway Endpoints — Phase 6 (Port 8000)
+
+| Method | Endpoint                   | Description                                                              |
+| ------ | -------------------------- | ------------------------------------------------------------------------ |
+| GET    | `/`                        | Health check — `{"status": "operational", "version": "1.0.0"}`           |
+| POST   | `/api/v1/parse-cv`         | Upload CV (PDF/DOCX/image) → skills + domain + contact_info              |
+| POST   | `/api/v1/scrape-on-demand` | `source_url` (Form) → up to 5 parsed job dicts via ai-job-miner          |
+| POST   | `/api/v1/hybrid-match`     | JSON body (`cv_text`, `job_description`, skills) → weighted hybrid score |
 
 ---
 
@@ -788,6 +831,10 @@ curl -X GET http://127.0.0.1:8000/api/admin/scraping-sources \
   - **Visualization**: `recharts` integration driving the Market Intelligence dashboard.
   - **Strict Regex Integrities**: Backend payload validation for robust data integrity boundaries.
 - [x] **Phase 22: Comprehensive API Documentation Update** - Performed a 360-degree deep scan across all microservices (Laravel Backend, Python AI Engine, React Frontend) and comprehensively updated the `CareerCompass.postman_collection.json`. Added new endpoints for Recommended Jobs, Advanced CV Parsing, Target Roles Admin CRUD, and the complete Job Application Tracker lifecycle, ensuring perfectly aligned payloads, parameters, and authentication headers.
+- [x] **Phase 23: AI Gateway & Hybrid Orchestrator** - Renamed `ai-engine-scraping` → `ai-job-miner` and `ai-engine-v2` → `ai-cv-analyzer` to reflect domain roles. Built the `ai-hybrid-orchestrator` Facade with:
+  - **`contact_extractor.py`**: Regex-based extractor for email, phone, LinkedIn, GitHub, and location.
+  - **`hybrid_runner.py`**: CLI pipeline combining all 3 AI models (BERT-NER + BART-MNLI + MiniLM) with a weighted `Final = (Semantic × 60%) + (TF-IDF × 40%)` scoring formula.
+  - **`main_api.py`**: FastAPI microservice (port 8000) with 3 Laravel-ready endpoints: `POST /api/v1/parse-cv`, `POST /api/v1/scrape-on-demand`, `POST /api/v1/hybrid-match`. Implements singleton model loading via FastAPI `lifespan`, CORS middleware, strict `try/except` error handling, and Pydantic request validation. Resolves `core/` namespace collision between engines via sequential `sys.path` swapping.
 
 ### 📈 Market Intelligence System
 
@@ -1214,9 +1261,10 @@ Import `CareerCompass.postman_collection.json` into Postman for comprehensive AP
 ---
 
 **Last Updated**: March 2026
-**Project Status**: ✅ **Phase 21 Complete — Security, Structure & Branding Updates**
-**Components**: Frontend (React 19 + Vite + Framer Motion + Recharts) + Backend API (Laravel 12) + Queue Worker + Scheduler + AI Engine (FastAPI)
-**API Endpoints**: 45+ total (Laravel APIs + Python APIs + Market Intelligence + Admin Source APIs + Application Tracker)
+**Project Status**: ✅ **Phase 23 Complete — AI Gateway & Hybrid Orchestrator**
+**Components**: Frontend (React 19 + Vite + Framer Motion + Recharts) + Backend API (Laravel 12) + Queue Worker + Scheduler + Legacy AI Engine (FastAPI/8001) + **AI Gateway (FastAPI/8000)** + ai-job-miner + ai-cv-analyzer
+**API Endpoints**: 50+ total (Laravel APIs + Legacy Python APIs + AI Gateway APIs + Market Intelligence + Admin Source APIs + Application Tracker)
 **Scraping Sources**: Wuzzuf (HTML) • Remotive API (free) • Adzuna US API — all 3 verified with `scrape:test-sources`
-**Key Features**: Role-Based Access Control (RBAC) • CV Analysis • Multi-Source Job Scraping • Gap Analysis • Market Intelligence Dashboard • Skill Importance Ranking • Real-time Polling • Scraping Source Management • Dynamic NLP Extraction • Application Tracker • Recommended Jobs • Premium Animated UI • Interactive Recharts Charts
-**Optimizations**: 3x Retry Logic • Memory Chunking • Auto-Polling • Rate Limiting • Scheduler Automation • GapAnalysis Bug Fix • Adzuna UA Spoofing • Env-based Credential Management • On-the-fly Data Creation • PUT→PATCH Fix • Search Params Forwarding • Optimistic UI Updates
+**Key Features**: Role-Based Access Control (RBAC) • CV Analysis • Hybrid AI Matching (Semantic + TF-IDF) • Contact Info Extraction • Multi-Source Job Scraping • Gap Analysis • Market Intelligence Dashboard • Skill Importance Ranking • Real-time Polling • Scraping Source Management • Dynamic NLP Extraction • Application Tracker • Recommended Jobs • Premium Animated UI • Interactive Recharts Charts
+**AI Models**: `dslim/bert-base-NER` • `facebook/bart-large-mnli` • `all-MiniLM-L6-v2` — all loaded as Singletons on gateway startup
+**Optimizations**: 3x Retry Logic • Memory Chunking • Auto-Polling • Rate Limiting • Scheduler Automation • GapAnalysis Bug Fix • Adzuna UA Spoofing • Env-based Credential Management • On-the-fly Data Creation • PUT→PATCH Fix • Namespace Isolation via sys.path swap

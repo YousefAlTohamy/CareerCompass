@@ -1,17 +1,15 @@
 # ai-hybrid-orchestrator
 
-> **Facade Pattern** — a single entry-point that combines two independent AI engines into one unified hybrid matching pipeline.
+> **Facade Pattern** — a single entry-point combining `ai-job-miner` + `ai-cv-analyzer` into one unified hybrid pipeline, now exposed as a **FastAPI microservice** for Laravel integration.
 
 ---
 
 ## Overview
 
-This orchestrator acts as a **Facade** over two standalone microservices that were built across Phases 1–5:
-
-| Engine             | Directory            | Role                                                                                                                                        |
-| ------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **AI Job Miner**   | `../ai-job-miner/`   | Scrapes and parses job listings from any URL using the 5-phase heuristic + AI pipeline (Token Bucket, DLQ, async generator)                 |
-| **AI CV Analyzer** | `../ai-cv-analyzer/` | Parses CVs (PDF / DOCX / Image), extracts entities via BERT NER, classifies domain with BART-MNLI, and embeds text semantically with MiniLM |
+| Engine             | Directory            | Role                                                                    |
+| ------------------ | -------------------- | ----------------------------------------------------------------------- |
+| **AI Job Miner**   | `../ai-job-miner/`   | 5-phase heuristic scraping + TF-IDF matching                            |
+| **AI CV Analyzer** | `../ai-cv-analyzer/` | BERT NER · BART-MNLI domain classification · MiniLM semantic embeddings |
 
 ---
 
@@ -19,38 +17,192 @@ This orchestrator acts as a **Facade** over two standalone microservices that we
 
 ```
 ai-hybrid-orchestrator/
-├── __init__.py          # Package marker
-├── README.md            # This file
-├── hybrid_runner.py     # Core facade: process_hybrid_application()
-└── hybrid_output.txt    # Output from the last local test run
+├── __init__.py              # Package marker
+├── contact_extractor.py     # Regex contact info extractor (email, phone, LinkedIn, GitHub, location)
+├── hybrid_runner.py         # Standalone CLI pipeline runner (for testing)
+├── main_api.py              # FastAPI gateway — 3 endpoints consumed by Laravel
+├── hybrid_output.txt        # Output from last CLI test run
+└── README.md                # This file
 ```
 
 ---
 
-## The Hybrid Pipeline
+## FastAPI Microservice — `main_api.py`
 
-`process_hybrid_application(cv_path, job_url)` runs in 3 sequential actions:
+### Run Server
 
+```bash
+cd ai-hybrid-orchestrator
+uvicorn main_api:app --host 0.0.0.0 --port 8000 --reload
 ```
-cv_path + job_url
-        │
-        ├─── [A] ScrapingEngine.stream_jobs()  ─── ai-job-miner ───────────────────┐
-        │         Phase 1: SmartAsyncClient (Token Bucket + Backoff + UA rotation)  │
-        │         Phase 2: HtmlSmartScraper (DFS density + title <h1> + location)   │
-        │         Phase 3: Regex FSM cleaners (job_type, work_model, salary, exp)   │
-        │         Phase 4: NER skill extractor + TF-IDF match scorer               │
-        │         Phase 5: DLQ fault-tolerance + O(1) async generator              │
-        │                                                                            │
-        ├─── [B] CV Analysis Pipeline  ────────── ai-cv-analyzer ──────────────────┤
-        │         Layer 1: PyMuPDF / python-docx / EasyOCR → raw text              │
-        │         Layer 1: dslim/bert-base-NER → skills, roles, orgs               │
-        │         Layer 2: facebook/bart-large-mnli → domain classification         │
-        │                                                                            │
-        └─── [C] Hybrid Scoring ──────────────────────────────────────────────────┘
-                  Semantic Score  (MiniLM all-MiniLM-L6-v2 cosine) × 60%
-                  TF-IDF Score    (pure-Python cosine similarity)   × 40%
-                  ─────────────────────────────────────────────
-                  Final Score  =  (Semantic × 0.6) + (TF-IDF × 0.4)
+
+- Swagger UI: **http://127.0.0.1:8000/docs**
+- Health check: **http://127.0.0.1:8000/**
+
+### Startup Behaviour
+
+On startup, the gateway loads all 3 heavy AI models **once** into memory (Singleton via FastAPI `lifespan`):
+
+| Model                      | Loaded By            | Purpose                                |
+| -------------------------- | -------------------- | -------------------------------------- |
+| `dslim/bert-base-NER`      | `SkillNEREngine`     | Skills · Roles · Orgs extraction       |
+| `facebook/bart-large-mnli` | `CVDomainClassifier` | Zero-shot domain classification        |
+| `all-MiniLM-L6-v2`         | `IntelligentMatcher` | Semantic embedding + cosine similarity |
+
+---
+
+## API Endpoints
+
+### `GET /`
+
+**Health check.**
+
+```json
+{
+  "status": "operational",
+  "version": "1.0.0",
+  "service": "Career Compass AI Gateway"
+}
+```
+
+---
+
+### `POST /api/v1/parse-cv`
+
+**Upload a CV file → extract skills, domain, and contact info.**
+
+| Parameter | Type         | Description            |
+| --------- | ------------ | ---------------------- |
+| `cv_file` | `UploadFile` | PDF · DOCX · PNG · JPG |
+
+**Example response:**
+
+```json
+{
+  "skills": ["Python", "TensorFlow", "Flutter"],
+  "domain": "Mobile App Development",
+  "domain_confidence": "65.7%",
+  "extraction_method": "pymupdf",
+  "contact_info": {
+    "email": "ahmed@example.com",
+    "phone": "+20 101 234 5678",
+    "linkedin_url": "https://linkedin.com/in/ahmedkhames",
+    "github_url": "https://github.com/ahmedkhames",
+    "location": "Cairo, Egypt"
+  }
+}
+```
+
+**Laravel call (Guzzle):**
+
+```php
+$response = Http::attach('cv_file', $fileContents, $fileName)
+                ->post(config('services.ai_gateway.url') . '/api/v1/parse-cv');
+```
+
+---
+
+### `POST /api/v1/scrape-on-demand`
+
+**Scrape a job listing URL — returns up to 5 parsed job dicts.**
+
+| Parameter    | Type        | Description                              |
+| ------------ | ----------- | ---------------------------------------- |
+| `source_url` | `Form(str)` | Full URL of the job listing or job board |
+
+**Example response:**
+
+```json
+{
+  "scraped": 2,
+  "jobs": [
+    {
+      "url": "https://example.com/jobs/python-dev",
+      "title": "Senior Python Developer",
+      "job_type": "Full-time",
+      "work_model": "Remote",
+      "location": "Cairo, Egypt",
+      "working_hours": "40 hours/week",
+      "salary": {
+        "min_salary": 90000,
+        "max_salary": 120000,
+        "currency": "USD"
+      },
+      "experience": { "min_exp": 4, "max_exp": 6 },
+      "skills": ["python", "django", "docker"],
+      "match_score": 0.87
+    }
+  ]
+}
+```
+
+---
+
+### `POST /api/v1/hybrid-match`
+
+**Compute a weighted hybrid match score between a CV and a job description.**
+
+**Formula:** `Final = (Semantic × 60%) + (TF-IDF × 40%)`
+
+**Request body (JSON):**
+
+```json
+{
+  "cv_text": "Ahmed Khames, Python developer with 5 years...",
+  "cv_skills": ["python", "django", "docker"],
+  "job_description": "We need a Python/Django backend engineer...",
+  "job_skills": ["python", "django", "kubernetes", "fastapi"]
+}
+```
+
+**Example response:**
+
+```json
+{
+  "hybrid_match_score": 74.3,
+  "semantic_score": 68.1,
+  "tfidf_score": 84.2,
+  "missing_skills": ["kubernetes", "fastapi"],
+  "formula": "Final = (Semantic × 60%) + (TF-IDF × 40%)"
+}
+```
+
+---
+
+## Contact Extractor — `contact_extractor.py`
+
+Standalone Regex-based utility. No ML required.
+
+```python
+from contact_extractor import extract_contacts
+
+info = extract_contacts(raw_cv_text)
+# {
+#   "email":        "ahmed@example.com",
+#   "phone":        "+20 101 234 5678",
+#   "linkedin_url": "https://linkedin.com/in/ahmedkhames",
+#   "github_url":   "https://github.com/ahmedkhames",
+#   "location":     "Cairo, Egypt"
+# }
+```
+
+| Pattern  | Matches                                                            |
+| -------- | ------------------------------------------------------------------ |
+| Email    | RFC-5321 simplified — `name@domain.tld`                            |
+| Phone    | Optional `+country` · optional `(area)` · 7–15 digit blocks        |
+| LinkedIn | `linkedin.com/in/<handle>` — adds `https://` if missing            |
+| GitHub   | `github.com/<user>` — adds `https://` if missing                   |
+| Location | Keyword-anchored: `Location:` · `Address:` · `Based in:` · `City:` |
+
+---
+
+## Hybrid Pipeline (CLI mode)
+
+The standalone `hybrid_runner.py` runs the full pipeline from the command line:
+
+```bash
+cd ai-hybrid-orchestrator
+python hybrid_runner.py  # edit MOCK_CV_PATH / MOCK_JOB_URL at the bottom
 ```
 
 ---
@@ -61,117 +213,39 @@ cv_path + job_url
 Final Score = (Semantic Score × 60%) + (TF-IDF Score × 40%)
 ```
 
-| Signal                | Model                                                                                                              | Weight  |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------ | ------- |
-| **Semantic Score**    | `all-MiniLM-L6-v2` sentence embeddings + cosine similarity (`ai-cv-analyzer` Layer 3)                              | **60%** |
-| **TF-IDF Math Score** | Term Frequency–Inverse Document Frequency + cosine similarity, pure Python, no NumPy (`ai-job-miner` `ai.matcher`) | **40%** |
+| Signal             | Model                                | Weight  |
+| ------------------ | ------------------------------------ | ------- |
+| **Semantic Score** | `all-MiniLM-L6-v2` cosine similarity | **60%** |
+| **TF-IDF Score**   | Pure-Python cosine similarity        | **40%** |
 
 ---
 
 ## Namespace Isolation
 
-Both engines expose a top-level `core/` package. The collision is resolved at import time by:
+Both engines expose a top-level `core/` package. Resolved by:
 
-1. Loading **ai-cv-analyzer** exclusively first (only its root on `sys.path`, `core.*` wiped from `sys.modules`).
-2. Saving the cv-analyzer `core.*` modules under `cva.*` aliases in `sys.modules`.
-3. Swapping to **ai-job-miner** exclusively to import `core.engine` and `ai.matcher`.
-4. Restoring both roots to `sys.path` for runtime intra-package imports.
-
----
-
-## Output Structure
-
-```json
-{
-  "job": {
-    "url": "https://...",
-    "title": "Senior Backend Engineer",
-    "job_type": "Full-time",
-    "work_model": "Remote",
-    "location": "Cairo, Egypt",
-    "working_hours": "40 hours/week",
-    "salary": { "min_salary": 90000, "max_salary": 120000, "currency": "USD" },
-    "experience": { "min_exp": 4, "max_exp": 6 },
-    "skills": ["python", "django", "fastapi", "docker", "kubernetes"]
-  },
-  "cv": {
-    "raw_text_preview": "Ahmed Khames … Cross-platform, AI …",
-    "extraction_method": "pymupdf",
-    "skills": ["Python", "TensorFlow", "Flutter"],
-    "roles": [],
-    "domain": "Mobile App Development",
-    "domain_confidence": "65.7%"
-  },
-  "scores": {
-    "semantic_score_pct": 72.4,
-    "tfidf_score_pct": 91.8,
-    "final_score_pct": 80.2,
-    "formula": "Final = (Semantic × 60%) + (TF-IDF × 40%)",
-    "missing_skills": ["kubernetes", "kafka"]
-  }
-}
-```
-
----
-
-## AI Models Used
-
-| Model                      | Source                              | Purpose                                        |
-| -------------------------- | ----------------------------------- | ---------------------------------------------- |
-| `dslim/bert-base-NER`      | HuggingFace                         | Named Entity Recognition — skills, roles, orgs |
-| `facebook/bart-large-mnli` | HuggingFace                         | Zero-shot domain classification                |
-| `all-MiniLM-L6-v2`         | HuggingFace / sentence-transformers | Semantic text embeddings                       |
-
-All models are downloaded automatically on first run and cached locally by HuggingFace.
-
----
-
-## Health Check Results (Pre-Integration)
-
-| Engine                        | Result                  |
-| ----------------------------- | ----------------------- |
-| `ai-job-miner` pytest         | **186 / 186 passed ✅** |
-| `ai-cv-analyzer` import check | **ALL IMPORTS OK ✅**   |
-
----
-
-## Usage
-
-```bash
-cd ai-hybrid-orchestrator
-python hybrid_runner.py
-```
-
-To test with a real CV and job URL, edit these two constants at the bottom of `hybrid_runner.py`:
-
-```python
-MOCK_CV_PATH = r"C:\path\to\your\real_cv.pdf"          # PDF, DOCX, PNG, JPG
-MOCK_JOB_URL = "https://example.com/job/python-dev"    # any HTML job listing page
-```
+1. Loading **ai-cv-analyzer** first (only its root on `sys.path`, `core.*` wiped from `sys.modules`)
+2. Then loading **ai-job-miner** exclusively for `core.engine` + `ai.matcher`
+3. Both roots restored to `sys.path` for runtime intra-package imports
 
 ---
 
 ## Dependencies
 
-Install on the system Python (required for cross-engine import):
-
 ```bash
-pip install aiohttp beautifulsoup4 sentence-transformers scikit-learn \
-            pymupdf python-docx opencv-python-headless pytesseract \
-            transformers torch spacy numpy
+pip install fastapi uvicorn python-multipart aiohttp beautifulsoup4 \
+            sentence-transformers scikit-learn pymupdf python-docx \
+            opencv-python-headless transformers torch spacy
 ```
 
 ---
 
 ## Roadmap
 
-| Phase                                                                      | Status |
-| -------------------------------------------------------------------------- | ------ |
-| Phase 1 — Architecture (Factory + Strategy)                                | ✅     |
-| Phase 2 — Smart DOM Analysis (DFS + Semantic Proximity)                    | ✅     |
-| Phase 3 — Data Normalization Pipeline (Bloom Filter + Regex FSM)           | ✅     |
-| Phase 4 — AI & Mathematical Matching (TF-IDF + NER)                        | ✅     |
-| Phase 5 — Performance, Memory & Evasion (Token Bucket + DLQ + O(1) stream) | ✅     |
-| Phase 5.5 — IE Enhancements (title, location, job_type, work_model, hours) | ✅     |
-| Phase 6 — Hybrid Orchestrator (Facade over ai-job-miner + ai-cv-analyzer)  | ✅     |
-| Phase 7 — REST API wrapper (FastAPI endpoint for Laravel integration)      | 🔜     |
+| Phase        | Feature                                                                           | Status |
+| ------------ | --------------------------------------------------------------------------------- | ------ |
+| Phase 1–5    | ai-job-miner 5-phase scraping pipeline                                            | ✅     |
+| Phase 6a     | ai-cv-analyzer 3-layer ML pipeline                                                | ✅     |
+| Phase 6b     | Hybrid Orchestrator Facade (CLI runner)                                           | ✅     |
+| **Phase 6c** | **FastAPI Gateway + Contact Extractor**                                           | ✅     |
+| Phase 7      | Laravel integration — update `CvController`, `JobController` to call this gateway | 🔜     |
