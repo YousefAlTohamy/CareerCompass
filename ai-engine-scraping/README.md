@@ -26,6 +26,8 @@ A highly scalable, generic web-scraping engine built with advanced software-engi
    - [Text Density Heuristic](#text-density-heuristic)
    - [DFS Density Traversal](#dfs-density-traversal)
    - [Semantic Proximity](#semantic-proximity)
+   - [Title Extraction](#title-extraction)
+   - [Location Extraction](#location-extraction)
    - [Phase 2 Quick-Start](#phase-2-quick-start)
 6. [Phase 3: Data Normalization Pipeline](#phase-3-data-normalization-pipeline)
    - [SHA-256 + Bloom Filter Deduplication](#sha-256--bloom-filter-deduplication-pipelinededuplicatorpy)
@@ -99,19 +101,19 @@ graph TD
     B --> C{ScraperFactory}
     C -->|HTML Site| D[HtmlSmartScraper]
     C -->|API Source| E[JsonApiScraper]
-    
+
     D --> F[DOM DFS & Heuristics]
     E --> G[JSON Parser]
-    
+
     F --> H[Data Pipeline]
     G --> H
-    
+
     subgraph Data Normalization & Evasion
         H --> I[Regex Cleaners & FSM]
         I --> J[Bloom Filter & SHA-256]
         J --> K[Fuzzy Matcher]
     end
-    
+
     K --> L([Async Yield Streaming])
     L -->|Constant Memory| M[(Laravel Database)]
 ```
@@ -156,7 +158,8 @@ ai-engine-scraping/
 │
 ├── strategies/
 │   ├── __init__.py
-│   ├── html_scraper.py          # Concrete Strategy: HTML page scraper (Phase 2 heuristics)
+│   ├── html_scraper.py          # Concrete Strategy: HTML scraper — title, location,
+│   │                            #   description, salary_hint via DFS & Semantic Proximity
 │   └── api_scraper.py           # Concrete Strategy: JSON REST API scraper
 │
 ├── factories/
@@ -166,7 +169,8 @@ ai-engine-scraping/
 ├── pipeline/                    # Phase 3: Data Normalization Pipeline
 │   ├── __init__.py
 │   ├── deduplicator.py          # BloomFilter (scratch) + JobDeduplicator (SHA-256)
-│   ├── cleaners.py              # clean_text, remove_noise, extract_salary, extract_experience
+│   ├── cleaners.py              # clean_text, remove_noise, extract_salary, extract_experience,
+│   │                            #   extract_job_type, extract_work_model, extract_working_hours
 │   └── fuzzy_matcher.py         # DP Levenshtein distance + are_skills_similar
 │
 ├── ai/                          # Phase 4: AI & Mathematical Matching Engine
@@ -183,6 +187,7 @@ ai-engine-scraping/
 │   ├── test_ai.py               # Phase 4: Segmenter, TF-IDF, NER tests (49 tests)
 │   └── test_performance.py      # Phase 5: TokenBucket, DLQ, engine streaming (30 tests)
 │
+├── run_engine.py                # Local microservice test runner (all 5 phases end-to-end)
 ├── requirements.txt
 └── README.md
 ```
@@ -291,7 +296,7 @@ asyncio.run(main())
 **Files:** `core/heuristics.py` · `strategies/html_scraper.py` (updated)
 
 Phase 2 eliminates the need for brittle, site-specific CSS selectors or XPath expressions.
-Instead, we use three complementary **CS algorithms** to extract structured data from _any_ HTML page.
+Instead, we use four complementary **CS algorithms** to extract structured data from _any_ HTML page.
 
 ---
 
@@ -355,6 +360,32 @@ Synonym keywords (`pay`, `compensation`, `remuneration`, `wage`, `stipend`) are 
 
 ---
 
+### Title Extraction
+
+> **CS Concept:** DOM tree priority search — O(1) best case.
+
+`HtmlSmartScraper` extracts the job title using a two-level fallback:
+
+| Priority | Source        | Method                                       |
+| -------- | ------------- | -------------------------------------------- |
+| 1st      | `<h1>` tag    | `soup.find("h1").get_text()`                 |
+| 2nd      | `<title>` tag | Strips " `–` Company" suffix noise via Regex |
+
+This works on any job board without knowing its HTML structure.
+
+---
+
+### Location Extraction
+
+> **CS Concept:** Semantic Proximity sibling walk — same algorithm as salary extraction, different keywords.
+
+The same `extract_semantic_sibling` function is reused with location-specific keywords:
+`location`, `headquarters`, `based in`, `office`, `city`.
+
+A guard filters out false positives — if the extracted value is longer than 120 characters it is likely a paragraph, not a location, and the next keyword is tried.
+
+---
+
 ### Phase 2 Quick-Start
 
 ```python
@@ -365,10 +396,10 @@ async def main():
     scraper = ScraperFactory.get_scraper("html")
     result  = await scraper.scrape("https://example-jobs.com/listing/123")
 
-    # result["description"] → full job description text (no CSS class needed)
-    # result["salary_hint"] → extracted salary string, or None
-    print(result["description"][:200])
-    print(result["salary_hint"])
+    print(result["title"])        # "Senior Backend Engineer"  — from <h1>
+    print(result["location"])     # "Cairo, Egypt"             — semantic proximity
+    print(result["description"]) # full body text             — DFS density
+    print(result["salary_hint"]) # "$90k – $120k"             — semantic proximity
 
 asyncio.run(main())
 ```
@@ -421,16 +452,21 @@ For 10,000 items at 1% FPR: m ≈ 95,850 bits (12 KB), k = 7 hash functions.
 
 > **CS Concept:** Finite State Machine — Python's `re` module compiles patterns into a DFA, giving O(n) matching with no backtracking.
 
-| Function             | Input Example                   | Output Example                                |
-| -------------------- | ------------------------------- | --------------------------------------------- |
-| `clean_text`         | `"<p>Python &amp; Django</p>"`  | `"Python & Django"`                           |
-| `remove_noise`       | `"Urgent: Python Dev (Remote)"` | `"Python Dev"`                                |
-| `extract_salary`     | `"10k - 12k USD"`               | `{min: 10000, max: 12000, currency: "USD"}`   |
-| `extract_salary`     | `"$130,000 - $160,000"`         | `{min: 130000, max: 160000, currency: "USD"}` |
-| `extract_experience` | `"3-5 yrs"`                     | `{min_exp: 3, max_exp: 5}`                    |
-| `extract_experience` | `"+3 years"`                    | `{min_exp: 3, max_exp: None}`                 |
+| Function                | Input Example                      | Output Example                              |
+| ----------------------- | ---------------------------------- | ------------------------------------------- |
+| `clean_text`            | `"<p>Python &amp; Django</p>"`     | `"Python & Django"`                         |
+| `remove_noise`          | `"Urgent: Python Dev (Remote)"`    | `"Python Dev"`                              |
+| `extract_salary`        | `"10k - 12k USD"`                  | `{min: 10000, max: 12000, currency: "USD"}` |
+| `extract_experience`    | `"3-5 yrs"`                        | `{min_exp: 3, max_exp: 5}`                  |
+| `extract_job_type`      | `"Full-time contract role"`        | `"Full-time"`                               |
+| `extract_work_model`    | `"Hybrid / remote position"`       | `"Hybrid"`                                  |
+| `extract_working_hours` | `"40 hrs/week, flexible schedule"` | `"40 hours/week"`                           |
 
-`extract_salary` handles 5 currency codes (USD, GBP, EUR, EGP, SAR…), `k`-multiplier (`10k` → `10000`), comma-formatted numbers, and synonym separators (`-`, `to`).
+**`extract_job_type`** — patterns tested most-specific-first so `"Full-time Contract"` → `"Full-time"`, not `"Contract"`.
+
+**`extract_work_model`** — `"Hybrid"` is checked before `"Remote"` to prevent `"Hybrid-remote"` mis-classifying as `Remote`.
+
+**`extract_working_hours`** — matches `X hours/week`, `9 to 5`, `night/morning/evening shift`, `flexible hours`, `rotating shifts`.
 
 ---
 
@@ -600,25 +636,35 @@ for task in await dlq.get_retryable():
 | First result latency | Must finish all URLs first            | Immediately after first URL  |
 | Back-pressure        | None                                  | Automatic (consumer pulls)   |
 
-The engine orchestrates the **full 5-phase pipeline** per URL:
+The engine orchestrates the **full 5-phase + IE pipeline** per URL:
 
 ```
-URL → SmartAsyncClient.get()   [Phase 5: rate-limited, retrying]
-    → HtmlSmartScraper.scrape()  [Phase 2: DOM heuristics]
-    → clean + extract_salary()   [Phase 3: Regex FSM]
-    → JobDeduplicator            [Phase 3: SHA-256 + Bloom Filter]
-    → CustomSkillExtractor       [Phase 4: NER lexicon]
-    → match_score()              [Phase 4: TF-IDF cosine]
-    → yield job_dict             [Phase 5: O(1) stream]
-    → DLQ on failure             [Phase 5: fault tolerance]
+URL → SmartAsyncClient.get()      [Phase 5: rate-limited, retrying]
+    → HtmlSmartScraper.scrape()   [Phase 2: DFS + title <h1> + location proximity]
+    → extract_job_type/model/hrs  [Phase 3: IE Regex classifiers]
+    → clean + extract_salary()    [Phase 3: Regex FSM]
+    → JobDeduplicator             [Phase 3: SHA-256 + Bloom Filter]
+    → CustomSkillExtractor        [Phase 4: NER lexicon]
+    → match_score()               [Phase 4: TF-IDF cosine]
+    → yield job_dict (11 fields)  [Phase 5: O(1) stream]
+    → DLQ on failure              [Phase 5: fault tolerance]
 ```
 
 ```python
 engine = ScrapingEngine(rate=3.0, reference_text="Python Django REST API")
 
 async for job in engine.stream_jobs(url_list):
-    await save_to_database(job)       # processed one at a time — O(1) memory
-    print(job["title"], job["match_score"])  # TF-IDF relevance score
+    # Each yielded dict has 11 fields:
+    print(job["title"])         # "Senior Backend Engineer"  — <h1> extraction
+    print(job["job_type"])      # "Full-time"                — Regex FSM
+    print(job["work_model"])    # "Remote"                   — Regex FSM
+    print(job["location"])      # "Cairo, Egypt"             — semantic proximity
+    print(job["working_hours"]) # "40 hours/week"            — Regex FSM
+    print(job["salary"])        # {min: 90000, max: 120000, currency: "USD"}
+    print(job["experience"])    # {min_exp: 4, max_exp: 6}
+    print(job["skills"])        # ["python", "django", "fastapi", ...]
+    print(job["match_score"])   # 0.9177  — TF-IDF cosine relevance
+    await save_to_database(job) # processed one at a time — O(1) memory
 
 # After the run
 print(engine.dlq.summary)            # inspect failures

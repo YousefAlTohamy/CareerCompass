@@ -1,0 +1,109 @@
+﻿
+================================================================
+  Smart AI Scraper Engine — Local Test Runner
+================================================================
+
+────────────────────────────────────────────────────────────────
+  [PASS 1] HTML scraper → http://127.0.0.1:8765/job/senior-backend-engineer
+────────────────────────────────────────────────────────────────
+
+INFO  factories.scraper_factory — [ScraperFactory] Creating scraper for type 'html' → HtmlSmartScraper
+INFO  core.engine — [Engine] Processing: http://127.0.0.1:8765/job/senior-backend-engineer
+INFO  strategies.html_scraper — [HtmlSmartScraper] Starting Phase 2 scrape for: http://127.0.0.1:8765/job/senior-backend-engineer
+INFO  strategies.html_scraper — [HtmlSmartScraper] Title from <h1>: 'Senior Backend Engineer'
+INFO  core.heuristics — [Heuristics] Best density node: <div class='['job-description']'> score=893.00 len=893
+INFO  strategies.html_scraper — [HtmlSmartScraper] Description extracted (893 chars).
+INFO  core.heuristics — [Heuristics] Searching for semantic keyword: 'salary'
+INFO  core.heuristics — [Heuristics] Salary via sibling walk: '$90,000 - $120,000 per year'
+INFO  strategies.html_scraper — [HtmlSmartScraper] Salary hint via keyword 'salary'
+INFO  core.heuristics — [Heuristics] Searching for semantic keyword: 'location'
+INFO  core.heuristics — [Heuristics] Salary via sibling walk: 'Cairo, Egypt'
+INFO  strategies.html_scraper — [HtmlSmartScraper] Location via keyword 'location': 'Cairo, Egypt'
+INFO  ai.ner_extractor — [NER] Extracted 13 skills: ['rest', 'python', 'django', 'fastapi', 'apache', 'kafka', 'postgresql', 'docker', 'kubernetes', 'redis', 'aws', 'ci/cd', 'github actions']
+INFO  ai.matcher — [Matcher] cosine_similarity = 0.9177
+INFO  ai.matcher — [Matcher] match_score = 0.9177
+INFO  core.engine — [Engine] ✓ Yielding job: 'Senior Backend Engineer' type=Full-time model=Remote skills=13 match=0.918
+{
+    "url": "http://127.0.0.1:8765/job/senior-backend-engineer",
+    "title": "Senior Backend Engineer",
+    "job_type": "Full-time",
+    "work_model": "Remote",
+    "location": "Cairo, Egypt",
+    "working_hours": "40 hours/week",
+    "description": "We are looking for a Senior Backend Engineer to join our platform team. This is a full-time, fully remote position with flexible hours (40 hours/week). You will design and implement high-throughput REST APIs using Python, Django, and FastAPI. You will work closely with our data engineering team to build pipelines using Apache Kafka and PostgreSQL. Strong proficiency in Docker and Kubernetes is required. Experience with Redis caching, AWS (EC2, S3, RDS), and CI/CD pipelines (GitHub Actions) is hi",
+    "raw_salary_hint": "$90,000 - $120,000 per year",
+    "salary": {
+        "min_salary": 90000,
+        "max_salary": 120000,
+        "currency": "USD"
+    },
+    "experience": {
+        "min_exp": 4,
+        "max_exp": 6
+    },
+    "skills": [
+        "rest",
+        "python",
+        "django",
+        "fastapi",
+        "apache",
+        "kafka",
+        "postgresql",
+        "docker",
+        "kubernetes",
+        "redis",
+        "aws",
+        "ci/cd",
+        "github actions"
+    ],
+    "match_score": 0.9177
+}
+
+  → 1 unique job(s) yielded from HTML source.
+
+────────────────────────────────────────────────────────────────
+  [PASS 2] API scraper → https://remotive.com/api/remote-jobs?limit=3
+────────────────────────────────────────────────────────────────
+
+INFO  factories.scraper_factory — [ScraperFactory] Creating scraper for type 'api' → JsonApiScraper
+INFO  core.engine — [Engine] Processing: https://remotive.com/api/remote-jobs?limit=3
+INFO  strategies.api_scraper — [JsonApiScraper] Starting scrape for: https://remotive.com/api/remote-jobs?limit=3
+INFO  core.base_scraper — Fetching URL: https://remotive.com/api/remote-jobs?limit=3
+INFO  core.base_scraper — Successfully fetched https://remotive.com/api/remote-jobs?limit=3 — HTTP 200 (30029 chars)
+INFO  strategies.api_scraper — [JsonApiScraper] Scrape completed for https://remotive.com/api/remote-jobs?limit=3 — 5 top-level key(s)
+INFO  core.engine — [Engine] ✓ Yielding job: 'api' type=Unspecified model=Unspecified skills=0 match=0.000
+{
+    "url": "https://remotive.com/api/remote-jobs?limit=3",
+    "title": "api",
+    "job_type": "Unspecified",
+    "work_model": "Unspecified",
+    "location": "",
+    "working_hours": "",
+    "description": "",
+    "raw_salary_hint": "",
+    "salary": {
+        "min_salary": null,
+        "max_salary": null,
+        "currency": null
+    },
+    "experience": {
+        "min_exp": null,
+        "max_exp": null
+    },
+    "skills": [],
+    "match_score": 0.0
+}
+
+  → 1 unique job(s) yielded from API source.
+
+────────────────────────────────────────────────────────────────
+  Dead Letter Queue summary:
+    Total failed URLs  : 0
+    Retryable          : 0
+    Permanently failed : 0
+
+================================================================
+  Run complete.  Jobs yielded: HTML=1  API=1
+  Total unique seen: 2
+================================================================
+

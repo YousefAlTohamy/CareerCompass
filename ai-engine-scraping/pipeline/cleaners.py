@@ -11,10 +11,13 @@ and returns a string or dict.  Functions can be composed freely.
 
 Functions
 ---------
-clean_text(text)          — strip HTML tags, normalize Unicode & whitespace
-remove_noise(title)       — remove job-title noise words via Regex FSM
-extract_salary(text)      — parse salary ranges into a structured dict
-extract_experience(text)  — parse experience requirements into a dict
+clean_text(text)           — strip HTML tags, normalize Unicode & whitespace
+remove_noise(title)        — remove job-title noise words via Regex FSM
+extract_salary(text)       — parse salary ranges into a structured dict
+extract_experience(text)   — parse experience requirements into a dict
+extract_job_type(text)     — classify employment type (Full-time, Contract …)
+extract_work_model(text)   — classify work model (Remote, Hybrid, On-site)
+extract_working_hours(text) — extract working-hours pattern from free text
 
 CS Concept: Regex as FSM
 -------------------------
@@ -390,3 +393,176 @@ def extract_experience(text: str) -> dict:
 
     logger.warning("[cleaners.extract_experience] No experience tokens in: '%s'", text)
     return _empty
+
+
+# ===========================================================================
+# 5. extract_job_type
+# ===========================================================================
+
+# Pre-compiled patterns — ordered from most to least specific so that
+# "Full-time" is tried before a generic single-word fallback.
+_JOB_TYPE_PATTERNS: list[tuple[re.Pattern, str]] = [
+    (re.compile(r"\bfull[\s\-]?time\b", re.IGNORECASE), "Full-time"),
+    (re.compile(r"\bpart[\s\-]?time\b", re.IGNORECASE), "Part-time"),
+    (re.compile(r"\binternship\b",       re.IGNORECASE), "Internship"),
+    (re.compile(r"\bfreelance\b",        re.IGNORECASE), "Freelance"),
+    (re.compile(r"\bcontract\b",         re.IGNORECASE), "Contract"),
+]
+
+
+def extract_job_type(text: str) -> str:
+    """
+    Classify the employment type by scanning free text for known keywords.
+
+    Patterns are tried in priority order (most-specific first) so that
+    "Full-time Contract" resolves to "Full-time" rather than "Contract".
+
+    Parameters
+    ----------
+    text : str
+        Any free-form job text (title, description, metadata).
+
+    Returns
+    -------
+    str
+        One of: ``"Full-time"``, ``"Part-time"``, ``"Internship"``,
+        ``"Freelance"``, ``"Contract"``, or ``"Unspecified"``.
+
+    Examples
+    --------
+    >>> extract_job_type("Senior Python Dev – Full-time position")
+    'Full-time'
+    >>> extract_job_type("3-month contract role")
+    'Contract'
+    """
+    if not text:
+        return "Unspecified"
+    for pattern, label in _JOB_TYPE_PATTERNS:
+        if pattern.search(text):
+            logger.debug("[cleaners.extract_job_type] matched '%s'", label)
+            return label
+    return "Unspecified"
+
+
+# ===========================================================================
+# 6. extract_work_model
+# ===========================================================================
+
+_WORK_MODEL_PATTERNS: list[tuple[re.Pattern, str]] = [
+    (re.compile(r"\bhybrid\b",             re.IGNORECASE), "Hybrid"),
+    (re.compile(r"\bremote\b",             re.IGNORECASE), "Remote"),
+    (re.compile(r"\bon[\s\-]?site\b",      re.IGNORECASE), "On-site"),
+    (re.compile(r"\bin[\s\-]?office\b",    re.IGNORECASE), "On-site"),
+    (re.compile(r"\bin[\s\-]?person\b",    re.IGNORECASE), "On-site"),
+]
+
+
+def extract_work_model(text: str) -> str:
+    """
+    Classify the work model by scanning free text for known keywords.
+
+    "Hybrid" is tested before "Remote" so that "Hybrid-remote" does not
+    mis-classify as purely Remote.
+
+    Parameters
+    ----------
+    text : str
+        Any free-form job text.
+
+    Returns
+    -------
+    str
+        One of: ``"Remote"``, ``"Hybrid"``, ``"On-site"``, or
+        ``"Unspecified"``.
+
+    Examples
+    --------
+    >>> extract_work_model("This is a hybrid role based in London")
+    'Hybrid'
+    >>> extract_work_model("Fully remote position")
+    'Remote'
+    """
+    if not text:
+        return "Unspecified"
+    for pattern, label in _WORK_MODEL_PATTERNS:
+        if pattern.search(text):
+            logger.debug("[cleaners.extract_work_model] matched '%s'", label)
+            return label
+    return "Unspecified"
+
+
+# ===========================================================================
+# 7. extract_working_hours
+# ===========================================================================
+
+# Each tuple: (compiled_pattern, human_readable_template)
+# Groups in the pattern are interpolated into the template where present.
+_HOURS_PATTERNS: list[tuple[re.Pattern, str]] = [
+    # "40 hours/week", "40 hrs per week"
+    (
+        re.compile(r"(\d+)\s*(?:hours?|hrs?)\s*(?:per|/|a)\s*week", re.IGNORECASE),
+        "{0} hours/week",
+    ),
+    # "9 to 5", "9-5", "9 am to 6 pm"
+    (
+        re.compile(
+            r"(\d{1,2})\s*(?:am|AM)?\s*(?:to|[-–])\s*(\d{1,2})\s*(?:pm|PM)?",
+            re.IGNORECASE,
+        ),
+        "{0} to {1}",
+    ),
+    # "night shift", "morning shift", "evening shift"
+    (
+        re.compile(r"(night|morning|evening|day|afternoon)\s+shift", re.IGNORECASE),
+        "{0} shift",
+    ),
+    # "flexible hours", "flexible working"
+    (
+        re.compile(r"flex(?:ible)?\s*(?:hours?|working|schedule)?", re.IGNORECASE),
+        "Flexible hours",
+    ),
+    # "rotating shifts"
+    (
+        re.compile(r"rotating\s+shifts?", re.IGNORECASE),
+        "Rotating shifts",
+    ),
+]
+
+
+def extract_working_hours(text: str) -> str:
+    """
+    Extract a working-hours description from free text using Regex FSM.
+
+    Patterns are matched in priority order.  The first match is returned.
+    Returns an empty string if no pattern matches.
+
+    Parameters
+    ----------
+    text : str
+        Any free-form job text.
+
+    Returns
+    -------
+    str
+        A normalised hours string (e.g. ``"40 hours/week"``, ``"9 to 5"``,
+        ``"Night shift"``, ``"Flexible hours"``), or ``""`` if not found.
+
+    Examples
+    --------
+    >>> extract_working_hours("We offer flexible hours and remote work")
+    'Flexible hours'
+    >>> extract_working_hours("40 hrs/week, night shift available")
+    '40 hours/week'
+    """
+    if not text:
+        return ""
+    for pattern, template in _HOURS_PATTERNS:
+        m = pattern.search(text)
+        if m:
+            groups = m.groups()
+            result = template.format(*groups) if groups else template
+            # Capitalise the first letter for consistent presentation
+            result = result[0].upper() + result[1:]
+            logger.debug("[cleaners.extract_working_hours] matched '%s'", result)
+            return result
+    return ""

@@ -47,7 +47,15 @@ from typing import AsyncIterator, Optional
 from core.dlq import DeadLetterQueue
 from core.http_client import SmartAsyncClient
 from factories.scraper_factory import ScraperFactory
-from pipeline.cleaners import clean_text, extract_experience, extract_salary, remove_noise
+from pipeline.cleaners import (
+    clean_text,
+    extract_experience,
+    extract_job_type,
+    extract_salary,
+    extract_work_model,
+    extract_working_hours,
+    remove_noise,
+)
 from pipeline.deduplicator import JobDeduplicator
 from ai.ner_extractor import CustomSkillExtractor
 from ai.matcher import match_score
@@ -199,19 +207,26 @@ class ScrapingEngine:
                 # --------------------------------------------------------
                 # Step 3: Normalise & clean (Phase 3 cleaners)
                 # --------------------------------------------------------
-                raw_title = result.get("title") or result.get("type", "")
+                raw_title   = result.get("title") or result.get("type", "")
                 cleaned_title = remove_noise(clean_text(raw_title))
                 description = clean_text(result.get("description") or "")
                 salary_hint = result.get("salary_hint") or ""
+                location    = result.get("location") or ""
 
-                salary = extract_salary(salary_hint)
-                experience = extract_experience(description)
+                # Combined text used for IE classifiers so they can scan
+                # both the description body and any extracted metadata
+                full_text = f"{cleaned_title} {description} {salary_hint}"
+
+                salary        = extract_salary(salary_hint)
+                experience    = extract_experience(description)
+                job_type      = extract_job_type(full_text)
+                work_model    = extract_work_model(full_text)
+                working_hours = extract_working_hours(full_text)
 
                 # --------------------------------------------------------
                 # Step 4: Deduplicate  (SHA-256 + Bloom Filter)
                 # --------------------------------------------------------
-                company = result.get("company", "")
-                location = result.get("location", "")
+                company  = result.get("company", "")
                 job_hash = JobDeduplicator.generate_hash(cleaned_title, company, location)
 
                 if self._deduplicator.is_duplicate(job_hash):
@@ -233,21 +248,26 @@ class ScrapingEngine:
                     score = match_score(self._reference_text, description)
 
                 # --------------------------------------------------------
-                # Step 7: Yield the processed record — O(1) memory
+                # Step 7: Yield the enriched record — O(1) memory
                 # --------------------------------------------------------
                 job_record = {
-                    "url": url,
-                    "title": cleaned_title,
-                    "description": description[:500],   # truncated for preview
+                    "url":           url,
+                    "title":         cleaned_title,
+                    "job_type":      job_type,
+                    "work_model":    work_model,
+                    "location":      location,
+                    "working_hours": working_hours,
+                    "description":   description[:500],
                     "raw_salary_hint": salary_hint,
-                    "salary": salary,
-                    "experience": experience,
-                    "skills": skills,
-                    "match_score": round(score, 4),
+                    "salary":        salary,
+                    "experience":    experience,
+                    "skills":        skills,
+                    "match_score":   round(score, 4),
                 }
 
                 logger.info(
-                    "[Engine] ✓ Yielding job: '%s' skills=%d match=%.3f",
-                    cleaned_title or url, len(skills), score,
+                    "[Engine] ✓ Yielding job: '%s' type=%s model=%s skills=%d match=%.3f",
+                    cleaned_title or url, job_type, work_model, len(skills), score,
                 )
-                yield job_record   # ← the generator suspends here; memory stays O(1)
+                yield job_record
+

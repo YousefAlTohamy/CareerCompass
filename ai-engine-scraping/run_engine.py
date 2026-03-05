@@ -56,27 +56,36 @@ REMOTE_JOBS_API_URLS = [
 # ---------------------------------------------------------------------------
 SAMPLE_JOB_HTML = b"""
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head><title>Senior Backend Engineer at TechCorp</title></head>
 <body>
   <nav>Home Jobs About Contact</nav>
   <main>
     <h1>Senior Backend Engineer</h1>
-    <span class="company">TechCorp</span>
-    <span class="location">Remote / Cairo, Egypt</span>
+
+    <p><strong>Company:</strong> TechCorp</p>
+    <p><strong>Location:</strong> Cairo, Egypt</p>
+    <p><strong>Job Type:</strong> Full-time</p>
+    <p><strong>Work Model:</strong> Remote</p>
+    <p><strong>Working Hours:</strong> Flexible hours, 40 hours/week</p>
+    <p><strong>Salary:</strong> $90,000 - $120,000 per year</p>
 
     <div class="job-description">
       We are looking for a Senior Backend Engineer to join our platform team.
+      This is a full-time, fully remote position with flexible hours (40 hours/week).
+
       You will design and implement high-throughput REST APIs using Python,
-      Django, and FastAPI. You will work closely with our data engineering
-      team to build pipelines using Apache Kafka and PostgreSQL.
+      Django, and FastAPI. You will work closely with our data engineering team
+      to build pipelines using Apache Kafka and PostgreSQL.
 
-      Strong proficiency in Docker and Kubernetes is required. Experience
-      with Redis caching, AWS (EC2, S3, RDS), and CI/CD pipelines (GitHub
-      Actions) is highly preferred. You should have at least 4-6 years of
-      professional Python experience.
+      Strong proficiency in Docker and Kubernetes is required. Experience with
+      Redis caching, AWS (EC2, S3, RDS), and CI/CD pipelines (GitHub Actions)
+      is highly preferred.
 
-      Responsibilities include:
+      You should have at least 4-6 years of professional Python experience.
+
+      Location: Cairo, Egypt (Remote / Work from Home accepted)
+      Responsibilities:
       - Designing microservice architectures
       - Writing unit and integration tests with pytest
       - Code review and mentoring junior engineers
