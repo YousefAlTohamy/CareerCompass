@@ -357,7 +357,7 @@ Authorization: Bearer {your_token}
 
 **POST** `/api/upload-cv`
 
-Upload a PDF CV and extract skills via AI Engine.
+Upload a CV (PDF or image) and extract skills, domain classification, and contact info via the **AI Gateway** (Phase 6).
 
 **Headers:**
 
@@ -368,31 +368,35 @@ Content-Type: multipart/form-data
 
 **Request Body (Form Data):**
 
-- `cv` (file, required) - PDF file (max 5MB)
-- `use_nlp` (boolean, optional) - Use NLP extraction (default: false)
+- `cv` (file, required) — PDF · JPEG · JPG · PNG (max 5MB)
 
 **Response (200 OK):**
 
 ```json
 {
-    "message": "CV analyzed successfully",
-    "skills_extracted": 12,
-    "new_skills": 8,
-    "existing_skills": 4,
+    "success": true,
+    "message": "CV parsed successfully.",
+    "is_new_role": false,
+    "user": {
+        "id": 1,
+        "name": "Ahmed Khames",
+        "email": "ahmed@example.com",
+        "job_title": "Backend Development",
+        "domain_confidence": "72.3%",
+        "phone": "+20 101 234 5678",
+        "location": "Cairo, Egypt",
+        "linkedin_url": "https://linkedin.com/in/ahmedkhames",
+        "github_url": "https://github.com/ahmedkhames",
+        "extraction_method": "pymupdf"
+    },
     "skills": [
-        {
-            "id": 1,
-            "name": "Laravel",
-            "type": "technical"
-        },
-        {
-            "id": 15,
-            "name": "Communication",
-            "type": "soft"
-        }
+        { "id": 1, "name": "Laravel", "type": "technical" },
+        { "id": 15, "name": "Communication", "type": "soft" }
     ]
 }
 ```
+
+> `is_new_role: true` means the AI discovered a new domain not in `target_job_roles` — background scraping was dispatched automatically.
 
 ---
 
@@ -1058,13 +1062,41 @@ Uses **Laravel Sanctum** for API token authentication:
 
 ### AI Engine Integration
 
-The backend communicates with the AI Engine via HTTP:
+The backend communicates with **two** Python microservices:
 
-- **URL**: Configured in `.env` as `AI_ENGINE_URL`
-- **Timeout**: 30 seconds (configurable)
-- **Endpoints Used**:
-    - `POST /analyze` - CV skill extraction
-    - `POST /scrape-jobs` - Job scraping
+#### Legacy AI Engine (Port 8001)
+
+Handles automated market scraping and scheduled jobs. Configured via `.env`:
+
+```env
+AI_ENGINE_URL=http://127.0.0.1:8001
+AI_ENGINE_TIMEOUT=30
+```
+
+| Endpoint            | Used by                      | Purpose                |
+| ------------------- | ---------------------------- | ---------------------- |
+| `POST /scrape-jobs` | `ProcessOnDemandJobScraping` | On-demand job scraping |
+| `POST /test-source` | Artisan scheduler            | Probe scraping sources |
+
+#### AI Gateway — Hybrid Orchestrator (Port 8000) _(Phase 6)_
+
+Handles CV parsing with full ML pipeline. Configured via `.env`:
+
+```env
+AI_GATEWAY_URL=http://127.0.0.1:8000
+AI_GATEWAY_TIMEOUT=60
+```
+
+| Endpoint                | Used by                       | Returns                                                                      |
+| ----------------------- | ----------------------------- | ---------------------------------------------------------------------------- |
+| `POST /api/v1/parse-cv` | `CvController::callGateway()` | `skills`, `domain`, `domain_confidence`, `contact_info`, `extraction_method` |
+
+`CvController` flow on CV upload:
+
+1. Sends raw file bytes + filename to `POST /api/v1/parse-cv`
+2. Persists `domain` → `job_title`, `phone`, `location`, `linkedin_url`, `github_url` to `users` table
+3. Finds-or-creates skills; syncs to `user_skills` pivot
+4. Runs **self-expanding role discovery** — if `domain` is not in `target_job_roles`, creates it and dispatches `ProcessOnDemandJobScraping` to the `high` queue
 
 ### CORS Configuration
 

@@ -1025,7 +1025,10 @@ curl -X GET http://127.0.0.1:8000/api/admin/scraping-sources \
 
 ```env
 AI_ENGINE_URL=http://127.0.0.1:8001
-AI_ENGINE_TIMEOUT=60
+AI_ENGINE_TIMEOUT=30
+# AI Gateway (ai-hybrid-orchestrator / Phase 6)
+AI_GATEWAY_URL=http://127.0.0.1:8000
+AI_GATEWAY_TIMEOUT=60
 QUEUE_CONNECTION=database
 FRONTEND_URL=http://localhost:5173
 ```
