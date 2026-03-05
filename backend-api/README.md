@@ -939,7 +939,11 @@ Check if the API is running.
 - `email` - Unique email address
 - `password` - Hashed password
 - `role` - Access privilege enum: 'user', 'admin'
-- `job_title` - Inferred job title string mapped from the CV PDF.
+- `job_title` - Inferred job title string mapped from the CV
+- `phone` - _(Phase 6)_ Extracted from CV by AI Gateway contact extractor
+- `location` - _(Phase 6)_ Extracted from CV (keyword-anchored regex)
+- `linkedin_url` - _(Phase 6)_ Extracted from CV
+- `github_url` - _(Phase 6)_ Extracted from CV
 - `timestamps` - created_at, updated_at
 
 ### Skills Table (Dynamic)
@@ -1074,8 +1078,8 @@ CORS is enabled for all origins in development (`config/cors.php`):
 
 CV upload validation (`CvUploadRequest.php`):
 
-- Max file size: 5MB
-- Allowed type: PDF only
+- Max file size: **5MB**
+- Allowed types: **PDF · JPEG · JPG · PNG** _(OCR for image-based CVs added in Phase 6)_
 - Stored temporarily during processing
 - Auto-deleted after analysis
 
@@ -1288,6 +1292,44 @@ The migrations already include necessary indexes on:
 
 ---
 
+## 🔗 Phase 6 Integration — AI Gateway
+
+> **Migration required:** `php artisan migrate --path=database/migrations/2026_03_06_000000_add_contact_info_to_users_table.php`
+
+### What changed
+
+| File                                                                        | Change                                                                                |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `database/migrations/2026_03_06_000000_add_contact_info_to_users_table.php` | Adds 4 nullable columns to `users`: `phone`, `location`, `linkedin_url`, `github_url` |
+| `app/Models/User.php`                                                       | Added the 4 new columns to `$fillable` for mass-assignment                            |
+| `app/Http/Requests/CvUploadRequest.php`                                     | `mimes:pdf` → `mimes:pdf,jpeg,jpg,png` (supports image CVs via OCR)                   |
+
+### How `CvController` will use the AI Gateway (Phase 7)
+
+When a user uploads a CV, `CvController` will:
+
+1. Forward the file to `POST http://127.0.0.1:8000/api/v1/parse-cv` (AI Gateway)
+2. Receive `skills`, `domain`, `domain_confidence`, and `contact_info`
+3. Persist contact info directly to the `users` table:
+    ```php
+    auth()->user()->update([
+        'phone'        => $contact['phone'],
+        'location'     => $contact['location'],
+        'linkedin_url' => $contact['linkedin_url'],
+        'github_url'   => $contact['github_url'],
+    ]);
+    ```
+4. Sync extracted skills via `$user->skills()->syncWithoutDetaching(...)`
+
+### AI Gateway `.env` variable to add
+
+```env
+AI_GATEWAY_URL=http://127.0.0.1:8000
+AI_GATEWAY_TIMEOUT=60
+```
+
+---
+
 ## 📦 Dependencies
 
 Main packages (from `composer.json`):
@@ -1313,7 +1355,7 @@ CareerCompass Team - Graduation Project 2026
 
 ---
 
-**Last Updated**: March 2026  
-**Version**: 1.2.0  
-**Status**: ✅ Phase 21 Complete (Security, Application Tracker, API Expansion)  
+**Last Updated**: March 2026
+**Version**: 1.3.0
+**Status**: ✅ Phase 23 Complete (AI Gateway Integration — DB migration, validation & contact extraction support)
 **API Endpoints**: 50+ total

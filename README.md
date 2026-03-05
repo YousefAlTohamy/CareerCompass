@@ -576,6 +576,10 @@ erDiagram
         string name
         string email
         string job_title "nullable — from CV"
+        string phone "nullable — AI Gateway"
+        string location "nullable — AI Gateway"
+        string linkedin_url "nullable — AI Gateway"
+        string github_url "nullable — AI Gateway"
         string password
         enum role "user/admin"
         datetime timestamps
