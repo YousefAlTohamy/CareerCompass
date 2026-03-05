@@ -99,21 +99,21 @@ graph TD
     B --> C{ScraperFactory}
     C -->|HTML Site| D[HtmlSmartScraper]
     C -->|API Source| E[JsonApiScraper]
-
+    
     D --> F[DOM DFS & Heuristics]
     E --> G[JSON Parser]
-
+    
     F --> H[Data Pipeline]
     G --> H
-
-    subgraph "Data Normalization & Evasion"
+    
+    subgraph Data Normalization & Evasion
         H --> I[Regex Cleaners & FSM]
-        I --> J["Bloom Filter & SHA-256 Deduplication"]
-        J --> K[Fuzzy Matcher / Levenshtein]
+        I --> J[Bloom Filter & SHA-256]
+        J --> K[Fuzzy Matcher]
     end
-
-    K --> L(("Async Yield / Generator"))
-    L -->|O(1) Memory| M[(Laravel Database)]
+    
+    K --> L([Async Yield Streaming])
+    L -->|Constant Memory| M[(Laravel Database)]
 ```
 
 ---
