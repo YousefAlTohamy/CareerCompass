@@ -24,19 +24,17 @@ graph TB
     Laravel --> Queue[Queue Worker<br/>Background Jobs]
     Laravel --> MySQL[(MySQL<br/>Database)]
     Laravel --> Redis[(Redis Cache<br/>& Queues)]
-    Laravel <--> LegacyAI[Python AI Engine<br/>Port 8001]
-    Laravel <--> Gateway[AI Gateway<br/>Port 8000]
+    Laravel <--> Gateway[AI Gateway<br/>Port 8001]
     Gateway --> JobMiner[ai-job-miner<br/>5-phase Scraper]
     Gateway --> CVAnalyzer[ai-cv-analyzer<br/>3-layer ML]
-    LegacyAI --> Wuzzuf[🌐 Wuzzuf.net]
-    LegacyAI --> Remotive[🌐 Remotive API]
-    LegacyAI --> Adzuna[🌐 Adzuna US API]
+    Gateway --> Wuzzuf[🌐 Wuzzuf.net]
+    Gateway --> Remotive[🌐 Remotive API]
+    Gateway --> Adzuna[🌐 Adzuna US API]
     Queue --> Laravel
     Scheduler[Laravel Scheduler<br/>Automated Tasks] --> Queue
 
     style Frontend fill:#61dafb
     style Laravel fill:#ff2d20
-    style LegacyAI fill:#3776ab
     style Gateway fill:#6c3483
     style JobMiner fill:#1e8449
     style CVAnalyzer fill:#2e86c1
@@ -47,18 +45,17 @@ graph TB
 
 ### Components
 
-| Component            | Technology                 | Port | Purpose                                                      |
-| -------------------- | -------------------------- | ---- | ------------------------------------------------------------ |
-| **Frontend**         | React 19 + Vite + Recharts | 5173 | User interface, dashboard, authentication                    |
-| **Backend API**      | Laravel 12 (IsAdmin)       | 8000 | User management, authentication, business logic              |
-| **Queue Worker**     | Laravel Queue              | -    | Background processing for scraping & calculations            |
-| **Legacy AI Engine** | Python/FastAPI             | 8001 | CV parsing, skill extraction, job scraping (Phases 1–22)     |
-| **AI Gateway**       | Python/FastAPI             | 8000 | Hybrid orchestrator: CV parse + scraping + semantic matching |
-| **ai-job-miner**     | Python (async)             | -    | 5-phase heuristic scraper + TF-IDF engine                    |
-| **ai-cv-analyzer**   | Python Transformers        | -    | BERT NER + BART-MNLI classifier + MiniLM semantic embedder   |
-| **Database**         | MySQL                      | 3306 | Data persistence                                             |
-| **Cache/Queue**      | Redis (opt)                | 6379 | Fast caching and queue management (production)               |
-| **Scheduler**        | Laravel Cron               | -    | Automated market data updates (every 48 hours)               |
+| Component          | Technology                 | Port | Purpose                                                      |
+| ------------------ | -------------------------- | ---- | ------------------------------------------------------------ |
+| **Frontend**       | React 19 + Vite + Recharts | 5173 | User interface, dashboard, authentication                    |
+| **Backend API**    | Laravel 12 (IsAdmin)       | 8000 | User management, authentication, business logic              |
+| **Queue Worker**   | Laravel Queue              | -    | Background processing for scraping & calculations            |
+| **AI Gateway**     | Python/FastAPI             | 8001 | Hybrid orchestrator: CV parse + scraping + semantic matching |
+| **ai-job-miner**   | Python (async)             | -    | 5-phase heuristic scraper + TF-IDF engine                    |
+| **ai-cv-analyzer** | Python Transformers        | -    | BERT NER + BART-MNLI classifier + MiniLM semantic embedder   |
+| **Database**       | MySQL                      | 3306 | Data persistence                                             |
+| **Cache/Queue**    | Redis (opt)                | 6379 | Fast caching and queue management (production)               |
+| **Scheduler**      | Laravel Cron               | -    | Automated market data updates (every 48 hours)               |
 
 ---
 
@@ -66,6 +63,8 @@ graph TB
 
 ```
 CareerCompass/
+├── debug_pipeline.py         # End-to-end CV upload timing and execution tracer
+├── start_all.bat             # Portable environment launcher
 ├── frontend/                 # React 19 + Vite Application
 │   ├── src/
 │   │   ├── api/
@@ -1024,11 +1023,9 @@ curl -X GET http://127.0.0.1:8000/api/admin/scraping-sources \
 **Laravel (`backend-api/.env`):**
 
 ```env
-AI_ENGINE_URL=http://127.0.0.1:8001
-AI_ENGINE_TIMEOUT=30
 # AI Gateway (ai-hybrid-orchestrator / Phase 6)
-AI_GATEWAY_URL=http://127.0.0.1:8000
-AI_GATEWAY_TIMEOUT=60
+AI_GATEWAY_URL=http://127.0.0.1:8001
+AI_GATEWAY_TIMEOUT=30
 QUEUE_CONNECTION=database
 FRONTEND_URL=http://localhost:5173
 ```
@@ -1248,7 +1245,7 @@ cd ..
 # 4. Start services (4 terminals)
 # Terminal 1: cd frontend && npm run dev
 # Terminal 2: cd backend-api && php artisan serve --port=8000
-# Terminal 3: cd ai-engine && source venv/bin/activate && uvicorn main:app --reload --port 8001
+# Terminal 3: cd ai-hybrid-orchestrator && uvicorn main_api:app --reload --port 8001 --host 0.0.0.0
 # Terminal 4: cd backend-api && php artisan queue:work --queue=high,default --tries=3
 ```
 
@@ -1270,8 +1267,8 @@ Import `CareerCompass.postman_collection.json` into Postman for comprehensive AP
 
 **Last Updated**: March 2026
 **Project Status**: ✅ **Phase 23 Complete — AI Gateway & Hybrid Orchestrator**
-**Components**: Frontend (React 19 + Vite + Framer Motion + Recharts) + Backend API (Laravel 12) + Queue Worker + Scheduler + Legacy AI Engine (FastAPI/8001) + **AI Gateway (FastAPI/8000)** + ai-job-miner + ai-cv-analyzer
-**API Endpoints**: 50+ total (Laravel APIs + Legacy Python APIs + AI Gateway APIs + Market Intelligence + Admin Source APIs + Application Tracker)
+**Components**: Frontend (React 19 + Vite + Framer Motion + Recharts) + Backend API (Laravel 12) + Queue Worker + Scheduler + **AI Gateway (FastAPI/8001)** + ai-job-miner + ai-cv-analyzer
+**API Endpoints**: 50+ total (Laravel APIs + AI Gateway APIs + Market Intelligence + Admin Source APIs + Application Tracker)
 **Scraping Sources**: Wuzzuf (HTML) • Remotive API (free) • Adzuna US API — all 3 verified with `scrape:test-sources`
 **Key Features**: Role-Based Access Control (RBAC) • CV Analysis • Hybrid AI Matching (Semantic + TF-IDF) • Contact Info Extraction • Multi-Source Job Scraping • Gap Analysis • Market Intelligence Dashboard • Skill Importance Ranking • Real-time Polling • Scraping Source Management • Dynamic NLP Extraction • Application Tracker • Recommended Jobs • Premium Animated UI • Interactive Recharts Charts
 **AI Models**: `dslim/bert-base-NER` • `facebook/bart-large-mnli` • `all-MiniLM-L6-v2` — all loaded as Singletons on gateway startup

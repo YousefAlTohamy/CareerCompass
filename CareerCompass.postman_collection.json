@@ -1463,7 +1463,7 @@
                                                                                 ]
                                                                },
                                                       "url":  {
-                                                                  "raw":  "http://127.0.0.1:8000/api/v1/parse-cv",
+                                                                  "raw": "http://127.0.0.1:8001/api/v1/parse-cv",
                                                                   "protocol":  "http",
                                                                   "host":  [
                                                                                "127",
@@ -1471,7 +1471,7 @@
                                                                                "0",
                                                                                "1"
                                                                            ],
-                                                                  "port":  "8000",
+                                                                  "port": "8001",
                                                                   "path":  [
                                                                                "api",
                                                                                "v1",
@@ -1503,7 +1503,7 @@
                                                                                 ]
                                                                },
                                                       "url":  {
-                                                                  "raw":  "http://127.0.0.1:8000/api/v1/scrape-on-demand",
+                                                                  "raw": "http://127.0.0.1:8001/api/v1/scrape-on-demand",
                                                                   "protocol":  "http",
                                                                   "host":  [
                                                                                "127",
@@ -1511,7 +1511,7 @@
                                                                                "0",
                                                                                "1"
                                                                            ],
-                                                                  "port":  "8000",
+                                                                  "port": "8001",
                                                                   "path":  [
                                                                                "api",
                                                                                "v1",
@@ -1544,7 +1544,7 @@
                                                                                }
                                                                },
                                                       "url":  {
-                                                                  "raw":  "http://127.0.0.1:8000/api/v1/hybrid-match",
+                                                                  "raw": "http://127.0.0.1:8001/api/v1/hybrid-match",
                                                                   "protocol":  "http",
                                                                   "host":  [
                                                                                "127",
@@ -1552,7 +1552,7 @@
                                                                                "0",
                                                                                "1"
                                                                            ],
-                                                                  "port":  "8000",
+                                                                  "port": "8001",
                                                                   "path":  [
                                                                                "api",
                                                                                "v1",
@@ -1566,7 +1566,7 @@
                                                    ]
                                   }
                               ],
-                     "description":  "Endpoints exposed by ai-hybrid-orchestrator/main_api.py (FastAPI, port 8000). Run: uvicorn ai-hybrid-orchestrator.main_api:app --host 0.0.0.0 --port 8000 --reload. Swagger: http://127.0.0.1:8000/docs"
+                     "description":  "Endpoints exposed by ai-hybrid-orchestrator/main_api.py (FastAPI, port 8000). Run: uvicorn ai-hybrid-orchestrator.main_api:app --host 0.0.0.0 --port 8001 --reload. Swagger: http://127.0.0.1:8001/docs"
                  }
              ],
     "variable":  [
@@ -1586,10 +1586,10 @@
                      },
                      {
                          "key":  "ai_gateway_url",
-                         "value":  "http://127.0.0.1:8000",
+                         "value":  "http://127.0.0.1:8001",
                          "type":  "default",
                          "enabled":  true,
-                         "description":  "AI Hybrid Orchestrator Gateway (port 8000). Swagger: http://127.0.0.1:8000/docs"
+                         "description":  "AI Hybrid Orchestrator Gateway (port 8000). Swagger: http://127.0.0.1:8001/docs"
                      },
                      {
                          "key":  "token",
@@ -1607,3 +1607,4 @@
                      }
                  ]
 }
+

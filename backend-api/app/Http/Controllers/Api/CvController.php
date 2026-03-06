@@ -28,8 +28,8 @@ class CvController extends Controller
 
     public function __construct()
     {
-        $this->gatewayUrl = config('services.ai_gateway.url', 'http://127.0.0.1:8000');
-        $this->timeout    = (int) config('services.ai_gateway.timeout', 60);
+        $this->gatewayUrl = config('services.ai_gateway.url', 'http://127.0.0.1:8001');
+        $this->timeout    = (int) config('services.ai_gateway.timeout', 30);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -44,6 +44,9 @@ class CvController extends Controller
      */
     public function upload(CvUploadRequest $request): JsonResponse
     {
+        // Prevent PHP from killing the script during heavy ML processing (OCR, NER)
+        set_time_limit(30);
+
         $user = $request->user();
 
         try {
@@ -194,10 +197,10 @@ class CvController extends Controller
             'file_size' => $file->getSize(),
         ]);
 
-        $response = Http::timeout($this->timeout)
+        $response = Http::timeout(30)
             ->attach(
                 'cv_file',                      // field name expected by FastAPI
-                file_get_contents($file->path()), // raw bytes
+                fopen($file->getPathname(), 'r'), // raw stream (prevents Windows cURL hang)
                 $fileName                        // original filename (extension matters for OCR)
             )
             ->post("{$this->gatewayUrl}/api/v1/parse-cv");

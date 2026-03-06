@@ -1062,29 +1062,15 @@ Uses **Laravel Sanctum** for API token authentication:
 
 ### AI Engine Integration
 
-The backend communicates with **two** Python microservices:
+The backend communicates with **one** Python microservice:
 
-#### Legacy AI Engine (Port 8001)
+#### AI Gateway — Hybrid Orchestrator (Port 8001) _(Phase 6)_
 
-Handles automated market scraping and scheduled jobs. Configured via `.env`:
-
-```env
-AI_ENGINE_URL=http://127.0.0.1:8001
-AI_ENGINE_TIMEOUT=30
-```
-
-| Endpoint            | Used by                      | Purpose                |
-| ------------------- | ---------------------------- | ---------------------- |
-| `POST /scrape-jobs` | `ProcessOnDemandJobScraping` | On-demand job scraping |
-| `POST /test-source` | Artisan scheduler            | Probe scraping sources |
-
-#### AI Gateway — Hybrid Orchestrator (Port 8000) _(Phase 6)_
-
-Handles CV parsing with full ML pipeline. Configured via `.env`:
+Handles CV parsing with full ML pipeline, along with background job scraping. Configured via `.env`:
 
 ```env
-AI_GATEWAY_URL=http://127.0.0.1:8000
-AI_GATEWAY_TIMEOUT=60
+AI_GATEWAY_URL=http://127.0.0.1:8001
+AI_GATEWAY_TIMEOUT=30
 ```
 
 | Endpoint                | Used by                       | Returns                                                                      |
@@ -1093,7 +1079,7 @@ AI_GATEWAY_TIMEOUT=60
 
 `CvController` flow on CV upload:
 
-1. Sends raw file bytes + filename to `POST /api/v1/parse-cv`
+1. Sends raw file stream (via `fopen` to prevent cURL hangs) + filename to `POST /api/v1/parse-cv`
 2. Persists `domain` → `job_title`, `phone`, `location`, `linkedin_url`, `github_url` to `users` table
 3. Finds-or-creates skills; syncs to `user_skills` pivot
 4. Runs **self-expanding role discovery** — if `domain` is not in `target_job_roles`, creates it and dispatches `ProcessOnDemandJobScraping` to the `high` queue
