@@ -83,8 +83,10 @@ export default function Jobs() {
         ? response.data
         : response.data?.data || [];
         
+      const jobsArray = Array.isArray(jobsData) ? jobsData : (jobsData?.data || []);
+      
       // Sort primarily by match_score (descending) if present
-      const sortedJobs = [...jobsData].sort((a, b) => {
+      const sortedJobs = [...jobsArray].sort((a, b) => {
         const scoreA = parseFloat(a.match_score) || 0;
         const scoreB = parseFloat(b.match_score) || 0;
         return scoreB - scoreA;
@@ -305,23 +307,23 @@ export default function Jobs() {
                 {recommended.map((job) => (
                   <div
                     key={job.id}
-                    className={`snap-start shrink-0 w-64 text-left bg-white rounded-2xl shadow-md hover:shadow-lg border-2 transition-all duration-200 p-5 flex flex-col justify-between hover:-translate-y-0.5 ${
+                    className={`relative snap-start shrink-0 w-64 text-left bg-white rounded-2xl shadow-md hover:shadow-lg border-2 transition-all duration-200 p-5 flex flex-col justify-between hover:-translate-y-0.5 ${
                       selectedJob?.id === job.id
                         ? 'border-primary ring-2 ring-primary/20'
                         : 'border-transparent'
                     }`}
                   >
-                    <button className="text-left" onClick={() => handleJobSelect(job)}>
+                    {job.match_score !== undefined && job.match_score !== null && (
+                      <div className="absolute top-4 right-4 bg-green-100 text-green-800 font-bold text-sm px-3 py-1 rounded-full border border-green-300 shadow-sm flex items-center gap-1 z-10">
+                        🎯 Match: {job.match_score}%
+                      </div>
+                    )}
+                    <button className="text-left mt-6" onClick={() => handleJobSelect(job)}>
                       <div className="flex items-start justify-between gap-2 mb-3">
                         <div className="flex items-center gap-2">
                           <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-primary/10 to-secondary/10 text-primary uppercase tracking-wide">
                             {job.source || 'job'}
                           </span>
-                          {job.match_score !== undefined && job.match_score !== null && (
-                            <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-secondary text-white uppercase tracking-wide shadow-sm">
-                              Match: {job.match_score}%
-                            </span>
-                          )}
                         </div>
                         {selectedJob?.id === job.id && (
                           <span className="text-primary text-xs font-bold">Selected ✓</span>
@@ -398,24 +400,25 @@ export default function Jobs() {
                   {jobs.map((job) => (
                     <div
                       key={job.id}
-                      className={`group w-full text-left p-4 rounded-xl transition border-2 ${
+                      className={`relative group w-full text-left p-4 rounded-xl transition border-2 ${
                         selectedJob?.id === job.id
                           ? 'border-primary bg-accent'
                           : 'border-transparent hover:bg-gray-50 hover:border-gray-200'
                       }`}
                     >
+                      {job.match_score !== undefined && job.match_score !== null && (
+                        <div className="absolute top-4 right-4 bg-green-100 text-green-800 font-bold text-sm px-3 py-1 rounded-full border border-green-300 shadow-sm flex items-center gap-1 z-10">
+                          🎯 Match: {job.match_score}%
+                        </div>
+                      )}
+                      
                       {/* Clickable area = select the job */}
                       <button
-                        className="w-full text-left"
+                        className="w-full text-left mt-2"
                         onClick={() => handleJobSelect(job)}
                       >
-                        <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start justify-between gap-2 pr-24">
                           <p className="font-semibold text-gray-900 text-sm">{job.title}</p>
-                          {job.match_score !== undefined && job.match_score !== null && (
-                            <span className="shrink-0 inline-block px-2 py-0.5 rounded-md text-[10px] font-bold bg-secondary/10 text-secondary uppercase border border-secondary/20">
-                              {job.match_score}%
-                            </span>
-                          )}
                         </div>
                         <p className="text-xs text-gray-600 mt-1">{job.company}</p>
                         {job.location && (

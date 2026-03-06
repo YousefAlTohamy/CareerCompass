@@ -176,10 +176,9 @@ export default function Dashboard() {
       setUploading(true);
       setMessage({ type: '', text: '' });
       const response = await cvAPI.uploadCV(formData);
-      
-      const responseData = response.data?.data || response.data;
-      const isNewRole = responseData.is_new_role === true;
-      const updatedUser = responseData.user;
+      const responseData = response?.data?.data || response?.data || {};
+      const isNewRole = response?.is_new_role || response?.data?.is_new_role || responseData?.is_new_role || false;
+      const updatedUser = responseData?.user;
       
       // Update the global auth context with new job title and contact info
       if (updatedUser) {
