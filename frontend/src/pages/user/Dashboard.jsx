@@ -5,6 +5,8 @@ import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { cvAPI, gapAnalysisAPI } from '../../api/endpoints';
 import ProcessingAnimation from '../../components/ProcessingAnimation';
 import Swal from 'sweetalert2';
@@ -112,9 +114,12 @@ const SkillRadar = ({ skills }) => {
 };
 
 export default function Dashboard() {
+  const navigate = useNavigate();
+  const { login } = useAuth(); // We'll use this to update user context silently
   const [skills, setSkills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [isDiscovering, setIsDiscovering] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [recommendations, setRecommendations] = useState({
     critical: [],
@@ -170,7 +175,27 @@ export default function Dashboard() {
     try {
       setUploading(true);
       setMessage({ type: '', text: '' });
-      await cvAPI.uploadCV(formData);
+      const response = await cvAPI.uploadCV(formData);
+      
+      const responseData = response.data?.data || response.data;
+      const isNewRole = responseData.is_new_role === true;
+      const updatedUser = responseData.user;
+      
+      // Update the global auth context with new job title and contact info
+      if (updatedUser) {
+          login(updatedUser, localStorage.getItem('token'));
+      }
+
+      if (isNewRole) {
+        setUploading(false);
+        setIsDiscovering(true);
+        setTimeout(() => {
+          setIsDiscovering(false);
+          navigate('/jobs');
+        }, 5000);
+        return; // Skip normal success toast
+      }
+
       Swal.fire({
         icon: 'success',
         title: 'CV Optimized!',
@@ -179,6 +204,7 @@ export default function Dashboard() {
       });
       await loadSkills();
       await loadRecommendations();
+      setUploading(false);
     } catch (error) {
       console.error('CV upload error:', error);
       Swal.fire({
@@ -188,7 +214,9 @@ export default function Dashboard() {
         confirmButtonColor: '#6366f1',
       });
     } finally {
-      setUploading(false);
+      if (!isDiscovering) {
+        setUploading(false);
+      }
     }
   };
 
@@ -229,6 +257,10 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-50">
       <ProcessingAnimation isVisible={uploading} />
+      <ProcessingAnimation 
+        isVisible={isDiscovering} 
+        message="Discovering new market opportunities for your unique profile..." 
+      />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Welcome Header */}

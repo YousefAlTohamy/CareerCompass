@@ -82,7 +82,15 @@ export default function Jobs() {
       const jobsData = Array.isArray(response.data)
         ? response.data
         : response.data?.data || [];
-      setJobs(jobsData);
+        
+      // Sort primarily by match_score (descending) if present
+      const sortedJobs = [...jobsData].sort((a, b) => {
+        const scoreA = parseFloat(a.match_score) || 0;
+        const scoreB = parseFloat(b.match_score) || 0;
+        return scoreB - scoreA;
+      });
+        
+      setJobs(sortedJobs);
       if (jobsData.length === 0) {
         setError(
           query
@@ -104,7 +112,16 @@ export default function Jobs() {
       setRecLoading(true);
       const response = await jobsAPI.getRecommendedJobs();
       const data = response.data?.data || [];
-      setRecommended(Array.isArray(data) ? data : []);
+      const recommendedJobs = Array.isArray(data) ? data : [];
+      
+      // Sort recommended by match_score (descending) if present
+      const sortedRecommended = [...recommendedJobs].sort((a, b) => {
+        const scoreA = parseFloat(a.match_score) || 0;
+        const scoreB = parseFloat(b.match_score) || 0;
+        return scoreB - scoreA;
+      });
+
+      setRecommended(sortedRecommended);
       setRecMeta(response.data?.meta || null);
     } catch (err) {
       console.error('Failed to load recommended jobs:', err);
@@ -296,9 +313,16 @@ export default function Jobs() {
                   >
                     <button className="text-left" onClick={() => handleJobSelect(job)}>
                       <div className="flex items-start justify-between gap-2 mb-3">
-                        <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-primary/10 to-secondary/10 text-primary uppercase tracking-wide">
-                          {job.source || 'job'}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-primary/10 to-secondary/10 text-primary uppercase tracking-wide">
+                            {job.source || 'job'}
+                          </span>
+                          {job.match_score !== undefined && job.match_score !== null && (
+                            <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-secondary text-white uppercase tracking-wide shadow-sm">
+                              Match: {job.match_score}%
+                            </span>
+                          )}
+                        </div>
                         {selectedJob?.id === job.id && (
                           <span className="text-primary text-xs font-bold">Selected ✓</span>
                         )}
@@ -385,8 +409,15 @@ export default function Jobs() {
                         className="w-full text-left"
                         onClick={() => handleJobSelect(job)}
                       >
-                        <p className="font-semibold text-gray-900 text-sm">{job.title}</p>
-                        <p className="text-xs text-gray-600">{job.company}</p>
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="font-semibold text-gray-900 text-sm">{job.title}</p>
+                          {job.match_score !== undefined && job.match_score !== null && (
+                            <span className="shrink-0 inline-block px-2 py-0.5 rounded-md text-[10px] font-bold bg-secondary/10 text-secondary uppercase border border-secondary/20">
+                              {job.match_score}%
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-600 mt-1">{job.company}</p>
                         {job.location && (
                           <p className="text-xs text-gray-400 mt-0.5">📍 {job.location}</p>
                         )}
