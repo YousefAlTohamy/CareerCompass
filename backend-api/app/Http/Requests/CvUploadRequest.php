@@ -26,8 +26,8 @@ class CvUploadRequest extends FormRequest
             'cv' => [
                 'required',
                 'file',
-                'mimes:pdf',
-                'max:5120', // 5MB in kilobytes
+                'mimes:pdf,jpeg,jpg,png',  // PDF + image formats (OCR via AI Gateway)
+                'max:5120',                 // 5 MB in kilobytes
             ],
         ];
     }
@@ -41,9 +41,9 @@ class CvUploadRequest extends FormRequest
     {
         return [
             'cv.required' => 'Please upload a CV file.',
-            'cv.file' => 'The uploaded file is invalid.',
-            'cv.mimes' => 'The CV must be a PDF file.',
-            'cv.max' => 'The CV file size must not exceed 5MB.',
+            'cv.file'     => 'The uploaded file is invalid.',
+            'cv.mimes'    => 'The CV must be a PDF, JPEG, JPG, or PNG file.',
+            'cv.max'      => 'The CV file size must not exceed 5MB.',
         ];
     }
 }

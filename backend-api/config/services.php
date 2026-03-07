@@ -36,8 +36,14 @@ return [
     ],
 
     'ai_engine' => [
-        'url' => env('AI_ENGINE_URL', 'http://127.0.0.1:8001'),
+        'url'     => env('AI_ENGINE_URL', 'http://127.0.0.1:8001'),
         'timeout' => env('AI_ENGINE_TIMEOUT', 30),
+    ],
+
+    // AI Gateway — ai-hybrid-orchestrator (main_api.py, port 8001)
+    'ai_gateway' => [
+        'url'     => env('AI_GATEWAY_URL', 'http://127.0.0.1:8001'),
+        'timeout' => env('AI_GATEWAY_TIMEOUT', 30),
     ],
 
 ];

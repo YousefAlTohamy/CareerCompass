@@ -24,6 +24,11 @@ class User extends Authenticatable
         'password',
         'job_title',
         'role',
+        // Contact info — populated by AI Gateway contact extractor on CV upload
+        'phone',
+        'location',
+        'linkedin_url',
+        'github_url',
     ];
 
     /**

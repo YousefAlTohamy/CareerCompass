@@ -1,1338 +1,1610 @@
-{
-    "info": {
-        "name": "CareerCompass API",
-        "description": "Complete API collection for CareerCompass - AI-powered career guidance platform with CV parsing, job scraping, and skill gap analysis",
-        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-        "_exporter_id": "careercompass"
-    },
-    "variable": [
-        {
-            "key": "base_url",
-            "value": "http://127.0.0.1:8000/api",
-            "type": "string"
-        },
-        {
-            "key": "ai_engine_url",
-            "value": "http://127.0.0.1:8001",
-            "type": "string"
-        },
-        {
-            "key": "token",
-            "value": "",
-            "type": "string"
-        }
-    ],
-    "item": [
-        {
-            "name": "1. Authentication",
-            "item": [
-                {
-                    "name": "Register User",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "exec": [
-                                    "if (pm.response.code === 201) {",
-                                    "    var jsonData = pm.response.json();",
-                                    "    pm.collectionVariables.set('token', jsonData.token);",
-                                    "    pm.environment.set('token', jsonData.token);",
-                                    "}"
-                                ],
-                                "type": "text/javascript"
-                            }
-                        }
-                    ],
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"name\": \"John Doe\",\n    \"email\": \"john.doe@example.com\",\n    \"password\": \"password123\",\n    \"password_confirmation\": \"password123\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/register",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "register"
-                            ]
-                        },
-                        "description": "Register a new user account. Returns authentication token."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Login",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "exec": [
-                                    "if (pm.response.code === 200) {",
-                                    "    var jsonData = pm.response.json();",
-                                    "    pm.collectionVariables.set('token', jsonData.token);",
-                                    "    pm.environment.set('token', jsonData.token);",
-                                    "}"
-                                ],
-                                "type": "text/javascript"
-                            }
-                        }
-                    ],
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"email\": \"john.doe@example.com\",\n    \"password\": \"password123\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/login",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "login"
-                            ]
-                        },
-                        "description": "Login with email and password. Returns authentication token."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Logout",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/logout",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "logout"
-                            ]
-                        },
-                        "description": "Logout and revoke current authentication token."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Get Current User",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/user",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "user"
-                            ]
-                        },
-                        "description": "Get authenticated user details."
-                    },
-                    "response": []
-                }
-            ]
-        },
-        {
-            "name": "2. CV Upload & Skills",
-            "item": [
-                {
-                    "name": "Upload CV",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "body": {
-                            "mode": "formdata",
-                            "formdata": [
-                                {
-                                    "key": "cv",
-                                    "type": "file",
-                                    "src": "/path/to/your/cv.pdf",
-                                    "description": "Upload CV file (PDF, max 5MB)"
-                                }
-                            ]
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/upload-cv",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "upload-cv"
-                            ]
-                        },
-                        "description": "Upload CV for AI analysis and skill extraction."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Get User Skills",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/user/skills",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "user",
-                                "skills"
-                            ]
-                        },
-                        "description": "Retrieve all skills associated with the authenticated user."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Remove User Skill",
-                    "request": {
-                        "method": "DELETE",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/user/skills/1",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "user",
-                                "skills",
-                                "1"
-                            ]
-                        },
-                        "description": "Remove a specific skill from user profile."
-                    },
-                    "response": []
-                }
-            ]
-        },
-        {
-            "name": "3. Jobs",
-            "item": [
-                {
-                    "name": "Browse Jobs",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{base_url}}/jobs?page=1&per_page=15&search=PHP&source=wuzzuf",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "jobs"
-                            ],
-                            "query": [
-                                {
-                                    "key": "page",
-                                    "value": "1",
-                                    "description": "Page number"
-                                },
-                                {
-                                    "key": "per_page",
-                                    "value": "15",
-                                    "description": "Results per page (default: 15)"
-                                },
-                                {
-                                    "key": "search",
-                                    "value": "PHP",
-                                    "description": "Search in title/company/description"
-                                },
-                                {
-                                    "key": "source",
-                                    "value": "wuzzuf",
-                                    "description": "Filter by source"
-                                }
-                            ]
-                        },
-                        "description": "Browse all jobs with pagination and optional search/filtering."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Get Single Job",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{base_url}}/jobs/1",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "jobs",
-                                "1"
-                            ]
-                        },
-                        "description": "Get detailed information about a specific job including required skills."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Scrape Jobs",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"query\": \"Laravel Developer\",\n    \"max_results\": 20,\n    \"use_samples\": true\n}"
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/jobs/scrape",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "jobs",
-                                "scrape"
-                            ]
-                        },
-                        "description": "Trigger job scraping from Wuzzuf. Set use_samples=true for testing without actual scraping."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Scrape Job If Missing (On-Demand)",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "exec": [
-                                    "if (pm.response.code === 202) {",
-                                    "    var jsonData = pm.response.json();",
-                                    "    pm.collectionVariables.set('scraping_job_id', jsonData.scraping_job_id);",
-                                    "}"
-                                ],
-                                "type": "text/javascript"
-                            }
-                        }
-                    ],
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"job_title\": \"React Developer\",\n    \"max_results\": 30\n}"
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/jobs/scrape-if-missing",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "jobs",
-                                "scrape-if-missing"
-                            ]
-                        },
-                        "description": "Check if job title exists in database. If not found, triggers on-demand background scraping and returns 202 with status polling URL."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Check Scraping Status",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/scraping-status/:jobId",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "scraping-status",
-                                ":jobId"
-                            ],
-                            "variable": [
-                                {
-                                    "key": "jobId",
-                                    "value": "{{scraping_job_id}}",
-                                    "description": "Scraping Job ID from previous request"
-                                }
-                            ]
-                        },
-                        "description": "Poll the status of an on-demand scraping job. Returns pending/processing/completed/failed status."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Recommended Jobs",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/jobs/recommended",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "jobs",
-                                "recommended"
-                            ]
-                        },
-                        "description": "Get recommended jobs based on user's extracted skills."
-                    },
-                    "response": []
-                }
-            ]
-        },
-        {
-            "name": "4. Gap Analysis",
-            "item": [
-                {
-                    "name": "Analyze Single Job",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/gap-analysis/job/1",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "gap-analysis",
-                                "job",
-                                "1"
-                            ]
-                        },
-                        "description": "Analyze skill gap between user and a specific job. Returns match percentage, matched skills, missing skills, and recommendations."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Batch Job Analysis",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"job_ids\": [1, 2, 3, 4, 5]\n}"
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/gap-analysis/batch",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "gap-analysis",
-                                "batch"
-                            ]
-                        },
-                        "description": "Analyze multiple jobs at once. Returns ranked list by match percentage, common missing skills, and best match."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Get Recommendations",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/gap-analysis/recommendations",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "gap-analysis",
-                                "recommendations"
-                            ]
-                        },
-                        "description": "Get personalized skill recommendations based on job market demand. Skills prioritized as Critical, Important, or Nice-to-Have."
-                    },
-                    "response": []
-                }
-            ]
-        },
-        {
-            "name": "5. Market Intelligence",
-            "item": [
-                {
-                    "name": "Get Market Overview",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/market/overview",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "market",
-                                "overview"
-                            ]
-                        },
-                        "description": "Get overall market statistics including total jobs, roles, average skills per job, and top 5 most in-demand skills."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Get Role Statistics",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/market/role-statistics/PHP Developer",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "market",
-                                "role-statistics",
-                                "PHP Developer"
-                            ]
-                        },
-                        "description": "Get detailed statistics for a specific job role including top skills, average experience, common locations, and salary range."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Get Trending Skills",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/market/trending-skills?limit=20&type=technical",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "market",
-                                "trending-skills"
-                            ],
-                            "query": [
-                                {
-                                    "key": "limit",
-                                    "value": "20",
-                                    "description": "Number of skills to return (default: 20)"
-                                },
-                                {
-                                    "key": "type",
-                                    "value": "technical",
-                                    "description": "Filter by skill type: technical or soft"
-                                }
-                            ]
-                        },
-                        "description": "Get trending skills across all job roles, sorted by demand. Can filter by skill type."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Get Skill Demand for Role",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/market/skill-demand/Laravel Developer",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "market",
-                                "skill-demand",
-                                "Laravel Developer"
-                            ]
-                        },
-                        "description": "Get comprehensive skill demand analysis for a specific role, including essential/important/nice-to-have categorization."
-                    },
-                    "response": []
-                }
-            ]
-        },
-        {
-            "name": "6. AI Engine",
-            "item": [
-                {
-                    "name": "Health Check",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{ai_engine_url}}/",
-                            "host": [
-                                "{{ai_engine_url}}"
-                            ],
-                            "path": [
-                                ""
-                            ]
-                        },
-                        "description": "Check AI Engine health status."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "List Skills",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{ai_engine_url}}/skills",
-                            "host": [
-                                "{{ai_engine_url}}"
-                            ],
-                            "path": [
-                                "skills"
-                            ]
-                        },
-                        "description": "Get all 84 predefined skills (66 technical + 18 soft)."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Analyze CV",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "body": {
-                            "mode": "formdata",
-                            "formdata": [
-                                {
-                                    "key": "file",
-                                    "type": "file",
-                                    "src": "/path/to/cv.pdf",
-                                    "description": "CV PDF file"
-                                },
-                                {
-                                    "key": "use_nlp",
-                                    "value": "false",
-                                    "type": "text",
-                                    "description": "Use NLP extraction (slower but more accurate)"
-                                }
-                            ]
-                        },
-                        "url": {
-                            "raw": "{{ai_engine_url}}/analyze",
-                            "host": [
-                                "{{ai_engine_url}}"
-                            ],
-                            "path": [
-                                "analyze"
-                            ]
-                        },
-                        "description": "Analyze CV and extract skills using AI."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Extract Text from PDF",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "body": {
-                            "mode": "formdata",
-                            "formdata": [
-                                {
-                                    "key": "file",
-                                    "type": "file",
-                                    "src": "/path/to/file.pdf"
-                                }
-                            ]
-                        },
-                        "url": {
-                            "raw": "{{ai_engine_url}}/extract-text",
-                            "host": [
-                                "{{ai_engine_url}}"
-                            ],
-                            "path": [
-                                "extract-text"
-                            ]
-                        },
-                        "description": "Extract raw text from PDF without skill analysis."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Scrape Jobs (AI)",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"query\": \"Python Developer\",\n    \"max_results\": 10,\n    \"use_samples\": true\n}"
-                        },
-                        "url": {
-                            "raw": "{{ai_engine_url}}/scrape-jobs",
-                            "host": [
-                                "{{ai_engine_url}}"
-                            ],
-                            "path": [
-                                "scrape-jobs"
-                            ]
-                        },
-                        "description": "Directly scrape jobs from AI Engine (usually called via Laravel)."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Scraper Status",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{ai_engine_url}}/scrape-jobs/status",
-                            "host": [
-                                "{{ai_engine_url}}"
-                            ],
-                            "path": [
-                                "scrape-jobs",
-                                "status"
-                            ]
-                        },
-                        "description": "Check job scraper service status."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Test Source",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"source\": {\n        \"name\": \"Remote Python Jobs\",\n        \"endpoint\": \"https://remotive.com/api/remote-jobs\",\n        \"type\": \"api\"\n    },\n    \"query\": \"python\",\n    \"max_results\": 2\n}"
-                        },
-                        "url": {
-                            "raw": "{{ai_engine_url}}/test-source",
-                            "host": [
-                                "{{ai_engine_url}}"
-                            ],
-                            "path": [
-                                "test-source"
-                            ]
-                        },
-                        "description": "Lightweight probe for a single scraping source."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Advanced Parse CV",
-                    "request": {
-                        "method": "POST",
-                        "header": [],
-                        "url": {
-                            "raw": "{{ai_engine_url}}/parse-cv",
-                            "host": [
-                                "{{ai_engine_url}}"
-                            ],
-                            "path": [
-                                "parse-cv"
-                            ]
-                        },
-                        "description": "Advanced CV parsing endpoint. Extracts job title, experience, and skills.",
-                        "body": {
-                            "mode": "formdata",
-                            "formdata": [
-                                {
-                                    "key": "file",
-                                    "type": "file",
-                                    "src": "/path/to/cv.pdf",
-                                    "description": "CV PDF file"
-                                }
-                            ]
-                        }
-                    },
-                    "response": []
-                }
-            ]
-        },
-        {
-            "name": "7. Admin",
-            "item": [
-                {
-                    "name": "Get Scraping Sources",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/scraping-sources",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "scraping-sources"
-                            ]
-                        },
-                        "description": "List all configured scraping sources."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Create Scraping Source",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"name\": \"Remotive\",\n    \"type\": \"api\",\n    \"endpoint\": \"https://remotive.com/api/remote-jobs\",\n    \"method\": \"GET\",\n    \"is_active\": true,\n    \"params\": {\"category\": \"software-dev\"}\n}"
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/admin/scraping-sources",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "scraping-sources"
-                            ]
-                        },
-                        "description": "Create a new scraping source configuration."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Get Single Source",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/scraping-sources/1",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "scraping-sources",
-                                "1"
-                            ]
-                        },
-                        "description": "Get details of a specific scraping source."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Update Scraping Source",
-                    "request": {
-                        "method": "PUT",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"name\": \"Remotive Updated\",\n    \"is_active\": false\n}"
-                        },
-                        "url": {
-                            "raw": "{{base_url}}/admin/scraping-sources/1",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "scraping-sources",
-                                "1"
-                            ]
-                        },
-                        "description": "Update an existing scraping source."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Delete Scraping Source",
-                    "request": {
-                        "method": "DELETE",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/scraping-sources/1",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "scraping-sources",
-                                "1"
-                            ]
-                        },
-                        "description": "Delete a scraping source."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Toggle Source Status",
-                    "request": {
-                        "method": "PATCH",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/scraping-sources/1/toggle",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "scraping-sources",
-                                "1",
-                                "toggle"
-                            ]
-                        },
-                        "description": "Toggle active/inactive status of a source."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Test All Sources",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/scraping-sources/test",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "scraping-sources",
-                                "test"
-                            ]
-                        },
-                        "description": "Run an automated diagnostic test on all active scraping sources."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Get Target Roles",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/target-roles",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "target-roles"
-                            ]
-                        },
-                        "description": "List target roles."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Create Target Role",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/target-roles",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "target-roles"
-                            ]
-                        },
-                        "description": "Create a required job target role.",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"title\": \"React Developer\",\n    \"is_active\": true\n}"
-                        }
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Toggle Target Role Status",
-                    "request": {
-                        "method": "PATCH",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/target-roles/1/toggle",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "target-roles",
-                                "1",
-                                "toggle"
-                            ]
-                        },
-                        "description": "Toggle target role active status."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Delete Target Role",
-                    "request": {
-                        "method": "DELETE",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/target-roles/1",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "target-roles",
-                                "1"
-                            ]
-                        },
-                        "description": "Delete target role."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Run Full Scraping",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/admin/scraping/run-full",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "admin",
-                                "scraping",
-                                "run-full"
-                            ]
-                        },
-                        "description": "Run full scraping job manually."
-                    },
-                    "response": []
-                }
-            ]
-        },
-        {
-            "name": "8. Applications Tracker",
-            "item": [
-                {
-                    "name": "Get All Applications",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/applications",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "applications"
-                            ]
-                        },
-                        "description": "Get all user applications for the job tracker."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Get Single Application",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/applications/1",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "applications",
-                                "1"
-                            ]
-                        },
-                        "description": "Get details of a single tracked application."
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Track Application",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/applications",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "applications"
-                            ]
-                        },
-                        "description": "Create or track a job application.",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"job_id\": 1,\n    \"status\": \"saved\"\n}"
-                        }
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Update Application",
-                    "request": {
-                        "method": "PATCH",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            },
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/applications/1",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "applications",
-                                "1"
-                            ]
-                        },
-                        "description": "Update an application's status or notes.",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n    \"status\": \"applied\",\n    \"notes\": \"Follow up next week\"\n}"
-                        }
-                    },
-                    "response": []
-                },
-                {
-                    "name": "Remove Application",
-                    "request": {
-                        "method": "DELETE",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/applications/1",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "applications",
-                                "1"
-                            ]
-                        },
-                        "description": "Delete a tracked application."
-                    },
-                    "response": []
-                }
-            ]
-        },
-        {
-            "name": "Health Check (Laravel)",
-            "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                    "raw": "{{base_url}}/health",
-                    "host": [
-                        "{{base_url}}"
-                    ],
-                    "path": [
-                        "health"
-                    ]
-                },
-                "description": "Check Laravel API health status."
-            },
-            "response": []
-        }
-    ]
+﻿{
+    "info":  {
+                 "name":  "CareerCompass API",
+                 "description":  "Complete API collection for CareerCompass - AI-powered career guidance platform with CV parsing, job scraping, and skill gap analysis",
+                 "schema":  "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+                 "_exporter_id":  "careercompass"
+             },
+    "item":  [
+                 {
+                     "name":  "1. Authentication",
+                     "item":  [
+                                  {
+                                      "name":  "Register User",
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "exec":  [
+                                                                                    "if (pm.response.code === 201) {",
+                                                                                    "    var jsonData = pm.response.json();",
+                                                                                    "    pm.collectionVariables.set(\u0027token\u0027, jsonData.token);",
+                                                                                    "    pm.environment.set(\u0027token\u0027, jsonData.token);",
+                                                                                    "}"
+                                                                                ],
+                                                                       "type":  "text/javascript"
+                                                                   }
+                                                    }
+                                                ],
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n    \"name\": \"John Doe\",\n    \"email\": \"john.doe@example.com\",\n    \"password\": \"password123\",\n    \"password_confirmation\": \"password123\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/register",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "register"
+                                                                           ]
+                                                              },
+                                                      "description":  "Register a new user account. Returns authentication token."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Login",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n    \"email\": \"john.doe@example.com\",\n    \"password\": \"password123\"\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/login",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "login"
+                                                                           ]
+                                                              },
+                                                      "description":  "Login with email and password. Returns authentication token."
+                                                  },
+                                      "response":  [
+
+                                                   ],
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "// Auto-capture Sanctum token after login",
+                                                                                    "var json = pm.response.json();",
+                                                                                    "if (json \u0026\u0026 json.token) {",
+                                                                                    "    pm.environment.set(\u0027token\u0027, json.token);",
+                                                                                    "    console.log(\u0027✅ token saved to environment: \u0027 + json.token.substring(0,20) + \u0027...\u0027);",
+                                                                                    "} else if (json \u0026\u0026 json.data \u0026\u0026 json.data.token) {",
+                                                                                    "    pm.environment.set(\u0027token\u0027, json.data.token);",
+                                                                                    "    console.log(\u0027✅ token saved to environment (nested).\u0027);",
+                                                                                    "} else {",
+                                                                                    "    console.warn(\u0027⚠️  No token found in response. Check key path.\u0027);",
+                                                                                    "}"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Logout",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/logout",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "logout"
+                                                                           ]
+                                                              },
+                                                      "description":  "Logout and revoke current authentication token."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Get Current User",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/user",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "user"
+                                                                           ]
+                                                              },
+                                                      "description":  "Get authenticated user details."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "2. CV Upload \u0026 Skills",
+                     "item":  [
+                                  {
+                                      "name":  "Upload CV",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "formdata",
+                                                                   "formdata":  [
+                                                                                    {
+                                                                                        "key":  "cv_file",
+                                                                                        "type":  "file",
+                                                                                        "src":  ""
+                                                                                    },
+                                                                                    {
+                                                                                        "key":  "cv",
+                                                                                        "type":  "file",
+                                                                                        "src":  "/path/to/your/cv.pdf",
+                                                                                        "description":  "Upload CV file (PDF, max 5MB)"
+                                                                                    }
+                                                                                ]
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/api/upload-cv",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "upload-cv"
+                                                                           ]
+                                                              },
+                                                      "description":  "Upload CV for AI analysis and skill extraction."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Get User Skills",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/user/skills",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "user",
+                                                                               "skills"
+                                                                           ]
+                                                              },
+                                                      "description":  "Retrieve all skills associated with the authenticated user."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Remove User Skill",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/user/skills/1",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "user",
+                                                                               "skills",
+                                                                               "1"
+                                                                           ]
+                                                              },
+                                                      "description":  "Remove a specific skill from user profile."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "3. Jobs",
+                     "item":  [
+                                  {
+                                      "name":  "Browse Jobs",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/jobs?page=1\u0026per_page=15\u0026search=PHP\u0026source=wuzzuf",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "jobs"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "page",
+                                                                                    "value":  "1",
+                                                                                    "description":  "Page number"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "per_page",
+                                                                                    "value":  "15",
+                                                                                    "description":  "Results per page (default: 15)"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "search",
+                                                                                    "value":  "PHP",
+                                                                                    "description":  "Search in title/company/description"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "source",
+                                                                                    "value":  "wuzzuf",
+                                                                                    "description":  "Filter by source"
+                                                                                }
+                                                                            ]
+                                                              },
+                                                      "description":  "Browse all jobs with pagination and optional search/filtering."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Get Single Job",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/jobs/1",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "jobs",
+                                                                               "1"
+                                                                           ]
+                                                              },
+                                                      "description":  "Get detailed information about a specific job including required skills."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Scrape Jobs",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n    \"query\": \"Laravel Developer\",\n    \"max_results\": 20,\n    \"use_samples\": true\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/jobs/scrape",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "jobs",
+                                                                               "scrape"
+                                                                           ]
+                                                              },
+                                                      "description":  "Trigger job scraping from Wuzzuf. Set use_samples=true for testing without actual scraping."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Scrape Job If Missing (On-Demand)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n    \"job_title\": \"React Developer\",\n    \"max_results\": 30\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/jobs/scrape-if-missing",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "jobs",
+                                                                               "scrape-if-missing"
+                                                                           ]
+                                                              },
+                                                      "description":  "Check if job title exists in database. If not found, triggers on-demand background scraping and returns 202 with status polling URL."
+                                                  },
+                                      "response":  [
+
+                                                   ],
+                                      "event":  [
+                                                    {
+                                                        "listen":  "test",
+                                                        "script":  {
+                                                                       "type":  "text/javascript",
+                                                                       "exec":  [
+                                                                                    "// Auto-capture scraping_job_id for status polling",
+                                                                                    "var json = pm.response.json();",
+                                                                                    "if (json \u0026\u0026 json.job_id) {",
+                                                                                    "    pm.environment.set(\u0027scraping_job_id\u0027, json.job_id);",
+                                                                                    "    console.log(\u0027✅ scraping_job_id saved: \u0027 + json.job_id);",
+                                                                                    "}"
+                                                                                ]
+                                                                   }
+                                                    }
+                                                ]
+                                  },
+                                  {
+                                      "name":  "Check Scraping Status",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/scraping-status/:jobId",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "scraping-status",
+                                                                               ":jobId"
+                                                                           ],
+                                                                  "variable":  [
+                                                                                   {
+                                                                                       "key":  "jobId",
+                                                                                       "value":  "{{scraping_job_id}}",
+                                                                                       "description":  "Scraping Job ID from previous request"
+                                                                                   }
+                                                                               ]
+                                                              },
+                                                      "description":  "Poll the status of an on-demand scraping job. Returns pending/processing/completed/failed status."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Recommended Jobs",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/jobs/recommended",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "jobs",
+                                                                               "recommended"
+                                                                           ]
+                                                              },
+                                                      "description":  "Get recommended jobs based on user\u0027s extracted skills."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "4. Gap Analysis",
+                     "item":  [
+                                  {
+                                      "name":  "Analyze Single Job",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/gap-analysis/job/1",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "gap-analysis",
+                                                                               "job",
+                                                                               "1"
+                                                                           ]
+                                                              },
+                                                      "description":  "Analyze skill gap between user and a specific job. Returns match percentage, matched skills, missing skills, and recommendations."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Batch Job Analysis",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n    \"job_ids\": [1, 2, 3, 4, 5]\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/gap-analysis/batch",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "gap-analysis",
+                                                                               "batch"
+                                                                           ]
+                                                              },
+                                                      "description":  "Analyze multiple jobs at once. Returns ranked list by match percentage, common missing skills, and best match."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Get Recommendations",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/gap-analysis/recommendations",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "gap-analysis",
+                                                                               "recommendations"
+                                                                           ]
+                                                              },
+                                                      "description":  "Get personalized skill recommendations based on job market demand. Skills prioritized as Critical, Important, or Nice-to-Have."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "5. Market Intelligence",
+                     "item":  [
+                                  {
+                                      "name":  "Get Market Overview",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/market/overview",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "market",
+                                                                               "overview"
+                                                                           ]
+                                                              },
+                                                      "description":  "Get overall market statistics including total jobs, roles, average skills per job, and top 5 most in-demand skills."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Get Role Statistics",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/market/role-statistics/PHP Developer",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "market",
+                                                                               "role-statistics",
+                                                                               "PHP Developer"
+                                                                           ]
+                                                              },
+                                                      "description":  "Get detailed statistics for a specific job role including top skills, average experience, common locations, and salary range."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Get Trending Skills",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/market/trending-skills?limit=20\u0026type=technical",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "market",
+                                                                               "trending-skills"
+                                                                           ],
+                                                                  "query":  [
+                                                                                {
+                                                                                    "key":  "limit",
+                                                                                    "value":  "20",
+                                                                                    "description":  "Number of skills to return (default: 20)"
+                                                                                },
+                                                                                {
+                                                                                    "key":  "type",
+                                                                                    "value":  "technical",
+                                                                                    "description":  "Filter by skill type: technical or soft"
+                                                                                }
+                                                                            ]
+                                                              },
+                                                      "description":  "Get trending skills across all job roles, sorted by demand. Can filter by skill type."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Get Skill Demand for Role",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/market/skill-demand/Laravel Developer",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "market",
+                                                                               "skill-demand",
+                                                                               "Laravel Developer"
+                                                                           ]
+                                                              },
+                                                      "description":  "Get comprehensive skill demand analysis for a specific role, including essential/important/nice-to-have categorization."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "6. AI Engine",
+                     "item":  [
+                                  {
+                                      "name":  "Health Check",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{ai_engine_url}}/",
+                                                                  "host":  [
+                                                                               "{{ai_engine_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               ""
+                                                                           ]
+                                                              },
+                                                      "description":  "Check AI Engine health status."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "List Skills",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{ai_engine_url}}/skills",
+                                                                  "host":  [
+                                                                               "{{ai_engine_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "skills"
+                                                                           ]
+                                                              },
+                                                      "description":  "Get all 84 predefined skills (66 technical + 18 soft)."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Analyze CV",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "formdata",
+                                                                   "formdata":  [
+                                                                                    {
+                                                                                        "key":  "file",
+                                                                                        "type":  "file",
+                                                                                        "src":  "/path/to/cv.pdf",
+                                                                                        "description":  "CV PDF file"
+                                                                                    },
+                                                                                    {
+                                                                                        "key":  "use_nlp",
+                                                                                        "value":  "false",
+                                                                                        "type":  "text",
+                                                                                        "description":  "Use NLP extraction (slower but more accurate)"
+                                                                                    }
+                                                                                ]
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{ai_engine_url}}/analyze",
+                                                                  "host":  [
+                                                                               "{{ai_engine_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "analyze"
+                                                                           ]
+                                                              },
+                                                      "description":  "Analyze CV and extract skills using AI."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Extract Text from PDF",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "formdata",
+                                                                   "formdata":  [
+                                                                                    {
+                                                                                        "key":  "file",
+                                                                                        "type":  "file",
+                                                                                        "src":  "/path/to/file.pdf"
+                                                                                    }
+                                                                                ]
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{ai_engine_url}}/extract-text",
+                                                                  "host":  [
+                                                                               "{{ai_engine_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "extract-text"
+                                                                           ]
+                                                              },
+                                                      "description":  "Extract raw text from PDF without skill analysis."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Scrape Jobs (AI)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n    \"query\": \"Python Developer\",\n    \"max_results\": 10,\n    \"use_samples\": true\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{ai_engine_url}}/scrape-jobs",
+                                                                  "host":  [
+                                                                               "{{ai_engine_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "scrape-jobs"
+                                                                           ]
+                                                              },
+                                                      "description":  "Directly scrape jobs from AI Engine (usually called via Laravel)."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Scraper Status",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{ai_engine_url}}/scrape-jobs/status",
+                                                                  "host":  [
+                                                                               "{{ai_engine_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "scrape-jobs",
+                                                                               "status"
+                                                                           ]
+                                                              },
+                                                      "description":  "Check job scraper service status."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Test Source",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n    \"source\": {\n        \"name\": \"Remote Python Jobs\",\n        \"endpoint\": \"https://remotive.com/api/remote-jobs\",\n        \"type\": \"api\"\n    },\n    \"query\": \"python\",\n    \"max_results\": 2\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{ai_engine_url}}/test-source",
+                                                                  "host":  [
+                                                                               "{{ai_engine_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "test-source"
+                                                                           ]
+                                                              },
+                                                      "description":  "Lightweight probe for a single scraping source."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Advanced Parse CV",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{ai_engine_url}}/parse-cv",
+                                                                  "host":  [
+                                                                               "{{ai_engine_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "parse-cv"
+                                                                           ]
+                                                              },
+                                                      "description":  "Advanced CV parsing endpoint. Extracts job title, experience, and skills.",
+                                                      "body":  {
+                                                                   "mode":  "formdata",
+                                                                   "formdata":  [
+                                                                                    {
+                                                                                        "key":  "file",
+                                                                                        "type":  "file",
+                                                                                        "src":  "/path/to/cv.pdf",
+                                                                                        "description":  "CV PDF file"
+                                                                                    }
+                                                                                ]
+                                                               }
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "7. Admin",
+                     "item":  [
+                                  {
+                                      "name":  "Get Scraping Sources",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/admin/scraping-sources",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "admin",
+                                                                               "scraping-sources"
+                                                                           ]
+                                                              },
+                                                      "description":  "List all configured scraping sources."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Create Scraping Source",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n    \"name\": \"Remotive\",\n    \"type\": \"api\",\n    \"endpoint\": \"https://remotive.com/api/remote-jobs\",\n    \"method\": \"GET\",\n    \"is_active\": true,\n    \"params\": {\"category\": \"software-dev\"}\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/admin/scraping-sources",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "admin",
+                                                                               "scraping-sources"
+                                                                           ]
+                                                              },
+                                                      "description":  "Create a new scraping source configuration."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Get Single Source",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/admin/scraping-sources/1",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "admin",
+                                                                               "scraping-sources",
+                                                                               "1"
+                                                                           ]
+                                                              },
+                                                      "description":  "Get details of a specific scraping source."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Update Scraping Source",
+                                      "request":  {
+                                                      "method":  "PUT",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n    \"name\": \"Remotive Updated\",\n    \"is_active\": false\n}"
+                                                               },
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/admin/scraping-sources/1",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "admin",
+                                                                               "scraping-sources",
+                                                                               "1"
+                                                                           ]
+                                                              },
+                                                      "description":  "Update an existing scraping source."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Delete Scraping Source",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/admin/scraping-sources/1",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "admin",
+                                                                               "scraping-sources",
+                                                                               "1"
+                                                                           ]
+                                                              },
+                                                      "description":  "Delete a scraping source."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Toggle Source Status",
+                                      "request":  {
+                                                      "method":  "PATCH",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/admin/scraping-sources/1/toggle",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "admin",
+                                                                               "scraping-sources",
+                                                                               "1",
+                                                                               "toggle"
+                                                                           ]
+                                                              },
+                                                      "description":  "Toggle active/inactive status of a source."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Test All Sources",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/admin/scraping-sources/test",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "admin",
+                                                                               "scraping-sources",
+                                                                               "test"
+                                                                           ]
+                                                              },
+                                                      "description":  "Run an automated diagnostic test on all active scraping sources."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Get Target Roles",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/admin/target-roles",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "admin",
+                                                                               "target-roles"
+                                                                           ]
+                                                              },
+                                                      "description":  "List target roles."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Create Target Role",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/admin/target-roles",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "admin",
+                                                                               "target-roles"
+                                                                           ]
+                                                              },
+                                                      "description":  "Create a required job target role.",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n    \"title\": \"React Developer\",\n    \"is_active\": true\n}"
+                                                               }
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Toggle Target Role Status",
+                                      "request":  {
+                                                      "method":  "PATCH",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/admin/target-roles/1/toggle",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "admin",
+                                                                               "target-roles",
+                                                                               "1",
+                                                                               "toggle"
+                                                                           ]
+                                                              },
+                                                      "description":  "Toggle target role active status."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Delete Target Role",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/admin/target-roles/1",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "admin",
+                                                                               "target-roles",
+                                                                               "1"
+                                                                           ]
+                                                              },
+                                                      "description":  "Delete target role."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Run Full Scraping",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/admin/scraping/run-full",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "admin",
+                                                                               "scraping",
+                                                                               "run-full"
+                                                                           ]
+                                                              },
+                                                      "description":  "Run full scraping job manually."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "8. Applications Tracker",
+                     "item":  [
+                                  {
+                                      "name":  "Get All Applications",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/applications",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "applications"
+                                                                           ]
+                                                              },
+                                                      "description":  "Get all user applications for the job tracker."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Get Single Application",
+                                      "request":  {
+                                                      "method":  "GET",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/applications/1",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "applications",
+                                                                               "1"
+                                                                           ]
+                                                              },
+                                                      "description":  "Get details of a single tracked application."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Track Application",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/applications",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "applications"
+                                                                           ]
+                                                              },
+                                                      "description":  "Create or track a job application.",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n    \"job_id\": 1,\n    \"status\": \"saved\"\n}"
+                                                               }
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Update Application",
+                                      "request":  {
+                                                      "method":  "PATCH",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     },
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/applications/1",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "applications",
+                                                                               "1"
+                                                                           ]
+                                                              },
+                                                      "description":  "Update an application\u0027s status or notes.",
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\n    \"status\": \"applied\",\n    \"notes\": \"Follow up next week\"\n}"
+                                                               }
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Remove Application",
+                                      "request":  {
+                                                      "method":  "DELETE",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Authorization",
+                                                                         "value":  "Bearer {{token}}"
+                                                                     }
+                                                                 ],
+                                                      "url":  {
+                                                                  "raw":  "{{base_url}}/applications/1",
+                                                                  "host":  [
+                                                                               "{{base_url}}"
+                                                                           ],
+                                                                  "path":  [
+                                                                               "applications",
+                                                                               "1"
+                                                                           ]
+                                                              },
+                                                      "description":  "Delete a tracked application."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ]
+                 },
+                 {
+                     "name":  "Health Check (Laravel)",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+
+                                                ],
+                                     "url":  {
+                                                 "raw":  "{{base_url}}/health",
+                                                 "host":  [
+                                                              "{{base_url}}"
+                                                          ],
+                                                 "path":  [
+                                                              "health"
+                                                          ]
+                                             },
+                                     "description":  "Check Laravel API health status."
+                                 },
+                     "response":  [
+
+                                  ]
+                 },
+                 {
+                     "name":  "⚙️ Phase 6: AI Gateway (Microservices)",
+                     "item":  [
+                                  {
+                                      "name":  "Parse CV (AI Gateway)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "formdata",
+                                                                   "formdata":  [
+                                                                                    {
+                                                                                        "key":  "cv_file",
+                                                                                        "type":  "file",
+                                                                                        "src":  "",
+                                                                                        "description":  "Upload a PDF, DOCX, PNG, or JPG CV file"
+                                                                                    }
+                                                                                ]
+                                                               },
+                                                      "url":  {
+                                                                  "raw": "http://127.0.0.1:8001/api/v1/parse-cv",
+                                                                  "protocol":  "http",
+                                                                  "host":  [
+                                                                               "127",
+                                                                               "0",
+                                                                               "0",
+                                                                               "1"
+                                                                           ],
+                                                                  "port": "8001",
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "parse-cv"
+                                                                           ]
+                                                              },
+                                                      "description":  "Upload a CV file to the AI Gateway. Returns skills (BERT NER), domain classification (BART-MNLI), domain_confidence, contact_info (email/phone/linkedin/github/location), and extraction_method."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Scrape On-Demand (AI Gateway)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "formdata",
+                                                                   "formdata":  [
+                                                                                    {
+                                                                                        "key":  "source_url",
+                                                                                        "value":  "https://remotive.com/api/remote-jobs?limit=2",
+                                                                                        "type":  "text",
+                                                                                        "description":  "Full URL of a job listing or job board API"
+                                                                                    }
+                                                                                ]
+                                                               },
+                                                      "url":  {
+                                                                  "raw": "http://127.0.0.1:8001/api/v1/scrape-on-demand",
+                                                                  "protocol":  "http",
+                                                                  "host":  [
+                                                                               "127",
+                                                                               "0",
+                                                                               "0",
+                                                                               "1"
+                                                                           ],
+                                                                  "port": "8001",
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "scrape-on-demand"
+                                                                           ]
+                                                              },
+                                                      "description":  "Scrape a job listing URL using the full 5-phase ai-job-miner pipeline. Returns up to 5 parsed job dicts (title, job_type, work_model, location, salary, skills, match_score)."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  },
+                                  {
+                                      "name":  "Hybrid Match Score (AI Gateway)",
+                                      "request":  {
+                                                      "method":  "POST",
+                                                      "header":  [
+                                                                     {
+                                                                         "key":  "Content-Type",
+                                                                         "value":  "application/json"
+                                                                     }
+                                                                 ],
+                                                      "body":  {
+                                                                   "mode":  "raw",
+                                                                   "raw":  "{\"cv_text\":\"Ahmed Khames — Senior Python Developer with 5 years experience in Django, FastAPI, Docker, PostgreSQL, Redis.\",\"cv_skills\":[\"python\",\"django\",\"fastapi\",\"docker\",\"postgresql\",\"redis\"],\"job_description\":\"We need a Senior Backend Engineer. Expertise in Python, FastAPI, Docker, Kubernetes, PostgreSQL, Redis required.\",\"job_skills\":[\"python\",\"fastapi\",\"docker\",\"kubernetes\",\"postgresql\",\"redis\",\"django\"]}",
+                                                                   "options":  {
+                                                                                   "raw":  {
+                                                                                               "language":  "json"
+                                                                                           }
+                                                                               }
+                                                               },
+                                                      "url":  {
+                                                                  "raw": "http://127.0.0.1:8001/api/v1/hybrid-match",
+                                                                  "protocol":  "http",
+                                                                  "host":  [
+                                                                               "127",
+                                                                               "0",
+                                                                               "0",
+                                                                               "1"
+                                                                           ],
+                                                                  "port": "8001",
+                                                                  "path":  [
+                                                                               "api",
+                                                                               "v1",
+                                                                               "hybrid-match"
+                                                                           ]
+                                                              },
+                                                      "description":  "Compute weighted hybrid match: Final = (Semantic x 60%) + (TF-IDF x 40%). Returns hybrid_match_score, semantic_score, tfidf_score, missing_skills."
+                                                  },
+                                      "response":  [
+
+                                                   ]
+                                  }
+                              ],
+                     "description":  "Endpoints exposed by ai-hybrid-orchestrator/main_api.py (FastAPI, port 8000). Run: uvicorn ai-hybrid-orchestrator.main_api:app --host 0.0.0.0 --port 8001 --reload. Swagger: http://127.0.0.1:8001/docs"
+                 }
+             ],
+    "variable":  [
+                     {
+                         "key":  "base_url",
+                         "value":  "http://127.0.0.1:8000",
+                         "type":  "default",
+                         "enabled":  true,
+                         "description":  "Laravel Backend API base URL (php artisan serve)"
+                     },
+                     {
+                         "key":  "ai_engine_url",
+                         "value":  "http://127.0.0.1:8001",
+                         "type":  "default",
+                         "enabled":  true,
+                         "description":  "Legacy AI Engine (ai-engine venv, uvicorn port 8001)"
+                     },
+                     {
+                         "key":  "ai_gateway_url",
+                         "value":  "http://127.0.0.1:8001",
+                         "type":  "default",
+                         "enabled":  true,
+                         "description":  "AI Hybrid Orchestrator Gateway (port 8000). Swagger: http://127.0.0.1:8001/docs"
+                     },
+                     {
+                         "key":  "token",
+                         "value":  "",
+                         "type":  "secret",
+                         "enabled":  true,
+                         "description":  "Sanctum Bearer token — auto-filled by Login Tests script"
+                     },
+                     {
+                         "key":  "scraping_job_id",
+                         "value":  "",
+                         "type":  "default",
+                         "enabled":  true,
+                         "description":  "Auto-filled by Scrape-If-Missing Tests script"
+                     }
+                 ]
 }
+
