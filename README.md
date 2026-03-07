@@ -182,19 +182,6 @@ CareerCompass/
 │   │   └── console.php                             # Scheduler configuration
 │   └── TESTING.md                          # API testing guide
 │
-├── ai-engine/                # Legacy Python FastAPI Service (Phases 1–22)
-│   ├── .env                                # Adzuna API credentials (not committed)
-│   ├── .gitignore
-│   ├── main.py                             # FastAPI entry point (port 8001)
-│   ├── parser.py                           # PDF text extraction
-│   ├── extractor.py                        # Skill extraction (NLP + fuzzy)
-│   ├── scraper.py                          # Job dispatch + frequency analysis
-│   ├── api_fetcher.py                      # Remotive & Adzuna US API fetchers
-│   ├── html_scraper.py                     # Wuzzuf HTML scraper
-│   ├── test_scraper.py                     # /test-source FastAPI router
-│   ├── requirements.txt
-│   └── README.md
-│
 ├── ai-job-miner/             # Phase 6: Heuristic Scraping Engine (5 phases)
 │   ├── core/                               # Engine core (http_client, dlq, engine, heuristics)
 │   ├── strategies/                         # HtmlSmartScraper + JsonApiScraper
@@ -448,12 +435,12 @@ Use Task Scheduler to run `php artisan schedule:run` every minute.
 
 Once all services are started, check the following URLs:
 
-| Service     | URL                              | Expected Response       |
-| ----------- | -------------------------------- | ----------------------- |
-| Frontend    | http://localhost:5173            | React login/register UI |
-| Backend API | http://127.0.0.1:8000/api/health | `{"status": "ok"}`      |
-| AI Engine   | http://127.0.0.1:8001            | `{"message": "ok"}`     |
-| AI Engine   | http://127.0.0.1:8001/docs       | Swagger UI              |
+| Service     | URL                              | Expected Response                               |
+| ----------- | -------------------------------- | ----------------------------------------------- |
+| Frontend    | http://localhost:5173            | React login/register UI                         |
+| Backend API | http://127.0.0.1:8000/api/health | `{"status": "ok"}`                              |
+| AI Gateway  | http://127.0.0.1:8001            | `{"status": "operational", "version": "1.0.0"}` |
+| AI Gateway  | http://127.0.0.1:8001/docs       | Swagger UI                                      |
 
 > **Tip**: After logging in, you can access distinct dashboard views at `/user/dashboard` and the admin portal at `/admin/` (requires Admin Role seeded via `AdminUserSeeder`).
 
@@ -536,19 +523,6 @@ Once all services are started, check the following URLs:
 | PATCH  | `/api/admin/target-roles/{id}/toggle`     | ✅   | Toggle target role active status |
 | DELETE | `/api/admin/target-roles/{id}`            | ✅   | Delete a target role             |
 | POST   | `/api/admin/scraping/run-full`            | ✅   | Trigger full market scraping     |
-
-### Legacy AI Engine Endpoints (Port 8001)
-
-| Method | Endpoint              | Description                                              |
-| ------ | --------------------- | -------------------------------------------------------- |
-| GET    | `/`                   | Health check                                             |
-| GET    | `/skills`             | List all predefined skills                               |
-| POST   | `/analyze`            | Analyze CV and extract skills                            |
-| POST   | `/parse-cv`           | Extract job_title, experience_years, and skills from PDF |
-| POST   | `/extract-text`       | Extract raw text from PDF                                |
-| POST   | `/scrape-jobs`        | Dispatch scraping across active sources                  |
-| GET    | `/scrape-jobs/status` | Scraper service status                                   |
-| POST   | `/test-source`        | Probe a single source (used by Artisan)                  |
 
 ### AI Gateway Endpoints — Phase 6 (Port 8000)
 
@@ -743,9 +717,9 @@ sequenceDiagram
     Laravel->>Queue: Dispatch ProcessOnDemandJobScraping (high priority)
     Laravel-->>User: {scraping_job_id, status: "processing"}
     User->>Laravel: GET /api/scraping-status/{jobId} (polls every 3s)
-    Queue->>AI Engine: POST /scrape-jobs
-    AI Engine->>Wuzzuf: HTTP scrape
-    AI Engine-->>Queue: {jobs: [...]}
+    Queue->>FastAPI Gateway: POST /api/v1/scrape-on-demand
+    FastAPI Gateway->>Wuzzuf: HTTP scrape
+    FastAPI Gateway-->>Queue: {jobs: [...]}
     Queue->>Database: Save jobs & skills
     Queue->>Database: Update ScrapingJob (status: completed)
     Laravel-->>User: {status: "completed"} → frontend re-fetches analysis
@@ -994,16 +968,16 @@ curl -X GET http://127.0.0.1:8000/api/admin/scraping-sources \
 - **Laravel Sanctum** - API token authentication
 - **Guzzle HTTP** - HTTP client for AI Engine communication
 
-### AI Engine
+### AI Job Miner & Gateway Models
 
 - **FastAPI** - High-performance Python web framework
-- **PDFMiner.six** - PDF text extraction
+- **Transformers** - HuggingFace `dslim/bert-base-NER` and `facebook/bart-large-mnli`
+- **Sentence-Transformers** - `all-MiniLM-L6-v2`
+- **PyPDF2 / PDFMiner.six / pytesseract** - Multipart PDF text & OCR extraction
 - **spaCy** - Industrial-strength NLP library
 - **BeautifulSoup4** - HTML/XML parser for web scraping
 - **httpx** - Async HTTP client (Remotive & Adzuna API fetching)
-- **FuzzyWuzzy** - Fuzzy string matching (default skill extraction)
-- **python-Levenshtein** - Fast string similarity calculations
-- **python-dotenv** - Loads API credentials from `ai-engine/.env`
+- **python-dotenv** - Loads API credentials
 - **undetected-chromedriver** - Bypass anti-bot detection for HTML scraping
 - **Uvicorn** - Lightning-fast ASGI server
 
@@ -1041,7 +1015,7 @@ QUEUE_CONNECTION=database
 FRONTEND_URL=http://localhost:5173
 ```
 
-**Python AI Engine (`ai-engine/.env`):**
+**Python AI Job Miner (`ai-job-miner/.env`):**
 
 ```env
 ADZUNA_APP_ID=your_adzuna_app_id
@@ -1092,10 +1066,10 @@ composer dump-autoload
 - Clear caches: `php artisan cache:clear` and `php artisan config:clear`
 - Ensure the user has uploaded a CV and has at least some skills on their profile
 
-### AI Engine Import Errors
+### AI Gateway Import Errors
 
 ```bash
-cd ai-engine
+cd ai-hybrid-orchestrator
 deactivate
 
 rm -rf venv  # or rmdir /s venv on Windows
@@ -1121,9 +1095,9 @@ cd backend-api
 php artisan scrape:test-sources
 ```
 
-- **Wuzzuf fails**: Check internet connection; HTML selectors may need updating in `html_scraper.py`
+- **Wuzzuf fails**: Check internet connection; HTML selectors may need updating in `ai-job-miner/strategies/html_scraper.py`
 - **Remotive fails**: Public API — just check internet connectivity
-- **Adzuna fails (HTTP 400)**: Ensure `ai-engine/.env` has correct `ADZUNA_APP_ID` / `ADZUNA_APP_KEY`, and restart the Python server after any `.env` changes
+- **Adzuna fails (HTTP 400)**: Ensure `ai-job-miner/.env` has correct `ADZUNA_APP_ID` / `ADZUNA_APP_KEY`, and restart the Python server after any `.env` changes
 - **Adzuna returns 0 jobs**: Python server needs a restart to reload `.env` credentials
 
 ### Port Already in Use
@@ -1139,7 +1113,7 @@ taskkill /PID <PID> /F
 lsof -ti:8000 | xargs kill -9
 ```
 
-**Port 8001 (AI Engine):**
+**Port 8001 (AI Gateway):**
 
 ```bash
 # Windows
@@ -1164,7 +1138,7 @@ lsof -ti:8001 | xargs kill -9
 - **Frontend Integration Guide**: [docs/FRONTEND_INTEGRATION.md](docs/FRONTEND_INTEGRATION.md) - React hooks & components for Market Intelligence
 - **Production Deployment**: [docs/PRODUCTION_DEPLOYMENT.md](docs/PRODUCTION_DEPLOYMENT.md) - Redis, Supervisor, deployment guide
 - **API Testing Guide**: [backend-api/TESTING.md](backend-api/TESTING.md)
-- **AI Engine API Docs**: http://127.0.0.1:8001/docs (Interactive Swagger UI - when running)
+- **AI Gateway API Docs**: http://127.0.0.1:8001/docs (Interactive Swagger UI - when running)
 - **Postman Collection**: Import `CareerCompass.postman_collection.json` for 30+ ready-to-use API requests
 
 ---
@@ -1190,8 +1164,7 @@ MIT License - See LICENSE file for details
 ## 👥 Authors
 
 - **Student Name** - Graduation Project 2026
-- **Supervisor** - [Name]
-
+- **Supervisor** - Dr. Amnah Mahmoud
 ---
 
 ## 🙏 Acknowledgments
@@ -1214,7 +1187,7 @@ CREATE DATABASE career_compass;
 # 2. Install all dependencies
 cd frontend && npm install
 cd ../backend-api && composer install
-cd ../ai-engine && python -m venv venv && venv\Scripts\activate && pip install -r requirements.txt
+cd ../ai-hybrid-orchestrator && python -m venv venv && venv\Scripts\activate && pip install -r requirements.txt
 
 # 3. Configure Laravel backend
 cd backend-api
@@ -1242,7 +1215,7 @@ EXIT;
 # 2. Install dependencies
 cd frontend && npm install && cd ..
 cd backend-api && composer install && cd ..
-cd ai-engine && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt && cd ..
+cd ai-hybrid-orchestrator && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt && cd ..
 
 # 3. Configure Laravel
 cd backend-api
