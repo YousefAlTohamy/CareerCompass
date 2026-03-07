@@ -45,7 +45,7 @@ class CvController extends Controller
     public function upload(CvUploadRequest $request): JsonResponse
     {
         // Prevent PHP from killing the script during heavy ML processing (OCR, NER)
-        set_time_limit(30);
+        set_time_limit(180);
 
         $user = $request->user();
 
@@ -197,7 +197,7 @@ class CvController extends Controller
             'file_size' => $file->getSize(),
         ]);
 
-        $response = Http::timeout(30)
+        $response = Http::timeout(180)
             ->attach(
                 'cv_file',                      // field name expected by FastAPI
                 fopen($file->getPathname(), 'r'), // raw stream (prevents Windows cURL hang)
