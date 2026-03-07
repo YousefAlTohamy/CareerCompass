@@ -8,10 +8,11 @@ CareerCompass is an **advanced AI-powered career development platform** that com
 
 - **Market Intelligence System**: Automated job scraping with skill importance ranking (Essential/Important/Nice-to-have)
 - **On-Demand Job Data**: Real-time job scraping with background queue processing and live status polling
-- **Smart Gap Analysis**: Priority-based skill roadmap with market demand insights
-- **Modern Architecture**: React frontend, Laravel backend with queue workers, Python AI engine, and Role-Based Access Control (RBAC)
+- **Hybrid AI Gateway**: FastAPI orchestrator combining TF-IDF + Semantic embeddings for absolute matching precision
+- **Smart Gap Analysis & Match Scoring**: Priority-based skill roadmap with dynamically calculated AI match scores rendered naturally in the jobs feed
+- **Seamless Discovery UX**: Intelligent React upload bounds capturing CV changes and gracefully routing users to real-time market opportunities
 - **Job Application Tracker**: Kanban-style lifecycle visualization for tracked applications
-- **Strict Routing Architecture**: Split frontend routing ensuring rigorous role-based feature segregation
+- **Strict Architecture Security**: Laravel 12 API guarded by `IsAdmin` middleware & React frontend heavily split into `/admin/*` and `/user/*` routing boundaries
 
 ---
 
@@ -47,12 +48,12 @@ graph TB
 
 | Component          | Technology                 | Port | Purpose                                                      |
 | ------------------ | -------------------------- | ---- | ------------------------------------------------------------ |
-| **Frontend**       | React 19 + Vite + Recharts | 5173 | User interface, dashboard, authentication                    |
-| **Backend API**    | Laravel 12 (IsAdmin)       | 8000 | User management, authentication, business logic              |
+| **Frontend**       | React 19 + Vite + Recharts | 5173 | UI, strict boundaries (`/admin/*` & `/user/*`), auth state   |
+| **Backend API**    | Laravel 12                 | 8000 | Business logic, `IsAdmin` RBAC, db management, token mgmt    |
 | **Queue Worker**   | Laravel Queue              | -    | Background processing for scraping & calculations            |
-| **AI Gateway**     | Python/FastAPI             | 8001 | Hybrid orchestrator: CV parse + scraping + semantic matching |
-| **ai-job-miner**   | Python (async)             | -    | 5-phase heuristic scraper + TF-IDF engine                    |
-| **ai-cv-analyzer** | Python Transformers        | -    | BERT NER + BART-MNLI classifier + MiniLM semantic embedder   |
+| **AI Gateway**     | Python/FastAPI             | 8001 | ai-hybrid-orchestrator: orchestrates CV parse & match scores |
+| **ai-job-miner**   | Python (async)             | -    | 5-phase heuristic scraper + TF-IDF engine (used by Gateway)  |
+| **ai-cv-analyzer** | Python Transformers        | -    | BERT+BART+MiniLM pipelines (used by Gateway)                 |
 | **Database**       | MySQL                      | 3306 | Data persistence                                             |
 | **Cache/Queue**    | Redis (opt)                | 6379 | Fast caching and queue management (production)               |
 | **Scheduler**      | Laravel Cron               | -    | Automated market data updates (every 48 hours)               |
@@ -95,9 +96,9 @@ CareerCompass/
 │   │   │   │   └── AdminSources.jsx        # Admin — scraping source management
 │   │   │   ├── user/
 │   │   │   │   ├── Applications.jsx        # Job Application Tracker (Kanban-style statuses)
-│   │   │   │   ├── Dashboard.jsx           # Main dashboard
+│   │   │   │   ├── Dashboard.jsx           # Main dashboard + 5s animated New Role Discovery UX
 │   │   │   │   ├── GapAnalysis.jsx         # Priority-based skill gap analysis
-│   │   │   │   ├── Jobs.jsx                # Job listings + inline gap analysis + apply button
+│   │   │   │   ├── Jobs.jsx                # Job listings + Match Score logic & dynamic UI badges
 │   │   │   │   ├── MarketIntelligence.jsx  # Market trends & trending skills (route: /market)
 │   │   │   │   └── Profile.jsx             # User profile management
 │   │   │   ├── Home.jsx                    # Landing / welcome page
@@ -331,10 +332,12 @@ php artisan db:seed --class=AdminUserSeeder
 php artisan migrate:fresh --seed
 ```
 
-#### 5️⃣ AI Engine Setup (Python + FastAPI)
+#### 5️⃣ AI Gateway Setup (FastAPI Orchestrator)
+
+_Note: The legacy `local-ai-engine` is deprecated. We now strictly use the `ai-hybrid-orchestrator`._
 
 ```bash
-cd ai-engine
+cd ai-hybrid-orchestrator
 
 # Create virtual environment
 python -m venv venv
@@ -346,8 +349,8 @@ source venv/bin/activate     # macOS/Linux
 # Install Python dependencies
 pip install -r requirements.txt
 
-# Download spaCy language model (Required for dynamic NLP skill extraction)
-python -m spacy download en_core_web_sm
+# Start the uvicorn API Gateway natively
+uvicorn main_api:app --host 0.0.0.0 --port 8001 --reload
 ```
 
 ---
@@ -391,16 +394,16 @@ php artisan serve --port=8000
 # API available at http://127.0.0.1:8000
 ```
 
-**Terminal 3 - AI Engine (Python + FastAPI):**
+**Terminal 3 - AI Gateway (Python + FastAPI):**
 
 ```bash
-cd ai-engine
+cd ai-hybrid-orchestrator
 venv\Scripts\activate        # Windows
 # OR
 source venv/bin/activate     # macOS/Linux
 
-uvicorn main:app --reload --port 8001
-# AI Engine available at http://127.0.0.1:8001
+uvicorn main_api:app --reload --port 8001
+# AI Gateway available at http://127.0.0.1:8001
 ```
 
 **Terminal 4 - Queue Worker (Laravel):**
@@ -470,13 +473,15 @@ Once all services are started, check the following URLs:
 
 ### User & Skills (Protected)
 
-| Method | Endpoint                | Auth | Description                                                                                     |
-| ------ | ----------------------- | ---- | ----------------------------------------------------------------------------------------------- |
-| GET    | `/api/user`             | ✅   | Get current user                                                                                |
-| POST   | `/api/logout`           | ✅   | Logout (revoke tokens)                                                                          |
-| POST   | `/api/upload-cv`        | ✅   | Upload CV → calls `/parse-cv` Python endpoint → returns `job_title`, `experience_years`, skills |
-| GET    | `/api/user/skills`      | ✅   | View user's skills                                                                              |
-| DELETE | `/api/user/skills/{id}` | ✅   | Remove a skill                                                                                  |
+| Method | Endpoint                | Auth | Description                                                                               |
+| ------ | ----------------------- | ---- | ----------------------------------------------------------------------------------------- |
+| GET    | `/api/user`             | ✅   | Get current user                                                                          |
+| POST   | `/api/logout`           | ✅   | Logout (revoke tokens)                                                                    |
+| POST   | `/api/upload-cv`        | ✅   | Upload CV → streams to FastApi → returns `job_title`, `is_new_role` boolean, + `contacts` |
+| GET    | `/api/user/skills`      | ✅   | View user's skills                                                                        |
+| DELETE | `/api/user/skills/{id}` | ✅   | Remove a skill                                                                            |
+
+> **Frontend Behavior**: The `upload-cv` response explicitly returns `is_new_role`. If the AI detected a domain change, React will silently sync the AuthContext payload, suppress immediate success popups, and dynamically transition the screen to a 5-second `ProcessingAnimation` indicating "Discovering market opportunities..." before cleanly piping the user into the `/jobs` page algorithm.
 
 ### Jobs (Public + Protected)
 
@@ -665,6 +670,8 @@ erDiagram
     }
 ```
 
+> **Note on Match Scores**: The `match_score` logic (e.g. `🎯 Match: 92%`) seen in the Jobs UI is NOT stored permanently in the database. Instead, it is dynamically calculated by the AI Hybrid Orchestrator using a weighted TF-IDF + Semantic mapping on the fly each time the user's skillset is queried against the active job listings.
+
 ### Role Management
 
 - Standard **admin** roles and foundational accounts are initialized specifically through the `AdminUserSeeder`.
@@ -678,26 +685,30 @@ erDiagram
 
 ## 🔄 System Flows
 
-### CV Upload Flow
+### CV Upload & Discovery UX Flow
 
 ```mermaid
 sequenceDiagram
     participant User
+    participant React Frontend
     participant Laravel
-    participant AI Engine
-    participant Database
+    participant FastAPI Gateway
 
-    User->>Laravel: POST /api/upload-cv (PDF)
-    Laravel->>Laravel: Validate PDF (max 5MB)
-    Laravel->>Laravel: Store temporarily
-    Laravel->>AI Engine: POST /analyze (PDF)
-    AI Engine->>AI Engine: Extract text (PDFMiner)
-    AI Engine->>AI Engine: Extract skills (Fuzzy/NLP)
-    AI Engine-->>Laravel: {skills: [...]}
-    Laravel->>Database: Match skills in DB
-    Laravel->>Database: Sync user_skills (no duplicates)
-    Laravel->>Laravel: Delete temp file
-    Laravel-->>User: Success + skill stats
+    User->>React Frontend: Upload CV (PDF)
+    React Frontend->>Laravel: POST /api/upload-cv
+    Laravel->>Laravel: Validate + Auth Guard + `fopen` Stream
+    Laravel->>FastAPI Gateway: POST /api/v1/parse-cv (Multipart)
+    FastAPI Gateway->>FastAPI Gateway: BERT NER + Semantic Classification
+    FastAPI Gateway-->>Laravel: {is_new_role, job_title, skills, contacts}
+    Laravel->>Laravel: Sync user_skills & target_job_roles
+    Laravel-->>React Frontend: Success Payload
+    React Frontend->>React Frontend: Sync AuthContext with updated user data
+    alt is_new_role == true
+        React Frontend->>User: Display 5s "Discovering..." overlay
+        React Frontend->>React Frontend: Redirect to /jobs
+    else is_new_role == false
+        React Frontend->>React Frontend: Immediate Redirect to /jobs
+    end
 ```
 
 ### Gap Analysis Flow
@@ -813,7 +824,7 @@ curl -X GET http://127.0.0.1:8000/api/admin/scraping-sources \
 - [x] **Phase 1: Project Setup** - Git, Laravel, Python structure
 - [x] **Phase 2: Database Design** - Migrations, models, relationships, seeders
 - [x] **Phase 3: AI Engine** - CV parsing, skill extraction (PDFMiner + spaCy + Fuzzy matching)
-- [x] **Phase 4: Backend API** - Auth (Sanctum), CV upload, skill management
+- [x] **Phase 4: Frontend UX & Smart Job Sorting** - Intercepted `is_new_role` for seamless 5s Discovery Animation overlays. Integrated AI 'Match Scores' dynamically into the React UI across all job cards with absolute-positioned design badges. Hardened array handlers to prevent JS runtime exceptions.
 - [x] **Phase 5: Job Scraper** - Wuzzuf scraping, sample jobs, storage & deduplication
 - [x] **Phase 6: Gap Analysis** - Match calculation, batch analysis, recommendations
 - [x] **Phase 7: Frontend Dashboard** - Complete React/Vite UI with authentication & all features
