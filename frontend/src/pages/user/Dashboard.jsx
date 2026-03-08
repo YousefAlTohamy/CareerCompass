@@ -47,16 +47,7 @@ const SkillChip = ({ skill, onRemove }) => (
   </motion.div>
 );
 
-const ReadinessScore = ({ skills, recommendations }) => {
-  // Calculate a "Market Readiness" score
-  // Ratio of existing skills to total skills (existing + gaps)
-  const totalGaps =
-    (recommendations.critical?.length || 0) +
-    (recommendations.important?.length || 0);
-  const totalSkills = skills.length + totalGaps;
-  const score =
-    totalSkills > 0 ? Math.round((skills.length / totalSkills) * 100) : 0;
-
+const ReadinessScore = ({ score }) => {
   const data = [
     { name: "Readiness", value: score, color: "#6366f1" },
     { name: "Remaining", value: 100 - score, color: "#f1f5f9" },
@@ -189,12 +180,9 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [isDiscovering, setIsDiscovering] = useState(false);
-  const [message, setMessage] = useState({ type: "", text: "" });
-  const [recommendations, setRecommendations] = useState({
-    critical: [],
-    important: [],
-    nice_to_have: [],
-  });
+  // Removed message state variable because it was unused
+  const [recommendations, setRecommendations] = useState([]);
+  const [marketReadiness, setMarketReadiness] = useState(0);
 
   useEffect(() => {
     loadSkills();
@@ -218,13 +206,10 @@ export default function Dashboard() {
   const loadRecommendations = async () => {
     try {
       const response = await gapAnalysisAPI.getRecommendations();
-      const data =
-        response.data.data?.recommendations || response.data.data || {};
-      setRecommendations({
-        critical: data.critical || [],
-        important: data.important || [],
-        nice_to_have: data.nice_to_have || [],
-      });
+      const responseData = response.data.data || {};
+      
+      setRecommendations(responseData.missing_skills || []);
+      setMarketReadiness(responseData.market_readiness_score || 0);
     } catch (error) {
       console.error("Failed to load recommendations:", error);
     }
@@ -235,7 +220,13 @@ export default function Dashboard() {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      setMessage({ type: "error", text: "File size must be less than 5MB" });
+      Swal.fire({
+        toast: true,
+        icon: 'error',
+        title: 'File size must be less than 5MB',
+        showConfirmButton: false,
+        timer: 3000
+      });
       return;
     }
 
@@ -244,7 +235,6 @@ export default function Dashboard() {
 
     try {
       setUploading(true);
-      setMessage({ type: "", text: "" });
       const response = await cvAPI.uploadCV(formData);
       const responseData = response?.data?.data || response?.data || {};
       const isNewRole =
@@ -315,7 +305,8 @@ export default function Dashboard() {
         timer: 2000,
         timerProgressBar: true,
       });
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       Swal.fire({
         toast: true,
         position: 'top-end',
@@ -369,8 +360,7 @@ export default function Dashboard() {
               className="bg-white p-4 rounded-3xl shadow-premium border border-slate-100 flex items-center gap-6"
             >
               <ReadinessScore
-                skills={skills}
-                recommendations={recommendations}
+                score={marketReadiness}
               />
               <div className="pr-4">
                 <h4 className="text-sm font-black text-slate-900 leading-tight">
@@ -382,7 +372,7 @@ export default function Dashboard() {
                 <div className="flex items-center gap-1 mt-3">
                   <div className="w-2 h-2 rounded-full bg-emerald-500" />
                   <span className="text-[10px] font-black text-emerald-600 uppercase">
-                    Top {Math.max(5, 100 - skills.length * 5)}% in Role
+                    Global Gap Analysis Active
                   </span>
                 </div>
               </div>
@@ -601,19 +591,19 @@ export default function Dashboard() {
               <div className="flex items-center gap-3 mb-6">
                 <Target className="text-accent" size={24} />
                 <h3 className="text-xl font-bold text-white">
-                  Smart Skill Path
+                  Prioritized Missing Skills
                 </h3>
               </div>
 
               <div className="space-y-6">
-                {recommendations.critical?.length > 0 && (
+                {recommendations?.length > 0 && (
                   <div>
                     <h4 className="flex items-center gap-2 text-[10px] font-black uppercase text-accent tracking-[.2em] mb-3">
                       <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                      Critical Demand
+                      Global Gap Focus
                     </h4>
                     <div className="space-y-2">
-                      {recommendations.critical.slice(0, 3).map((rec, idx) => (
+                      {recommendations.slice(0, 5).map((rec, idx) => (
                         <div
                           key={idx}
                           className="bg-white/10 border border-white/10 p-4 rounded-xl hover:bg-white/20 transition-all cursor-default"
@@ -623,30 +613,10 @@ export default function Dashboard() {
                           </p>
                           <div className="flex items-center gap-2 mt-2">
                             <TrendingUp size={12} className="text-accent" />
-                            <span className="text-[10px] text-slate-300 font-bold">
-                              High Market Gap
+                            <span className="text-[10px] text-slate-300 font-bold uppercase">
+                              {rec.importance_category ? rec.importance_category.replace(/_/g, ' ') : 'Market Gap'}
                             </span>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {recommendations.important?.length > 0 && (
-                  <div>
-                    <h4 className="flex items-center gap-2 text-[10px] font-black uppercase text-slate-400 tracking-[.2em] mb-3">
-                      Important
-                    </h4>
-                    <div className="space-y-2">
-                      {recommendations.important.slice(0, 3).map((rec, idx) => (
-                        <div
-                          key={idx}
-                          className="bg-white/5 border border-white/5 p-4 rounded-xl text-slate-200 hover:text-white transition-all"
-                        >
-                          <p className="font-semibold text-sm">
-                            {rec.name || rec}
-                          </p>
                         </div>
                       ))}
                     </div>
