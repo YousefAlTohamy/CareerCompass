@@ -65,6 +65,38 @@ class AuthController extends Controller
     }
 
     /**
+     * Update the authenticated user's profile.
+     */
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'name'         => 'required|string|max:255',
+            'email'        => [
+                'required',
+                'string',
+                'email',
+                'max:255',
+                'unique:users,email,' . $user->id,
+            ],
+            'phone'        => 'nullable|string|max:255',
+            'job_title'    => 'nullable|string|max:255',
+            'location'     => 'nullable|string|max:255',
+            'linkedin_url' => 'nullable|url|max:255',
+            'github_url'   => 'nullable|url|max:255',
+        ]);
+
+        $user->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile updated successfully',
+            'data'    => $user,
+        ]);
+    }
+
+    /**
      * Login a user.
      */
     public function login(Request $request): JsonResponse

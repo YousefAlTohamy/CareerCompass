@@ -1,9 +1,10 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { AuthProvider } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
+import GuestRoute from './components/GuestRoute';
 
 // ── Public / Auth pages ──────────────────────────────────────────────────────
 import Home from './pages/Home';
@@ -40,8 +41,8 @@ function AnimatedRoutes() {
         <Routes location={location} key={location.pathname}>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
+          <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
 
           {/* ── Protected User Routes ─────────────────────────────────── */}
           <Route
