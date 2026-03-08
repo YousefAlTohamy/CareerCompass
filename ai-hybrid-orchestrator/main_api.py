@@ -89,7 +89,7 @@ logger.setLevel(logging.DEBUG)
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile   # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware                    # noqa: E402
 from pydantic import BaseModel                                        # noqa: E402
-from typing import Any, Dict, Optional                                # noqa: E402
+from typing import Any, Dict, Optional, Union                                # noqa: E402
 
 # ── Singleton AI models (load once on startup) ────────────────────────────────
 _ner_engine: SkillNEREngine | None     = None
@@ -255,8 +255,8 @@ class TestSourceSourceProxy(BaseModel):
     name: str = ""
     endpoint: str
     type: str = "html"
-    headers: Dict[str, Any] = {}
-    params: Dict[str, Any] = {}
+    headers: Union[dict, list, str, None] = None
+    params: Union[dict, list, str, None] = None
 
 class TestSourceRequest(BaseModel):
     source: TestSourceSourceProxy
@@ -272,7 +272,22 @@ async def test_source(body: TestSourceRequest):
     import urllib.parse
     
     # 1. Update params with the provided search query
-    params = dict(body.source.params)
+    
+    # Safely parse params: PHP arrays may be sent as lists [] or JSON strings
+    raw_params = body.source.params
+    if isinstance(raw_params, dict):
+        params = dict(raw_params)
+    elif isinstance(raw_params, str):
+        import json
+        try:
+            params = json.loads(raw_params)
+            if not isinstance(params, dict):
+                params = {}
+        except:
+            params = {}
+    else:
+        params = {}
+        
     injected = False
     
     # Try common keys for searching
@@ -374,7 +389,21 @@ async def scrape_jobs(body: ScrapeJobsRequest):
     # We iterate over each requested source configuration
     for source_proxy in body.sources:
         try:
-            params = dict(source_proxy.params)
+            # Safely parse params: PHP arrays may be sent as lists [] or JSON strings
+            raw_params = source_proxy.params
+            if isinstance(raw_params, dict):
+                params = dict(raw_params)
+            elif isinstance(raw_params, str):
+                import json
+                try:
+                    params = json.loads(raw_params)
+                    if not isinstance(params, dict):
+                        params = {}
+                except:
+                    params = {}
+            else:
+                params = {}
+                
             injected = False
             
             # Inject Laravel's search query
