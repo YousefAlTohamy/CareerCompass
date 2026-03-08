@@ -20,9 +20,11 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Authentication routes (no auth required)
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+// Authentication routes (require user to be a guest)
+Route::middleware('guest:sanctum')->group(function () {
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+});
 
 // Public routes (no authentication required)
 Route::get('/health', function () {
