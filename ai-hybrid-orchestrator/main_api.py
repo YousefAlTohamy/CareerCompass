@@ -83,6 +83,7 @@ logging.basicConfig(
     stream=sys.stdout,
 )
 logger = logging.getLogger("gateway")
+logger.setLevel(logging.DEBUG)
 
 # ── FastAPI ───────────────────────────────────────────────────────────────────
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile   # noqa: E402
@@ -293,16 +294,41 @@ async def test_source(body: TestSourceRequest):
     url_parts = list(urllib.parse.urlparse(body.source.endpoint))
     existing_query = dict(urllib.parse.parse_qsl(url_parts[4]))
     existing_query.update(params)
+    
+    # Adzuna Injector
+    scraper_type_override = body.source.type
+    if "adzuna.com" in body.source.endpoint:
+        scraper_type_override = "api"  # Force API scraper for Adzuna despite Laravel's HTML redirect
+        env_path = _ROOT / "ai-hybrid-orchestrator" / ".env"
+        if env_path.exists():
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("ADZUNA_APP_ID="):
+                        existing_query["app_id"] = line.split("=", 1)[1]
+                    elif line.startswith("ADZUNA_APP_KEY="):
+                        existing_query["app_key"] = line.split("=", 1)[1]
+                        
+        # Adzuna specific param mapping
+        if "search" in existing_query:
+            existing_query["what"] = existing_query.pop("search")
+        elif "q" in existing_query:
+            existing_query["what"] = existing_query.pop("q")
+            
+        if "limit" in existing_query:
+            existing_query["results_per_page"] = existing_query.pop("limit")
+    
     url_parts[4] = urllib.parse.urlencode(existing_query)
     
     target_url = urllib.parse.urlunparse(url_parts)
+    logger.info(f"Target URL: {target_url}")
     
     # 3. Scrape
     try:
         engine = ScrapingEngine(rate=3.0)
         jobs: list[dict] = []
 
-        async for job in engine.stream_jobs([target_url], scraper_type=body.source.type):
+        async for job in engine.stream_jobs([target_url], scraper_type=scraper_type_override):
             jobs.append(job)
             if len(jobs) >= body.max_results:
                 break
