@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class ScrapingSourceSeeder extends Seeder
 {
@@ -19,6 +20,10 @@ class ScrapingSourceSeeder extends Seeder
      */
     public function run(): void
     {
+        Schema::disableForeignKeyConstraints();
+        DB::table('scraping_sources')->truncate();
+        Schema::enableForeignKeyConstraints();
+
         $sources = [
             // ── 1. Wuzzuf HTML board ─────────────────────────────────────────────
             [
@@ -39,12 +44,12 @@ class ScrapingSourceSeeder extends Seeder
                 'type'       => 'api',
                 'status'     => 'active',
                 'headers'    => null,
-                'params'     => json_encode(['category' => 'software-dev']),
+                'params'     => json_encode(['candidate_area' => 'Middle East']),
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
 
-            // ── 3. Adzuna US (credentials loaded from ai-engine/.env, not the DB) ─
+            // ── 3. Adzuna US (credentials loaded from ai-engine/.env) ───────
             [
                 'name'       => 'Adzuna US Tech Jobs',
                 'endpoint'   => 'https://api.adzuna.com/v1/api/jobs/us/search/1',
@@ -52,6 +57,24 @@ class ScrapingSourceSeeder extends Seeder
                 'status'     => 'active',
                 'headers'    => null,
                 'params'     => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+
+            // ── 4. LinkedIn Egypt/MENA ──────────────────────────────────────────
+            [
+                'name'       => 'LinkedIn Egypt/MENA',
+                'endpoint'   => 'https://www.linkedin.com/jobs/search',
+                'type'       => 'html',
+                'status'     => 'active',
+                'headers'    => json_encode([
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+                ]),
+                'params'     => json_encode([
+                    'job_query_param' => 'keywords',
+                    'location_query_param' => 'location',
+                    'default_location' => 'Egypt'
+                ]),
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
