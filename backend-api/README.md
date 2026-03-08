@@ -19,6 +19,7 @@ The Backend API is a Laravel 12-based RESTful service that handles user authenti
 - **Scheduled Tasks** - Automated market data updates every 48 hours
 - **Gap Analysis** - Calculate skill gaps with market-driven priority categorization
 - **Market Intelligence** - Market demand, trending skills, and role statistics
+- **Memory Optimized Services** - Core CV and Gap calculations extracted into dedicated strictly-typed Service layers to eliminate memory leaks.
 - **Admin Dashboard APIs** - Manage Scraping Sources and Target Job Roles dynamically
 - **Strict Role-Based Validation (RBAC)** - Segregates `/user/*` endpoints from `/admin/*` via Middleware rules.
 - **RESTful API** - 40+ fully documented endpoints
@@ -60,9 +61,13 @@ backend-api/
 │   │   ├── Skill.php                            # Individual capabilities
 │   │   ├── TargetJobRole.php                    # Base roles for generic fetching
 │   │   └── User.php                             # Authenticated account with string enum Role
+│   ├── Services/                            # Heavy Business Logic & Memory Optimization
+│   │   ├── Contracts/                       # Service Interfaces
+│   │   ├── CvProcessingService.php          # Core logic handling uploads to CV analyzer
+│   │   └── GapAnalysisService.php           # High-precision AI matching calculation loop
 │   ├── Jobs/
-│   │   ├── ProcessMarketScraping.php            # Automated scheduled execution
-│   │   └── ProcessOnDemandJobScraping.php       # Live synchronous fetching via ID
+│   │   ├── ProcessMarketScraping.php            # Automated scheduled execution (Includes array fallback handlers)
+│   │   └── ProcessOnDemandJobScraping.php       # Live synchronous fetching via ID (Includes array fallback handlers)
 ├── database/
 │   ├── migrations/                         # Database schema records
 │   └── seeders/

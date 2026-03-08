@@ -22,6 +22,7 @@ ai-hybrid-orchestrator/
 ├── hybrid_runner.py         # Standalone CLI pipeline runner (for testing)
 ├── main_api.py              # FastAPI gateway — 3 endpoints consumed by Laravel
 ├── test_api.py              # End-to-end test runner using FastAPI TestClient (5 test groups)
+├── .env.example             # Template for API credentials (loads environment variables automatically)
 ├── hybrid_output.txt        # Output from last CLI test run
 └── README.md                # This file
 ```
@@ -136,6 +137,8 @@ $response = Http::attach('cv_file', $fileContents, $fileName)
   ]
 }
 ```
+
+> **Note on PHP Interoperability**: The Pydantic payload models natively use `Union[dict, list, str, None]` typing definitions. This ensures that when Laravel sends empty associative arrays `[]` (which PHP strictly evaluates as lists rather than Javascript `{}` objects), the FastAPI gateway gracefully catches and evaluates it natively, permanently mitigating `422 Unprocessable Entity` crashes.
 
 ---
 
