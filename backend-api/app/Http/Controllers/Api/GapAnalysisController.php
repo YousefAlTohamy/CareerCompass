@@ -7,7 +7,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\GapAnalysisResource;
 use App\Models\Job;
-use App\Services\GapAnalysisService;
+use App\Services\Contracts\GapAnalysisServiceInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -15,9 +15,9 @@ use Illuminate\Support\Facades\Validator;
 
 class GapAnalysisController extends Controller
 {
-    private GapAnalysisService $gapAnalysisService;
+    private GapAnalysisServiceInterface $gapAnalysisService;
 
-    public function __construct(GapAnalysisService $gapAnalysisService)
+    public function __construct(GapAnalysisServiceInterface $gapAnalysisService)
     {
         $this->gapAnalysisService = $gapAnalysisService;
     }

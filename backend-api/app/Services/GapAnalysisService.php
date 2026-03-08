@@ -7,11 +7,12 @@ namespace App\Services;
 use App\Models\Job;
 use App\Models\Skill;
 use App\Models\User;
+use App\Services\Contracts\GapAnalysisServiceInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-class GapAnalysisService
+class GapAnalysisService implements GapAnalysisServiceInterface
 {
     /**
      * Perform weighted gap analysis between a user and a job.
