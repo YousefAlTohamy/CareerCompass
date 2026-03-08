@@ -47,16 +47,7 @@ const SkillChip = ({ skill, onRemove }) => (
   </motion.div>
 );
 
-const ReadinessScore = ({ skills, recommendations }) => {
-  // Calculate a "Market Readiness" score
-  // Ratio of existing skills to total skills (existing + gaps)
-  const totalGaps =
-    (recommendations.critical?.length || 0) +
-    (recommendations.important?.length || 0);
-  const totalSkills = skills.length + totalGaps;
-  const score =
-    totalSkills > 0 ? Math.round((skills.length / totalSkills) * 100) : 0;
-
+const ReadinessScore = ({ score }) => {
   const data = [
     { name: "Readiness", value: score, color: "#6366f1" },
     { name: "Remaining", value: 100 - score, color: "#f1f5f9" },
@@ -195,6 +186,7 @@ export default function Dashboard() {
     important: [],
     nice_to_have: [],
   });
+  const [marketReadiness, setMarketReadiness] = useState(0);
 
   useEffect(() => {
     loadSkills();
@@ -225,6 +217,7 @@ export default function Dashboard() {
         important: data.important || [],
         nice_to_have: data.nice_to_have || [],
       });
+      setMarketReadiness(response.data.data?.market_readiness_score || 0);
     } catch (error) {
       console.error("Failed to load recommendations:", error);
     }
@@ -369,8 +362,7 @@ export default function Dashboard() {
               className="bg-white p-4 rounded-3xl shadow-premium border border-slate-100 flex items-center gap-6"
             >
               <ReadinessScore
-                skills={skills}
-                recommendations={recommendations}
+                score={marketReadiness}
               />
               <div className="pr-4">
                 <h4 className="text-sm font-black text-slate-900 leading-tight">

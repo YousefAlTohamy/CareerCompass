@@ -97,9 +97,16 @@ class GapAnalysisService implements GapAnalysisServiceInterface
         $matchedSkillsArr  = $matchedJobSkills->map($toSkillArray);
         $missingSkillsArr  = $missingJobSkills->map($toSkillArray);
 
-        // ── Weighted match percentage ──────────────────────────────────────────
-        $totalWeight   = $jobSkills->sum(fn($s) => $s->pivot->importance_score ?? 50);
-        $matchedWeight = $matchedSkillsArr->sum('importance_score');
+        // ── Smart Weighted match percentage ──────────────────────────────────────
+        $getWeight = function ($category) {
+            $category = strtolower($category ?? '');
+            if (in_array($category, ['essential', 'critical', 'high'])) return 5;
+            if (in_array($category, ['important', 'medium'])) return 3;
+            return 1; // nice_to_have, low, or default
+        };
+
+        $totalWeight = $jobSkills->sum(fn($s) => $getWeight($s->pivot->importance_category ?? 'nice_to_have'));
+        $matchedWeight = $matchedSkillsArr->sum(fn($s) => $getWeight($s['importance_category'] ?? 'nice_to_have'));
 
         $matchPercentage = $totalWeight > 0
             ? min(100, ($matchedWeight / $totalWeight) * 100)
@@ -260,6 +267,26 @@ class GapAnalysisService implements GapAnalysisServiceInterface
         $userSkillIds = $user->skills->pluck('id')->toArray();
         $totalJobs    = Job::count();
 
+        // ── Calculate Market Readiness Score ─────────────────────────────────
+        $userSkillsCount = count($userSkillIds);
+
+        // Take the top 20 most demanded skills across all jobs
+        $topMarketSkills = DB::table('job_skill')
+            ->select('skill_id', DB::raw('COUNT(job_id) as demand'))
+            ->groupBy('skill_id')
+            ->orderByDesc('demand')
+            ->limit(20)
+            ->get();
+
+        $topMarketSkillIds = $topMarketSkills->pluck('skill_id')->toArray();
+        $matchedTopSkillsCount = count(array_intersect($userSkillIds, $topMarketSkillIds));
+
+        // If there are top market skills, see what percentage of them the user has
+        $marketReadinessScore = !empty($topMarketSkillIds)
+            ? round(($matchedTopSkillsCount / count($topMarketSkillIds)) * 100)
+            : ($userSkillsCount > 0 ? 100 : 0); // fallback if no skills exist in DB
+
+        // Now calculate missing recommendations (excluding user skills)
         $query = DB::table('skills')
             ->join('job_skill', 'skills.id', '=', 'job_skill.skill_id');
 
@@ -290,12 +317,14 @@ class GapAnalysisService implements GapAnalysisServiceInterface
         Log::info('Recommendations generated via DB aggregation', [
             'user_id'               => $user->id,
             'total_recommendations' => $skillDemand->count(),
+            'market_readiness_score' => $marketReadinessScore,
         ]);
 
         return [
-            'user_skills_count'   => count($userSkillIds),
-            'total_jobs_analyzed' => $totalJobs,
-            'recommendations'     => [
+            'user_skills_count'      => $userSkillsCount,
+            'market_readiness_score' => $marketReadinessScore,
+            'total_jobs_analyzed'    => $totalJobs,
+            'recommendations'        => [
                 'critical'     => $critical,
                 'important'    => $important,
                 'nice_to_have' => $niceToHave,
