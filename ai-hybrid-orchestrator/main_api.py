@@ -88,6 +88,7 @@ logger = logging.getLogger("gateway")
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile   # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware                    # noqa: E402
 from pydantic import BaseModel                                        # noqa: E402
+from typing import Any, Dict, Optional                                # noqa: E402
 
 # ── Singleton AI models (load once on startup) ────────────────────────────────
 _ner_engine: SkillNEREngine | None     = None
@@ -241,6 +242,83 @@ async def scrape_on_demand(source_url: str = Form(...)):
 
     except Exception as exc:
         logger.exception("scrape-on-demand failed")
+        raise HTTPException(status_code=500, detail=f"Scraping error: {exc}") from exc
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Endpoint 2.5 — POST /test-source
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestSourceSourceProxy(BaseModel):
+    id: Optional[int] = None
+    name: str = ""
+    endpoint: str
+    type: str = "html"
+    headers: Dict[str, Any] = {}
+    params: Dict[str, Any] = {}
+
+class TestSourceRequest(BaseModel):
+    source: TestSourceSourceProxy
+    query: str = "developer"
+    max_results: int = 2
+
+@app.post("/test-source", tags=["Job Scraping"])
+async def test_source(body: TestSourceRequest):
+    """
+    Test a single configured job scraping source by constructing
+    the final URL and firing up the ScrapingEngine.
+    """
+    import urllib.parse
+    
+    # 1. Update params with the provided search query
+    params = dict(body.source.params)
+    injected = False
+    
+    # Try common keys for searching
+    for key in ["q", "search", "keyword", "keywords"]:
+        if key in params:
+            params[key] = body.query
+            injected = True
+            break
+            
+    # If no obvious search param key is found in the DB configs, default to "q"
+    if not injected and params:
+        for k in params.keys():
+            params[k] = body.query
+            break
+    elif not injected and not params:
+        params["q"] = body.query
+        
+    # 2. Build the target URL
+    url_parts = list(urllib.parse.urlparse(body.source.endpoint))
+    existing_query = dict(urllib.parse.parse_qsl(url_parts[4]))
+    existing_query.update(params)
+    url_parts[4] = urllib.parse.urlencode(existing_query)
+    
+    target_url = urllib.parse.urlunparse(url_parts)
+    
+    # 3. Scrape
+    try:
+        engine = ScrapingEngine(rate=3.0)
+        jobs: list[dict] = []
+
+        async for job in engine.stream_jobs([target_url], scraper_type=body.source.type):
+            jobs.append(job)
+            if len(jobs) >= body.max_results:
+                break
+
+        if not jobs:
+            return {
+                "jobs":    [],
+                "total_fetched": 0,
+                "dlq":     engine.dlq.summary,
+                "message": "No jobs returned – site may be blocking the scraper.",
+            }
+
+        return {"jobs": jobs, "total_fetched": len(jobs)}
+
+    except Exception as exc:
+        logger.exception("test-source failed")
         raise HTTPException(status_code=500, detail=f"Scraping error: {exc}") from exc
 
 
