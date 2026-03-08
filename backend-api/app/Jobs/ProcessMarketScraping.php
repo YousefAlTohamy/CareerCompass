@@ -6,7 +6,6 @@ use App\Models\Job;
 use App\Models\JobRoleStatistic;
 use App\Models\ScrapingJob;
 use App\Models\ScrapingSource;
-use App\Models\Skill;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -214,8 +213,8 @@ class ProcessMarketScraping implements ShouldQueue
         }
 
         if (!$existingJob) {
-            $existingJob = Job::where('title', $jobData['title'])
-                ->where('company', $jobData['company'])
+            $existingJob = Job::where('title', $jobData['title'] ?? 'Unknown Position')
+                ->where('company', $jobData['company'] ?? 'Unknown Company')
                 ->first();
         }
 
@@ -227,10 +226,10 @@ class ProcessMarketScraping implements ShouldQueue
 
         // Create new job
         $job = Job::create([
-            'title' => $jobData['title'],
-            'company' => $jobData['company'],
-            'description' => $jobData['description'] ?? '',
-            'location' => $jobData['location'] ?? null,
+            'title' => $jobData['title'] ?? 'Unknown Position',
+            'company' => $jobData['company'] ?? 'Unknown Company',
+            'description' => $jobData['description'] ?? 'No description provided',
+            'location' => $jobData['location'] ?? 'Unknown',
             'salary_range' => $jobData['salary_range'] ?? null,
             'job_type' => $jobData['job_type'] ?? null,
             'experience' => $jobData['experience'] ?? null,

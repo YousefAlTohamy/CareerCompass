@@ -196,8 +196,8 @@ class ProcessOnDemandJobScraping implements ShouldQueue
         }
 
         if (!$existingJob) {
-            $existingJob = Job::where('title', $jobData['title'])
-                ->where('company', $jobData['company'])
+            $existingJob = Job::where('title', $jobData['title'] ?? 'Unknown Position')
+                ->where('company', $jobData['company'] ?? 'Unknown Company')
                 ->first();
         }
 
@@ -208,29 +208,29 @@ class ProcessOnDemandJobScraping implements ShouldQueue
         // Create new job with race condition protection
         try {
             $job = Job::create([
-                'title' => $jobData['title'],
-                'company' => $jobData['company'],
-                'description' => $jobData['description'] ?? '',
-                'location' => $jobData['location'] ?? null,
+                'title' => $jobData['title'] ?? 'Unknown Position',
+                'company' => $jobData['company'] ?? 'Unknown Company',
+                'description' => $jobData['description'] ?? 'No description provided',
+                'location' => $jobData['location'] ?? 'Unknown',
                 'salary_range' => $jobData['salary_range'] ?? null,
                 'job_type' => $jobData['job_type'] ?? null,
                 'experience' => $jobData['experience'] ?? null,
                 'url' => $normalizedUrl ?? $jobData['url'] ?? null,
-                'source' => $jobData['source'] ?? 'wuzzuf',
+                'source' => $jobData['source'] ?? 'unknown',
             ]);
         } catch (\Illuminate\Database\QueryException $e) {
             // Handle duplicate entry error (race condition)
             if ($e->getCode() == 23000 || str_contains($e->getMessage(), 'Duplicate entry')) {
                 Log::info('Duplicate job prevented by database constraint in queue job', [
-                    'title' => $jobData['title'],
-                    'company' => $jobData['company'],
+                    'title' => $jobData['title'] ?? 'Unknown Position',
+                    'company' => $jobData['company'] ?? 'Unknown Company',
                 ]);
 
                 // Fetch existing job
-                $existingJob = Job::where('url', $normalizedUrl ?? $jobData['url'])
+                $existingJob = Job::where('url', $normalizedUrl ?? $jobData['url'] ?? null)
                     ->orWhere(function ($q) use ($jobData) {
-                        $q->where('title', $jobData['title'])
-                            ->where('company', $jobData['company']);
+                        $q->where('title', $jobData['title'] ?? 'Unknown Position')
+                            ->where('company', $jobData['company'] ?? 'Unknown Company');
                     })
                     ->first();
 
