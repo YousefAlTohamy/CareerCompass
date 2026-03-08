@@ -12,7 +12,7 @@ CareerCompass is an **advanced AI-powered career development platform** that com
 - **Smart Gap Analysis & Match Scoring**: Priority-based skill roadmap with dynamically calculated AI match scores rendered naturally in the jobs feed
 - **Seamless Discovery UX**: Intelligent React upload bounds capturing CV changes and gracefully routing users to real-time market opportunities
 - **Job Application Tracker**: Kanban-style lifecycle visualization for tracked applications
-- **Strict Architecture Security**: Laravel 12 API guarded by `IsAdmin` middleware & React frontend heavily split into `/admin/*` and `/user/*` routing boundaries
+- **Strict Architecture Security**: Laravel 12 API guarded by `IsAdmin` middleware & React frontend heavily split into `/admin/*` and `/user/*` routing boundaries, bootstrapped by a secure `AdminUserSeeder`.
 
 ---
 
@@ -82,7 +82,7 @@ CareerCompass/
 │   │   │   ├── LoadingSpinner.jsx          # Full-screen / inline spinner
 │   │   │   ├── Navbar.jsx                  # Scroll-aware glassmorphism nav (Framer Motion)
 │   │   │   ├── ProcessingAnimation.jsx     # Animated CV-processing overlay
-│   │   │   ├── ProtectedRoute.jsx          # Auth route guard
+│   │   │   ├── ProtectedRoute.jsx          # Auth route guard (includes strict `requireAdmin` logic for bridging RBAC)
 │   │   │   ├── SuccessAlert.jsx            # Dismissible success banner
 │   │   ├── context/
 │   │   │   └── AuthContext.jsx             # React Context for authentication state
@@ -173,7 +173,7 @@ CareerCompass/
 │   │   │   ├── *_create_applications_table.php     # Job applications tracking
 │   │   │   └── *_add_role_to_users_table.php       # RBAC role enum
 │   │   └── seeders/
-│   │       ├── AdminUserSeeder.php                 # Seeds default admin account
+│   │       ├── AdminUserSeeder.php                 # Seeds default admin account required to cross the RBAC threshold
 │   │       ├── SkillSeeder.php                     # 84 predefined skills
 │   │       ├── ScrapingSourceSeeder.php            # 3 active scraping sources
 │   │       └── TargetJobRoleSeeder.php             # Default target job roles
@@ -319,6 +319,12 @@ php artisan db:seed --class=AdminUserSeeder
 php artisan migrate:fresh --seed
 ```
 
+> **🔑 Default Admin Credentials**:
+> Upon running the `AdminUserSeeder`, the master administrative account is generated to bypass the RBAC guards:
+>
+> - **Email:** `careercompassadmin@gmail.com`
+> - **Password:** `CareerCompassAdmin2026`
+
 #### 5️⃣ AI Gateway Setup (FastAPI Orchestrator)
 
 _Note: The legacy `local-ai-engine` is deprecated. We now strictly use the `ai-hybrid-orchestrator`._
@@ -456,7 +462,7 @@ Once all services are started, check the following URLs:
 | POST   | `/api/register` | Create new user account     |
 | POST   | `/api/login`    | Login and get token         |
 
-> **Note**: Incoming payloads for registration and profile updates are guarded by strict Regex Validations for data integrity.
+> **Note**: Incoming payloads for registration and profile updates are guarded by strict Regex Validations inside Laravel's `FormRequest` buffers. This ensures data normalization (e.g. validating international phone formats, strictly evaluating password entropy, and enforcing URL syntaxes) before reaching the Eloquent ORM.
 
 ### User & Skills (Protected)
 
@@ -824,6 +830,12 @@ curl -X GET http://127.0.0.1:8000/api/admin/scraping-sources \
   - **`contact_extractor.py`**: Regex-based extractor for email, phone, LinkedIn, GitHub, and location.
   - **`hybrid_runner.py`**: CLI pipeline combining all 3 AI models (BERT-NER + BART-MNLI + MiniLM) with a weighted `Final = (Semantic × 60%) + (TF-IDF × 40%)` scoring formula.
   - **`main_api.py`**: FastAPI microservice (port 8000) with 3 Laravel-ready endpoints: `POST /api/v1/parse-cv`, `POST /api/v1/scrape-on-demand`, `POST /api/v1/hybrid-match`. Implements singleton model loading via FastAPI `lifespan`, CORS middleware, strict `try/except` error handling, and Pydantic request validation. Resolves `core/` namespace collision between engines via sequential `sys.path` swapping.
+- [x] **Phase 24: Architecture Hardening & Memory Optimization** - A massive stabilization update addressing edge-case AI data formats and memory leaks:
+  - **Service Layer Extraction**: Refactored massive `CvController` and `GapAnalysisController` files by extracting their heavy business logic into strictly-typed `CvProcessingService` and `GapAnalysisService` classes, firmly adhering to the Single Responsibility Principle and fixing a major memory leak in the Recommendations loop.
+  - **Scraping Format Resiliency**: Bulletproofed the FastAPI Gateway endpoint models with Python `Union` to safely catch empty array brackets `[]` from PHP, preventing 422 validations.
+  - **SQL String Safety**: Implemented a defensive `castToString()` parser array handler across all background Laravel queue jobs. When the NLP engine unpredictably returns `list` formats instead of scalar strings (such as locations), Laravel cleanly implodes them, fully preventing the fatal `PDO Array to string conversion` exceptions.
+  - **React Routing Security**: Hardened the public authentication flow by wrapping `Login` and `Register` components locally with a `<GuestRoute>` component to prevent authenticated users from navigating backward. Improved Profile layouts and fixed Dashboard `motion` import crashes.
+  - **Scraping Scope Scopes**: Seeded `LinkedIn Egypt/MENA` as a primary HTML parsing source and narrowed the `Adzuna` API targeting via the central Database Seeder. Added missing `.env.example` templates to the hybrid orchestrator.
 
 ### 📈 Market Intelligence System
 
@@ -868,6 +880,7 @@ curl -X GET http://127.0.0.1:8000/api/admin/scraping-sources \
 - **Retry Logic**: 3 automatic retries with 100ms delays for HTTP failures
 - **Intelligent Retry**: Only retries on connection errors and 5xx server errors
 - **Exponential Backoff**: Progressive delay multiplier for failed requests
+- **SQL Data Resiliency**: Custom `castToString()` parser implemented in background queues. Gracefully catches and implodes unpredictable AI engine JSON arrays sent to scalar MySQL string columns, fully mitigating fatal PDO `Array to string conversion` query exceptions.
 - **Failed Job Tracking**: Automatic status updates in database for monitoring
 - **Empty CV Guard**: Returns user-friendly 422 error if no skills are extracted from CV
 
@@ -927,7 +940,7 @@ curl -X GET http://127.0.0.1:8000/api/admin/scraping-sources \
 
 ### 🔒 Security Features
 
-- **Role-Based Access Control (RBAC)**: Segregated functionalities using robust middleware (`IsAdmin`) to protect admin endpoints and frontend routes based on user role.
+- **Role-Based Access Control (RBAC)**: Segregated functionalities using robust middleware (`IsAdmin.php`) interceptors that return 403 Forbidden for unprivileged API access. This logic is physically mirrored in the React frontend via the `<ProtectedRoute requireAdmin>` component to entirely block the mounting of unauthorized admin routing boundaries.
 - **Strict Validations**: Complete data validation using Laravel FormRequests for both user actions and admin scraping configs to maintain strict data integrity.
 - **SQL Injection Prevention**: Uses Laravel's Eloquent ORM and parameterized queries
 - **Race Condition Handling**: `withoutOverlapping()` for scheduled tasks + DB transactions
@@ -1165,6 +1178,7 @@ MIT License - See LICENSE file for details
 
 - **Student Name** - Graduation Project 2026
 - **Supervisor** - Dr. Amnah Mahmoud
+
 ---
 
 ## 🙏 Acknowledgments
@@ -1250,7 +1264,7 @@ Import `CareerCompass.postman_collection.json` into Postman for comprehensive AP
 ---
 
 **Last Updated**: March 2026
-**Project Status**: ✅ **Phase 23 Complete — AI Gateway & Hybrid Orchestrator**
+**Project Status**: ✅ **Phase 24 Complete — Architecture Hardening & Memory Optimization**
 **Components**: Frontend (React 19 + Vite + Framer Motion + Recharts) + Backend API (Laravel 12) + Queue Worker + Scheduler + **AI Gateway (FastAPI/8001)** + ai-job-miner + ai-cv-analyzer
 **API Endpoints**: 50+ total (Laravel APIs + AI Gateway APIs + Market Intelligence + Admin Source APIs + Application Tracker)
 **Scraping Sources**: Wuzzuf (HTML) • Remotive API (free) • Adzuna US API — all 3 verified with `scrape:test-sources`
