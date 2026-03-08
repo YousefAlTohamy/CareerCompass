@@ -9,13 +9,14 @@ use App\Models\ScrapingJob;
 use App\Models\Skill;
 use App\Models\TargetJobRole;
 use App\Models\User;
+use App\Services\Contracts\CvProcessingServiceInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
-class CvProcessingService
+class CvProcessingService implements CvProcessingServiceInterface
 {
     private string $gatewayUrl;
     private int $timeout;

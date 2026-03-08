@@ -7,15 +7,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CvUploadRequest;
 use App\Http\Resources\SkillResource;
-use App\Services\CvProcessingService;
+use App\Services\Contracts\CvProcessingServiceInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
 class CvController extends Controller
 {
-    private CvProcessingService $cvService;
+    private CvProcessingServiceInterface $cvService;
 
-    public function __construct(CvProcessingService $cvService)
+    public function __construct(CvProcessingServiceInterface $cvService)
     {
         $this->cvService = $cvService;
     }
