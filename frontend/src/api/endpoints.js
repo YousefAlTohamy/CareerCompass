@@ -6,6 +6,7 @@ export const authAPI = {
   login: (data) => apiClient.post('/login', data),
   logout: () => apiClient.post('/logout'),
   getUser: () => apiClient.get('/user'),
+  updateProfile: (data) => apiClient.put('/user/profile', data),
 };
 
 export const jobsAPI = {
