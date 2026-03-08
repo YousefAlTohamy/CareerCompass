@@ -9,13 +9,13 @@ use App\Models\Skill;
 use App\Models\User;
 use App\Services\Contracts\GapAnalysisServiceInterface;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class GapAnalysisService implements GapAnalysisServiceInterface
 {
     /**
      * Perform weighted gap analysis between a user and a job.
+     * Specific Job Gap Analysis.
      *
      * @param User $user
      * @param Job $job
@@ -31,7 +31,7 @@ class GapAnalysisService implements GapAnalysisServiceInterface
         if ($totalRequired === 0) {
             return [
                 'job'                         => $job,
-                'match_percentage'            => 100.0,
+                'match_percentage'            => 0,
                 'total_required'              => 0,
                 'matched_count'               => 0,
                 'missing_count'               => 0,
@@ -48,7 +48,6 @@ class GapAnalysisService implements GapAnalysisServiceInterface
                 'soft_matched'                => 0,
                 'recommendations'             => [
                     'This job listing has no specific skill requirements listed.',
-                    'Consider reviewing the full job description for details.',
                 ],
             ];
         }
@@ -85,12 +84,18 @@ class GapAnalysisService implements GapAnalysisServiceInterface
 
         // ── Build structured skill arrays ─────────────────────────────────────
         $toSkillArray = function ($skill) {
+            $cat = mb_strtolower($skill->pivot->importance_category ?? 'nice_to_have');
+            // normalize category names
+            if (in_array($cat, ['high', 'critical'])) $cat = 'essential';
+            if (in_array($cat, ['medium'])) $cat = 'important';
+            if (in_array($cat, ['low'])) $cat = 'nice_to_have';
+
             return [
                 'id'                  => $skill->id,
                 'name'                => $skill->name,
                 'type'                => $skill->type,
                 'importance_score'    => $skill->pivot->importance_score ?? 50,
-                'importance_category' => $skill->pivot->importance_category ?? 'nice_to_have',
+                'importance_category' => $cat,
             ];
         };
 
@@ -105,23 +110,31 @@ class GapAnalysisService implements GapAnalysisServiceInterface
             return 1; // nice_to_have, low, or default
         };
 
-        $totalWeight = $jobSkills->sum(fn($s) => $getWeight($s->pivot->importance_category ?? 'nice_to_have'));
-        $matchedWeight = $matchedSkillsArr->sum(fn($s) => $getWeight($s['importance_category'] ?? 'nice_to_have'));
+        // Edge case: zero intersection
+        if ($matchedJobSkills->count() === 0) {
+            $matchPercentage = 0;
+        } else {
+            $totalWeight = $jobSkills->sum(fn($s) => $getWeight($s->pivot->importance_category ?? 'nice_to_have'));
+            $matchedWeight = $matchedSkillsArr->sum(fn($s) => $getWeight($s['importance_category'] ?? 'nice_to_have'));
 
-        $matchPercentage = $totalWeight > 0
-            ? min(100, ($matchedWeight / $totalWeight) * 100)
-            : ($totalRequired > 0 ? ($matchedJobSkills->count() / $totalRequired) * 100 : 0);
+            $matchPercentage = $totalWeight > 0
+                ? min(100, ($matchedWeight / $totalWeight) * 100)
+                : ($totalRequired > 0 ? ($matchedJobSkills->count() / $totalRequired) * 100 : 0);
+        }
 
-        $matchPercentage = round($matchPercentage, 2);
+        $matchPercentage = round((float)$matchPercentage, 2);
+
+        // Sort missing skills by importance (Essential > Important > Nice-to-have)
+        $missingSkillsArr = collect($missingSkillsArr)->sortByDesc(fn($s) => $getWeight($s['importance_category']))->values();
 
         // ── Categorise missing skills ──────────────────────────────────────────
         $criticalSkills   = $missingSkillsArr->filter(fn($s) => ($s['importance_score'] ?? 0) > 60)->values();
         $niceToHaveSkills = $missingSkillsArr->filter(fn($s) => ($s['importance_score'] ?? 0) <= 60)->values();
 
         // Legacy category breakdown
-        $missingEssential  = $missingSkillsArr->where('importance_category', 'essential')->values();
-        $missingImportant  = $missingSkillsArr->where('importance_category', 'important')->values();
-        $missingNiceToHave = $missingSkillsArr->where('importance_category', 'nice_to_have')->values();
+        $missingEssential  = collect($missingSkillsArr)->where('importance_category', 'essential')->values();
+        $missingImportant  = collect($missingSkillsArr)->where('importance_category', 'important')->values();
+        $missingNiceToHave = collect($missingSkillsArr)->whereNotIn('importance_category', ['essential', 'important'])->values();
 
         // ── Breakdown by skill type ───────────────────────────────────────────
         $technicalRequired = $jobSkills->where('type', 'technical')->count();
@@ -132,7 +145,7 @@ class GapAnalysisService implements GapAnalysisServiceInterface
         // ── Recommendations ───────────────────────────────────────────────────
         $recommendations = $this->generateRecommendations(
             $matchPercentage,
-            $missingSkillsArr,
+            collect($missingSkillsArr),
             $missingEssential,
             $missingImportant
         );
@@ -144,7 +157,7 @@ class GapAnalysisService implements GapAnalysisServiceInterface
             'matched_count'               => $matchedJobSkills->count(),
             'missing_count'               => $missingJobSkills->count(),
             'matched_skills'              => $matchedSkillsArr,
-            'missing_skills'              => $missingSkillsArr,
+            'missing_skills'              => $missingSkillsArr, // Sorted array
             'critical_skills'             => $criticalSkills,
             'nice_to_have_skills'         => $niceToHaveSkills,
             'missing_essential_skills'    => $missingEssential,
@@ -257,79 +270,161 @@ class GapAnalysisService implements GapAnalysisServiceInterface
     }
 
     /**
-     * Get recommendations efficiently mapped via a single DB query.
+     * Get similar jobs for the user based on job_title.
+     * Used for Global Gap Analysis.
+     */
+    private function getSimilarJobsForUser(User $user): Collection
+    {
+        $jobTitle = $user->job_title;
+        if (!$jobTitle) {
+            return collect();
+        }
+
+        $cleanTitle = preg_replace(
+            '/^(senior|junior|lead|principal|associate|mid[- ]?level)\s+/i',
+            '',
+            trim($jobTitle)
+        );
+
+        $words   = explode(' ', (string) $cleanTitle);
+        $keyword = implode(' ', array_slice($words, 0, 2));
+
+        // Load jobs and their skills
+        return Job::with('skills')->where(function ($query) use ($keyword, $cleanTitle) {
+            $query->where('title', 'LIKE', '%' . $keyword . '%')
+                ->orWhere('title', 'LIKE', '%' . $cleanTitle . '%');
+        })
+            ->latest()
+            ->take(50)
+            ->get();
+    }
+
+    /**
+     * Get recommendations (Global Gap Analysis).
+     * Compares user's skills against aggregate market average of similar jobs.
      *
      * @param User $user
      * @return array<string, mixed>
      */
     public function getRecommendations(User $user): array
     {
-        $userSkillIds = $user->skills->pluck('id')->toArray();
-        $totalJobs    = Job::count();
+        $userSkills = $user->skills;
+        $userSkillsCount = $userSkills->count();
+        $similarJobs = $this->getSimilarJobsForUser($user);
+        $totalJobsAnalyzed = $similarJobs->count();
 
-        // ── Calculate Market Readiness Score ─────────────────────────────────
-        $userSkillsCount = count($userSkillIds);
-
-        // Take the top 20 most demanded skills across all jobs
-        $topMarketSkills = DB::table('job_skill')
-            ->select('skill_id', DB::raw('COUNT(job_id) as demand'))
-            ->groupBy('skill_id')
-            ->orderByDesc('demand')
-            ->limit(20)
-            ->get();
-
-        $topMarketSkillIds = $topMarketSkills->pluck('skill_id')->toArray();
-        $matchedTopSkillsCount = count(array_intersect($userSkillIds, $topMarketSkillIds));
-
-        // If there are top market skills, see what percentage of them the user has
-        $marketReadinessScore = !empty($topMarketSkillIds)
-            ? round(($matchedTopSkillsCount / count($topMarketSkillIds)) * 100)
-            : ($userSkillsCount > 0 ? 100 : 0); // fallback if no skills exist in DB
-
-        // Now calculate missing recommendations (excluding user skills)
-        $query = DB::table('skills')
-            ->join('job_skill', 'skills.id', '=', 'job_skill.skill_id');
-
-        if (!empty($userSkillIds)) {
-            $query->whereNotIn('skills.id', $userSkillIds);
+        if ($totalJobsAnalyzed === 0) {
+            return [
+                'user_skills_count'      => $userSkillsCount,
+                'market_readiness_score' => 0,
+                'total_jobs_analyzed'    => 0,
+                'recommendations'        => [
+                    'critical'     => collect(),
+                    'important'    => collect(),
+                    'nice_to_have' => collect(),
+                ],
+                'top_20_skills' => collect(),
+                'matched_skills' => collect(),
+                'missing_skills' => collect(),
+            ];
         }
 
-        // DB level aggregation: Avoids pulling all Jobs and their skills into PHP memory
-        $missingSkillsAgg = $query->select('skills.id', 'skills.name', 'skills.type', DB::raw('COUNT(job_skill.job_id) as demand'))
-            ->groupBy('skills.id', 'skills.name', 'skills.type')
-            ->orderByDesc('demand')
-            ->get();
+        $skillIdToJobCount = [];
+        $skillMap = [];
 
-        $skillDemand = collect($missingSkillsAgg)->map(function ($skill) use ($totalJobs) {
-            return [
-                'id'       => $skill->id,
-                'name'     => $skill->name,
-                'type'     => $skill->type,
-                'demand'   => (int) $skill->demand,
-                'priority' => $this->calculatePriority((int) $skill->demand, $totalJobs),
+        foreach ($similarJobs as $job) {
+            foreach ($job->skills as $skill) {
+                if (!isset($skillIdToJobCount[$skill->id])) {
+                    $skillIdToJobCount[$skill->id] = 0;
+                    $skillMap[$skill->id] = $skill;
+                }
+                $skillIdToJobCount[$skill->id]++;
+            }
+        }
+
+        $getWeight = function ($category) {
+            $cat = strtolower($category ?? '');
+            if (in_array($cat, ['essential', 'critical', 'high'])) return 5;
+            if (in_array($cat, ['important', 'medium'])) return 3;
+            return 1;
+        };
+
+        $totalMarketWeight = 0;
+        $matchedMarketWeight = 0;
+
+        $globalMissingSkills = collect();
+        $globalMatchedSkills = collect();
+
+        foreach ($skillIdToJobCount as $skillId => $frequency) {
+            $skill = $skillMap[$skillId];
+
+            $matched = false;
+            foreach ($userSkills as $uSkill) {
+                if ($uSkill->id === $skill->id || $this->normalizeSkillName((string)$uSkill->name) === $this->normalizeSkillName((string)$skill->name)) {
+                    $matched = true;
+                    break;
+                }
+            }
+
+            $catRaw = $skill->pivot->importance_category ?? 'nice_to_have';
+            $weight = $getWeight($catRaw);
+            $weightedImportance = $frequency * $weight;
+
+            $totalMarketWeight += $weightedImportance;
+
+            $cat = mb_strtolower($catRaw);
+            if (in_array($cat, ['high', 'critical'])) $cat = 'essential';
+            if (in_array($cat, ['medium'])) $cat = 'important';
+            if (in_array($cat, ['low'])) $cat = 'nice_to_have';
+
+            $structuredSkill = [
+                'id' => $skill->id,
+                'name' => $skill->name,
+                'type' => $skill->type,
+                'frequency' => $frequency,
+                'weight' => $weight,
+                'weighted_importance' => $weightedImportance,
+                'importance_category' => $cat,
             ];
-        });
 
-        $critical   = $skillDemand->where('priority', 'Critical')->take(5)->values();
-        $important  = $skillDemand->where('priority', 'Important')->take(5)->values();
-        $niceToHave = $skillDemand->where('priority', 'Nice-to-Have')->take(5)->values();
+            if ($matched) {
+                $matchedMarketWeight += $weightedImportance;
+                $globalMatchedSkills->push($structuredSkill);
+            } else {
+                $globalMissingSkills->push($structuredSkill);
+            }
+        }
 
-        Log::info('Recommendations generated via DB aggregation', [
-            'user_id'               => $user->id,
-            'total_recommendations' => $skillDemand->count(),
+        $marketReadinessScore = $totalMarketWeight > 0
+            ? round(($matchedMarketWeight / $totalMarketWeight) * 100)
+            : 0;
+
+        // Sort descending by weighted market importance
+        $globalMissingSkills = $globalMissingSkills->sortByDesc('weighted_importance')->values();
+        $globalMatchedSkills = $globalMatchedSkills->sortByDesc('weighted_importance')->values();
+
+        $critical = $globalMissingSkills->where('importance_category', 'essential')->values();
+        $important = $globalMissingSkills->where('importance_category', 'important')->values();
+        $niceToHave = $globalMissingSkills->whereNotIn('importance_category', ['essential', 'important'])->values();
+
+        Log::info('Global Map Analysis completed', [
+            'user_id' => $user->id,
             'market_readiness_score' => $marketReadinessScore,
+            'total_jobs_analyzed' => $totalJobsAnalyzed,
         ]);
 
         return [
             'user_skills_count'      => $userSkillsCount,
             'market_readiness_score' => $marketReadinessScore,
-            'total_jobs_analyzed'    => $totalJobs,
+            'total_jobs_analyzed'    => $totalJobsAnalyzed,
             'recommendations'        => [
                 'critical'     => $critical,
                 'important'    => $important,
                 'nice_to_have' => $niceToHave,
             ],
-            'top_20_skills' => $skillDemand->take(20)->values(),
+            'top_20_skills' => $globalMissingSkills->take(20)->values(), // top 20 missing
+            'matched_skills' => $globalMatchedSkills,
+            'missing_skills' => $globalMissingSkills,
         ];
     }
 
@@ -392,7 +487,7 @@ class GapAnalysisService implements GapAnalysisServiceInterface
     }
 
     /**
-     * Calculate priority based on market demand frequency.
+     * Calculate priority based on market demand frequency. (Deprecated/Internal use)
      */
     private function calculatePriority(int $demand, int $totalJobs): string
     {
