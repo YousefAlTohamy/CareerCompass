@@ -185,7 +185,8 @@ class ProcessOnDemandJobScraping implements ShouldQueue
         // Normalize URL to prevent duplicates from tracking parameters
         $normalizedUrl = null;
         if (!empty($jobData['url'])) {
-            $normalizedUrl = $this->normalizeUrl($jobData['url']);
+            $urlStr = $this->castToString($jobData['url']);
+            $normalizedUrl = $this->normalizeUrl($urlStr);
         }
 
         // Check for duplicates
@@ -196,8 +197,11 @@ class ProcessOnDemandJobScraping implements ShouldQueue
         }
 
         if (!$existingJob) {
-            $existingJob = Job::where('title', $jobData['title'])
-                ->where('company', $jobData['company'])
+            $title = $this->castToString($jobData['title'] ?? null, 'Unknown Position');
+            $company = $this->castToString($jobData['company'] ?? null, 'Unknown Company');
+
+            $existingJob = Job::where('title', $title)
+                ->where('company', $company)
                 ->first();
         }
 
@@ -208,29 +212,32 @@ class ProcessOnDemandJobScraping implements ShouldQueue
         // Create new job with race condition protection
         try {
             $job = Job::create([
-                'title' => $jobData['title'],
-                'company' => $jobData['company'],
-                'description' => $jobData['description'] ?? '',
-                'location' => $jobData['location'] ?? null,
-                'salary_range' => $jobData['salary_range'] ?? null,
-                'job_type' => $jobData['job_type'] ?? null,
-                'experience' => $jobData['experience'] ?? null,
-                'url' => $normalizedUrl ?? $jobData['url'] ?? null,
-                'source' => $jobData['source'] ?? 'wuzzuf',
+                'title' => $this->castToString($jobData['title'] ?? null, 'Unknown Position'),
+                'company' => $this->castToString($jobData['company'] ?? null, 'Unknown Company'),
+                'description' => $this->castToString($jobData['description'] ?? null, 'No description provided'),
+                'location' => $this->castToString($jobData['location'] ?? null, 'Unknown'),
+                'salary_range' => $this->castToString($jobData['salary_range'] ?? null, null),
+                'job_type' => $this->castToString($jobData['job_type'] ?? null, null),
+                'experience' => $this->castToString($jobData['experience'] ?? null, null),
+                'url' => $normalizedUrl ?? $this->castToString($jobData['url'] ?? null, null),
+                'source' => $this->castToString($jobData['source'] ?? null, 'unknown'),
             ]);
         } catch (\Illuminate\Database\QueryException $e) {
             // Handle duplicate entry error (race condition)
             if ($e->getCode() == 23000 || str_contains($e->getMessage(), 'Duplicate entry')) {
+                $title = $this->castToString($jobData['title'] ?? null, 'Unknown Position');
+                $company = $this->castToString($jobData['company'] ?? null, 'Unknown Company');
+
                 Log::info('Duplicate job prevented by database constraint in queue job', [
-                    'title' => $jobData['title'],
-                    'company' => $jobData['company'],
+                    'title' => $title,
+                    'company' => $company,
                 ]);
 
                 // Fetch existing job
-                $existingJob = Job::where('url', $normalizedUrl ?? $jobData['url'])
-                    ->orWhere(function ($q) use ($jobData) {
-                        $q->where('title', $jobData['title'])
-                            ->where('company', $jobData['company']);
+                $existingJob = Job::where('url', $normalizedUrl ?? $this->castToString($jobData['url'] ?? null))
+                    ->orWhere(function ($q) use ($title, $company) {
+                        $q->where('title', $title)
+                            ->where('company', $company);
                     })
                     ->first();
 
@@ -407,5 +414,15 @@ class ProcessOnDemandJobScraping implements ShouldQueue
                 $exception?->getMessage() ?? 'Job failed after maximum retries'
             );
         }
+    }
+
+    /**
+     * Safely cast incoming potentially-array data to strings.
+     */
+    private function castToString($value, $default = null)
+    {
+        if (is_null($value)) return $default;
+        if (is_array($value)) return implode(', ', array_filter($value));
+        return (string) $value;
     }
 }

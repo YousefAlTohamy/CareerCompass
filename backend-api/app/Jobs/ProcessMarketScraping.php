@@ -6,7 +6,6 @@ use App\Models\Job;
 use App\Models\JobRoleStatistic;
 use App\Models\ScrapingJob;
 use App\Models\ScrapingSource;
-use App\Models\Skill;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -210,12 +209,16 @@ class ProcessMarketScraping implements ShouldQueue
         $existingJob = null;
 
         if (!empty($jobData['url'])) {
-            $existingJob = Job::where('url', $jobData['url'])->first();
+            $url = $this->castToString($jobData['url']);
+            $existingJob = Job::where('url', $url)->first();
         }
 
         if (!$existingJob) {
-            $existingJob = Job::where('title', $jobData['title'])
-                ->where('company', $jobData['company'])
+            $title = $this->castToString($jobData['title'] ?? null, 'Unknown Position');
+            $company = $this->castToString($jobData['company'] ?? null, 'Unknown Company');
+
+            $existingJob = Job::where('title', $title)
+                ->where('company', $company)
                 ->first();
         }
 
@@ -223,19 +226,19 @@ class ProcessMarketScraping implements ShouldQueue
             return ['stored' => false, 'job' => $existingJob];
         }
 
-        $sourceModel = \App\Models\ScrapingSource::where('name', $jobData['source'] ?? '')->first();
+        $sourceModel = \App\Models\ScrapingSource::where('name', $this->castToString($jobData['source'] ?? null, ''))->first();
 
         // Create new job
         $job = Job::create([
-            'title' => $jobData['title'],
-            'company' => $jobData['company'],
-            'description' => $jobData['description'] ?? '',
-            'location' => $jobData['location'] ?? null,
-            'salary_range' => $jobData['salary_range'] ?? null,
-            'job_type' => $jobData['job_type'] ?? null,
-            'experience' => $jobData['experience'] ?? null,
-            'url' => $jobData['url'] ?? null,
-            'source' => $jobData['source'] ?? 'unknown',
+            'title' => $this->castToString($jobData['title'] ?? null, 'Unknown Position'),
+            'company' => $this->castToString($jobData['company'] ?? null, 'Unknown Company'),
+            'description' => $this->castToString($jobData['description'] ?? null, 'No description provided'),
+            'location' => $this->castToString($jobData['location'] ?? null, 'Unknown'),
+            'salary_range' => $this->castToString($jobData['salary_range'] ?? null, null),
+            'job_type' => $this->castToString($jobData['job_type'] ?? null, null),
+            'experience' => $this->castToString($jobData['experience'] ?? null, null),
+            'url' => $this->castToString($jobData['url'] ?? null, null),
+            'source' => $this->castToString($jobData['source'] ?? null, 'unknown'),
             'scraping_source_id' => $sourceModel->id ?? null,
         ]);
 
@@ -381,5 +384,15 @@ class ProcessMarketScraping implements ShouldQueue
                 'error_message' => $exception?->getMessage() ?? 'Job failed after maximum retries',
                 'updated_at' => now(),
             ]);
+    }
+
+    /**
+     * Safely cast incoming potentially-array data to strings.
+     */
+    private function castToString($value, $default = null)
+    {
+        if (is_null($value)) return $default;
+        if (is_array($value)) return implode(', ', array_filter($value));
+        return (string) $value;
     }
 }

@@ -89,7 +89,7 @@ logger.setLevel(logging.DEBUG)
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile   # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware                    # noqa: E402
 from pydantic import BaseModel                                        # noqa: E402
-from typing import Any, Dict, Optional                                # noqa: E402
+from typing import Any, Dict, Optional, Union                                # noqa: E402
 
 # ── Singleton AI models (load once on startup) ────────────────────────────────
 _ner_engine: SkillNEREngine | None     = None
@@ -255,8 +255,8 @@ class TestSourceSourceProxy(BaseModel):
     name: str = ""
     endpoint: str
     type: str = "html"
-    headers: Dict[str, Any] = {}
-    params: Dict[str, Any] = {}
+    headers: Union[dict, list, str, None] = None
+    params: Union[dict, list, str, None] = None
 
 class TestSourceRequest(BaseModel):
     source: TestSourceSourceProxy
@@ -272,7 +272,22 @@ async def test_source(body: TestSourceRequest):
     import urllib.parse
     
     # 1. Update params with the provided search query
-    params = dict(body.source.params)
+    
+    # Safely parse params: PHP arrays may be sent as lists [] or JSON strings
+    raw_params = body.source.params
+    if isinstance(raw_params, dict):
+        params = dict(raw_params)
+    elif isinstance(raw_params, str):
+        import json
+        try:
+            params = json.loads(raw_params)
+            if not isinstance(params, dict):
+                params = {}
+        except:
+            params = {}
+    else:
+        params = {}
+        
     injected = False
     
     # Try common keys for searching
@@ -349,7 +364,123 @@ async def test_source(body: TestSourceRequest):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Endpoint 3 — POST /api/v1/hybrid-match
+# Endpoint 3 — POST /scrape-jobs (Background Market Scraping)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class ScrapeJobsRequest(BaseModel):
+    query: str
+    max_results: int = 30
+    use_samples: bool = False
+    calculate_statistics: bool = True
+    sources: list[TestSourceSourceProxy]
+
+
+@app.post("/scrape-jobs", tags=["Job Scraping"])
+async def scrape_jobs(body: ScrapeJobsRequest):
+    """
+    Called by Laravel's background job (ProcessMarketScraping).
+    Loops through the provided active sources, constructs their URLs,
+    and scrapes jobs in parallel (or sequentially) returning a unified list.
+    """
+    import urllib.parse
+    
+    all_jobs = []
+    
+    # We iterate over each requested source configuration
+    for source_proxy in body.sources:
+        try:
+            # Safely parse params: PHP arrays may be sent as lists [] or JSON strings
+            raw_params = source_proxy.params
+            if isinstance(raw_params, dict):
+                params = dict(raw_params)
+            elif isinstance(raw_params, str):
+                import json
+                try:
+                    params = json.loads(raw_params)
+                    if not isinstance(params, dict):
+                        params = {}
+                except:
+                    params = {}
+            else:
+                params = {}
+                
+            injected = False
+            
+            # Inject Laravel's search query
+            for key in ["q", "search", "keyword", "keywords"]:
+                if key in params:
+                    params[key] = body.query
+                    injected = True
+                    break
+                    
+            if not injected and params:
+                for k in params.keys():
+                    params[k] = body.query
+                    break
+            elif not injected and not params:
+                params["q"] = body.query
+                
+            # Build URL
+            url_parts = list(urllib.parse.urlparse(source_proxy.endpoint))
+            existing_query = dict(urllib.parse.parse_qsl(url_parts[4]))
+            existing_query.update(params)
+            
+            # Adzuna Logic (same as /test-source)
+            scraper_type_override = source_proxy.type
+            if "adzuna.com" in source_proxy.endpoint:
+                scraper_type_override = "api"
+                env_path = _ROOT / "ai-hybrid-orchestrator" / ".env"
+                if env_path.exists():
+                    with open(env_path, "r", encoding="utf-8") as f:
+                        for line in f:
+                            line = line.strip()
+                            if line.startswith("ADZUNA_APP_ID="):
+                                existing_query["app_id"] = line.split("=", 1)[1]
+                            elif line.startswith("ADZUNA_APP_KEY="):
+                                existing_query["app_key"] = line.split("=", 1)[1]
+                                
+                if "search" in existing_query:
+                    existing_query["what"] = existing_query.pop("search")
+                elif "q" in existing_query:
+                    existing_query["what"] = existing_query.pop("q")
+                    
+                if "limit" in existing_query:
+                    existing_query["results_per_page"] = existing_query.pop("limit")
+            
+            url_parts[4] = urllib.parse.urlencode(existing_query)
+            target_url = urllib.parse.urlunparse(url_parts)
+            
+            logger.info(f"[scrape-jobs] Scraping source '{source_proxy.name}' for query '{body.query}' -> {target_url}")
+            
+            # Fire up the engine for this current source URL
+            engine = ScrapingEngine(rate=3.0)
+            source_jobs = []
+            
+            # Use max_results logic. If not provided, we pull up to body.max_results per source
+            # The Laravel system expects batching per source or collectively. Usually collectively, but doing it per source is safer.
+            async for job in engine.stream_jobs([target_url], scraper_type=scraper_type_override):
+                source_jobs.append(job)
+                if len(source_jobs) >= body.max_results:
+                    break
+                    
+            # Add to the global return list
+            all_jobs.extend(source_jobs)
+            
+        except Exception as e:
+            logger.error(f"[scrape-jobs] Failed to scrape {source_proxy.name}: {e}")
+            continue
+
+    # ProcessMarketScraping in Laravel expects {"jobs": [...]} in the root JSON response 
+    # and maybe 'statistics' if calculate_statistics is true. We'll return jobs directly.
+    return {
+        "total_jobs": len(all_jobs),
+        "jobs": all_jobs,
+        "statistics": {} # Placeholder for potential local AI statistics rendering later
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Endpoint 4 — POST /api/v1/hybrid-match
 # ─────────────────────────────────────────────────────────────────────────────
 
 class HybridMatchRequest(BaseModel):
