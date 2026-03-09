@@ -1,39 +1,31 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { adminAPI } from '../../api/endpoints';
 import { Search, Trash2, Briefcase, MapPin, Building, Calendar, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { motion } from 'framer-motion';
 
 export default function AdminJobs() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialPage = parseInt(searchParams.get('page')) || 1;
+  const initialSearch = searchParams.get('search') || '';
+
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [searchInput, setSearchInput] = useState(initialSearch);
+  const [activeSearch, setActiveSearch] = useState(initialSearch);
+  const [currentPage, setCurrentPage] = useState(initialPage);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Debounced search logic
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      fetchJobs(1); // Reset to page 1 on search change
-    }, 500);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [search]);
-
-  useEffect(() => {
-    fetchJobs(currentPage);
-  }, [currentPage]);
-
-  const fetchJobs = async (page) => {
+  const fetchJobs = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await adminAPI.getAdminJobs(page, search);
+      const response = await adminAPI.getAdminJobs(currentPage, activeSearch);
       if (response.data && response.data.success) {
         setJobs(response.data.data.data);
         setTotalPages(response.data.data.last_page);
         setCurrentPage(response.data.data.current_page);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (err) {
       console.error('Failed to fetch admin jobs:', err);
@@ -49,7 +41,33 @@ export default function AdminJobs() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, activeSearch]);
+
+  // Debounced search logic
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      // Only reset page if the search actually changed from initial
+      if (searchInput !== activeSearch) {
+        setActiveSearch(searchInput);
+        setCurrentPage(1); // Reset to page 1 on new search
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchInput, activeSearch]);
+
+  // URL Synchronization
+  useEffect(() => {
+    const params = {};
+    if (currentPage > 1) params.page = currentPage;
+    if (activeSearch) params.search = activeSearch;
+
+    setSearchParams(params, { replace: true });
+  }, [currentPage, activeSearch, setSearchParams]);
+
+  useEffect(() => {
+    fetchJobs();
+  }, [currentPage, activeSearch, fetchJobs]);
 
   const handleDelete = async (id, title) => {
     const result = await Swal.fire({
@@ -74,7 +92,7 @@ export default function AdminJobs() {
           showConfirmButton: false,
           timer: 3000
         });
-        fetchJobs(currentPage); // Refresh current page
+        fetchJobs(); // Refresh current page
       } catch (err) {
         console.error('Failed to delete job:', err);
         Swal.fire({
@@ -87,18 +105,6 @@ export default function AdminJobs() {
           timer: 3000
         });
       }
-    }
-  };
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage((prev) => prev + 1);
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage((prev) => prev - 1);
     }
   };
 
@@ -121,18 +127,14 @@ export default function AdminJobs() {
           type="text"
           placeholder="Search by job title, company, or location..."
           className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-gray-700 font-medium placeholder-gray-400"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
         />
         {loading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary ml-3"></div>}
       </div>
 
       {/* Jobs Table */}
-      <motion.div 
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
-      >
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -206,28 +208,28 @@ export default function AdminJobs() {
         </div>
 
         {/* Server-Side Pagination Controls */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-slate-50">
-          <span className="text-sm font-semibold text-gray-500">
+        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50">
+          <span className="text-sm font-semibold text-slate-500">
             Page {currentPage} of {totalPages}
           </span>
           <div className="flex items-center gap-2">
             <button
-              onClick={handlePrevPage}
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage <= 1 || loading}
-              className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50 flex items-center gap-1 bg-white"
+              className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50 flex items-center gap-1 bg-white"
             >
                <ChevronLeft size={16} /> Prev
             </button>
             <button
-              onClick={handleNextPage}
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage >= totalPages || loading}
-              className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50 flex items-center gap-1 bg-white"
+              className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50 flex items-center gap-1 bg-white"
             >
                Next <ChevronRight size={16} />
             </button>
           </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

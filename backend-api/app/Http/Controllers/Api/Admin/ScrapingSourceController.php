@@ -11,9 +11,21 @@ use Illuminate\Support\Facades\Log;
 
 class ScrapingSourceController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return ScrapingSourceResource::collection(ScrapingSource::all());
+        $query = ScrapingSource::query();
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('endpoint', 'like', "%{$search}%")
+                    ->orWhere('type', 'like', "%{$search}%");
+            });
+        }
+
+        $sources = $query->orderBy('created_at', 'desc')->paginate(10);
+        return ScrapingSourceResource::collection($sources);
     }
 
     public function store(Request $request)

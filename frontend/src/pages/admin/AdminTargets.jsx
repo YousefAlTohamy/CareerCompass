@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from 'react-router-dom';
 import {
   getTargetRoles,
   addTargetRole,
@@ -36,27 +37,60 @@ const AdminTargets = () => {
   const [newRoleName, setNewRoleName] = useState("");
 
   // Pagination & Search State
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialPage = parseInt(searchParams.get('page')) || 1;
+  const initialSearch = searchParams.get('search') || '';
 
-  useEffect(() => {
-    fetchRoles();
-  }, []);
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchInput, setSearchInput] = useState(initialSearch);
+  const [activeSearch, setActiveSearch] = useState(initialSearch);
 
-  const fetchRoles = async () => {
+  const fetchRoles = useCallback(async () => {
     try {
       setLoading(true);
-      const rolesRes = await getTargetRoles();
-      const fetchedData = rolesRes?.data || rolesRes;
-      setRoles(Array.isArray(fetchedData) ? fetchedData : []);
+      const rolesRes = await getTargetRoles(currentPage, activeSearch);
+      
+      if (rolesRes.data) {
+        setRoles(rolesRes.data);
+        setTotalPages(rolesRes.meta?.last_page || rolesRes.last_page || 1);
+        setCurrentPage(rolesRes.meta?.current_page || rolesRes.current_page || 1);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        setRoles([]);
+      }
     } catch (error) {
       console.error("Failed to fetch roles:", error);
       setRoles([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, activeSearch]);
+
+  // Debounced search logic
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (searchInput !== activeSearch) {
+        setActiveSearch(searchInput);
+        setCurrentPage(1);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchInput, activeSearch]);
+
+  // URL Synchronization
+  useEffect(() => {
+    const params = {};
+    if (currentPage > 1) params.page = currentPage;
+    if (activeSearch) params.search = activeSearch;
+
+    setSearchParams(params, { replace: true });
+  }, [currentPage, activeSearch, setSearchParams]);
+
+  useEffect(() => {
+    fetchRoles();
+  }, [currentPage, activeSearch, fetchRoles]);
 
   const handleAddRole = async (e) => {
     e.preventDefault();
@@ -121,11 +155,7 @@ const AdminTargets = () => {
         timer: 2000,
         timerProgressBar: true,
       });
-      
-      // Adjust page if we deleted the last item on current page
-      if (currentRoles.length === 1 && currentPage > 1) {
-        setCurrentPage(currentPage - 1);
-      }
+      fetchRoles();
     } catch (error) {
       console.error(error);
       Swal.fire({
@@ -137,32 +167,6 @@ const AdminTargets = () => {
     }
   };
 
-  // Search Logic
-  const filteredRoles = Array.isArray(roles)
-    ? roles.filter((role) =>
-        role.name?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : [];
-
-  // Pagination Logic
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentRoles = filteredRoles.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredRoles.length / itemsPerPage);
-
-  // Reset to page 1 when search term changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1);
-  };
-
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-6">
@@ -170,6 +174,19 @@ const AdminTargets = () => {
           <Target className="w-6 h-6 text-indigo-600" />
           Target Job Roles
         </h1>
+      </div>
+
+      {/* Search Input Card */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6 flex items-center px-4">
+        <Search className="text-slate-400 mr-3" size={20} />
+        <input
+          type="text"
+          placeholder="Search roles..."
+          className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-slate-700 font-medium placeholder-slate-400"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+        />
+        {loading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600 ml-3"></div>}
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -201,23 +218,9 @@ const AdminTargets = () => {
           </form>
         </div>
         
-        {/* Search Bar */}
-        <div className="p-4 border-b border-gray-200 bg-white">
-          <div className="relative max-w-md">
-             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
-             </div>
-             <input
-               type="text"
-               value={searchTerm}
-               onChange={(e) => setSearchTerm(e.target.value)}
-               placeholder="Search roles..."
-               className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
-             />
-          </div>
-        </div>
 
         <table className="w-full text-left border-collapse">
+
           <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-semibold tracking-wider">
             <tr>
               <th className="p-4 border-b">Role Name</th>
@@ -232,14 +235,14 @@ const AdminTargets = () => {
                   Loading roles...
                 </td>
               </tr>
-            ) : currentRoles.length === 0 ? (
+            ) : roles.length === 0 ? (
               <tr>
                 <td colSpan="3" className="p-8 text-center text-gray-500">
                   No target roles defined.
                 </td>
               </tr>
             ) : (
-              currentRoles.map((role) => (
+              roles.map((role) => (
                 <tr
                   key={role.id}
                   className="hover:bg-gray-50 transition-colors"
@@ -273,37 +276,28 @@ const AdminTargets = () => {
           </tbody>
         </table>
         
-        {/* Pagination Controls */}
-        {!loading && filteredRoles.length > 0 && (
-          <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-t border-gray-200">
-            <div className="text-sm text-gray-700">
-              Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to{" "}
-              <span className="font-medium">
-                {Math.min(indexOfLastItem, filteredRoles.length)}
-              </span>{" "}
-              of <span className="font-medium">{filteredRoles.length}</span> results
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handlePrevPage}
-                disabled={currentPage === 1}
-                className="p-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4 text-gray-600" />
-              </button>
-              <span className="text-sm font-medium text-gray-700">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={handleNextPage}
-                disabled={currentPage === totalPages || totalPages === 0}
-                className="p-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
-              >
-                <ChevronRight className="w-4 h-4 text-gray-600" />
-              </button>
-            </div>
+        {/* Server-Side Pagination Controls */}
+        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50">
+          <span className="text-sm font-semibold text-slate-500">
+            Page {currentPage} of {totalPages}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage <= 1 || loading}
+              className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50 flex items-center gap-1 bg-white"
+            >
+               <ChevronLeft size={16} /> Prev
+            </button>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage >= totalPages || loading}
+              className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50 flex items-center gap-1 bg-white"
+            >
+               Next <ChevronRight size={16} />
+            </button>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
