@@ -9,6 +9,11 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [healthData, setHealthData] = useState({
+    status: 'checking',
+    services: { 'Database': 'checking', 'Cache & Queue': 'checking', 'AI Services': 'checking' }
+  });
+
   const [randomLinks] = useState(() => {
     const links = [
       { name: 'Manage Users', href: '/admin/users', icon: Users },
@@ -18,6 +23,32 @@ export default function AdminDashboard() {
     ];
     return links.sort(() => 0.5 - Math.random()).slice(0, 2);
   });
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchHealth = async () => {
+      try {
+        const response = await adminAPI.getAdminSystemHealth();
+        if (isMounted && response.data?.success) {
+          setHealthData(response.data.data);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setHealthData({
+            status: 'critical',
+            services: { 'Database': 'offline', 'Cache & Queue': 'offline', 'AI Services': 'offline' }
+          });
+        }
+      }
+    };
+
+    fetchHealth();
+    const interval = setInterval(fetchHealth, 30000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     fetchDashboardStats();
@@ -232,15 +263,29 @@ export default function AdminDashboard() {
              })}
            </div>
            
-           <div className="mt-6 pt-6 border-t border-gray-100">
-             <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100 flex items-start gap-3">
-               <div className="mt-1">
-                 <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>
-               </div>
-               <div>
-                 <p className="text-sm font-bold text-indigo-900 tracking-tight">System Status</p>
-                 <p className="text-xs font-medium text-indigo-600 mt-0.5">All services are operating normally.</p>
-               </div>
+           <div className="mt-6 bg-slate-50 rounded-xl p-5 border border-slate-100">
+             <div className="flex items-center justify-between mb-4">
+               <h4 className="text-sm font-bold text-slate-800 tracking-tight">System Status</h4>
+               <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${
+                 healthData.status === 'operational' ? 'bg-emerald-100 text-emerald-700' :
+                 healthData.status === 'checking' ? 'bg-slate-200 text-slate-600' : 'bg-red-100 text-red-700'
+               }`}>
+                 {healthData.status}
+               </span>
+             </div>
+             <div className="space-y-3">
+               {Object.entries(healthData.services).map(([serviceName, serviceStatus]) => (
+                 <div key={serviceName} className="flex items-center justify-between">
+                   <span className="text-xs font-bold text-slate-600">{serviceName}</span>
+                   <div className="flex items-center gap-2">
+                     <span className="text-[10px] font-bold text-slate-400 uppercase">{serviceStatus}</span>
+                     <div className={`w-2 h-2 rounded-full ${
+                       serviceStatus === 'online' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse' :
+                       serviceStatus === 'checking' ? 'bg-slate-400' : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]'
+                     }`}></div>
+                   </div>
+                 </div>
+               ))}
              </div>
            </div>
         </motion.div>
