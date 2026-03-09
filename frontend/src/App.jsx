@@ -22,6 +22,7 @@ import Applications from './pages/user/Applications';
 
 // ── Admin pages ──────────────────────────────────────────────────────────────
 import AdminSources from './pages/admin/AdminSources';
+import AdminTargets from './pages/admin/AdminTargets';
 
 import './index.css';
 
@@ -96,10 +97,18 @@ function AnimatedRoutes() {
 
           {/* ── Protected Admin Routes ───────────────────────────────── */}
           <Route
-            path="/admin/scraping-sources"
+            path="/admin/sources"
             element={
               <ProtectedRoute requireAdmin>
                 <AdminSources />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/targets"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminTargets />
               </ProtectedRoute>
             }
           />

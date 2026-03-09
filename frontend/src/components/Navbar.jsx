@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Compass, LayoutDashboard, Briefcase, BarChart3, Settings, User, LogOut } from 'lucide-react';
+import { Menu, X, Compass, LayoutDashboard, Briefcase, BarChart3, User, LogOut, Database, Target } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
@@ -23,12 +23,17 @@ export default function Navbar() {
     navigate('/login');
   };
 
-  const navLinks = [
-    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'Discovery', path: '/jobs', icon: Briefcase },
-    { name: 'Tracker', path: '/applications', icon: Compass },
-    { name: 'Market', path: '/market', icon: BarChart3 },
-  ];
+  const navLinks = user?.role === 'admin'
+    ? [
+        { name: 'Sources', path: '/admin/sources', icon: Database },
+        { name: 'Target Roles', path: '/admin/targets', icon: Target },
+      ]
+    : [
+        { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+        { name: 'Discovery', path: '/jobs', icon: Briefcase },
+        { name: 'Tracker', path: '/applications', icon: Compass },
+        { name: 'Market', path: '/market', icon: BarChart3 },
+      ];
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
@@ -67,11 +72,6 @@ export default function Navbar() {
                 </div>
 
                 <div className="flex items-center gap-4 pl-4 border-l border-slate-200">
-                  {user.role === 'admin' && (
-                    <Link to="/admin/scraping-sources" className="p-2 text-slate-400 hover:text-primary transition-colors">
-                      <Settings size={20} />
-                    </Link>
-                  )}
                   <div className="group relative">
                     <Link
                       to="/profile"
