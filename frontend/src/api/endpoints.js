@@ -56,3 +56,8 @@ export const getApplications = () => applicationsAPI.getApplications();
 export const trackApplication = (jobId) => applicationsAPI.trackApplication(jobId);
 export const updateApplicationStatus = (id, status) => applicationsAPI.updateApplicationStatus(id, status);
 export const deleteApplication = (id) => applicationsAPI.deleteApplication(id);
+
+// Admin API
+export const adminAPI = {
+  getAdminDashboardStats: () => apiClient.get('/admin/dashboard/stats'),
+};
