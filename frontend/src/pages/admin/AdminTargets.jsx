@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from 'react-router-dom';
 import {
   getTargetRoles,
   addTargetRole,
@@ -36,10 +37,14 @@ const AdminTargets = () => {
   const [newRoleName, setNewRoleName] = useState("");
 
   // Pagination & Search State
-  const [currentPage, setCurrentPage] = useState(1);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialPage = parseInt(searchParams.get('page')) || 1;
+  const initialSearch = searchParams.get('search') || '';
+
+  const [currentPage, setCurrentPage] = useState(initialPage);
   const [totalPages, setTotalPages] = useState(1);
-  const [searchInput, setSearchInput] = useState("");
-  const [activeSearch, setActiveSearch] = useState("");
+  const [searchInput, setSearchInput] = useState(initialSearch);
+  const [activeSearch, setActiveSearch] = useState(initialSearch);
 
   const fetchRoles = useCallback(async () => {
     try {
@@ -50,6 +55,7 @@ const AdminTargets = () => {
         setRoles(rolesRes.data);
         setTotalPages(rolesRes.meta?.last_page || rolesRes.last_page || 1);
         setCurrentPage(rolesRes.meta?.current_page || rolesRes.current_page || 1);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         setRoles([]);
       }
@@ -64,12 +70,23 @@ const AdminTargets = () => {
   // Debounced search logic
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      setActiveSearch(searchInput);
-      setCurrentPage(1);
+      if (searchInput !== activeSearch) {
+        setActiveSearch(searchInput);
+        setCurrentPage(1);
+      }
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchInput]);
+  }, [searchInput, activeSearch]);
+
+  // URL Synchronization
+  useEffect(() => {
+    const params = {};
+    if (currentPage > 1) params.page = currentPage;
+    if (activeSearch) params.search = activeSearch;
+
+    setSearchParams(params, { replace: true });
+  }, [currentPage, activeSearch, setSearchParams]);
 
   useEffect(() => {
     fetchRoles();

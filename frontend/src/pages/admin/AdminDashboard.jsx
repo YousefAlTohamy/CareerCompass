@@ -9,6 +9,16 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [randomLinks] = useState(() => {
+    const links = [
+      { name: 'Manage Users', href: '/admin/users', icon: Users },
+      { name: 'Manage Jobs', href: '/admin/jobs', icon: Briefcase },
+      { name: 'Manage Sources', href: '/admin/sources', icon: Database },
+      { name: 'Manage Target Roles', href: '/admin/targets', icon: Target },
+    ];
+    return links.sort(() => 0.5 - Math.random()).slice(0, 2);
+  });
+
   useEffect(() => {
     fetchDashboardStats();
   }, []);
@@ -207,22 +217,19 @@ export default function AdminDashboard() {
         >
            <h3 className="text-lg font-black text-gray-900 mb-6">Quick Links</h3>
            <div className="space-y-3 flex-1">
-             <a href="/admin/sources" className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100 hover:border-primary/30 hover:bg-indigo-50/30 transition-all group">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-white shadow-sm text-gray-400 group-hover:text-primary transition-colors">
-                    <Database size={20} />
-                  </div>
-                  <span className="font-bold text-gray-700 group-hover:text-primary transition-colors">Manage Sources</span>
-                </div>
-             </a>
-             <a href="/admin/targets" className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100 hover:border-primary/30 hover:bg-indigo-50/30 transition-all group">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-white shadow-sm text-gray-400 group-hover:text-primary transition-colors">
-                    <Target size={20} />
-                  </div>
-                  <span className="font-bold text-gray-700 group-hover:text-primary transition-colors">Manage Target Roles</span>
-                </div>
-             </a>
+             {randomLinks.map((link, idx) => {
+               const Icon = link.icon;
+               return (
+                 <a key={idx} href={link.href} className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100 hover:border-primary/30 hover:bg-indigo-50/30 transition-all group">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-white shadow-sm text-gray-400 group-hover:text-primary transition-colors">
+                        <Icon size={20} />
+                      </div>
+                      <span className="font-bold text-gray-700 group-hover:text-primary transition-colors">{link.name}</span>
+                    </div>
+                 </a>
+               );
+             })}
            </div>
            
            <div className="mt-6 pt-6 border-t border-gray-100">

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from 'react-router-dom';
 import {
   getAllSources,
   createSource,
@@ -46,10 +47,14 @@ const AdminSources = () => {
   const [editingSource, setEditingSource] = useState(null);
 
   // Pagination & Search State
-  const [currentPage, setCurrentPage] = useState(1);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialPage = parseInt(searchParams.get('page')) || 1;
+  const initialSearch = searchParams.get('search') || '';
+
+  const [currentPage, setCurrentPage] = useState(initialPage);
   const [totalPages, setTotalPages] = useState(1);
-  const [searchInput, setSearchInput] = useState('');
-  const [activeSearch, setActiveSearch] = useState('');
+  const [searchInput, setSearchInput] = useState(initialSearch);
+  const [activeSearch, setActiveSearch] = useState(initialSearch);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -70,6 +75,7 @@ const AdminSources = () => {
           setSources(sourcesRes.data);
           setTotalPages(sourcesRes.meta?.last_page || 1);
           setCurrentPage(sourcesRes.meta?.current_page || 1);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
           setSources([]);
       }
@@ -84,11 +90,22 @@ const AdminSources = () => {
   // Debounced search logic
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      setActiveSearch(searchInput);
-      setCurrentPage(1);
+      if (searchInput !== activeSearch) {
+        setActiveSearch(searchInput);
+        setCurrentPage(1);
+      }
     }, 500);
     return () => clearTimeout(delayDebounceFn);
-  }, [searchInput]);
+  }, [searchInput, activeSearch]);
+
+  // URL Synchronization
+  useEffect(() => {
+    const params = {};
+    if (currentPage > 1) params.page = currentPage;
+    if (activeSearch) params.search = activeSearch;
+
+    setSearchParams(params, { replace: true });
+  }, [currentPage, activeSearch, setSearchParams]);
 
   useEffect(() => {
     fetchAllData();

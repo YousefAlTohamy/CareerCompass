@@ -1,16 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { adminAPI } from '../../api/endpoints';
 import { Search, Trash2, Briefcase, MapPin, Building, Calendar, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Swal from 'sweetalert2';
 
 export default function AdminJobs() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialPage = parseInt(searchParams.get('page')) || 1;
+  const initialSearch = searchParams.get('search') || '';
+
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchInput, setSearchInput] = useState('');
-  const [activeSearch, setActiveSearch] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
+  const [searchInput, setSearchInput] = useState(initialSearch);
+  const [activeSearch, setActiveSearch] = useState(initialSearch);
+  const [currentPage, setCurrentPage] = useState(initialPage);
   const [totalPages, setTotalPages] = useState(1);
 
   const fetchJobs = useCallback(async () => {
@@ -21,6 +25,7 @@ export default function AdminJobs() {
         setJobs(response.data.data.data);
         setTotalPages(response.data.data.last_page);
         setCurrentPage(response.data.data.current_page);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (err) {
       console.error('Failed to fetch admin jobs:', err);
@@ -41,12 +46,24 @@ export default function AdminJobs() {
   // Debounced search logic
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      setActiveSearch(searchInput);
-      setCurrentPage(1); // Reset to page 1 on new search
+      // Only reset page if the search actually changed from initial
+      if (searchInput !== activeSearch) {
+        setActiveSearch(searchInput);
+        setCurrentPage(1); // Reset to page 1 on new search
+      }
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchInput]);
+  }, [searchInput, activeSearch]);
+
+  // URL Synchronization
+  useEffect(() => {
+    const params = {};
+    if (currentPage > 1) params.page = currentPage;
+    if (activeSearch) params.search = activeSearch;
+
+    setSearchParams(params, { replace: true });
+  }, [currentPage, activeSearch, setSearchParams]);
 
   useEffect(() => {
     fetchJobs();
