@@ -8,14 +8,15 @@ export default function AdminUsers() {
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [activeSearch, setActiveSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  const fetchUsers = useCallback(async (page) => {
+  const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await adminAPI.getAdminUsers(page, search);
+      const response = await adminAPI.getAdminUsers(currentPage, activeSearch);
       if (response.data && response.data.success) {
         setUsers(response.data.data.data);
         setTotalPages(response.data.data.last_page);
@@ -35,20 +36,21 @@ export default function AdminUsers() {
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [currentPage, activeSearch]);
 
   // Debounced search logic
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      fetchUsers(1); 
+      setActiveSearch(searchInput);
+      setCurrentPage(1); // Reset to page 1 on new search
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [search, fetchUsers]);
+  }, [searchInput]);
 
   useEffect(() => {
-    fetchUsers(currentPage);
-  }, [currentPage, fetchUsers]);
+    fetchUsers();
+  }, [currentPage, activeSearch, fetchUsers]);
 
   const handleToggleBan = async (id, name, isBanned) => {
     const actionText = isBanned ? 'unban' : 'ban';
@@ -119,8 +121,8 @@ export default function AdminUsers() {
           type="text"
           placeholder="Search by user name or email..."
           className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-slate-700 font-medium placeholder-slate-400"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
         />
         {loading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary ml-3"></div>}
       </div>

@@ -24,7 +24,7 @@ class ScrapingSourceController extends Controller
             });
         }
 
-        $sources = $query->orderBy('created_at', 'desc')->paginate(15);
+        $sources = $query->orderBy('created_at', 'desc')->paginate(10);
         return ScrapingSourceResource::collection($sources);
     }
 

@@ -38,12 +38,13 @@ const AdminTargets = () => {
   // Pagination & Search State
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [activeSearch, setActiveSearch] = useState("");
 
-  const fetchRoles = useCallback(async (page) => {
+  const fetchRoles = useCallback(async () => {
     try {
       setLoading(true);
-      const rolesRes = await getTargetRoles(page, search);
+      const rolesRes = await getTargetRoles(currentPage, activeSearch);
       
       if (rolesRes.data) {
         setRoles(rolesRes.data);
@@ -58,20 +59,21 @@ const AdminTargets = () => {
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [currentPage, activeSearch]);
 
   // Debounced search logic
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      fetchRoles(1); 
+      setActiveSearch(searchInput);
+      setCurrentPage(1);
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [search, fetchRoles]);
+  }, [searchInput]);
 
   useEffect(() => {
-    fetchRoles(currentPage);
-  }, [currentPage, fetchRoles]);
+    fetchRoles();
+  }, [currentPage, activeSearch, fetchRoles]);
 
   const handleAddRole = async (e) => {
     e.preventDefault();
@@ -136,7 +138,7 @@ const AdminTargets = () => {
         timer: 2000,
         timerProgressBar: true,
       });
-      fetchRoles(currentPage);
+      fetchRoles();
     } catch (error) {
       console.error(error);
       Swal.fire({
@@ -155,6 +157,19 @@ const AdminTargets = () => {
           <Target className="w-6 h-6 text-indigo-600" />
           Target Job Roles
         </h1>
+      </div>
+
+      {/* Search Input Card */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6 flex items-center px-4">
+        <Search className="text-slate-400 mr-3" size={20} />
+        <input
+          type="text"
+          placeholder="Search roles..."
+          className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-slate-700 font-medium placeholder-slate-400"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+        />
+        {loading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600 ml-3"></div>}
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -186,23 +201,9 @@ const AdminTargets = () => {
           </form>
         </div>
         
-        {/* Search Bar */}
-        <div className="p-4 border-b border-gray-200 bg-white">
-          <div className="relative max-w-md">
-             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
-             </div>
-             <input
-               type="text"
-               value={search}
-               onChange={(e) => setSearch(e.target.value)}
-               placeholder="Search roles..."
-               className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
-             />
-          </div>
-        </div>
 
         <table className="w-full text-left border-collapse">
+
           <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-semibold tracking-wider">
             <tr>
               <th className="p-4 border-b">Role Name</th>

@@ -48,7 +48,8 @@ const AdminSources = () => {
   // Pagination & Search State
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [activeSearch, setActiveSearch] = useState('');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -61,10 +62,10 @@ const AdminSources = () => {
     is_active: true,
   });
 
-  const fetchAllData = useCallback(async (page) => {
+  const fetchAllData = useCallback(async () => {
     try {
       setLoading(true);
-      const sourcesRes = await getAllSources(page, search);
+      const sourcesRes = await getAllSources(currentPage, activeSearch);
       if (sourcesRes.data) {
           setSources(sourcesRes.data);
           setTotalPages(sourcesRes.meta?.last_page || 1);
@@ -78,19 +79,20 @@ const AdminSources = () => {
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [currentPage, activeSearch]);
 
   // Debounced search logic
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      fetchAllData(1); 
+      setActiveSearch(searchInput);
+      setCurrentPage(1);
     }, 500);
     return () => clearTimeout(delayDebounceFn);
-  }, [search, fetchAllData]);
+  }, [searchInput]);
 
   useEffect(() => {
-    fetchAllData(currentPage);
-  }, [currentPage, fetchAllData]);
+    fetchAllData();
+  }, [currentPage, activeSearch, fetchAllData]);
 
   const handleTestAll = async () => {
     setTesting(true);
@@ -184,7 +186,7 @@ const AdminSources = () => {
         timer: 2000,
         timerProgressBar: true,
       });
-      fetchAllData(currentPage);
+      fetchAllData();
     } catch (error) {
       console.error(error);
       Swal.fire({
@@ -314,25 +316,23 @@ const AdminSources = () => {
         </div>
       )}
 
+      {/* Search Input Card */}
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6 flex items-center px-4">
+        <Search className="text-slate-400 mr-3" size={20} />
+        <input
+          type="text"
+          placeholder="Search sources by name, URL, or type..."
+          className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-slate-700 font-medium placeholder-slate-400"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+        />
+        {loading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600 ml-3"></div>}
+      </div>
+
       {/* Sources Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        {/* Search Bar */}
-        <div className="p-4 border-b border-gray-200 bg-white">
-          <div className="relative max-w-md">
-             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
-             </div>
-             <input
-               type="text"
-               value={search}
-               onChange={(e) => setSearch(e.target.value)}
-               placeholder="Search sources by name, URL, or type..."
-               className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
-             />
-          </div>
-        </div>
-
         <table className="w-full text-left border-collapse">
+
           <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-semibold tracking-wider">
             <tr>
               <th className="p-4 border-b">Method</th>

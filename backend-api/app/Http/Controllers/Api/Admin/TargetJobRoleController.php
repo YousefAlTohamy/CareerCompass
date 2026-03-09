@@ -16,7 +16,7 @@ class TargetJobRoleController extends Controller
             $query->where('name', 'like', "%{$search}%");
         }
 
-        $roles = $query->orderBy('created_at', 'desc')->paginate(15);
+        $roles = $query->orderBy('created_at', 'desc')->paginate(10);
         return response()->json($roles);
     }
 

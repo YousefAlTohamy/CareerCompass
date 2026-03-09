@@ -8,14 +8,15 @@ export default function AdminJobs() {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [activeSearch, setActiveSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  const fetchJobs = useCallback(async (page) => {
+  const fetchJobs = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await adminAPI.getAdminJobs(page, search);
+      const response = await adminAPI.getAdminJobs(currentPage, activeSearch);
       if (response.data && response.data.success) {
         setJobs(response.data.data.data);
         setTotalPages(response.data.data.last_page);
@@ -35,20 +36,21 @@ export default function AdminJobs() {
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [currentPage, activeSearch]);
 
   // Debounced search logic
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      fetchJobs(1); // Reset to page 1 on search change
+      setActiveSearch(searchInput);
+      setCurrentPage(1); // Reset to page 1 on new search
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [search, fetchJobs]);
+  }, [searchInput]);
 
   useEffect(() => {
-    fetchJobs(currentPage);
-  }, [currentPage, fetchJobs]);
+    fetchJobs();
+  }, [currentPage, activeSearch, fetchJobs]);
 
   const handleDelete = async (id, title) => {
     const result = await Swal.fire({
@@ -73,7 +75,7 @@ export default function AdminJobs() {
           showConfirmButton: false,
           timer: 3000
         });
-        fetchJobs(currentPage); // Refresh current page
+        fetchJobs(); // Refresh current page
       } catch (err) {
         console.error('Failed to delete job:', err);
         Swal.fire({
@@ -108,8 +110,8 @@ export default function AdminJobs() {
           type="text"
           placeholder="Search by job title, company, or location..."
           className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-gray-700 font-medium placeholder-gray-400"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
         />
         {loading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary ml-3"></div>}
       </div>

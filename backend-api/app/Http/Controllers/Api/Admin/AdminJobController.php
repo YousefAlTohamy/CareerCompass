@@ -31,7 +31,7 @@ class AdminJobController extends Controller
             }
 
             // Paginate results, order by created_at desc
-            $jobs = $query->orderBy('created_at', 'desc')->paginate(15);
+            $jobs = $query->orderBy('created_at', 'desc')->paginate(10);
 
             return response()->json([
                 'success' => true,
