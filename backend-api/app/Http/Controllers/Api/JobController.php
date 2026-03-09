@@ -11,6 +11,7 @@ use App\Models\Skill;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
@@ -305,7 +306,7 @@ class JobController extends Controller
                 'url' => $normalizedUrl ?? $jobData['url'] ?? null,
                 'source' => $jobData['source'] ?? 'unknown',
             ]);
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             // Handle duplicate entry error (race condition)
             if ($e->getCode() == 23000 || str_contains($e->getMessage(), 'Duplicate entry')) {
                 Log::info('Duplicate job prevented by database constraint (race condition)', [

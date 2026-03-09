@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\GapAnalysisResource;
 use App\Models\Job;
+use App\Models\User;
 use App\Services\Contracts\GapAnalysisServiceInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,7 +30,7 @@ class GapAnalysisController extends Controller
     public function analyzeJob(int $jobId): JsonResponse
     {
         try {
-            /** @var \App\Models\User $user */
+            /** @var User $user */
             $user = auth()->user();
 
             // Get job with skills
@@ -109,7 +110,7 @@ class GapAnalysisController extends Controller
         }
 
         try {
-            /** @var \App\Models\User $user */
+            /** @var User $user */
             $user = auth()->user();
             $jobIds = $request->input('job_ids');
 
@@ -199,7 +200,7 @@ class GapAnalysisController extends Controller
     public function getRecommendations(): JsonResponse
     {
         try {
-            /** @var \App\Models\User $user */
+            /** @var User $user */
             $user = auth()->user();
 
             $data = $this->gapAnalysisService->getRecommendations($user);
