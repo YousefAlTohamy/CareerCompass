@@ -93,6 +93,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/jobs/{id}', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'show']);
         Route::delete('/jobs/{id}', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'destroy']);
 
+        // Admin Users Management
+        Route::get('/users', [\App\Http\Controllers\Api\Admin\AdminUserController::class, 'index']);
+        Route::get('/users/{id}', [\App\Http\Controllers\Api\Admin\AdminUserController::class, 'show']);
+        Route::post('/users/{id}/toggle-ban', [\App\Http\Controllers\Api\Admin\AdminUserController::class, 'toggleBan']);
+
         // Specific routes MUST come before apiResource (wildcards)
         Route::patch('scraping-sources/{scrapingSource}/toggle', [ScrapingSourceController::class, 'toggleStatus']);
         Route::post('scraping-sources/test', [ScrapingSourceController::class, 'test']);

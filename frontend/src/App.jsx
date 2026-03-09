@@ -24,6 +24,8 @@ import Applications from './pages/user/Applications';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminJobs from './pages/admin/AdminJobs';
 import AdminJobDetails from './pages/admin/AdminJobDetails';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminUserDetails from './pages/admin/AdminUserDetails';
 import AdminSources from './pages/admin/AdminSources';
 import AdminTargets from './pages/admin/AdminTargets';
 
@@ -120,6 +122,22 @@ function AnimatedRoutes() {
             element={
               <ProtectedRoute requireAdmin>
                 <AdminJobDetails />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminUsers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users/:id"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminUserDetails />
               </ProtectedRoute>
             }
           />

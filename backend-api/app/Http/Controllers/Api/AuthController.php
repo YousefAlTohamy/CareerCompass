@@ -114,6 +114,13 @@ class AuthController extends Controller
             ]);
         }
 
+        if ($user->is_banned) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your account has been banned. Please contact support.',
+            ], 403);
+        }
+
         // Revoke old tokens
         $user->tokens()->delete();
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Compass, LayoutDashboard, Briefcase, BarChart3, User, LogOut, Database, Target } from 'lucide-react';
+import { Menu, X, Compass, LayoutDashboard, Briefcase, BarChart3, User, LogOut, Database, Target, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
@@ -26,6 +26,7 @@ export default function Navbar() {
   const navLinks = user?.role === 'admin'
     ? [
         { name: 'Overview', path: '/admin/dashboard', icon: LayoutDashboard },
+        { name: 'Users', path: '/admin/users', icon: Users },
         { name: 'Jobs', path: '/admin/jobs', icon: Briefcase },
         { name: 'Sources', path: '/admin/sources', icon: Database },
         { name: 'Target Roles', path: '/admin/targets', icon: Target },
