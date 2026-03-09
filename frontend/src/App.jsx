@@ -21,6 +21,7 @@ import MarketIntelligence from './pages/user/MarketIntelligence';
 import Applications from './pages/user/Applications';
 
 // ── Admin pages ──────────────────────────────────────────────────────────────
+import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminSources from './pages/admin/AdminSources';
 import AdminTargets from './pages/admin/AdminTargets';
 
@@ -96,6 +97,14 @@ function AnimatedRoutes() {
           />
 
           {/* ── Protected Admin Routes ───────────────────────────────── */}
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/admin/sources"
             element={

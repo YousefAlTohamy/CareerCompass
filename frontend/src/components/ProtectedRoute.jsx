@@ -23,7 +23,7 @@ export default function ProtectedRoute({ children, requireAdmin = false, allowAd
 
   // Logged in as admin but accessing normal user route (not explicitly allowed) → send to admin dashboard/sources
   if (!requireAdmin && !allowAdmin && user.role === 'admin') {
-    return <Navigate to="/admin/sources" replace />;
+    return <Navigate to="/admin/dashboard" replace />;
   }
 
   return children;

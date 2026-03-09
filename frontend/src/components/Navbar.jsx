@@ -25,6 +25,7 @@ export default function Navbar() {
 
   const navLinks = user?.role === 'admin'
     ? [
+        { name: 'Overview', path: '/admin/dashboard', icon: LayoutDashboard },
         { name: 'Sources', path: '/admin/sources', icon: Database },
         { name: 'Target Roles', path: '/admin/targets', icon: Target },
       ]
