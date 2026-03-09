@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   getAllSources,
   createSource,
@@ -47,8 +47,8 @@ const AdminSources = () => {
 
   // Pagination & Search State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
-  const [searchTerm, setSearchTerm] = useState('');
+  const [totalPages, setTotalPages] = useState(1);
+  const [search, setSearch] = useState('');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -61,24 +61,36 @@ const AdminSources = () => {
     is_active: true,
   });
 
-  useEffect(() => {
-    fetchAllData();
-  }, []);
-
-  const fetchAllData = async () => {
+  const fetchAllData = useCallback(async (page) => {
     try {
       setLoading(true);
-      const sourcesRes = await getAllSources();
-      const fetchedData =
-        sourcesRes.data?.data || sourcesRes.data || sourcesRes;
-      setSources(Array.isArray(fetchedData) ? fetchedData : []);
+      const sourcesRes = await getAllSources(page, search);
+      if (sourcesRes.data) {
+          setSources(sourcesRes.data);
+          setTotalPages(sourcesRes.meta?.last_page || 1);
+          setCurrentPage(sourcesRes.meta?.current_page || 1);
+      } else {
+          setSources([]);
+      }
     } catch (error) {
       console.error("Failed to fetch data:", error);
       setSources([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [search]);
+
+  // Debounced search logic
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchAllData(1); 
+    }, 500);
+    return () => clearTimeout(delayDebounceFn);
+  }, [search, fetchAllData]);
+
+  useEffect(() => {
+    fetchAllData(currentPage);
+  }, [currentPage, fetchAllData]);
 
   const handleTestAll = async () => {
     setTesting(true);
@@ -172,11 +184,7 @@ const AdminSources = () => {
         timer: 2000,
         timerProgressBar: true,
       });
-
-      // Adjust page if we deleted the last item on current page
-      if (currentSources.length === 1 && currentPage > 1) {
-        setCurrentPage(currentPage - 1);
-      }
+      fetchAllData(currentPage);
     } catch (error) {
       console.error(error);
       Swal.fire({
@@ -256,37 +264,6 @@ const AdminSources = () => {
       : "bg-purple-100 text-purple-800";
   };
 
-  // Search Logic
-  const filteredSources = Array.isArray(sources)
-    ? sources.filter((source) => {
-        const term = searchTerm.toLowerCase();
-        return (
-          source.name?.toLowerCase().includes(term) ||
-          source.endpoint?.toLowerCase().includes(term) ||
-          source.type?.toLowerCase().includes(term)
-        );
-      })
-    : [];
-
-  // Pagination Logic
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentSources = filteredSources.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredSources.length / itemsPerPage);
-
-  // Reset to page 1 when search term changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1);
-  };
-
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-6">
@@ -347,8 +324,8 @@ const AdminSources = () => {
              </div>
              <input
                type="text"
-               value={searchTerm}
-               onChange={(e) => setSearchTerm(e.target.value)}
+               value={search}
+               onChange={(e) => setSearch(e.target.value)}
                placeholder="Search sources by name, URL, or type..."
                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
              />
@@ -373,14 +350,14 @@ const AdminSources = () => {
                   Loading sources...
                 </td>
               </tr>
-            ) : currentSources.length === 0 ? (
+            ) : sources.length === 0 ? (
               <tr>
                 <td colSpan="6" className="p-8 text-center text-gray-500">
                   No scraping sources found.
                 </td>
               </tr>
             ) : (
-              currentSources.map((source) => (
+              sources.map((source) => (
                 <tr
                   key={source.id}
                   className="hover:bg-gray-50 transition-colors"
@@ -449,38 +426,28 @@ const AdminSources = () => {
           </tbody>
         </table>
 
-        {/* Pagination Controls */}
-        {!loading && filteredSources.length > 0 && (
-          <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-t border-gray-200">
-            <div className="text-sm text-gray-700">
-              Showing{" "}
-              <span className="font-medium">{indexOfFirstItem + 1}</span> to{" "}
-              <span className="font-medium">
-                {Math.min(indexOfLastItem, filteredSources.length)}
-              </span>{" "}
-              of <span className="font-medium">{filteredSources.length}</span> results
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handlePrevPage}
-                disabled={currentPage === 1}
-                className="p-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4 text-gray-600" />
-              </button>
-              <span className="text-sm font-medium text-gray-700">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={handleNextPage}
-                disabled={currentPage === totalPages || totalPages === 0}
-                className="p-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
-              >
-                <ChevronRight className="w-4 h-4 text-gray-600" />
-              </button>
-            </div>
+        {/* Server-Side Pagination Controls */}
+        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50">
+          <span className="text-sm font-semibold text-slate-500">
+            Page {currentPage} of {totalPages}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage <= 1 || loading}
+              className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50 flex items-center gap-1 bg-white"
+            >
+               <ChevronLeft size={16} /> Prev
+            </button>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage >= totalPages || loading}
+              className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50 flex items-center gap-1 bg-white"
+            >
+               Next <ChevronRight size={16} />
+            </button>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Add/Edit Modal */}

@@ -2,8 +2,8 @@ import apiClient from './client';
 
 const BASE_URL = '/admin/scraping-sources';
 
-export const getAllSources = async () => {
-    const response = await apiClient.get(BASE_URL);
+export const getAllSources = async (page = 1, search = '') => {
+    const response = await apiClient.get(`${BASE_URL}?page=${page}&search=${encodeURIComponent(search)}`);
     return response.data;
 };
 
@@ -34,8 +34,8 @@ export const testSources = async () => {
 // Target Job Roles
 const ROLES_URL = '/admin/target-roles';
 
-export const getTargetRoles = async () => {
-    const response = await apiClient.get(ROLES_URL);
+export const getTargetRoles = async (page = 1, search = '') => {
+    const response = await apiClient.get(`${ROLES_URL}?page=${page}&search=${encodeURIComponent(search)}`);
     return response.data;
 };
 

@@ -3,7 +3,6 @@ import { adminAPI } from '../../api/endpoints';
 import { Search, Trash2, Briefcase, MapPin, Building, Calendar, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
-import { motion } from 'framer-motion';
 
 export default function AdminJobs() {
   const navigate = useNavigate();
@@ -13,20 +12,7 @@ export default function AdminJobs() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Debounced search logic
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      fetchJobs(1); // Reset to page 1 on search change
-    }, 500);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [search]);
-
-  useEffect(() => {
-    fetchJobs(currentPage);
-  }, [currentPage]);
-
-  const fetchJobs = async (page) => {
+  const fetchJobs = useCallback(async (page) => {
     setLoading(true);
     try {
       const response = await adminAPI.getAdminJobs(page, search);
@@ -49,7 +35,20 @@ export default function AdminJobs() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search]);
+
+  // Debounced search logic
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchJobs(1); // Reset to page 1 on search change
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [search, fetchJobs]);
+
+  useEffect(() => {
+    fetchJobs(currentPage);
+  }, [currentPage, fetchJobs]);
 
   const handleDelete = async (id, title) => {
     const result = await Swal.fire({
@@ -90,18 +89,6 @@ export default function AdminJobs() {
     }
   };
 
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage((prev) => prev + 1);
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage((prev) => prev - 1);
-    }
-  };
-
   return (
     <div className="p-6 max-w-7xl mx-auto min-h-screen">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -128,11 +115,7 @@ export default function AdminJobs() {
       </div>
 
       {/* Jobs Table */}
-      <motion.div 
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
-      >
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -206,28 +189,28 @@ export default function AdminJobs() {
         </div>
 
         {/* Server-Side Pagination Controls */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-slate-50">
-          <span className="text-sm font-semibold text-gray-500">
+        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50">
+          <span className="text-sm font-semibold text-slate-500">
             Page {currentPage} of {totalPages}
           </span>
           <div className="flex items-center gap-2">
             <button
-              onClick={handlePrevPage}
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage <= 1 || loading}
-              className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50 flex items-center gap-1 bg-white"
+              className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50 flex items-center gap-1 bg-white"
             >
                <ChevronLeft size={16} /> Prev
             </button>
             <button
-              onClick={handleNextPage}
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage >= totalPages || loading}
-              className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-bold text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-50 flex items-center gap-1 bg-white"
+              className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50 flex items-center gap-1 bg-white"
             >
                Next <ChevronRight size={16} />
             </button>
           </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

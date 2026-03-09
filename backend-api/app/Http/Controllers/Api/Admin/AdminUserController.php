@@ -19,8 +19,8 @@ class AdminUserController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            // Exclude admin role
-            $query = User::where(function ($q) {
+            // Exclude admin role and eager load skills
+            $query = User::with('skills')->where(function ($q) {
                 $q->whereNull('role')->orWhere('role', '!=', 'admin');
             });
 

@@ -18,7 +18,7 @@ class AdminJobController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Job::query();
+            $query = Job::with('skills');
 
             // Handle search
             if ($request->filled('search')) {

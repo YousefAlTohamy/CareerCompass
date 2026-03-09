@@ -7,9 +7,16 @@ use Illuminate\Http\Request;
 
 class TargetJobRoleController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $roles = \App\Models\TargetJobRole::all();
+        $query = \App\Models\TargetJobRole::query();
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where('name', 'like', "%{$search}%");
+        }
+
+        $roles = $query->orderBy('created_at', 'desc')->paginate(15);
         return response()->json($roles);
     }
 
