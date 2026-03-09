@@ -56,3 +56,14 @@ export const getApplications = () => applicationsAPI.getApplications();
 export const trackApplication = (jobId) => applicationsAPI.trackApplication(jobId);
 export const updateApplicationStatus = (id, status) => applicationsAPI.updateApplicationStatus(id, status);
 export const deleteApplication = (id) => applicationsAPI.deleteApplication(id);
+
+// Admin API
+export const adminAPI = {
+  getAdminDashboardStats: () => apiClient.get('/admin/dashboard/stats'),
+  getAdminJobs: (page = 1, search = '') => apiClient.get(`/admin/jobs?page=${page}&search=${encodeURIComponent(search)}`),
+  getAdminJobDetails: (id) => apiClient.get(`/admin/jobs/${id}`),
+  deleteAdminJob: (id) => apiClient.delete(`/admin/jobs/${id}`),
+  getAdminUsers: (page = 1, search = '') => apiClient.get(`/admin/users?page=${page}&search=${encodeURIComponent(search)}`),
+  getAdminUserDetails: (id) => apiClient.get(`/admin/users/${id}`),
+  toggleUserBan: (id) => apiClient.post(`/admin/users/${id}/toggle-ban`),
+};

@@ -6,10 +6,6 @@ import {
   deleteSource,
   toggleSourceStatus,
   testSources,
-  getTargetRoles,
-  addTargetRole,
-  toggleTargetRole,
-  deleteTargetRole,
   runFullScraping,
 } from "../../api/scrapingSources";
 import {
@@ -22,6 +18,9 @@ import {
   ToggleRight,
   X,
   Save,
+  ChevronLeft,
+  ChevronRight,
+  Search
 } from "lucide-react";
 import Swal from "sweetalert2";
 
@@ -40,13 +39,16 @@ const getErrorMessage = (
 
 const AdminSources = () => {
   const [sources, setSources] = useState([]);
-  const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [newRoleName, setNewRoleName] = useState("");
   const [testResult, setTestResult] = useState(null);
   const [testing, setTesting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSource, setEditingSource] = useState(null);
+
+  // Pagination & Search State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -66,14 +68,13 @@ const AdminSources = () => {
   const fetchAllData = async () => {
     try {
       setLoading(true);
-      const [sourcesRes, rolesRes] = await Promise.all([
-        getAllSources(),
-        getTargetRoles(),
-      ]);
-      setSources(sourcesRes.data || sourcesRes || []);
-      setRoles(rolesRes || []);
+      const sourcesRes = await getAllSources();
+      const fetchedData =
+        sourcesRes.data?.data || sourcesRes.data || sourcesRes;
+      setSources(Array.isArray(fetchedData) ? fetchedData : []);
     } catch (error) {
       console.error("Failed to fetch data:", error);
+      setSources([]);
     } finally {
       setLoading(false);
     }
@@ -130,84 +131,11 @@ const AdminSources = () => {
     }
   };
 
-  const handleAddRole = async (e) => {
-    e.preventDefault();
-    if (!newRoleName.trim()) return;
-    try {
-      const result = await addTargetRole({
-        name: newRoleName.trim(),
-        is_active: true,
-      });
-      setRoles([...roles, result.data || result]);
-      setNewRoleName("");
-    } catch (error) {
-      console.error(error);
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: getErrorMessage(error, "Failed to add role"),
-        confirmButtonColor: "#6366f1",
-      });
-    }
-  };
-
-  const handleToggleRole = async (id) => {
-    try {
-      const result = await toggleTargetRole(id);
-      const updated = result.data || result;
-      setRoles(roles.map((r) => (r.id === id ? updated : r)));
-    } catch (error) {
-      console.error(error);
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: getErrorMessage(error, "Failed to toggle role"),
-        confirmButtonColor: "#6366f1",
-      });
-    }
-  };
-
-  const handleDeleteRole = async (id) => {
-    const result = await Swal.fire({
-      title: "Delete Role?",
-      text: "Are you sure you want to delete this role?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#6366f1",
-      cancelButtonColor: "#f43f5e",
-      confirmButtonText: "Yes, delete it",
-    });
-
-    if (!result.isConfirmed) return;
-
-    try {
-      await deleteTargetRole(id);
-      setRoles(roles.filter((r) => r.id !== id));
-      Swal.fire({
-        toast: true,
-        position: "top-end",
-        icon: "success",
-        title: "Role deleted",
-        showConfirmButton: false,
-        timer: 2000,
-        timerProgressBar: true,
-      });
-    } catch (error) {
-      console.error(error);
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: getErrorMessage(error, "Failed to delete role"),
-        confirmButtonColor: "#6366f1",
-      });
-    }
-  };
-
   const handleToggleStatus = async (id) => {
     try {
       const response = await toggleSourceStatus(id);
       const updated = response.data || response;
-      setSources(sources.map((s) => (s.id === id ? updated : s)));
+      setSources((prev) => prev.map((s) => (s.id === id ? updated : s)));
     } catch (error) {
       console.error(error);
       Swal.fire({
@@ -234,7 +162,7 @@ const AdminSources = () => {
 
     try {
       await deleteSource(id);
-      setSources(sources.filter((s) => s.id !== id));
+      setSources((prev) => prev.filter((s) => s.id !== id));
       Swal.fire({
         toast: true,
         position: "top-end",
@@ -244,6 +172,11 @@ const AdminSources = () => {
         timer: 2000,
         timerProgressBar: true,
       });
+
+      // Adjust page if we deleted the last item on current page
+      if (currentSources.length === 1 && currentPage > 1) {
+        setCurrentPage(currentPage - 1);
+      }
     } catch (error) {
       console.error(error);
       Swal.fire({
@@ -294,11 +227,13 @@ const AdminSources = () => {
       if (editingSource) {
         const response = await updateSource(editingSource.id, payload);
         const updated = response.data || response;
-        setSources(sources.map((s) => (s.id === updated.id ? updated : s)));
+        setSources((prev) =>
+          prev.map((s) => (s.id === updated.id ? updated : s)),
+        );
       } else {
         const response = await createSource(payload);
         const created = response.data || response;
-        setSources([...sources, created]);
+        setSources((prev) => [...prev, created]);
       }
       setIsModalOpen(false);
     } catch (error) {
@@ -319,6 +254,37 @@ const AdminSources = () => {
     return type === "api"
       ? "bg-blue-100 text-blue-800"
       : "bg-purple-100 text-purple-800";
+  };
+
+  // Search Logic
+  const filteredSources = Array.isArray(sources)
+    ? sources.filter((source) => {
+        const term = searchTerm.toLowerCase();
+        return (
+          source.name?.toLowerCase().includes(term) ||
+          source.endpoint?.toLowerCase().includes(term) ||
+          source.type?.toLowerCase().includes(term)
+        );
+      })
+    : [];
+
+  // Pagination Logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentSources = filteredSources.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredSources.length / itemsPerPage);
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) setCurrentPage(currentPage - 1);
   };
 
   return (
@@ -373,6 +339,22 @@ const AdminSources = () => {
 
       {/* Sources Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        {/* Search Bar */}
+        <div className="p-4 border-b border-gray-200 bg-white">
+          <div className="relative max-w-md">
+             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400" />
+             </div>
+             <input
+               type="text"
+               value={searchTerm}
+               onChange={(e) => setSearchTerm(e.target.value)}
+               placeholder="Search sources by name, URL, or type..."
+               className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+             />
+          </div>
+        </div>
+
         <table className="w-full text-left border-collapse">
           <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-semibold tracking-wider">
             <tr>
@@ -391,14 +373,14 @@ const AdminSources = () => {
                   Loading sources...
                 </td>
               </tr>
-            ) : sources.length === 0 ? (
+            ) : currentSources.length === 0 ? (
               <tr>
                 <td colSpan="6" className="p-8 text-center text-gray-500">
                   No scraping sources found.
                 </td>
               </tr>
             ) : (
-              sources.map((source) => (
+              currentSources.map((source) => (
                 <tr
                   key={source.id}
                   className="hover:bg-gray-50 transition-colors"
@@ -466,93 +448,39 @@ const AdminSources = () => {
             )}
           </tbody>
         </table>
-      </div>
 
-      {/* Target Job Roles Section */}
-      <div className="mt-12 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-          <div>
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-              Target Job Roles
-            </h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Manage the dynamically tracked professions. Active roles are
-              prioritized in scraping.
-            </p>
+        {/* Pagination Controls */}
+        {!loading && filteredSources.length > 0 && (
+          <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-t border-gray-200">
+            <div className="text-sm text-gray-700">
+              Showing{" "}
+              <span className="font-medium">{indexOfFirstItem + 1}</span> to{" "}
+              <span className="font-medium">
+                {Math.min(indexOfLastItem, filteredSources.length)}
+              </span>{" "}
+              of <span className="font-medium">{filteredSources.length}</span> results
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePrevPage}
+                disabled={currentPage === 1}
+                className="p-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+              >
+                <ChevronLeft className="w-4 h-4 text-gray-600" />
+              </button>
+              <span className="text-sm font-medium text-gray-700">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="p-2 border border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+              >
+                <ChevronRight className="w-4 h-4 text-gray-600" />
+              </button>
+            </div>
           </div>
-          <form onSubmit={handleAddRole} className="flex gap-2">
-            <input
-              type="text"
-              value={newRoleName}
-              onChange={(e) => setNewRoleName(e.target.value)}
-              placeholder="e.g. Lawyer, Backend Dev"
-              className="w-64 px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-shadow"
-            />
-            <button
-              type="submit"
-              disabled={!newRoleName.trim()}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center gap-2 text-sm font-medium"
-            >
-              <Plus className="w-4 h-4" />
-              Add Role
-            </button>
-          </form>
-        </div>
-        <table className="w-full text-left border-collapse">
-          <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-semibold tracking-wider">
-            <tr>
-              <th className="p-4 border-b">Role Name</th>
-              <th className="p-4 border-b text-center">Status</th>
-              <th className="p-4 border-b text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {loading ? (
-              <tr>
-                <td colSpan="3" className="p-8 text-center text-gray-500">
-                  Loading roles...
-                </td>
-              </tr>
-            ) : roles.length === 0 ? (
-              <tr>
-                <td colSpan="3" className="p-8 text-center text-gray-500">
-                  No target roles defined.
-                </td>
-              </tr>
-            ) : (
-              roles.map((role) => (
-                <tr
-                  key={role.id}
-                  className="hover:bg-gray-50 transition-colors"
-                >
-                  <td className="p-4 font-medium text-gray-900">{role.name}</td>
-                  <td className="p-4 text-center">
-                    <button
-                      onClick={() => handleToggleRole(role.id)}
-                      className={`transition-colors ${role.is_active ? "text-green-500 hover:text-green-600" : "text-gray-400 hover:text-gray-500"}`}
-                      title="Toggle Status"
-                    >
-                      {role.is_active ? (
-                        <ToggleRight className="w-8 h-8" />
-                      ) : (
-                        <ToggleLeft className="w-8 h-8" />
-                      )}
-                    </button>
-                  </td>
-                  <td className="p-4 text-right">
-                    <button
-                      onClick={() => handleDeleteRole(role.id)}
-                      className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-block"
-                      title="Delete Role"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        )}
       </div>
 
       {/* Add/Edit Modal */}

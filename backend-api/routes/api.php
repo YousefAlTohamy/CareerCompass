@@ -85,6 +85,19 @@ Route::middleware('auth:sanctum')->group(function () {
     // ─── Admin: Scraping Sources Management ───────────────────────────────────
     // Requires both authentication AND admin role
     Route::middleware('admin')->prefix('admin')->group(function () {
+        // Admin Dashboard Stats
+        Route::get('/dashboard/stats', [\App\Http\Controllers\Api\Admin\DashboardController::class, 'getStats']);
+
+        // Admin Jobs Management
+        Route::get('/jobs', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'index']);
+        Route::get('/jobs/{id}', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'show']);
+        Route::delete('/jobs/{id}', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'destroy']);
+
+        // Admin Users Management
+        Route::get('/users', [\App\Http\Controllers\Api\Admin\AdminUserController::class, 'index']);
+        Route::get('/users/{id}', [\App\Http\Controllers\Api\Admin\AdminUserController::class, 'show']);
+        Route::post('/users/{id}/toggle-ban', [\App\Http\Controllers\Api\Admin\AdminUserController::class, 'toggleBan']);
+
         // Specific routes MUST come before apiResource (wildcards)
         Route::patch('scraping-sources/{scrapingSource}/toggle', [ScrapingSourceController::class, 'toggleStatus']);
         Route::post('scraping-sources/test', [ScrapingSourceController::class, 'test']);

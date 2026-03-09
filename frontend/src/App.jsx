@@ -21,7 +21,13 @@ import MarketIntelligence from './pages/user/MarketIntelligence';
 import Applications from './pages/user/Applications';
 
 // ── Admin pages ──────────────────────────────────────────────────────────────
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminJobs from './pages/admin/AdminJobs';
+import AdminJobDetails from './pages/admin/AdminJobDetails';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminUserDetails from './pages/admin/AdminUserDetails';
 import AdminSources from './pages/admin/AdminSources';
+import AdminTargets from './pages/admin/AdminTargets';
 
 import './index.css';
 
@@ -72,7 +78,7 @@ function AnimatedRoutes() {
           <Route
             path="/profile"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowAdmin={true}>
                 <Profile />
               </ProtectedRoute>
             }
@@ -96,10 +102,58 @@ function AnimatedRoutes() {
 
           {/* ── Protected Admin Routes ───────────────────────────────── */}
           <Route
-            path="/admin/scraping-sources"
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/jobs"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminJobs />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/jobs/:id"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminJobDetails />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminUsers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users/:id"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminUserDetails />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/sources"
             element={
               <ProtectedRoute requireAdmin>
                 <AdminSources />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/targets"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminTargets />
               </ProtectedRoute>
             }
           />
