@@ -11,7 +11,7 @@ export default function GuestRoute({ children }) {
   // If user is already logged in, redirect them away from auth pages
   if (user) {
     if (user.role === 'admin') {
-      return <Navigate to="/admin/scraping-sources" replace />;
+      return <Navigate to="/admin/dashboard" replace />;
     }
     return <Navigate to="/dashboard" replace />;
   }

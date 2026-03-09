@@ -20,7 +20,9 @@ class DashboardController extends Controller
     {
         try {
             // Calculate totals
-            $totalStudents = User::whereNull('role')->orWhere('role', 'student')->count();
+            $totalStudents = User::where(function ($q) {
+                $q->whereNull('role')->orWhere('role', '!=', 'admin');
+            })->count();
             $totalJobs = Job::count();
             $totalSources = ScrapingSource::count();
             $totalTargets = TargetJobRole::count();
