@@ -6,6 +6,7 @@ __pycache__/
 # ── Test / Run Output ─────────────────────────────────────────────────
 hybrid_output.txt
 *.txt
+!requirements.txt
 
 # ── Virtual Environment (if one is ever created here) ─────────────────
 venv/
