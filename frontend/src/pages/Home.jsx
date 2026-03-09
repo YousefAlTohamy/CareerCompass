@@ -49,8 +49,11 @@ export default function Home() {
             className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4"
           >
             {user ? (
-               <Link to="/dashboard" className="btn-primary flex items-center gap-3 px-10 py-5">
-                 Enter Talent Cockpit <ArrowRight size={20} />
+               <Link 
+                 to={user.role === 'admin' ? '/admin/dashboard' : '/dashboard'} 
+                 className="btn-primary flex items-center gap-3 px-10 py-5"
+               >
+                 {user.role === 'admin' ? 'Enter Admin Dashboard' : 'Enter Talent Cockpit'} <ArrowRight size={20} />
                </Link>
             ) : (
               <>

@@ -20,6 +20,7 @@ import {
   Save,
   ChevronLeft,
   ChevronRight,
+  Search
 } from "lucide-react";
 import Swal from "sweetalert2";
 
@@ -44,9 +45,10 @@ const AdminSources = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSource, setEditingSource] = useState(null);
 
-  // Pagination State
+  // Pagination & Search State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Form State
   const [formData, setFormData] = useState({
@@ -254,13 +256,28 @@ const AdminSources = () => {
       : "bg-purple-100 text-purple-800";
   };
 
+  // Search Logic
+  const filteredSources = Array.isArray(sources)
+    ? sources.filter((source) => {
+        const term = searchTerm.toLowerCase();
+        return (
+          source.name?.toLowerCase().includes(term) ||
+          source.endpoint?.toLowerCase().includes(term) ||
+          source.type?.toLowerCase().includes(term)
+        );
+      })
+    : [];
+
   // Pagination Logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentSources = Array.isArray(sources)
-    ? sources.slice(indexOfFirstItem, indexOfLastItem)
-    : [];
-  const totalPages = Math.ceil((sources?.length || 0) / itemsPerPage);
+  const currentSources = filteredSources.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredSources.length / itemsPerPage);
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const handleNextPage = () => {
     if (currentPage < totalPages) setCurrentPage(currentPage + 1);
@@ -322,6 +339,22 @@ const AdminSources = () => {
 
       {/* Sources Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        {/* Search Bar */}
+        <div className="p-4 border-b border-gray-200 bg-white">
+          <div className="relative max-w-md">
+             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400" />
+             </div>
+             <input
+               type="text"
+               value={searchTerm}
+               onChange={(e) => setSearchTerm(e.target.value)}
+               placeholder="Search sources by name, URL, or type..."
+               className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+             />
+          </div>
+        </div>
+
         <table className="w-full text-left border-collapse">
           <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-semibold tracking-wider">
             <tr>
@@ -417,15 +450,15 @@ const AdminSources = () => {
         </table>
 
         {/* Pagination Controls */}
-        {!loading && sources.length > 0 && (
+        {!loading && filteredSources.length > 0 && (
           <div className="flex items-center justify-between px-6 py-3 bg-gray-50 border-t border-gray-200">
             <div className="text-sm text-gray-700">
               Showing{" "}
               <span className="font-medium">{indexOfFirstItem + 1}</span> to{" "}
               <span className="font-medium">
-                {Math.min(indexOfLastItem, sources.length)}
+                {Math.min(indexOfLastItem, filteredSources.length)}
               </span>{" "}
-              of <span className="font-medium">{sources.length}</span> results
+              of <span className="font-medium">{filteredSources.length}</span> results
             </div>
             <div className="flex items-center gap-2">
               <button

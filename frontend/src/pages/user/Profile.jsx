@@ -5,7 +5,7 @@ import { authAPI } from '../../api/endpoints';
 import Swal from 'sweetalert2';
 
 export default function Profile() {
-  const { logout, refreshUser } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -161,121 +161,126 @@ export default function Profile() {
               )}
             </div>
 
-            {/* Phone */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Phone
-              </label>
-              {editing ? (
-                <input
-                  type="text"
-                  name="phone"
-                  value={formData.phone || ''}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="e.g. +1 234 567 890"
-                />
-              ) : (
-                <p className="text-lg font-semibold text-gray-900">{profile?.phone || <span className="text-slate-400 italic text-sm">Not provided</span>}</p>
-              )}
-            </div>
+            {/* Conditional fields for non-admin users */}
+            {user?.role !== 'admin' && (
+              <>
+                {/* Phone */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Phone
+                  </label>
+                  {editing ? (
+                    <input
+                      type="text"
+                      name="phone"
+                      value={formData.phone || ''}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="e.g. +1 234 567 890"
+                    />
+                  ) : (
+                    <p className="text-lg font-semibold text-gray-900">{profile?.phone || <span className="text-slate-400 italic text-sm">Not provided</span>}</p>
+                  )}
+                </div>
 
-            {/* Role / Job Title */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Target Role
-              </label>
-              {editing ? (
-                <input
-                  type="text"
-                  name="job_title"
-                  value={formData.job_title || ''}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="e.g. Software Engineer"
-                />
-              ) : (
-                <p className="text-lg font-semibold text-gray-900">{profile?.job_title || <span className="text-slate-400 italic text-sm">Not provided</span>}</p>
-              )}
-            </div>
+                {/* Role / Job Title */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Target Role
+                  </label>
+                  {editing ? (
+                    <input
+                      type="text"
+                      name="job_title"
+                      value={formData.job_title || ''}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="e.g. Software Engineer"
+                    />
+                  ) : (
+                    <p className="text-lg font-semibold text-gray-900">{profile?.job_title || <span className="text-slate-400 italic text-sm">Not provided</span>}</p>
+                  )}
+                </div>
 
-            {/* Location */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Location
-              </label>
-              {editing ? (
-                <input
-                  type="text"
-                  name="location"
-                  value={formData.location || ''}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="e.g. New York, NY"
-                />
-              ) : (
-                <p className="text-lg font-semibold text-gray-900">{profile?.location || <span className="text-slate-400 italic text-sm">Not provided</span>}</p>
-              )}
-            </div>
+                {/* Location */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Location
+                  </label>
+                  {editing ? (
+                    <input
+                      type="text"
+                      name="location"
+                      value={formData.location || ''}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="e.g. New York, NY"
+                    />
+                  ) : (
+                    <p className="text-lg font-semibold text-gray-900">{profile?.location || <span className="text-slate-400 italic text-sm">Not provided</span>}</p>
+                  )}
+                </div>
 
-            {/* LinkedIn */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                LinkedIn Profile
-              </label>
-              {editing ? (
-                <input
-                  type="url"
-                  name="linkedin_url"
-                  value={formData.linkedin_url || ''}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="https://linkedin.com/in/..."
-                />
-              ) : (
-                profile?.linkedin_url ? (
-                  <a href={profile.linkedin_url} target="_blank" rel="noreferrer" className="text-lg font-semibold text-primary hover:underline block truncate">
-                    {profile.linkedin_url}
-                  </a>
-                ) : (
-                  <p className="text-lg font-semibold text-slate-400 italic">Not provided</p>
-                )
-              )}
-            </div>
+                {/* LinkedIn */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    LinkedIn Profile
+                  </label>
+                  {editing ? (
+                    <input
+                      type="url"
+                      name="linkedin_url"
+                      value={formData.linkedin_url || ''}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="https://linkedin.com/in/..."
+                    />
+                  ) : (
+                    profile?.linkedin_url ? (
+                      <a href={profile.linkedin_url} target="_blank" rel="noreferrer" className="text-lg font-semibold text-primary hover:underline block truncate">
+                        {profile.linkedin_url}
+                      </a>
+                    ) : (
+                      <p className="text-lg font-semibold text-slate-400 italic">Not provided</p>
+                    )
+                  )}
+                </div>
 
-            {/* GitHub */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                GitHub Profile
-              </label>
-              {editing ? (
-                <input
-                  type="url"
-                  name="github_url"
-                  value={formData.github_url || ''}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="https://github.com/..."
-                />
-              ) : (
-                profile?.github_url ? (
-                  <a href={profile.github_url} target="_blank" rel="noreferrer" className="text-lg font-semibold text-primary hover:underline block truncate">
-                    {profile.github_url}
-                  </a>
-                ) : (
-                  <p className="text-lg font-semibold text-slate-400 italic">Not provided</p>
-                )
-              )}
-            </div>
+                {/* GitHub */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    GitHub Profile
+                  </label>
+                  {editing ? (
+                    <input
+                      type="url"
+                      name="github_url"
+                      value={formData.github_url || ''}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="https://github.com/..."
+                    />
+                  ) : (
+                    profile?.github_url ? (
+                      <a href={profile.github_url} target="_blank" rel="noreferrer" className="text-lg font-semibold text-primary hover:underline block truncate">
+                        {profile.github_url}
+                      </a>
+                    ) : (
+                      <p className="text-lg font-semibold text-slate-400 italic">Not provided</p>
+                    )
+                  )}
+                </div>
 
-            {/* Joined Date */}
-            {profile?.created_at && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Member Since</label>
-                <p className="text-gray-900">
-                  {new Date(profile.created_at).toLocaleDateString()}
-                </p>
-              </div>
+                {/* Joined Date */}
+                {profile?.created_at && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Member Since</label>
+                    <p className="text-gray-900">
+                      {new Date(profile.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Action Buttons */}

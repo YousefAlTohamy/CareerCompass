@@ -73,7 +73,7 @@ function AnimatedRoutes() {
           <Route
             path="/profile"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowAdmin={true}>
                 <Profile />
               </ProtectedRoute>
             }
