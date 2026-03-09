@@ -6,13 +6,15 @@
 
 CareerCompass is an **advanced AI-powered career development platform** that combines intelligent CV analysis, real-time job market scraping, and smart skill gap analysis to help users make data-driven career decisions. The platform features:
 
-- **Market Intelligence System**: Automated job scraping with skill importance ranking (Essential/Important/Nice-to-have)
+- **Market Intelligence System**: Automated job scraping with skill importance ranking, visualized via an interactive Recharts dashboard
 - **On-Demand Job Data**: Real-time job scraping with background queue processing and live status polling
 - **Hybrid AI Gateway**: FastAPI orchestrator combining TF-IDF + Semantic embeddings for absolute matching precision
 - **Smart Gap Analysis & Match Scoring**: Priority-based skill roadmap with dynamically calculated AI match scores rendered naturally in the jobs feed
 - **Seamless Discovery UX**: Intelligent React upload bounds capturing CV changes and gracefully routing users to real-time market opportunities
 - **Job Application Tracker**: Kanban-style lifecycle visualization for tracked applications
-- **Strict Architecture Security**: Laravel 12 API guarded by `IsAdmin` middleware & React frontend heavily split into `/admin/*` and `/user/*` routing boundaries, bootstrapped by a secure `AdminUserSeeder`.
+- **Strict Payload Integrities**: External user requests are rigorously sanitized through Regex-powered `FormRequest` validations prior to backend processing
+- **Secure Split Routing Boundaries**: Frontend is rigidly divided into `ProtectedRoute`-shielded `/admin/*` schemas and consumer `/user/*` layouts
+- **Robust RBAC Layer**: All critical endpoints are shielded by `IsAdmin` middleware, universally bypassed initially by the safe `AdminUserSeeder` protocol
 
 ---
 
@@ -43,6 +45,8 @@ graph TB
     style Redis fill:#dc382d
     style Queue fill:#00d084
 ```
+
+> **Security Note:** The `IsAdmin` middleware acts as a rigid backend ingress shield, bridging directly to the `ProtectedRoute` boundaries in the React SPA UI to enforce Role-Based Access Control (RBAC).
 
 ### Components
 
@@ -93,13 +97,16 @@ CareerCompass/
 │   │   │   └── useScrapingStatus.js        # Poll scraping job status
 │   │   ├── pages/
 │   │   │   ├── admin/
-│   │   │   │   └── AdminSources.jsx        # Admin — scraping source management
+│   │   │   │   ├── AdminDashboard.jsx      # Admin — system-wide statistics overview
+│   │   │   │   ├── AdminJobs.jsx           # Admin — centralized job listings management
+│   │   │   │   ├── AdminSources.jsx        # Admin — scraping source management
+│   │   │   │   └── AdminUsers.jsx          # Admin — user base control and ban management
 │   │   │   ├── user/
 │   │   │   │   ├── Applications.jsx        # Job Application Tracker (Kanban-style statuses)
 │   │   │   │   ├── Dashboard.jsx           # Main dashboard + 5s animated New Role Discovery UX
 │   │   │   │   ├── GapAnalysis.jsx         # Priority-based skill gap analysis
 │   │   │   │   ├── Jobs.jsx                # Job listings + Match Score logic & dynamic UI badges
-│   │   │   │   ├── MarketIntelligence.jsx  # Market trends & trending skills (route: /market)
+│   │   │   │   ├── MarketIntelligence.jsx  # Rich Recharts-based Market trends & trending skills dashboard
 │   │   │   │   └── Profile.jsx             # User profile management
 │   │   │   ├── Home.jsx                    # Landing / welcome page
 │   │   │   ├── Login.jsx                   # Login page
@@ -135,8 +142,8 @@ CareerCompass/
 │   │   │   ├── Middleware/
 │   │   │   │   └── IsAdmin.php                     # Role-Based Access Control (RBAC) guard
 │   │   │   ├── Requests/
-│   │   │   │   ├── CvUploadRequest.php             # CV validation (5MB PDF)
-│   │   │   │   └── StoreScrapingSourceRequest.php  # Scraping source validation
+│   │   │   │   ├── CvUploadRequest.php             # CV validation with strict Regex filters (5MB PDF)
+│   │   │   │   └── StoreScrapingSourceRequest.php  # Scraping source validation via strict Regex mappings
 │   │   │   └── Resources/
 │   │   │       ├── GapAnalysisResource.php         # Gap analysis JSON formatting
 │   │   │       ├── JobResource.php                 # Job JSON formatting
@@ -319,8 +326,8 @@ php artisan db:seed --class=AdminUserSeeder
 php artisan migrate:fresh --seed
 ```
 
-> **🔑 Default Admin Credentials**:
-> Upon running the `AdminUserSeeder`, the master administrative account is generated to bypass the RBAC guards:
+> **🔑 Default Admin Credentials (Crucial)**:
+> Upon running the `AdminUserSeeder`, a master administrative account is generated. This seeder is the **only** vector to bypass the RBAC guards initially, as the standard frontend React registration flow rigidly restricts all new sign-ups to the standard `user` enum:
 >
 > - **Email:** `careercompassadmin@gmail.com`
 > - **Password:** `CareerCompassAdmin2026`
@@ -448,7 +455,7 @@ Once all services are started, check the following URLs:
 | AI Gateway  | http://127.0.0.1:8001            | `{"status": "operational", "version": "1.0.0"}` |
 | AI Gateway  | http://127.0.0.1:8001/docs       | Swagger UI                                      |
 
-> **Tip**: After logging in, you can access distinct dashboard views at `/user/dashboard` and the admin portal at `/admin/` (requires Admin Role seeded via `AdminUserSeeder`).
+> **Tip**: After logging in, you can access distinct dashboard views at `/user/dashboard` and the admin portal at `/admin/` (requires Admin Role). The secure `ProtectedRoute.jsx` component seamlessly intercepts any standard user attempting to traverse into the `/admin/` domain and safely deflects them backward.
 
 ---
 
@@ -462,7 +469,7 @@ Once all services are started, check the following URLs:
 | POST   | `/api/register` | Create new user account     |
 | POST   | `/api/login`    | Login and get token         |
 
-> **Note**: Incoming payloads for registration and profile updates are guarded by strict Regex Validations inside Laravel's `FormRequest` buffers. This ensures data normalization (e.g. validating international phone formats, strictly evaluating password entropy, and enforcing URL syntaxes) before reaching the Eloquent ORM.
+> **Note**: Incoming payloads for registration, profile updates, and CV uploads are actively filtered by **strict Regex Validations** inside Laravel's `FormRequest` buffers. This layer guarantees comprehensive data sanitization (e.g. normalizing phone digits, asserting dense password entropy via regex dictionaries, and shielding URL schemas) significantly prior to Eloquent ORM mapping.
 
 ### User & Skills (Protected)
 
@@ -514,10 +521,15 @@ Once all services are started, check the following URLs:
 | GET    | `/api/market/trending-skills`        | ✅   | Get trending skills with demand data  |
 | GET    | `/api/market/skill-demand/{role}`    | ✅   | Get skill demand breakdown for a role |
 
-### Admin — Scraping Sources (Protected)
+### Admin — Control Panel & Scraping (Rigidly Protected by `IsAdmin` Middleware)
 
 | Method | Endpoint                                  | Auth | Description                      |
 | ------ | ----------------------------------------- | ---- | -------------------------------- |
+| GET    | `/api/admin/dashboard/stats`              | ✅   | Get system-wide metrics Overview |
+| GET    | `/api/admin/jobs`                         | ✅   | View all centralized jobs        |
+| DELETE | `/api/admin/jobs/{id}`                    | ✅   | Delete a centralized job entry   |
+| GET    | `/api/admin/users`                        | ✅   | List and analyze user base       |
+| POST   | `/api/admin/users/{id}/toggle-ban`        | ✅   | Toggle user platform ban status  |
 | GET    | `/api/admin/scraping-sources`             | ✅   | List all scraping sources        |
 | POST   | `/api/admin/scraping-sources`             | ✅   | Create a new source              |
 | PUT    | `/api/admin/scraping-sources/{id}`        | ✅   | Update a source                  |
@@ -565,6 +577,7 @@ erDiagram
         string linkedin_url "nullable — AI Gateway"
         string github_url "nullable — AI Gateway"
         string password
+        boolean is_banned "platform access control"
         enum role "user/admin"
         datetime timestamps
     }
@@ -652,9 +665,9 @@ erDiagram
 
 > **Note on Match Scores**: The `match_score` logic (e.g. `🎯 Match: 92%`) seen in the Jobs UI is NOT stored permanently in the database. Instead, it is dynamically calculated by the AI Hybrid Orchestrator using a weighted TF-IDF + Semantic mapping on the fly each time the user's skillset is queried against the active job listings.
 
-### Role Management
+### Role Management & Tracking
 
-- Standard **admin** roles and foundational accounts are initialized specifically through the `AdminUserSeeder`.
+- The `role` ENUM definitively sets the ingress bounds. Core applications inherently default to `user`, tracking standard metrics onto the Applications Tracker. Master **admin** roles are strictly bootstrapped through the initial `AdminUserSeeder`, unlocking the full Market Intelligence controls.
 
 ### Skills Management
 
@@ -747,6 +760,24 @@ sequenceDiagram
     Laravel-->>User: Updated Status
 ```
 
+### Admin Authorization & Market Intelligence Flow
+
+```mermaid
+sequenceDiagram
+    participant Admin
+    participant Frontend
+    participant IsAdmin Middleware
+    participant Database
+
+    Admin->>Frontend: Access /admin/market
+    Frontend->>Frontend: ProtectedRoute evaluates isAdmin?
+    Frontend->>IsAdmin Middleware: GET /api/admin/* (with JWT payload)
+    IsAdmin Middleware->>Database: Validate user ENUM role
+    Database-->>IsAdmin Middleware: Role 'admin' Verified
+    IsAdmin Middleware-->>Frontend: 200 OK + Market Data
+    Frontend->>Admin: Render interactive Recharts Dashboard
+```
+
 ---
 
 ## 🧪 Testing
@@ -790,9 +821,14 @@ curl -X POST http://127.0.0.1:8000/api/login \
 curl -X GET http://127.0.0.1:8000/api/gap-analysis/job/1 \
   -H "Authorization: Bearer <token>"
 
-# Test RBAC Protection (Should return 403 Forbidden for non-admins)
-curl -X GET http://127.0.0.1:8000/api/admin/scraping-sources \
-  -H "Authorization: Bearer <standard_user_token>"
+# Test RBAC Protection (Should return 403 Forbidden for standard user profiles)
+curl -s -X GET http://127.0.0.1:8000/api/admin/scraping-sources \
+  -H "Authorization: Bearer <user_token>"
+
+# Test Strict Payload Integrities (Should trigger 422 Unprocessable Entity via Regex Guard)
+curl -s -X POST http://127.0.0.1:8000/api/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"A_#$Invalid","email":"notanemail","password":"123","password_confirmation":"123"}'
 ```
 
 ---
@@ -836,6 +872,10 @@ curl -X GET http://127.0.0.1:8000/api/admin/scraping-sources \
   - **SQL String Safety**: Implemented a defensive `castToString()` parser array handler across all background Laravel queue jobs. When the NLP engine unpredictably returns `list` formats instead of scalar strings (such as locations), Laravel cleanly implodes them, fully preventing the fatal `PDO Array to string conversion` exceptions.
   - **React Routing Security**: Hardened the public authentication flow by wrapping `Login` and `Register` components locally with a `<GuestRoute>` component to prevent authenticated users from navigating backward. Improved Profile layouts and fixed Dashboard `motion` import crashes.
   - **Scraping Scope Scopes**: Seeded `LinkedIn Egypt/MENA` as a primary HTML parsing source and narrowed the `Adzuna` API targeting via the central Database Seeder. Added missing `.env.example` templates to the hybrid orchestrator.
+- [x] **Phase 25: Master Admin Control Panel** - Expanded the `ProtectedRoute` boundaries into a comprehensive suite of Admin functionalities.
+  - Added new React pages for `AdminDashboard.jsx`, `AdminJobs.jsx`, and `AdminUsers.jsx`.
+  - Added backend endpoints for system-wide metric tracking, centralized job manipulation, and user-base analysis.
+  - Implemented an `is_banned` boolean mapping to the `USERS` database table allowing master admins to selectively revoke platform access.
 
 ### 📈 Market Intelligence System
 
@@ -1264,10 +1304,10 @@ Import `CareerCompass.postman_collection.json` into Postman for comprehensive AP
 ---
 
 **Last Updated**: March 2026
-**Project Status**: ✅ **Phase 24 Complete — Architecture Hardening & Memory Optimization**
+**Project Status**: ✅ **Phase 25 Complete — Master Admin Control Panel**
 **Components**: Frontend (React 19 + Vite + Framer Motion + Recharts) + Backend API (Laravel 12) + Queue Worker + Scheduler + **AI Gateway (FastAPI/8001)** + ai-job-miner + ai-cv-analyzer
-**API Endpoints**: 50+ total (Laravel APIs + AI Gateway APIs + Market Intelligence + Admin Source APIs + Application Tracker)
+**API Endpoints**: 55+ total (Laravel APIs + AI Gateway APIs + Market Intelligence + Admin Control Panel + Application Tracker)
 **Scraping Sources**: Wuzzuf (HTML) • Remotive API (free) • Adzuna US API — all 3 verified with `scrape:test-sources`
-**Key Features**: Role-Based Access Control (RBAC) • CV Analysis • Hybrid AI Matching (Semantic + TF-IDF) • Contact Info Extraction • Multi-Source Job Scraping • Gap Analysis • Market Intelligence Dashboard • Skill Importance Ranking • Real-time Polling • Scraping Source Management • Dynamic NLP Extraction • Application Tracker • Recommended Jobs • Premium Animated UI • Interactive Recharts Charts
+**Key Features**: Role-Based Access Control (RBAC) • **Admin Control Panel (Dashboard/Users/Jobs)** • CV Analysis • Hybrid AI Matching (Semantic + TF-IDF) • Contact Info Extraction • Multi-Source Job Scraping • Gap Analysis • Market Intelligence Dashboard • Skill Importance Ranking • Real-time Polling • Scraping Source Management • Dynamic NLP Extraction • Application Tracker • Recommended Jobs • Premium Animated UI • Interactive Recharts Charts
 **AI Models**: `dslim/bert-base-NER` • `facebook/bart-large-mnli` • `all-MiniLM-L6-v2` — all loaded as Singletons on gateway startup
 **Optimizations**: 3x Retry Logic • Memory Chunking • Auto-Polling • Rate Limiting • Scheduler Automation • GapAnalysis Bug Fix • Adzuna UA Spoofing • Env-based Credential Management • On-the-fly Data Creation • PUT→PATCH Fix • Namespace Isolation via sys.path swap
