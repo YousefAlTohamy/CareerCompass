@@ -22,7 +22,7 @@
 **/venv/
 **/env/
 **/.pytest_cache/
-**/models/
+ai-*/models/
 
 # Frontend Caches
 frontend/node_modules/
