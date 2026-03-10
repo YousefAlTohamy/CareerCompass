@@ -5,7 +5,12 @@ use App\Http\Controllers\Api\CvController;
 use App\Http\Controllers\Api\GapAnalysisController;
 use App\Http\Controllers\Api\JobController;
 use App\Http\Controllers\Api\MarketIntelligenceController;
+use App\Http\Controllers\Api\ApplicationController;
 use App\Http\Controllers\Api\Admin\ScrapingSourceController;
+use App\Http\Controllers\Api\Admin\DashboardController;
+use App\Http\Controllers\Api\Admin\AdminJobController;
+use App\Http\Controllers\Api\Admin\AdminUserController;
+use App\Http\Controllers\Api\Admin\TargetJobRoleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -44,7 +49,7 @@ Route::get('/jobs/{id}', [JobController::class, 'show'])->whereNumber('id');
 Route::middleware('auth:sanctum')->group(function () {
     // Get authenticated user
     Route::get('/user', function (Request $request) {
-        return $request->user();
+        return $request->user()->load('skills');
     });
 
     // Profile Management
@@ -80,23 +85,24 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/market/skill-demand/{roleTitle}', [MarketIntelligenceController::class, 'getSkillDemand']);
 
     // Job Application Tracker
-    Route::apiResource('applications', \App\Http\Controllers\Api\ApplicationController::class);
+    Route::apiResource('applications', ApplicationController::class);
 
     // ─── Admin: Scraping Sources Management ───────────────────────────────────
     // Requires both authentication AND admin role
     Route::middleware('admin')->prefix('admin')->group(function () {
-        // Admin Dashboard Stats
-        Route::get('/dashboard/stats', [\App\Http\Controllers\Api\Admin\DashboardController::class, 'getStats']);
+        // Admin Dashboard Stats & Health
+        Route::get('/dashboard/stats', [DashboardController::class, 'getStats']);
+        Route::get('/dashboard/health', [DashboardController::class, 'getSystemHealth']);
 
         // Admin Jobs Management
-        Route::get('/jobs', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'index']);
-        Route::get('/jobs/{id}', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'show']);
-        Route::delete('/jobs/{id}', [\App\Http\Controllers\Api\Admin\AdminJobController::class, 'destroy']);
+        Route::get('/jobs', [AdminJobController::class, 'index']);
+        Route::get('/jobs/{id}', [AdminJobController::class, 'show']);
+        Route::delete('/jobs/{id}', [AdminJobController::class, 'destroy']);
 
         // Admin Users Management
-        Route::get('/users', [\App\Http\Controllers\Api\Admin\AdminUserController::class, 'index']);
-        Route::get('/users/{id}', [\App\Http\Controllers\Api\Admin\AdminUserController::class, 'show']);
-        Route::post('/users/{id}/toggle-ban', [\App\Http\Controllers\Api\Admin\AdminUserController::class, 'toggleBan']);
+        Route::get('/users', [AdminUserController::class, 'index']);
+        Route::get('/users/{id}', [AdminUserController::class, 'show']);
+        Route::post('/users/{id}/toggle-ban', [AdminUserController::class, 'toggleBan']);
 
         // Specific routes MUST come before apiResource (wildcards)
         Route::patch('scraping-sources/{scrapingSource}/toggle', [ScrapingSourceController::class, 'toggleStatus']);
@@ -106,12 +112,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('scraping-sources', ScrapingSourceController::class);
 
         // Target Job Roles
-        Route::get('target-roles', [\App\Http\Controllers\Api\Admin\TargetJobRoleController::class, 'index']);
-        Route::post('target-roles', [\App\Http\Controllers\Api\Admin\TargetJobRoleController::class, 'store']);
-        Route::patch('target-roles/{id}/toggle', [\App\Http\Controllers\Api\Admin\TargetJobRoleController::class, 'toggleActive']);
-        Route::delete('target-roles/{id}', [\App\Http\Controllers\Api\Admin\TargetJobRoleController::class, 'destroy']);
+        Route::get('target-roles', [TargetJobRoleController::class, 'index']);
+        Route::post('target-roles', [TargetJobRoleController::class, 'store']);
+        Route::patch('target-roles/{id}/toggle', [TargetJobRoleController::class, 'toggleActive']);
+        Route::delete('target-roles/{id}', [TargetJobRoleController::class, 'destroy']);
 
         // Quick Execute Scraper
-        Route::post('scraping/run-full', [\App\Http\Controllers\Api\Admin\TargetJobRoleController::class, 'runFullScraping']);
+        Route::post('scraping/run-full', [TargetJobRoleController::class, 'runFullScraping']);
     });
 });

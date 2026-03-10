@@ -1,7 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { adminAPI } from '../../api/endpoints';
-import { Building, MapPin, Briefcase, Calendar, Link as LinkIcon, ArrowLeft, Trash2, Clock, DollarSign, Award, AlertCircle } from 'lucide-react';
+import { 
+  Building2, 
+  MapPin, 
+  Briefcase, 
+  Calendar, 
+  ArrowLeft, 
+  Trash2, 
+  DollarSign, 
+  Award, 
+  AlertCircle,
+  ExternalLink,
+  AlignLeft,
+  Clock
+} from 'lucide-react';
 import Swal from 'sweetalert2';
 
 export default function AdminJobDetails() {
@@ -19,6 +32,7 @@ export default function AdminJobDetails() {
         const response = await adminAPI.getAdminJobDetails(id);
         if (response.data && response.data.success) {
           setJob(response.data.data);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
           setError('Job not found.');
         }
@@ -39,14 +53,14 @@ export default function AdminJobDetails() {
       text: `Are you sure you want to delete "${job.title}"? This cannot be undone.`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#ef4444',
+      confirmButtonColor: '#e11d48', // rose-600
       cancelButtonColor: '#94a3b8',
-      confirmButtonText: 'Yes, delete it!'
+      confirmButtonText: 'Yes, delete job'
     });
 
     if (result.isConfirmed) {
       try {
-        await adminAPI.deleteAdminJob(id);
+        await adminAPI.deleteJob(id); // Using the standard deleteJob endpoint
         Swal.fire({
           icon: 'success',
           title: 'Deleted!',
@@ -62,7 +76,7 @@ export default function AdminJobDetails() {
         Swal.fire({
           icon: 'error',
           title: 'Error',
-          text: 'Failed to delete job.',
+          text: 'Failed to delete the job.',
           toast: true,
           position: 'top-end',
           showConfirmButton: false,
@@ -72,26 +86,31 @@ export default function AdminJobDetails() {
     }
   };
 
+  // Consistent Loading State
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex flex-col justify-center items-center min-h-[60vh] space-y-4">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+        <p className="text-slate-400 font-medium text-sm">Loading job details...</p>
       </div>
     );
   }
 
+  // Consistent Error State
   if (error || !job) {
     return (
-      <div className="p-6 max-w-7xl mx-auto min-h-screen flex items-center justify-center">
-        <div className="bg-red-50 text-red-600 p-8 rounded-3xl flex flex-col items-center gap-4 border border-red-100 shadow-sm max-w-md text-center">
-          <AlertCircle size={64} className="text-red-400" />
-          <h2 className="text-2xl font-black">{error || 'Job not found'}</h2>
-          <p className="text-sm font-medium text-red-500 mb-2">The requested job details could not be retrieved.</p>
+      <div className="p-6 max-w-3xl mx-auto min-h-[60vh] flex items-center justify-center">
+        <div className="bg-white p-8 rounded-3xl flex flex-col items-center gap-4 border border-slate-200 shadow-sm text-center w-full">
+          <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mb-2">
+            <AlertCircle size={40} />
+          </div>
+          <h2 className="text-2xl font-black text-slate-800">{error || 'Job not found'}</h2>
+          <p className="text-slate-500 font-medium mb-4">The job you are looking for does not exist or has been removed.</p>
           <button 
             onClick={() => navigate('/admin/jobs')} 
-            className="mt-2 bg-red-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-red-700 transition"
+            className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition shadow-sm"
           >
-            Back to Jobs
+            Back to Jobs List
           </button>
         </div>
       </div>
@@ -99,158 +118,182 @@ export default function AdminJobDetails() {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto min-h-screen pb-20">
+    <div className="p-6 max-w-5xl mx-auto pb-20 space-y-6">
+      
       {/* Top Action Bar */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <button 
           onClick={() => navigate('/admin/jobs')}
-          className="flex items-center gap-2 text-gray-500 hover:text-primary font-bold transition-colors"
+          className="flex items-center gap-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 px-3 py-2 rounded-lg font-bold transition-colors w-fit"
         >
-           <ArrowLeft size={20} />
-           Back to Jobs Analysis
+           <ArrowLeft size={18} />
+           Back to Jobs List
         </button>
+        
         <button 
           onClick={handleDelete}
-          className="flex items-center gap-2 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 px-4 py-2 rounded-xl font-bold transition-colors border border-red-100"
+          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 rounded-xl font-bold transition-all shadow-sm"
         >
            <Trash2 size={18} />
-           Delete Job
+           Delete Job Posting
         </button>
       </div>
 
       {/* Main Content Card */}
-      <div className="bg-white rounded-3xl shadow-premium border border-slate-100 overflow-hidden">
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
         
-        {/* Header Section */}
-        <div className="p-8 md:p-10 border-b border-slate-100 bg-gradient-to-b from-slate-50 to-white relative overflow-hidden">
-          {/* Decorative blur */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-100/50 rounded-full blur-3xl -mx-20 -my-20"></div>
+        {/* Header Banner Section */}
+        <div className="bg-slate-50 border-b border-slate-200 relative overflow-hidden">
+          {/* Decorative background shape */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-full blur-3xl -mx-20 -my-20 pointer-events-none"></div>
           
-          <div className="relative z-10 flex flex-col md:flex-row md:items-start justify-between gap-6">
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-3 mb-4">
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 uppercase tracking-wider">
-                  #{job.id}
+          <div className="p-8 md:p-10 relative z-10 flex flex-col lg:flex-row justify-between gap-8">
+            
+            {/* Job Main Info */}
+            <div className="flex-1 flex flex-col items-start">
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                <span className="inline-flex items-center px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-slate-200 text-slate-700">
+                  ID: #{job.id}
                 </span>
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 uppercase tracking-wider">
-                  <Clock size={12} className="mr-1" /> Active
-                </span>
+                
+                {/* Job Type / Work Model Badge */}
                 {(job.job_type || job.work_model) && (
-                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 uppercase tracking-wider">
+                   <span className="inline-flex items-center px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-100">
                       {job.job_type || job.work_model || 'Full-time'}
                    </span>
                 )}
               </div>
               
-              <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight mb-4 leading-tight">
+              <h1 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight mb-4 leading-tight">
                 {job.title}
               </h1>
               
-              <div className="flex flex-col sm:flex-row flex-wrap gap-4 sm:gap-6 text-slate-600 font-medium">
-                <div className="flex items-center gap-2">
-                  <Building className="text-primary" size={20} />
-                  <span className="text-lg">{job.company}</span>
+              <div className="flex flex-wrap items-center gap-4 text-slate-600 font-medium">
+                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-100 shadow-sm">
+                  <Building2 size={18} className="text-indigo-500" />
+                  <span>{job.company || 'Unknown Company'}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="text-secondary" size={20} />
-                  <span className="text-lg">{job.location || 'Remote'}</span>
+                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-100 shadow-sm">
+                  <MapPin size={18} className="text-fuchsia-500" />
+                  <span>{job.location || 'Remote'}</span>
                 </div>
               </div>
             </div>
 
-            {/* Application Link */}
-            {job.url && (
-              <div className="shrink-0 pt-2">
+            {/* Application Link / Source */}
+            <div className="shrink-0 flex flex-col gap-3">
+              {job.url ? (
                 <a 
                   href={job.url} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 bg-slate-900 text-white hover:bg-primary px-6 py-3 rounded-xl font-bold transition-all shadow-md hover:shadow-lg w-full md:w-auto group"
+                  className="flex items-center justify-center gap-2 bg-slate-800 text-white hover:bg-slate-900 px-6 py-3 rounded-xl font-bold transition-all shadow-md hover:shadow-lg w-full sm:w-auto group"
                 >
                   View Original Source
-                  <LinkIcon size={18} className="group-hover:translate-x-1 transition-transform" />
+                  <ExternalLink size={18} className="group-hover:scale-110 transition-transform" />
                 </a>
-              </div>
-            )}
+              ) : (
+                 <div className="flex items-center justify-center gap-2 bg-slate-100 text-slate-400 px-6 py-3 rounded-xl font-bold border border-slate-200 w-full sm:w-auto cursor-not-allowed">
+                    No Source URL
+                 </div>
+              )}
+              {job.source && (
+                 <div className="text-center text-xs font-bold text-slate-400 uppercase tracking-wider">
+                   Via {job.source}
+                 </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Body Section */}
-        <div className="p-8 md:p-10">
+        <div className="p-8 md:p-10 space-y-10">
           
-          {/* Key Details Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10 pb-10 border-b border-slate-100">
-            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
-               <div className="flex items-center gap-2 text-slate-500 font-bold text-sm mb-2 uppercase tracking-wider">
-                 <DollarSign size={16} /> Salary Range
-               </div>
-               <div className="text-lg font-black text-slate-900">
-                 {job.salary_range || <span className="text-slate-400 italic font-medium">Not specified</span>}
-               </div>
-            </div>
-            
-            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
-               <div className="flex items-center gap-2 text-slate-500 font-bold text-sm mb-2 uppercase tracking-wider">
-                 <Award size={16} /> Experience
-               </div>
-               <div className="text-lg font-black text-slate-900">
-                 {job.experience_level || <span className="text-slate-400 italic font-medium">Not specified</span>}
-               </div>
-            </div>
+          {/* Key Details Grid (Matching UserDetails Grid Style) */}
+          <div>
+             <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-5 flex items-center gap-2">
+                <Briefcase size={16} /> Job Specifications
+             </h3>
+             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                  <div className="bg-white p-2 rounded-lg shadow-sm text-emerald-500"><DollarSign size={18} /></div>
+                  <div className="overflow-hidden">
+                    <p className="text-xs font-bold text-slate-500 mb-0.5">Salary Range</p>
+                    <p className="font-medium text-slate-800 truncate" title={job.salary_range}>
+                       {job.salary_range || <span className="text-slate-400 italic font-normal">Not specified</span>}
+                    </p>
+                  </div>
+                </div>
 
-            <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
-               <div className="flex items-center gap-2 text-slate-500 font-bold text-sm mb-2 uppercase tracking-wider">
-                 <Calendar size={16} /> Date Scraped
-               </div>
-               <div className="text-lg font-black text-slate-900">
-                 {job.created_at ? new Date(job.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown'}
-               </div>
-            </div>
+                <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                  <div className="bg-white p-2 rounded-lg shadow-sm text-amber-500"><Award size={18} /></div>
+                  <div className="overflow-hidden">
+                    <p className="text-xs font-bold text-slate-500 mb-0.5">Experience Required</p>
+                    <p className="font-medium text-slate-800 truncate" title={job.experience_level}>
+                       {job.experience_level || <span className="text-slate-400 italic font-normal">Not specified</span>}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                  <div className="bg-white p-2 rounded-lg shadow-sm text-indigo-500"><Calendar size={18} /></div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 mb-0.5">Date Scraped</p>
+                    <p className="font-medium text-slate-800">
+                      {job.created_at ? new Date(job.created_at).toLocaleDateString() : 'Unknown'}
+                    </p>
+                  </div>
+                </div>
+             </div>
           </div>
+
+          <div className="border-t border-slate-100"></div>
 
           {/* Job Description */}
           <div>
-            <h3 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-2">
-              <Briefcase className="text-primary" />
-              Full Job Description
+            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-5 flex items-center gap-2">
+              <AlignLeft size={16} /> Full Job Description
             </h3>
             
             {job.description ? (
-               <div className="prose prose-slate max-w-none">
-                 <div className="text-slate-700 leading-relaxed font-medium whitespace-pre-wrap bg-slate-50 p-6 md:p-8 rounded-3xl border border-slate-100">
-                   {job.description}
-                 </div>
+               <div className="prose prose-slate max-w-none text-slate-700 leading-relaxed font-medium whitespace-pre-wrap bg-slate-50 p-6 md:p-8 rounded-2xl border border-slate-100 text-sm md:text-base">
+                 {job.description}
                </div>
             ) : (
-               <div className="text-slate-400 italic bg-slate-50 p-6 rounded-2xl border border-slate-100 text-center font-medium">
-                 No description provided for this job.
+               <div className="flex flex-col items-center justify-center py-10 bg-slate-50 rounded-2xl border border-slate-100 border-dashed text-center">
+                 <AlignLeft className="w-12 h-12 text-slate-300 mb-3 stroke-1" />
+                 <p className="text-slate-500 font-medium">No detailed description provided.</p>
                </div>
             )}
           </div>
 
-          {/* Required Skills Section */}
-          <div className="mt-12 pt-10 border-t border-slate-100">
-            <h3 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-2">
-              <Award className="text-primary" />
-              Required Skills
+          <div className="border-t border-slate-100"></div>
+
+          {/* Required Skills Section (Matching UserDetails Skills) */}
+          <div>
+            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-5 flex items-center gap-2">
+              <Award size={16} /> Required Skills
             </h3>
             
-            {job.skills && job.skills.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {job.skills.map((skill, index) => (
-                  <span 
-                    key={index} 
-                    className="px-4 py-2 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-xl text-sm font-bold shadow-sm"
-                  >
-                    {skill.name}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <div className="text-slate-400 italic bg-slate-50 p-6 rounded-2xl border border-slate-100 text-center font-medium">
-                No skills extracted for this job yet.
-              </div>
-            )}
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+              {Array.isArray(job.skills) && job.skills.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {job.skills.map((skill, index) => (
+                    <span 
+                      key={index} 
+                      className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold uppercase tracking-wider border border-indigo-100"
+                    >
+                      {typeof skill === 'object' ? skill.name : skill}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-6 text-center">
+                  <Award className="w-10 h-10 text-slate-200 mb-3 stroke-1" />
+                  <p className="text-slate-500 font-medium text-sm">No specific skills extracted for this job.</p>
+                </div>
+              )}
+            </div>
           </div>
           
         </div>

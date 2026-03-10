@@ -15,13 +15,14 @@ import {
   Trash2,
   Edit,
   Activity,
-  ToggleLeft,
-  ToggleRight,
   X,
   Save,
   ChevronLeft,
   ChevronRight,
-  Search
+  Search,
+  Link as LinkIcon,
+  ArchiveX,
+  Terminal
 } from "lucide-react";
 import Swal from "sweetalert2";
 
@@ -41,10 +42,15 @@ const getErrorMessage = (
 const AdminSources = () => {
   const [sources, setSources] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [testResult, setTestResult] = useState(null);
   const [testing, setTesting] = useState(false);
+  
+  // Modal States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSource, setEditingSource] = useState(null);
+  
+  // Test Results States
+  const [testResult, setTestResult] = useState(null);
+  const [isTestModalOpen, setIsTestModalOpen] = useState(false);
 
   // Pagination & Search State
   const [searchParams, setSearchParams] = useSearchParams();
@@ -73,8 +79,8 @@ const AdminSources = () => {
       const sourcesRes = await getAllSources(currentPage, activeSearch);
       if (sourcesRes.data) {
           setSources(sourcesRes.data);
-          setTotalPages(sourcesRes.meta?.last_page || 1);
-          setCurrentPage(sourcesRes.meta?.current_page || 1);
+          setTotalPages(sourcesRes.meta?.last_page || sourcesRes.last_page || 1);
+          setCurrentPage(sourcesRes.meta?.current_page || sourcesRes.current_page || 1);
           window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
           setSources([]);
@@ -114,6 +120,8 @@ const AdminSources = () => {
   const handleTestAll = async () => {
     setTesting(true);
     setTestResult(null);
+    setIsTestModalOpen(true); // Open modal immediately to show loading state
+    
     try {
       const result = await testSources();
       setTestResult(result);
@@ -123,7 +131,7 @@ const AdminSources = () => {
         output:
           error.response?.data?.output ||
           error.message ||
-          "Unknown error occurred",
+          "Unknown error occurred during testing phase.",
       });
     } finally {
       setTesting(false);
@@ -137,8 +145,8 @@ const AdminSources = () => {
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#6366f1",
-      cancelButtonColor: "#f43f5e",
-      confirmButtonText: "Yes, start now!",
+      cancelButtonColor: "#cbd5e1",
+      confirmButtonText: "Yes, start now",
     });
 
     if (!result.isConfirmed) return;
@@ -163,12 +171,16 @@ const AdminSources = () => {
   };
 
   const handleToggleStatus = async (id) => {
+    // Optimistic UI Update
+    setSources((prev) => prev.map((s) => s.id === id ? { ...s, is_active: !s.is_active } : s));
     try {
       const response = await toggleSourceStatus(id);
       const updated = response.data || response;
       setSources((prev) => prev.map((s) => (s.id === id ? updated : s)));
     } catch (error) {
       console.error(error);
+      // Revert on error
+      setSources((prev) => prev.map((s) => s.id === id ? { ...s, is_active: !s.is_active } : s));
       Swal.fire({
         icon: "error",
         title: "Error",
@@ -181,11 +193,11 @@ const AdminSources = () => {
   const handleDelete = async (id) => {
     const result = await Swal.fire({
       title: "Delete Source?",
-      text: "Are you sure you want to delete this source?",
+      text: "Are you sure you want to delete this source permanently?",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#6366f1",
-      cancelButtonColor: "#f43f5e",
+      confirmButtonColor: "#f43f5e",
+      cancelButtonColor: "#cbd5e1",
       confirmButtonText: "Yes, delete it",
     });
 
@@ -201,9 +213,12 @@ const AdminSources = () => {
         title: "Source deleted",
         showConfirmButton: false,
         timer: 2000,
-        timerProgressBar: true,
       });
-      fetchAllData();
+      if (sources.length === 1 && currentPage > 1) {
+          setCurrentPage(prev => prev - 1);
+      } else {
+          fetchAllData();
+      }
     } catch (error) {
       console.error(error);
       Swal.fire({
@@ -257,10 +272,12 @@ const AdminSources = () => {
         setSources((prev) =>
           prev.map((s) => (s.id === updated.id ? updated : s)),
         );
+        Swal.fire({ toast: true, position: "top-end", icon: "success", title: "Source updated", showConfirmButton: false, timer: 2000 });
       } else {
         const response = await createSource(payload);
         const created = response.data || response;
-        setSources((prev) => [...prev, created]);
+        setSources((prev) => [created, ...prev]);
+        Swal.fire({ toast: true, position: "top-end", icon: "success", title: "Source added", showConfirmButton: false, timer: 2000 });
       }
       setIsModalOpen(false);
     } catch (error) {
@@ -279,187 +296,210 @@ const AdminSources = () => {
 
   const getTypeColor = (type) => {
     return type === "api"
-      ? "bg-blue-100 text-blue-800"
-      : "bg-purple-100 text-purple-800";
+      ? "bg-blue-100 text-blue-700"
+      : "bg-fuchsia-100 text-fuchsia-700";
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          <Activity className="w-6 h-6 text-indigo-600" />
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      
+      {/* Header Section */}
+      <div>
+        <h1 className="text-3xl font-black text-slate-800 flex items-center gap-3">
+          <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl">
+            <LinkIcon className="w-7 h-7" />
+          </div>
           Scraping Sources
         </h1>
-        <div className="flex gap-3">
+        <p className="text-slate-500 mt-2 text-sm font-medium">
+          Manage endpoints and HTML targets used to fetch job data from the market.
+        </p>
+      </div>
+
+      {/* Toolbar */}
+      <div className="bg-white p-2 border border-slate-200 rounded-2xl shadow-sm flex flex-col lg:flex-row justify-between items-stretch gap-2">
+        {/* Search */}
+        <div className="relative flex-1 flex items-center bg-slate-50 rounded-xl px-4 py-3">
+          <Search className="text-slate-400 mr-3" size={20} />
+          <input
+            type="text"
+            placeholder="Search sources by name, URL, or type..."
+            className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-slate-700 font-medium placeholder-slate-400"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
+          {loading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600 ml-3"></div>}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2 flex-shrink-0 w-full lg:w-auto overflow-x-auto pb-1 lg:pb-0">
           <button
             onClick={handleRunScraping}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-sm"
+            className="flex-shrink-0 flex items-center justify-center gap-2 px-5 py-3 bg-fuchsia-600 text-white rounded-xl hover:bg-fuchsia-700 transition-all shadow-sm shadow-fuchsia-200 font-bold text-sm"
           >
             <Play className="w-4 h-4 fill-white" />
-            Run Full Scraping
+            <span className="hidden sm:inline">Run Scraping</span>
           </button>
+          
           <button
             onClick={handleTestAll}
             disabled={testing}
-            className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-colors ${
+            className={`flex-shrink-0 flex items-center justify-center gap-2 px-5 py-3 text-white rounded-xl transition-all font-bold text-sm shadow-sm ${
               testing
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-green-600 hover:bg-green-700 shadow-sm"
+                ? "bg-slate-400 cursor-not-allowed"
+                : "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-200"
             }`}
           >
-            <Activity className="w-4 h-4" />
-            {testing ? "Running Tests..." : "Test All Sources"}
+            <Terminal className="w-4 h-4" />
+            <span className="hidden sm:inline">Test Endpoints</span>
           </button>
+
           <button
             onClick={() => handleOpenModal()}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+            className="flex-shrink-0 flex items-center justify-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200 font-bold text-sm"
           >
-            <Plus className="w-4 h-4" />
-            Add Source
+            <Plus className="w-5 h-5" />
+            <span className="hidden sm:inline">Add Source</span>
           </button>
         </div>
       </div>
 
-      {/* Test Results Output */}
-      {testResult && (
-        <div
-          className={`mb-8 p-4 rounded-lg font-mono text-sm whitespace-pre-wrap overflow-x-auto max-h-96 border ${
-            testResult.success
-              ? "bg-gray-900 text-green-400 border-gray-800"
-              : "bg-gray-900 text-red-400 border-red-900"
-          }`}
-        >
-          {testResult.output}
-        </div>
-      )}
-
-      {/* Search Input Card */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6 flex items-center px-4">
-        <Search className="text-slate-400 mr-3" size={20} />
-        <input
-          type="text"
-          placeholder="Search sources by name, URL, or type..."
-          className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-slate-700 font-medium placeholder-slate-400"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-        />
-        {loading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600 ml-3"></div>}
-      </div>
-
-      {/* Sources Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <table className="w-full text-left border-collapse">
-
-          <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-semibold tracking-wider">
-            <tr>
-              <th className="p-4 border-b">Method</th>
-              <th className="p-4 border-b">Name</th>
-              <th className="p-4 border-b">Type</th>
-              <th className="p-4 border-b">Endpoint</th>
-              <th className="p-4 border-b text-center">Status</th>
-              <th className="p-4 border-b text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {loading ? (
+      {/* Sources Table Card */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[800px]">
+            <thead className="bg-slate-50/80 text-slate-500 uppercase text-xs font-bold tracking-wider border-b border-slate-200">
               <tr>
-                <td colSpan="6" className="p-8 text-center text-gray-500">
-                  Loading sources...
-                </td>
+                <th className="p-5 w-16">Method</th>
+                <th className="p-5">Source Name</th>
+                <th className="p-5 w-24">Type</th>
+                <th className="p-5">Endpoint</th>
+                <th className="p-5 text-center w-32">Status</th>
+                <th className="p-5 text-right w-32">Actions</th>
               </tr>
-            ) : sources.length === 0 ? (
-              <tr>
-                <td colSpan="6" className="p-8 text-center text-gray-500">
-                  No scraping sources found.
-                </td>
-              </tr>
-            ) : (
-              sources.map((source) => (
-                <tr
-                  key={source.id}
-                  className="hover:bg-gray-50 transition-colors"
-                >
-                  <td className="p-4">
-                    <span
-                      className={`inline-block px-2 py-1 rounded text-xs font-mono font-bold ${
-                        source.method === "GET"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-yellow-100 text-yellow-700"
-                      }`}
-                    >
-                      {source.method}
-                    </span>
-                  </td>
-                  <td className="p-4 font-medium text-gray-900">
-                    {source.name}
-                  </td>
-                  <td className="p-4">
-                    <span
-                      className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeColor(source.type)}`}
-                    >
-                      {source.type.toUpperCase()}
-                    </span>
-                  </td>
-                  <td
-                    className="p-4 text-gray-500 text-sm max-w-xs truncate font-mono"
-                    title={source.endpoint}
-                  >
-                    {source.endpoint}
-                  </td>
-                  <td className="p-4 text-center">
-                    <button
-                      onClick={() => handleToggleStatus(source.id)}
-                      className={`transition-colors ${source.is_active ? "text-green-500 hover:text-green-600" : "text-gray-400 hover:text-gray-500"}`}
-                      title="Toggle Status"
-                    >
-                      {source.is_active ? (
-                        <ToggleRight className="w-8 h-8" />
-                      ) : (
-                        <ToggleLeft className="w-8 h-8" />
-                      )}
-                    </button>
-                  </td>
-                  <td className="p-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => handleOpenModal(source)}
-                        className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                        title="Edit"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(source.id)}
-                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {loading && sources.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="p-12 text-center">
+                    <div className="flex flex-col items-center justify-center text-slate-400 space-y-3">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                      <p className="font-medium text-sm">Loading sources...</p>
                     </div>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : sources.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="p-12 text-center">
+                    <div className="flex flex-col items-center justify-center text-slate-400 space-y-3">
+                      <LinkIcon className="w-12 h-12 text-slate-300 stroke-1" />
+                      <p className="font-medium text-sm text-slate-500">No scraping sources found.</p>
+                      {activeSearch && <p className="text-xs">Try clearing your search.</p>}
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                sources.map((source) => (
+                  <tr
+                    key={source.id}
+                    className="hover:bg-slate-50/50 transition-colors group"
+                  >
+                    <td className="p-5">
+                      <span
+                        className={`inline-block px-2.5 py-1 rounded-md text-[11px] font-black uppercase tracking-wider ${
+                          source.method === "GET"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-amber-100 text-amber-700"
+                        }`}
+                      >
+                        {source.method}
+                      </span>
+                    </td>
+                    
+                    <td className="p-5">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${source.is_active ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
+                          {source.is_active ? <Activity size={16} /> : <ArchiveX size={16} />}
+                        </div>
+                        <p className="font-bold text-slate-800 text-sm">{source.name}</p>
+                      </div>
+                    </td>
+
+                    <td className="p-5">
+                      <span
+                        className={`inline-block px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${getTypeColor(source.type)}`}
+                      >
+                        {source.type}
+                      </span>
+                    </td>
+
+                    <td className="p-5">
+                       <p className="text-slate-500 text-sm max-w-[200px] lg:max-w-xs truncate font-mono bg-slate-50 px-2 py-1 rounded border border-slate-100" title={source.endpoint}>
+                        {source.endpoint}
+                       </p>
+                    </td>
+
+                    <td className="p-5 text-center">
+                       {/* Custom Modern Toggle Switch */}
+                       <button
+                          onClick={() => handleToggleStatus(source.id)}
+                          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 ${
+                            source.is_active ? 'bg-indigo-600' : 'bg-slate-200'
+                          }`}
+                          role="switch"
+                          aria-checked={source.is_active}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                              source.is_active ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                    </td>
+
+                    <td className="p-5 text-right">
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => handleOpenModal(source)}
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                          title="Edit Source"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(source.id)}
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                          title="Delete Source"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
         {/* Server-Side Pagination Controls */}
-        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50">
+        <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-slate-50">
           <span className="text-sm font-semibold text-slate-500">
-            Page {currentPage} of {totalPages}
+            Page <span className="text-slate-800">{currentPage}</span> of <span className="text-slate-800">{totalPages}</span>
           </span>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage <= 1 || loading}
-              className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50 flex items-center gap-1 bg-white"
+              className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all disabled:opacity-40 disabled:hover:bg-white flex items-center gap-1 bg-white shadow-sm"
             >
                <ChevronLeft size={16} /> Prev
             </button>
             <button
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage >= totalPages || loading}
-              className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50 flex items-center gap-1 bg-white"
+              className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all disabled:opacity-40 disabled:hover:bg-white flex items-center gap-1 bg-white shadow-sm"
             >
                Next <ChevronRight size={16} />
             </button>
@@ -469,26 +509,26 @@ const AdminSources = () => {
 
       {/* Add/Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-slate-200">
             <form onSubmit={handleSubmit}>
-              <div className="p-6 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white rounded-t-xl z-10">
-                <h2 className="text-xl font-bold text-gray-800">
-                  {editingSource ? "Edit Source" : "Add New Source"}
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-2xl z-10">
+                <h2 className="text-xl font-bold text-slate-800">
+                  {editingSource ? "Edit Scraping Source" : "Add New Source"}
                 </h2>
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 p-2 rounded-xl transition-colors"
                 >
-                  <X className="w-6 h-6" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="p-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              <div className="p-6 space-y-5">
+                <div className="grid grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">
                       Name
                     </label>
                     <input
@@ -498,12 +538,12 @@ const AdminSources = () => {
                       onChange={(e) =>
                         setFormData({ ...formData, name: e.target.value })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                      placeholder="e.g. Wuzzuf Laravel Jobs"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm"
+                      placeholder="e.g. Wuzzuf API"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">
                       Type
                     </label>
                     <select
@@ -511,16 +551,16 @@ const AdminSources = () => {
                       onChange={(e) =>
                         setFormData({ ...formData, type: e.target.value })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium"
                     >
-                      <option value="api">API</option>
-                      <option value="html">HTML</option>
+                      <option value="api">API Endpoints</option>
+                      <option value="html">HTML Structure</option>
                     </select>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-bold text-slate-700 mb-1.5">
                     Endpoint URL
                   </label>
                   <input
@@ -530,50 +570,50 @@ const AdminSources = () => {
                     onChange={(e) =>
                       setFormData({ ...formData, endpoint: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
-                    placeholder="https://api.example.com/v1/jobs..."
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-mono"
+                    placeholder="https://api.example.com/v1/jobs"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Method
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">
+                      HTTP Method
                     </label>
                     <select
                       value={formData.method}
                       onChange={(e) =>
                         setFormData({ ...formData, method: e.target.value })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium"
                     >
                       <option value="GET">GET</option>
                       <option value="POST">POST</option>
                     </select>
                   </div>
-                  <div className="flex items-center pt-6">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.is_active}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            is_active: e.target.checked,
-                          })
-                        }
-                        className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300"
-                      />
-                      <span className="text-sm font-medium text-gray-700">
-                        Active
+                  <div className="flex items-center pt-7">
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
+                          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 ${
+                            formData.is_active ? 'bg-indigo-600' : 'bg-slate-200'
+                          }`}
+                          role="switch"
+                        >
+                          <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${formData.is_active ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </button>
+                      <span className="text-sm font-bold text-slate-600 group-hover:text-slate-800 transition-colors">
+                        Active Source
                       </span>
                     </label>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Headers (JSON)
+                  <label className="block text-sm font-bold text-slate-700 mb-1.5 flex justify-between">
+                    <span>Headers</span>
+                    <span className="text-xs font-normal text-slate-400">JSON Format</span>
                   </label>
                   <textarea
                     rows="3"
@@ -581,14 +621,16 @@ const AdminSources = () => {
                     onChange={(e) =>
                       setFormData({ ...formData, headers: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono text-xs"
+                    className="w-full px-4 py-3 bg-slate-900 text-slate-300 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all text-xs font-mono"
                     placeholder='{"Authorization": "Bearer token"}'
+                    spellCheck="false"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Params (JSON)
+                  <label className="block text-sm font-bold text-slate-700 mb-1.5 flex justify-between">
+                    <span>Params / Payload</span>
+                    <span className="text-xs font-normal text-slate-400">JSON Format</span>
                   </label>
                   <textarea
                     rows="3"
@@ -596,29 +638,94 @@ const AdminSources = () => {
                     onChange={(e) =>
                       setFormData({ ...formData, params: e.target.value })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono text-xs"
+                    className="w-full px-4 py-3 bg-slate-900 text-slate-300 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all text-xs font-mono"
                     placeholder='{"q": "developer"}'
+                    spellCheck="false"
                   />
                 </div>
               </div>
 
-              <div className="p-6 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-end gap-3">
+              <div className="p-6 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
+                  className="px-5 py-2.5 text-slate-600 hover:bg-slate-200 rounded-xl font-bold transition-colors text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-sm transition-colors flex items-center gap-2 font-medium"
+                  className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-sm transition-colors flex items-center gap-2 font-bold text-sm"
                 >
                   <Save className="w-4 h-4" />
                   Save Source
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 🚀 New Terminal-Style Test Results Modal */}
+      {isTestModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-[60]">
+          <div className="bg-[#0f172a] rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] border border-slate-700 flex flex-col overflow-hidden">
+            
+            {/* Terminal Header */}
+            <div className="bg-[#1e293b] px-4 py-3 border-b border-slate-700 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+                  <div className="w-3 h-3 rounded-full bg-amber-500/80"></div>
+                  <div className="w-3 h-3 rounded-full bg-emerald-500/80"></div>
+                </div>
+                <div className="flex items-center gap-2 text-slate-400 font-mono text-xs ml-2">
+                  <Terminal size={14} />
+                  <span>source-diagnostic.log</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsTestModalOpen(false)}
+                className="text-slate-400 hover:text-white transition-colors"
+                disabled={testing} // Prevent closing while testing
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Terminal Body */}
+            <div className="p-5 overflow-y-auto flex-1 bg-[#0f172a] text-slate-300 font-mono text-sm leading-relaxed">
+              {testing ? (
+                <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-500"></div>
+                  <p className="text-emerald-400 animate-pulse">Running diagnostics on all active endpoints...</p>
+                </div>
+              ) : testResult ? (
+                <pre className={`whitespace-pre-wrap ${testResult.success ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {testResult.output}
+                </pre>
+              ) : null}
+            </div>
+
+            {/* Terminal Footer */}
+            {!testing && testResult && (
+               <div className="bg-[#1e293b] px-5 py-3 border-t border-slate-700 flex justify-between items-center shrink-0">
+                  <div className="flex items-center gap-2 text-xs font-mono">
+                    <span className="text-slate-500">Status:</span>
+                    {testResult.success ? (
+                      <span className="text-emerald-400 font-bold bg-emerald-400/10 px-2 py-0.5 rounded">PASS</span>
+                    ) : (
+                      <span className="text-rose-400 font-bold bg-rose-400/10 px-2 py-0.5 rounded">FAIL</span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setIsTestModalOpen(false)}
+                    className="px-4 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    Close Diagnostics
+                  </button>
+               </div>
+            )}
           </div>
         </div>
       )}

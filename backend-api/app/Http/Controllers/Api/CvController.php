@@ -7,8 +7,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CvUploadRequest;
 use App\Http\Resources\SkillResource;
+use App\Models\User;
 use App\Services\Contracts\CvProcessingServiceInterface;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Log;
 
 class CvController extends Controller
@@ -31,11 +34,11 @@ class CvController extends Controller
         // Prevent PHP from killing the script during heavy ML processing (OCR, NER)
         set_time_limit(180);
 
-        /** @var \App\Models\User $user */
+        /** @var User $user */
         $user = $request->user();
 
         try {
-            /** @var \Illuminate\Http\UploadedFile $cvFile */
+            /** @var UploadedFile $cvFile */
             $cvFile = $request->file('cv');
 
             $result = $this->cvService->processCv($cvFile, $user);
@@ -70,7 +73,7 @@ class CvController extends Controller
                     $user->skills()->orderBy('name')->get()
                 ),
             ]);
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+        } catch (ConnectionException $e) {
             Log::error('AI Gateway unreachable', [
                 'user_id' => $user->id,
                 'url'     => config('services.ai_gateway.url', 'http://127.0.0.1:8001'),

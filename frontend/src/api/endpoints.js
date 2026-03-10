@@ -60,6 +60,7 @@ export const deleteApplication = (id) => applicationsAPI.deleteApplication(id);
 // Admin API
 export const adminAPI = {
   getAdminDashboardStats: () => apiClient.get('/admin/dashboard/stats'),
+  getAdminSystemHealth: () => apiClient.get('/admin/dashboard/health'),
   getAdminJobs: (page = 1, search = '') => apiClient.get(`/admin/jobs?page=${page}&search=${encodeURIComponent(search)}`),
   getAdminJobDetails: (id) => apiClient.get(`/admin/jobs/${id}`),
   deleteAdminJob: (id) => apiClient.delete(`/admin/jobs/${id}`),

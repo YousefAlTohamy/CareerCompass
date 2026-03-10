@@ -3,13 +3,15 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\TargetJobRole;
+use App\Jobs\ProcessMarketScraping;
 use Illuminate\Http\Request;
 
 class TargetJobRoleController extends Controller
 {
     public function index(Request $request)
     {
-        $query = \App\Models\TargetJobRole::query();
+        $query = TargetJobRole::query();
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -27,7 +29,7 @@ class TargetJobRoleController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        $role = \App\Models\TargetJobRole::create([
+        $role = TargetJobRole::create([
             'name' => $request->name,
             'is_active' => $request->is_active ?? true,
         ]);
@@ -37,7 +39,7 @@ class TargetJobRoleController extends Controller
 
     public function toggleActive($id)
     {
-        $role = \App\Models\TargetJobRole::findOrFail($id);
+        $role = TargetJobRole::findOrFail($id);
         $role->is_active = !$role->is_active;
         $role->save();
 
@@ -46,7 +48,7 @@ class TargetJobRoleController extends Controller
 
     public function destroy($id)
     {
-        $role = \App\Models\TargetJobRole::findOrFail($id);
+        $role = TargetJobRole::findOrFail($id);
         $role->delete();
 
         return response()->json(['message' => 'Role deleted successfully']);
@@ -54,7 +56,7 @@ class TargetJobRoleController extends Controller
 
     public function runFullScraping()
     {
-        \App\Jobs\ProcessMarketScraping::dispatch(null, 30);
+        ProcessMarketScraping::dispatch(null, 30);
         return response()->json(['message' => 'Full scraping background job has been dispatched.']);
     }
 }

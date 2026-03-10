@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\JobRoleStatistic;
 use App\Models\Job;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
 class MarketIntelligenceController extends Controller
@@ -14,7 +15,7 @@ class MarketIntelligenceController extends Controller
      * Get market statistics for a specific job role.
      *
      * @param string $roleTitle
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function getRoleStatistics(string $roleTitle)
     {
@@ -48,7 +49,7 @@ class MarketIntelligenceController extends Controller
      * Get trending skills across all job roles.
      *
      * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function getTrendingSkills(Request $request)
     {
@@ -99,7 +100,7 @@ class MarketIntelligenceController extends Controller
      * Get skill demand breakdown for a specific job role.
      *
      * @param string $roleTitle
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function getSkillDemand(string $roleTitle)
     {
@@ -169,7 +170,7 @@ class MarketIntelligenceController extends Controller
     /**
      * Get market overview statistics.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function getMarketOverview()
     {

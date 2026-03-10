@@ -1,17 +1,29 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { adminAPI } from '../../api/endpoints';
-import { Search, Trash2, Briefcase, MapPin, Building, Calendar, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { adminAPI } from '../../api/endpoints';
+import { 
+  Briefcase, 
+  Search, 
+  Trash2, 
+  Eye, 
+  MapPin, 
+  Building2,
+  ChevronLeft,
+  ChevronRight,
+  Link as LinkIcon
+} from 'lucide-react';
 import Swal from 'sweetalert2';
 
-export default function AdminJobs() {
+const AdminJobs = () => {
   const navigate = useNavigate();
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Pagination & Search State (URL Synced)
   const [searchParams, setSearchParams] = useSearchParams();
   const initialPage = parseInt(searchParams.get('page')) || 1;
   const initialSearch = searchParams.get('search') || '';
 
-  const [jobs, setJobs] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState(initialSearch);
   const [activeSearch, setActiveSearch] = useState(initialSearch);
   const [currentPage, setCurrentPage] = useState(initialPage);
@@ -23,40 +35,33 @@ export default function AdminJobs() {
       const response = await adminAPI.getAdminJobs(currentPage, activeSearch);
       if (response.data && response.data.success) {
         setJobs(response.data.data.data);
-        setTotalPages(response.data.data.last_page);
-        setCurrentPage(response.data.data.current_page);
+        setTotalPages(response.data.data.last_page || 1);
+        setCurrentPage(response.data.data.current_page || 1);
         window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        setJobs([]);
       }
     } catch (err) {
       console.error('Failed to fetch admin jobs:', err);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Failed to load jobs list.',
-        toast: true,
-        position: 'top-end',
-        showConfirmButton: false,
-        timer: 3000
-      });
+      setJobs([]);
     } finally {
       setLoading(false);
     }
   }, [currentPage, activeSearch]);
 
-  // Debounced search logic
+  // Debounce logic
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      // Only reset page if the search actually changed from initial
       if (searchInput !== activeSearch) {
         setActiveSearch(searchInput);
-        setCurrentPage(1); // Reset to page 1 on new search
+        setCurrentPage(1);
       }
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchInput, activeSearch]);
 
-  // URL Synchronization
+  // URL Sync logic
   useEffect(() => {
     const params = {};
     if (currentPage > 1) params.page = currentPage;
@@ -67,163 +72,220 @@ export default function AdminJobs() {
 
   useEffect(() => {
     fetchJobs();
-  }, [currentPage, activeSearch, fetchJobs]);
+  }, [fetchJobs]);
 
-  const handleDelete = async (id, title) => {
+  const handleDelete = async (id) => {
     const result = await Swal.fire({
       title: 'Delete Job?',
-      text: `Are you sure you want to delete "${title}"? This cannot be undone.`,
+      text: "You won't be able to revert this! All related skills will be kept, but the job will be deleted.",
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#ef4444',
-      cancelButtonColor: '#94a3b8',
-      confirmButtonText: 'Yes, delete it!'
+      confirmButtonColor: '#f43f5e',
+      cancelButtonColor: '#cbd5e1',
+      confirmButtonText: 'Yes, delete it'
     });
 
     if (result.isConfirmed) {
       try {
-        await adminAPI.deleteAdminJob(id);
+        await adminAPI.deleteJob(id);
+        setJobs((prev) => prev.filter((j) => j.id !== id));
         Swal.fire({
-          icon: 'success',
-          title: 'Deleted!',
-          text: 'The job has been deleted.',
           toast: true,
           position: 'top-end',
+          icon: 'success',
+          title: 'Job deleted successfully',
           showConfirmButton: false,
-          timer: 3000
+          timer: 2000
         });
-        fetchJobs(); // Refresh current page
+        
+        if (jobs.length === 1 && currentPage > 1) {
+            setCurrentPage(prev => prev - 1);
+        } else {
+            fetchJobs();
+        }
       } catch (err) {
         console.error('Failed to delete job:', err);
         Swal.fire({
           icon: 'error',
           title: 'Error',
-          text: 'Failed to delete job.',
-          toast: true,
-          position: 'top-end',
-          showConfirmButton: false,
-          timer: 3000
+          text: err.response?.data?.message || 'Failed to delete the job.',
+          confirmButtonColor: '#6366f1'
         });
       }
     }
   };
 
+  // handleToggleStatus removed as per user request
+
   return (
-    <div className="p-6 max-w-7xl mx-auto min-h-screen">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
-             <Briefcase className="text-primary" />
-             Jobs Management
-          </h1>
-          <p className="text-gray-500 mt-1 font-medium text-sm">Review, search, and manage all scraped jobs in the system.</p>
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      
+      {/* Header Section */}
+      <div>
+        <h1 className="text-3xl font-black text-slate-800 flex items-center gap-3">
+          <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl">
+            <Briefcase className="w-7 h-7" />
+          </div>
+          Job Market
+        </h1>
+        <p className="text-slate-500 mt-2 text-sm font-medium">
+          Manage and monitor all jobs scraped from connected sources.
+        </p>
+      </div>
+
+      {/* Toolbar */}
+      <div className="bg-white p-2 border border-slate-200 rounded-2xl shadow-sm flex flex-col lg:flex-row justify-between items-stretch gap-2">
+        <div className="relative flex-1 flex items-center bg-slate-50 rounded-xl px-4 py-3">
+          <Search className="text-slate-400 mr-3" size={20} />
+          <input
+            type="text"
+            placeholder="Search by job title, company, or location..."
+            className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-slate-700 font-medium placeholder-slate-400"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
+          {loading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600 ml-3"></div>}
         </div>
       </div>
 
-      {/* Search Input Card */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex items-center px-4">
-        <Search className="text-gray-400 mr-3" size={20} />
-        <input
-          type="text"
-          placeholder="Search by job title, company, or location..."
-          className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-gray-700 font-medium placeholder-gray-400"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-        />
-        {loading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary ml-3"></div>}
-      </div>
-
-      {/* Jobs Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* Table Card */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b border-gray-100">
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider hidden md:table-cell">ID</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Job Details</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Company & Location</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider hidden md:table-cell">Date Scraped</th>
-                <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Actions</th>
+          <table className="w-full text-left border-collapse min-w-[900px]">
+            <thead className="bg-slate-50/80 text-slate-500 uppercase text-xs font-bold tracking-wider border-b border-slate-200">
+              <tr>
+                <th className="p-5 w-1/3">Job Details</th>
+                <th className="p-5 w-1/4">Source</th>
+                <th className="p-5 w-1/3">Required Skills</th>
+                <th className="p-5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {jobs.length > 0 ? (
-                jobs.map((job) => (
-                  <tr key={job.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4 md:table-cell hidden">
-                       <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-md">#{job.id}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-gray-900 mb-1 line-clamp-1">{job.title}</div>
-                      <div className="lg:hidden mt-2 space-y-1">
-                         <div className="flex items-center gap-1 text-xs text-gray-500 font-medium">
-                            <Building size={12} className="text-primary" /> {job.company}
-                         </div>
-                         <div className="flex items-center gap-1 text-xs text-gray-500 font-medium">
-                            <MapPin size={12} className="text-secondary" /> {job.location || 'Remote'}
-                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 hidden lg:table-cell">
-                       <div className="flex items-center gap-2 text-sm text-gray-700 font-semibold mb-1">
-                          <Building size={14} className="text-primary" /> {job.company}
-                       </div>
-                       <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
-                          <MapPin size={12} className="text-secondary" /> {job.location || 'Remote'}
-                       </div>
-                    </td>
-                    <td className="px-6 py-4 hidden md:table-cell">
-                       <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
-                          <Calendar size={14} />
-                          {new Date(job.created_at).toLocaleDateString()}
-                       </div>
-                    </td>
-                    <td className="px-6 py-4 flex justify-end gap-2">
-                      <button
-                        onClick={() => navigate(`/admin/jobs/${job.id}`)}
-                        className="text-gray-400 hover:text-blue-500 p-2 rounded-xl hover:bg-blue-50 transition-colors inline-block"
-                        title="View Job Details"
-                      >
-                        <Eye size={20} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(job.id, job.title)}
-                        className="text-gray-400 hover:text-red-500 p-2 rounded-xl hover:bg-red-50 transition-colors inline-block"
-                        title="Delete Job"
-                      >
-                        <Trash2 size={20} />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
+            <tbody className="divide-y divide-slate-100">
+              {loading && jobs.length === 0 ? (
+                 <tr>
+                 <td colSpan="4" className="p-12 text-center">
+                   <div className="flex flex-col items-center justify-center text-slate-400 space-y-3">
+                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                     <p className="font-medium text-sm">Loading jobs...</p>
+                   </div>
+                 </td>
+               </tr>
+              ) : jobs.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-gray-500 font-medium">
-                    {loading ? 'Searching jobs...' : 'No jobs found.'}
+                  <td colSpan="4" className="p-12 text-center">
+                    <div className="flex flex-col items-center justify-center text-slate-400 space-y-3">
+                      <Briefcase className="w-12 h-12 text-slate-300 stroke-1" />
+                      <p className="font-medium text-sm text-slate-500">No jobs found in the database.</p>
+                      {activeSearch && <p className="text-xs">Try adjusting your search criteria.</p>}
+                    </div>
                   </td>
                 </tr>
+              ) : (
+                jobs.map((job) => (
+                  <tr key={job.id} className="hover:bg-slate-50/50 transition-colors group">
+                    
+                    {/* Job Details Column */}
+                    <td className="p-5">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-800 text-sm line-clamp-1" title={job.title}>
+                          {job.title}
+                        </span>
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-1.5 font-medium">
+                          <span className="flex items-center gap-1.5 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                            <Building2 size={12} className="text-slate-400"/> 
+                            <span className="max-w-[120px] truncate">{job.company || 'N/A'}</span>
+                          </span>
+                          <span className="flex items-center gap-1.5 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                            <MapPin size={12} className="text-slate-400"/> 
+                            <span className="max-w-[100px] truncate">{job.location || 'Remote'}</span>
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Source Column */}
+                    <td className="p-5">
+                       <div className="flex items-center gap-2">
+                         <div className="w-6 h-6 rounded bg-indigo-50 flex items-center justify-center text-indigo-500 shrink-0">
+                           <LinkIcon size={12} />
+                         </div>
+                         <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
+                           {job.source || 'Unknown'}
+                         </span>
+                       </div>
+                    </td>
+
+                    {/* Skills Column (Compact Chips) */}
+                    <td className="p-5">
+                      <div className="flex flex-wrap gap-1.5">
+                        {job.skills && job.skills.length > 0 ? (
+                          <>
+                            {job.skills.slice(0, 3).map((skill, index) => (
+                              <span 
+                                key={index} 
+                                className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded text-[10px] font-bold uppercase tracking-wider border border-indigo-100"
+                              >
+                                {skill.name}
+                              </span>
+                            ))}
+                            {job.skills.length > 3 && (
+                              <span className="px-2 py-1 bg-slate-100 text-slate-500 rounded text-[10px] font-bold border border-slate-200">
+                                +{job.skills.length - 3}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-xs text-slate-400 italic">No skills extracted</span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Status Column Removed */}
+
+                    {/* Actions Column */}
+                    <td className="p-5 text-right">
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => navigate(`/admin/jobs/${job.id}`)}
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(job.id)}
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                          title="Delete Job"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                    
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
         </div>
 
-        {/* Server-Side Pagination Controls */}
-        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50">
+        {/* Unified Server-Side Pagination */}
+        <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-slate-50">
           <span className="text-sm font-semibold text-slate-500">
-            Page {currentPage} of {totalPages}
+            Page <span className="text-slate-800">{currentPage}</span> of <span className="text-slate-800">{totalPages}</span>
           </span>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage <= 1 || loading}
-              className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50 flex items-center gap-1 bg-white"
+              className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all disabled:opacity-40 disabled:hover:bg-white flex items-center gap-1 bg-white shadow-sm"
             >
                <ChevronLeft size={16} /> Prev
             </button>
             <button
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage >= totalPages || loading}
-              className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50 flex items-center gap-1 bg-white"
+              className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all disabled:opacity-40 disabled:hover:bg-white flex items-center gap-1 bg-white shadow-sm"
             >
                Next <ChevronRight size={16} />
             </button>
@@ -232,4 +294,6 @@ export default function AdminJobs() {
       </div>
     </div>
   );
-}
+};
+
+export default AdminJobs;

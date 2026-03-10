@@ -85,9 +85,26 @@ class AuthController extends Controller
             'location'     => 'nullable|string|max:255',
             'linkedin_url' => 'nullable|url|max:255',
             'github_url'   => 'nullable|url|max:255',
+            'skills'       => 'nullable|array',
+            'skills.*'     => 'string|max:255',
         ]);
 
         $user->update($validated);
+
+        if ($request->has('skills')) {
+            $skillIds = [];
+            foreach ($request->skills as $skillName) {
+                // Ignore empty or whitespace-only skills
+                if (trim($skillName) === '') {
+                    continue;
+                }
+                $skill = \App\Models\Skill::firstOrCreate(['name' => trim($skillName)]);
+                $skillIds[] = $skill->id;
+            }
+            $user->skills()->sync($skillIds);
+        }
+
+        $user->load('skills');
 
         return response()->json([
             'success' => true,
