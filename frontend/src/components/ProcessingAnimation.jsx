@@ -1,25 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Cpu, Scan, CheckCircle2 } from 'lucide-react';
+import { FileText, Sparkles, Wand2 } from 'lucide-react';
 
-const ProcessingAnimation = ({ isVisible, message = "Analyzing Resume..." }) => {
-  const [progress, setProgress] = useState(0);
-
-  useEffect(() => {
-    if (isVisible) {
-      const interval = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 98) return prev;
-          const increment = Math.random() * 5;
-          return Math.min(prev + increment, 98);
-        });
-      }, 200);
-      return () => clearInterval(interval);
-    } else {
-      setProgress(0);
-    }
-  }, [isVisible]);
-
+export default function ProcessingAnimation({ isVisible, message = "Scanning document..." }) {
   return (
     <AnimatePresence>
       {isVisible && (
@@ -27,93 +10,69 @@ const ProcessingAnimation = ({ isVisible, message = "Analyzing Resume..." }) => 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-primary/95 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 font-sans no-print"
         >
-          <div className="max-w-md w-full p-8 text-center space-y-8">
-            {/* Resume Skeleton Container */}
-            <div className="relative w-48 h-64 bg-white/10 rounded-xl mx-auto border border-white/20 overflow-hidden shadow-2xl">
-              {/* Fake Text Lines */}
-              <div className="p-6 space-y-4">
-                <div className="h-2 w-1/2 bg-white/20 rounded-full" />
-                <div className="h-2 w-full bg-white/10 rounded-full" />
-                <div className="h-2 w-full bg-white/10 rounded-full" />
-                <div className="h-2 w-3/4 bg-white/10 rounded-full" />
-                <div className="pt-4 space-y-2">
-                  <div className="h-2 w-full bg-white/10 rounded-full" />
-                  <div className="h-2 w-full bg-white/10 rounded-full" />
-                </div>
+          <motion.div
+            initial={{ scale: 0.9, y: 10 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.9, y: 10 }}
+            className="bg-white rounded-3xl p-10 shadow-2xl border border-slate-100 max-w-sm w-full text-center relative overflow-hidden"
+          >
+            {/* Visuals - SCANNING CONCEPT */}
+            <div className="relative mb-8">
+              {/* The indigo scanning container */}
+              <div className="w-24 h-32 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-center mx-auto relative overflow-hidden shadow-inner p-4">
+                
+                {/* The Document Icon */}
+                <FileText className="text-indigo-600" size={48} strokeWidth={1.5} />
+                
+                {/* The Scan Line (Animated UP and DOWN) */}
+                <motion.div 
+                  className="absolute left-0 right-0 h-0.5 bg-indigo-500 shadow-[0_0_10px_#6366f1]"
+                  initial={{ top: '10%' }}
+                  animate={{ top: ['10%', '90%', '10%'] }}
+                  transition={{ 
+                    repeat: Infinity, 
+                    duration: 2.2, 
+                    ease: "easeInOut" 
+                  }}
+                />
+                
+                {/* Small pulsing sparkles inside */}
+                <motion.div
+                    className="absolute bottom-2 right-2 text-indigo-400"
+                    animate={{ opacity: [0.3, 1, 0.3] }}
+                    transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                >
+                    <Wand2 size={16} />
+                </motion.div>
               </div>
-
-              {/* Scanning Laser */}
-              <motion.div
-                animate={{ 
-                  top: ["0%", "90%", "0%"],
-                  opacity: [0.5, 1, 0.5]
-                }}
-                transition={{ 
-                  duration: 2.5, 
-                  repeat: Infinity, 
-                  ease: "easeInOut" 
-                }}
-                className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-accent to-transparent shadow-[0_0_15px_#00d4ff] z-10"
-              />
-
-              {/* Glow Effect where Laser hits */}
-              <motion.div 
-                animate={{ 
-                  top: ["0%", "90%", "0%"],
-                }}
-                transition={{ 
-                  duration: 2.5, 
-                  repeat: Infinity, 
-                  ease: "easeInOut" 
-                }}
-                className="absolute inset-x-0 h-20 bg-accent/5 blur-xl pointer-events-none"
-              />
             </div>
 
-            {/* Status Text & Progress */}
-            <div className="space-y-4">
-              <motion.div
-                animate={{ opacity: [0.5, 1, 0.5] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-                className="flex items-center justify-center gap-3"
-              >
-                <Cpu className="text-accent animate-spin-slow" size={24} />
-                <h2 className="text-2xl font-bold text-white tracking-tight">
-                  {message}
-                </h2>
-              </motion.div>
-
-              <div className="w-full bg-white/10 rounded-full h-2 max-w-[200px] mx-auto overflow-hidden">
-                <motion.div
-                  className="bg-accent h-full shadow-[0_0_10px_#00d4ff]"
-                  initial={{ width: "0%" }}
-                  animate={{ width: `${progress}%` }}
-                />
-              </div>
-              
-              <p className="text-slate-400 text-sm font-medium">
-                AI Engines: <span className="text-white">{Math.round(progress)}% Complete</span>
+            {/* Text */}
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-slate-800 tracking-tight flex items-center justify-center gap-2">
+                <Sparkles className="text-indigo-500" size={20}/>
+                AI Analysis Engine
+              </h3>
+              <p className="text-sm font-medium text-slate-500 leading-relaxed px-4">
+                {message}
               </p>
             </div>
 
-            {/* Quick Insights List */}
-            <div className="flex justify-center gap-6">
-               <div className="flex flex-col items-center gap-2">
-                  <Scan size={18} className="text-accent" />
-                  <span className="text-[10px] text-slate-300 uppercase font-bold tracking-widest">Parsing Structure</span>
-               </div>
-               <div className="flex flex-col items-center gap-2">
-                  <FileText size={18} className="text-accent" />
-                  <span className="text-[10px] text-slate-300 uppercase font-bold tracking-widest">Extracting Skills</span>
-               </div>
+            {/* Animated Loading Bar */}
+            <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden mt-8 relative">
+              <motion.div
+                className="absolute top-0 bottom-0 left-0 w-1/2 bg-gradient-to-r from-indigo-500 to-fuchsia-500 rounded-full"
+                initial={{ x: '-100%' }}
+                animate={{ x: '200%' }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+              />
             </div>
-          </div>
+
+          </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
   );
-};
-
-export default ProcessingAnimation;
+}

@@ -39,138 +39,143 @@ export default function Navbar() {
       ];
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
-      scrolled ? 'bg-white/80 backdrop-blur-md shadow-premium border-b border-slate-100 py-3' : 'bg-transparent py-5'
-    }`}>
+    <nav className={`fixed top-0 w-full z-50 transition-all duration-300 font-sans ${scrolled ? 'bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm py-3' : 'bg-transparent py-5'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center">
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className={`p-2 rounded-xl transition-colors ${scrolled ? 'bg-primary text-white' : 'bg-white text-primary'}`}>
-               <Compass className="group-hover:rotate-45 transition-transform duration-500" />
+        <div className="flex items-center justify-between">
+          
+          {/* LOGO */}
+          <Link to="/" className="flex items-center gap-2.5 group">
+            <div className="bg-indigo-600 text-white p-1.5 rounded-xl shadow-md shadow-indigo-200 group-hover:scale-105 transition-transform">
+              <Compass size={24} strokeWidth={2.5} />
             </div>
-            <span className={`text-xl font-black tracking-tighter transition-colors ${scrolled ? 'text-primary' : 'text-primary'}`}>
-              Career<span className="text-secondary italic">Compass</span>
+            <span className="font-black text-xl tracking-tight text-slate-800">
+              Career<span className="text-indigo-600">Compass</span>
             </span>
           </Link>
 
-          {/* Desktop Menu */}
-          <div className="hidden md:flex items-center gap-8">
-            {user ? (
-              <>
-                <div className="flex items-center gap-1 bg-slate-100/50 p-1 rounded-capsule border border-slate-200/50">
-                  {navLinks.map((link) => (
-                    <Link
-                      key={link.name}
-                      to={link.path}
-                      className={`flex items-center gap-2 px-5 py-2 rounded-capsule text-sm font-bold transition-all ${
-                        location.pathname === link.path 
-                          ? 'bg-white text-primary shadow-sm' 
-                          : 'text-slate-500 hover:text-primary'
-                      }`}
-                    >
-                      <link.icon size={16} />
-                      {link.name}
-                    </Link>
-                  ))}
-                </div>
+          {/* DESKTOP LINKS */}
+          <div className="hidden md:flex items-center gap-1.5">
+            {user && navLinks.map((link) => (
+              <Link
+                key={link.name}
+                to={link.path}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                  location.pathname === link.path 
+                    ? 'bg-indigo-50 text-indigo-700' 
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                }`}
+              >
+                <link.icon size={16} />
+                {link.name}
+              </Link>
+            ))}
+          </div>
 
-                <div className="flex items-center gap-4 pl-4 border-l border-slate-200">
-                  <div className="group relative">
-                    <Link
-                      to="/profile"
-                      className="flex items-center gap-3 p-1 pr-4 bg-white border border-slate-100 rounded-capsule shadow-sm hover:shadow-premium transition-all"
-                    >
-                       <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-white font-black text-xs">
-                          {user.name.charAt(0).toUpperCase()}
-                       </div>
-                       <span className="text-sm font-bold text-slate-700">{user.name}</span>
-                    </Link>
-                    {/* Hover dropdown — no mt gap so mouse doesn't leave the group */}
-                    <div className="absolute right-0 top-full opacity-0 group-hover:opacity-100 transition-all pointer-events-none group-hover:pointer-events-auto bg-white border border-slate-100 shadow-premium-hover rounded-xl min-w-[140px] z-50 pt-2 pb-1 overflow-hidden">
-                      <Link
-                        to="/profile"
-                        className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 rounded-lg text-sm font-bold w-full transition-colors"
-                      >
-                        <User size={14} />
-                        Profile
-                      </Link>
-                      <button
-                        onClick={handleLogout}
-                        className="flex items-center gap-2 px-3 py-2 text-red-500 hover:bg-red-50 rounded-lg text-sm font-bold w-full transition-colors"
-                      >
-                        <LogOut size={14} />
-                        Logout
-                      </button>
-                    </div>
+          {/* DESKTOP ACTIONS */}
+          <div className="hidden md:flex items-center gap-4">
+            {user ? (
+              <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
+                <Link to="/profile" className="flex items-center gap-2.5 p-1.5 pr-4 rounded-full border border-slate-200 bg-white hover:border-indigo-200 hover:shadow-sm transition-all group">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center text-white font-black text-xs shadow-inner">
+                    {user.name.charAt(0).toUpperCase()}
                   </div>
-                </div>
-              </>
+                  <span className="text-sm font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">
+                    {user.name.split(' ')[0]}
+                  </span>
+                </Link>
+                <button 
+                  onClick={handleLogout}
+                  className="p-2.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                  title="Logout"
+                >
+                  <LogOut size={18} strokeWidth={2.5} />
+                </button>
+              </div>
             ) : (
-              <div className="flex items-center gap-4">
-                <Link to="/login" className="text-slate-600 hover:text-primary font-bold transition-colors">
-                  Login
-                </Link>
-                <Link to="/register" className="btn-primary">
-                  Start Analysis
-                </Link>
+              <div className="flex items-center gap-3">
+                <Link to="/login" className="text-sm font-bold text-slate-600 hover:text-indigo-600 transition-colors px-2">Sign In</Link>
+                <Link to="/register" className="bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold px-5 py-2.5 rounded-xl shadow-md transition-all active:scale-95">Start Analysis</Link>
               </div>
             )}
           </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            className="md:hidden p-2 text-primary"
-            onClick={() => setIsOpen(!isOpen)}
-          >
-            {isOpen ? <X size={28} /> : <Menu size={28} />}
-          </button>
+          {/* MOBILE TOGGLE BUTTON */}
+          <div className="md:hidden flex items-center">
+            <button 
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-2.5 rounded-xl bg-slate-50 text-slate-600 hover:bg-slate-100 transition-colors border border-slate-200"
+            >
+              {isOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* MOBILE MENU */}
       <AnimatePresence>
         {isOpen && (
           <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="absolute top-full left-0 right-0 bg-white border-b border-slate-100 p-4 md:hidden shadow-premium"
+            initial={{ opacity: 0, height: 0 }} 
+            animate={{ opacity: 1, height: 'auto' }} 
+            exit={{ opacity: 0, height: 0 }} 
+            className="md:hidden overflow-hidden bg-white border-b border-slate-200 shadow-xl absolute top-full left-0 w-full"
           >
-            <div className="space-y-2">
+            <div className="px-4 pt-2 pb-6 space-y-2">
               {user ? (
                 <>
-                  {navLinks.map((link) => (
+                  <div className="space-y-1 mb-4 pb-4 border-b border-slate-100">
+                    {navLinks.map((link) => (
+                      <Link
+                        key={link.name}
+                        to={link.path}
+                        onClick={() => setIsOpen(false)}
+                        className={`flex items-center gap-3 p-3 rounded-xl font-bold transition-all text-sm ${
+                          location.pathname === link.path 
+                            ? 'bg-indigo-50 text-indigo-700' 
+                            : 'text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <link.icon size={18} />
+                        {link.name}
+                      </Link>
+                    ))}
                     <Link
-                      key={link.name}
-                      to={link.path}
+                      to="/profile"
                       onClick={() => setIsOpen(false)}
-                      className={`flex items-center gap-3 p-4 rounded-xl font-bold transition-all ${
-                        location.pathname === link.path ? 'bg-primary text-white' : 'bg-slate-50 text-slate-600'
+                      className={`flex items-center gap-3 p-3 rounded-xl font-bold transition-all text-sm ${
+                        location.pathname === '/profile' 
+                          ? 'bg-indigo-50 text-indigo-700' 
+                          : 'text-slate-600 hover:bg-slate-50'
                       }`}
                     >
-                      <link.icon size={20} />
-                      {link.name}
+                      <User size={18} />
+                      Profile
                     </Link>
-                  ))}
-                  <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
-                     <Link to="/profile" onClick={() => setIsOpen(false)} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                        <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-white font-black">
+                  </div>
+                  
+                  {/* Mobile User Profile Section */}
+                  <div className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                     <Link to="/profile" onClick={() => setIsOpen(false)} className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center text-white font-black shadow-inner">
                            {user.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <span className="font-bold text-slate-900 block">{user.name}</span>
-                          <span className="text-xs text-slate-400">View Profile</span>
+                          <span className="font-bold text-slate-800 block text-sm">{user.name}</span>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">View Profile</span>
                         </div>
                      </Link>
-                     <button onClick={handleLogout} className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors">
+                     <button 
+                        onClick={handleLogout}
+                        className="p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"
+                     >
                         <LogOut size={20} />
                      </button>
                   </div>
                 </>
               ) : (
-                <div className="flex flex-col gap-2">
-                  <Link to="/login" onClick={() => setIsOpen(false)} className="p-4 text-center font-bold text-slate-600">Login</Link>
-                  <Link to="/register" onClick={() => setIsOpen(false)} className="btn-primary">Start Analysis</Link>
+                <div className="flex flex-col gap-3 pt-4">
+                  <Link to="/login" onClick={() => setIsOpen(false)} className="w-full py-3.5 text-center font-bold text-slate-700 bg-slate-50 rounded-xl border border-slate-200">Sign In</Link>
+                  <Link to="/register" onClick={() => setIsOpen(false)} className="w-full py-3.5 text-center font-bold text-white bg-slate-900 rounded-xl shadow-md">Start Analysis Free</Link>
                 </div>
               )}
             </div>
