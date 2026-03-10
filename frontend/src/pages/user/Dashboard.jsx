@@ -1,66 +1,64 @@
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import {
   Upload,
   X,
-  CheckCircle2,
-  TrendingUp,
   Target,
-  Plus,
   Search,
   Award,
-  Sparkles,
+  Zap,
+  Compass,
+  TrendingUp,
 } from "lucide-react";
 import {
   Radar,
   RadarChart,
   PolarGrid,
   PolarAngleAxis,
-  PolarRadiusAxis,
   ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
 } from "recharts";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { cvAPI, gapAnalysisAPI } from "../../api/endpoints";
 import ProcessingAnimation from "../../components/ProcessingAnimation";
 import Swal from "sweetalert2";
 
+// --- NEW UI FOR SkillChip ---
 const SkillChip = ({ skill, onRemove }) => (
-  <motion.div
+  <motion.div 
     initial={{ opacity: 0, scale: 0.9 }}
     animate={{ opacity: 1, scale: 1 }}
-    whileHover={{ y: -2, scale: 1.02 }}
-    whileTap={{ scale: 0.98 }}
-    className="flex items-center gap-3 bg-white border border-slate-100 px-4 py-2.5 rounded-xl shadow-premium hover:shadow-premium-hover transition-all group cursor-default"
+    whileHover={{ y: -2 }}
+    className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm hover:shadow hover:border-indigo-200 transition-all group cursor-default shrink-0"
   >
-    <div className="w-1.5 h-1.5 rounded-full bg-secondary shadow-[0_0_8px_#6366f1]" />
-    <span className="font-semibold text-slate-700 text-sm">{skill.name}</span>
-    <button
-      onClick={() => onRemove(skill.id)}
-      className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-red-500 p-1"
+    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)] animate-pulse" />
+    <span className="font-bold text-slate-700 text-[11px] uppercase tracking-wider">{skill.name}</span>
+    <button 
+      onClick={() => onRemove(skill.id)} 
+      className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-rose-500 p-0.5"
     >
-      <X size={14} />
+      <X size={14} strokeWidth={2.5} />
     </button>
   </motion.div>
 );
 
 const ReadinessScore = ({ score }) => {
   const data = [
-    { name: "Readiness", value: score, color: "#6366f1" },
+    { name: "Readiness", value: score, color: "#4f46e5" }, // Indigo 600
     { name: "Remaining", value: 100 - score, color: "#f1f5f9" },
   ];
 
   return (
-    <div className="relative w-32 h-32 mx-auto">
+    <div className="relative w-20 h-20 shrink-0">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
             data={data}
-            innerRadius={40}
-            outerRadius={55}
+            innerRadius={25}
+            outerRadius={40}
             paddingAngle={0}
             dataKey="value"
             startAngle={90}
@@ -73,10 +71,7 @@ const ReadinessScore = ({ score }) => {
         </PieChart>
       </ResponsiveContainer>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-2xl font-black text-slate-900">{score}%</span>
-        <span className="text-[8px] font-black uppercase text-slate-400 tracking-tighter">
-          Ready
-        </span>
+        <span className="text-sm font-black text-slate-900">{score}%</span>
       </div>
     </div>
   );
@@ -86,86 +81,49 @@ const SkillRadar = ({ skills }) => {
   // Categorize skills for the radar chart
   const categories = {
     Technical: [
-      "javascript",
-      "react",
-      "node",
-      "python",
-      "java",
-      "c++",
-      "backend",
-      "frontend",
-      "sql",
-      "nosql",
-      "api",
+      "javascript", "react", "node", "python", "java", "c++", "backend", "frontend", "sql", "nosql", "api",
     ],
     Tools: [
-      "git",
-      "docker",
-      "kubernetes",
-      "aws",
-      "azure",
-      "jenkins",
-      "linux",
-      "figma",
-      "jira",
+      "git", "docker", "kubernetes", "aws", "azure", "jenkins", "linux", "figma", "jira",
     ],
     Industry: [
-      "agile",
-      "scrum",
-      "fintech",
-      "healthcare",
-      "e-commerce",
-      "security",
+      "agile", "scrum", "fintech", "healthcare", "e-commerce", "security",
     ],
     "Soft Skills": [
-      "communication",
-      "leadership",
-      "teamwork",
-      "problem solving",
-      "management",
-      "mentoring",
+      "communication", "leadership", "teamwork", "problem solving", "management", "mentoring",
     ],
   };
 
   const getScore = (keywords) => {
     const count = skills.filter((s) =>
-      keywords.some((k) => s.name.toLowerCase().includes(k)),
+      keywords.some((k) => s.name.toLowerCase().includes(k))
     ).length;
-    // Map count to a 100-point scale (simple demo logic)
     return Math.min(count * 25 + 10, 100);
   };
 
   const data = [
-    {
-      subject: "Technical",
-      A: getScore(categories["Technical"]),
-      fullMark: 100,
-    },
-    {
-      subject: "Soft Skills",
-      A: getScore(categories["Soft Skills"]),
-      fullMark: 100,
-    },
+    { subject: "Technical", A: getScore(categories["Technical"]), fullMark: 100 },
+    { subject: "Soft Skills", A: getScore(categories["Soft Skills"]), fullMark: 100 },
     { subject: "Industry", A: getScore(categories["Industry"]), fullMark: 100 },
     { subject: "Tools", A: getScore(categories["Tools"]), fullMark: 100 },
-    { subject: "Legacy", A: 30, fullMark: 100 }, // Mock static category for balance
+    { subject: "Legacy", A: 30, fullMark: 100 },
   ];
 
   return (
-    <div className="h-64 w-full">
+    <div className="h-72 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
+        <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data}>
           <PolarGrid stroke="#e2e8f0" />
           <PolarAngleAxis
             dataKey="subject"
-            tick={{ fill: "#64748b", fontSize: 10, fontWeight: 700 }}
+            tick={{ fill: "#64748b", fontSize: 11, fontWeight: 700 }}
           />
           <Radar
             name="Skills"
             dataKey="A"
-            stroke="#6366f1"
-            fill="#6366f1"
-            fillOpacity={0.15}
+            stroke="#4f46e5"
+            fill="#4f46e5"
+            fillOpacity={0.2}
           />
         </RadarChart>
       </ResponsiveContainer>
@@ -175,12 +133,11 @@ const SkillRadar = ({ skills }) => {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { refreshUser } = useAuth(); // We'll use this to update user context silently
+  const { user, refreshUser } = useAuth();
   const [skills, setSkills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [isDiscovering, setIsDiscovering] = useState(false);
-  // Removed message state variable because it was unused
   const [recommendations, setRecommendations] = useState([]);
   const [marketReadiness, setMarketReadiness] = useState(0);
 
@@ -244,7 +201,6 @@ export default function Dashboard() {
         false;
       const updatedUser = responseData?.user;
 
-      // Update the global auth context with new job title and contact info
       if (updatedUser) {
         await refreshUser();
       }
@@ -256,7 +212,7 @@ export default function Dashboard() {
           setIsDiscovering(false);
           navigate("/jobs");
         }, 5000);
-        return; // Skip normal success toast
+        return;
       }
 
       Swal.fire({
@@ -292,7 +248,6 @@ export default function Dashboard() {
   };
 
   const removeSkill = async (skillId) => {
-
     try {
       await cvAPI.removeSkill(skillId);
       setSkills((prev) => prev.filter((s) => s.id !== skillId));
@@ -320,354 +275,228 @@ export default function Dashboard() {
     }
   };
 
+  const hasSkills = skills.length > 0;
+
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto pb-20 space-y-8 font-sans bg-slate-50 min-h-screen">
       <ProcessingAnimation isVisible={uploading} />
       <ProcessingAnimation
         isVisible={isDiscovering}
         message="Discovering new market opportunities for your unique profile..."
       />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Welcome Header */}
-        <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div>
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center gap-2 px-3 py-1 bg-white border border-slate-200 rounded-full shadow-sm text-secondary font-black text-[10px] uppercase tracking-wider mb-3"
-            >
-              <Sparkles size={12} />
-              AI Career Intelligence Active
-            </motion.div>
-            <motion.h1
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="text-4xl md:text-5xl font-black text-primary tracking-tight"
-            >
-              Your Talent{" "}
-              <span className="text-secondary font-medium italic">Cockpit</span>
-            </motion.h1>
-            <p className="text-slate-500 mt-2 text-lg font-medium">
-              Analyze, optimize, and track your career growth with AI.
-            </p>
+      {/* HEADER */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <motion.h1 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3"
+          >
+             Welcome back, {user?.name?.split(' ')[0] || 'Talent'} <span className="animate-bounce origin-bottom-right">👋</span>
+          </motion.h1>
+          <motion.p 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
+            className="text-slate-500 mt-2 text-sm font-medium"
+          >
+            Here is your personal career intelligence overview.
+          </motion.p>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        {/* HERO ACTION CARD (DARK) */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative rounded-3xl overflow-hidden bg-slate-900 shadow-xl border border-slate-800 p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8"
+        >
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/20 blur-[100px] rounded-full pointer-events-none" />
+          <div className="text-center md:text-left flex-1 space-y-4 relative z-10 w-full">
+             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-white/10 text-indigo-300 border border-white/10">
+               <Zap size={12} className="text-fuchsia-400" /> Next Best Action
+             </span>
+             
+             {hasSkills ? (
+               <>
+                 <h2 className="text-3xl md:text-4xl font-black text-white">Ready to bridge the gap?</h2>
+                 <p className="text-slate-400 font-medium">Run a gap analysis against the live market.</p>
+                 <Link to="/jobs" className="inline-flex bg-indigo-500 hover:bg-indigo-600 transition-colors text-white font-bold py-3.5 px-8 rounded-xl items-center justify-center gap-2">
+                   Start Gap Analysis
+                 </Link>
+               </>
+             ) : (
+               <>
+                 <h2 className="text-3xl md:text-4xl font-black text-white">Upload your CV to start</h2>
+                 <p className="text-slate-400 font-medium">Extract skills and generate your custom roadmap.</p>
+                 <label className="cursor-pointer inline-block w-full sm:w-auto">
+                   <input type="file" accept=".pdf" className="hidden" onChange={handleCVUpload} disabled={uploading} /> 
+                   <div className="bg-fuchsia-600 hover:bg-fuchsia-700 transition-colors text-white font-bold py-3.5 px-8 rounded-xl flex justify-center items-center gap-2">
+                     <Upload size={18} /> {uploading ? "Uploading..." : "Upload Resume Now"}
+                   </div>
+                 </label>
+               </>
+             )}
           </div>
+          <div className="hidden lg:flex relative z-10">
+            <Compass size={100} className="text-indigo-400/80 animate-pulse" strokeWidth={1} />
+          </div>
+        </motion.div>
 
-          {skills.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-white p-4 rounded-3xl shadow-premium border border-slate-100 flex items-center gap-6"
-            >
-              <ReadinessScore
-                score={marketReadiness}
-              />
-              <div className="pr-4">
-                <h4 className="text-sm font-black text-slate-900 leading-tight">
-                  Career Readiness
-                </h4>
-                <p className="text-xs text-slate-400 font-medium mt-1 uppercase tracking-tighter">
-                  Market Match Score
-                </p>
-                <div className="flex items-center gap-1 mt-3">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span className="text-[10px] font-black text-emerald-600 uppercase">
-                    Global Gap Analysis Active
-                  </span>
-                </div>
+        {/* 3 STAT CARDS GRID */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* CARD 1: SKILLS */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between relative overflow-hidden group">
+            <div className="relative z-10">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"><Award size={24} /></div>
+              <h3 className="text-sm font-bold text-slate-400 uppercase">Your Skillset</h3>
+              <div className="text-2xl font-black text-slate-800 mt-1">{loading ? '...' : `${skills.length} Skills Detected`}</div>
+            </div>
+            
+            {/* MINI UPLOAD BUTTON */}
+            <div className="absolute top-6 right-6 z-10">
+               <label className="cursor-pointer group/btn" title="Update Resume">
+                  <input type="file" accept=".pdf" className="hidden" onChange={handleCVUpload} disabled={uploading} />
+                  <div className="p-2 bg-slate-50 hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 rounded-xl transition-colors border border-slate-100 group-hover/btn:border-indigo-200">
+                    <Upload size={16} />
+                  </div>
+               </label>
+            </div>
+          </motion.div>
+          
+          {/* CARD 2: READINESS PIE CHART */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex items-center gap-6">
+             <ReadinessScore score={marketReadiness} />
+             <div>
+               <h3 className="text-sm font-bold text-slate-400 uppercase mb-1">Career Readiness</h3>
+               <div className="text-xl font-black text-slate-800">Market Match</div>
+               {marketReadiness > 0 && <span className="text-xs font-bold text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-md mt-1 inline-block border border-emerald-100">Analyzed</span>}
+             </div>
+          </motion.div>
+
+          {/* CARD 3: TARGET ROLE */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-fuchsia-50 text-fuchsia-600 flex items-center justify-center mb-4"><Target size={24} /></div>
+              <h3 className="text-sm font-bold text-slate-400 uppercase">Target Role</h3>
+              <div className="text-2xl font-black text-slate-800 line-clamp-1 mt-1" title={user?.job_title || 'Unset'}>
+                {user?.job_title ? user.job_title : <span className="text-slate-300 italic">Not set</span>}
               </div>
-            </motion.div>
-          )}
-        </header>
+            </div>
+          </motion.div>
+        </div>
 
-        <div className="grid lg:grid-cols-12 gap-10">
-          <div className="lg:col-span-8 space-y-10">
-            {/* Action Card: CV Upload */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`card-premium p-8 bg-gradient-to-br from-white to-slate-50 border-2 ${
-                !loading && skills.length > 0
-                  ? "border-emerald-100/50"
-                  : "border-transparent"
-              }`}
-            >
-              {loading ? (
-                <div className="animate-pulse flex flex-col md:flex-row items-center gap-6">
-                  <div className="w-12 h-12 bg-slate-200 rounded-2xl shrink-0"></div>
-                  <div className="space-y-3 flex-1 w-full text-center md:text-left">
-                    <div className="h-6 bg-slate-200 rounded w-1/3 mx-auto md:mx-0"></div>
-                    <div className="h-4 bg-slate-200 rounded w-2/3 mx-auto md:mx-0"></div>
-                  </div>
-                </div>
-              ) : skills.length > 0 ? (
-                /* Compact Active State */
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-500 shadow-sm">
-                      <CheckCircle2 size={24} />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-xl font-bold text-slate-900">
-                          Resume Data Active
-                        </h2>
-                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase rounded-md tracking-wider">
-                          Scanned
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500 font-medium">
-                        Your profile is synced with your latest professional
-                        data.
-                      </p>
-                    </div>
-                  </div>
+        {/* MAIN SPLIT AREA */}
+        <div className="grid lg:grid-cols-12 gap-8">
+          
+          {/* LEFT: SKILLS & RADAR */}
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 }} className="lg:col-span-8 space-y-8">
+            <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200">
+               <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center justify-between">
+                 <span>Extracted Expertise</span>
+                 <span className="text-xs font-bold bg-slate-100 text-slate-500 px-3 py-1 rounded-md">{skills.length} tracked</span>
+               </h3>
+               
+               {loading ? (
+                 <div className="flex flex-wrap gap-2 animate-pulse">
+                    {[1, 2, 3, 4, 5, 6].map(k => <div key={k} className="h-8 w-24 bg-slate-200 rounded-lg" />)}
+                 </div>
+               ) : hasSkills ? (
+                 <>
+                   <div className="flex flex-wrap gap-2 bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-8 min-h-[100px]">
+                     {skills.map(skill => (
+                       <SkillChip key={skill.id} skill={skill} onRemove={removeSkill} />
+                     ))}
+                   </div>
 
-                  <label className="shrink-0 cursor-pointer group">
-                    <input
-                      type="file"
-                      accept=".pdf"
-                      onChange={handleCVUpload}
-                      disabled={uploading}
-                      className="hidden"
-                    />
-                    <div className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 rounded-xl text-slate-600 font-bold text-sm hover:border-primary hover:text-primary transition-all shadow-sm">
-                      <Upload size={16} />
-                      Update Resume
-                    </div>
-                  </label>
-                </div>
-              ) : (
-                /* Full Upload State */
-                <>
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="w-12 h-12 bg-primary/5 rounded-2xl flex items-center justify-center text-primary">
-                      <Upload size={24} />
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-slate-900">
-                        Optimize Your Resume
-                      </h2>
-                      <p className="text-sm text-slate-500 font-medium">
-                        Extract skills and identify hidden potential.
-                      </p>
-                    </div>
-                  </div>
+                   <hr className="border-slate-100 mb-8" />
 
-                  <label className="group block relative cursor-pointer">
-                    <input
-                      type="file"
-                      accept=".pdf"
-                      onChange={handleCVUpload}
-                      disabled={uploading}
-                      className="hidden"
-                    />
-                    <div className="border-2 border-dashed border-slate-200 rounded-2xl p-12 text-center group-hover:border-primary group-hover:bg-white transition-all duration-300">
-                      <div className="w-16 h-16 bg-slate-50 group-hover:bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors">
-                        <Upload
-                          className="text-slate-400 group-hover:text-primary transition-colors"
-                          size={28}
-                        />
-                      </div>
-                      <h3 className="text-lg font-bold text-slate-700">
-                        Drop your resume here or{" "}
-                        <span className="text-primary underline decoration-primary/30 underline-offset-4">
-                          browse
-                        </span>
-                      </h3>
-                      <p className="text-slate-400 text-sm mt-2">
-                        Maximum file size: 5MB (PDF only)
-                      </p>
-                    </div>
-                  </label>
-                </>
-              )}
-            </motion.div>
-
-            {/* Skills Dashboard */}
-            <section className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-8 bg-secondary rounded-full" />
-                  <h3 className="text-2xl font-bold text-slate-900">
-                    Extracted Expertise
-                  </h3>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-slate-400 font-bold text-sm uppercase tracking-widest">
-                    {skills.length} Skills
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid lg:grid-cols-12 gap-6">
-                <div className="lg:col-span-12">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {loading ? (
-                      [...Array(6)].map((_, i) => (
-                        <div
-                          key={i}
-                          className="h-[52px] bg-slate-200 animate-pulse rounded-xl"
-                        />
-                      ))
-                    ) : skills.length === 0 ? (
-                      <div className="col-span-full border-2 border-dashed border-slate-200 py-16 text-center rounded-2xl bg-white/50">
-                        <p className="text-slate-400 font-bold">
-                          No skills detected yet. Upload your CV to start.
-                        </p>
-                      </div>
-                    ) : (
-                      skills.map((skill) => (
-                        <SkillChip
-                          key={skill.id}
-                          skill={skill}
-                          onRemove={removeSkill}
-                        />
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                {skills.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="lg:col-span-12 card-premium p-6 bg-white"
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
-                        <Award size={14} className="text-secondary" />
-                        Skill Matrix Analysis
-                      </h4>
-                    </div>
-                    <div className="flex flex-col md:flex-row items-center gap-8">
-                      <div className="w-full md:w-1/2">
-                        <SkillRadar skills={skills} />
-                      </div>
-                      <div className="w-full md:w-1/2 space-y-4">
-                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                          <p className="text-xs font-bold text-slate-500 uppercase tracking-tighter mb-1">
-                            Focus Area
-                          </p>
-                          <p className="font-bold text-slate-900">
-                            {skills.length > 5
-                              ? "Technical Depth & Architecture"
-                              : "Foundational Growth"}
-                          </p>
-                          <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                            {skills.length > 5
-                              ? "Your profile shows strong mastery in core engineering tools."
-                              : "Focus on expanding your core technical stack to match top-tier roles."}
+                   <h4 className="text-sm font-black uppercase text-slate-400 tracking-widest flex items-center gap-2 mb-6">
+                     <Award size={16} className="text-indigo-500" />
+                     Skill Matrix Analysis
+                   </h4>
+                   <div className="flex flex-col md:flex-row items-center gap-8 bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                     <div className="w-full md:w-1/2">
+                       <SkillRadar skills={skills} />
+                     </div>
+                     <div className="w-full md:w-1/2 space-y-4">
+                        <div className="p-5 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                          <p className="text-xs font-bold text-slate-500 uppercase tracking-tighter mb-1">Focus Area</p>
+                          <p className="font-bold text-slate-800">{skills.length > 5 ? "Technical Depth & Architecture" : "Foundational Growth"}</p>
+                          <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                            {skills.length > 5 ? "Your profile shows strong mastery in core engineering tools." : "Focus on expanding your core technical stack to match top-tier roles."}
                           </p>
                         </div>
-                        <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-                          <p className="text-xs font-bold text-emerald-600 uppercase tracking-tighter mb-1">
-                            Market Standout
-                          </p>
-                          <p className="font-bold text-emerald-900">
-                            {skills.find((s) =>
-                              s.name.toLowerCase().includes("react"),
-                            )
-                              ? "Modern Frontend"
-                              : "Applied Intelligence"}
-                          </p>
-                          <p className="text-[11px] text-emerald-600/70 mt-1 leading-relaxed">
-                            You perform exceptionally well in{" "}
-                            {skills.length > 0 ? skills[0].name : "analytical"}{" "}
-                            domains.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </div>
-            </section>
-          </div>
+                     </div>
+                   </div>
+                 </>
+               ) : (
+                 <div className="flex flex-col items-center justify-center py-16 text-center bg-slate-50 rounded-2xl border border-slate-100 border-dashed">
+                    <Award size={48} className="text-slate-300 mb-4" />
+                    <p className="text-slate-500 font-bold mb-2">No expertise data available</p>
+                    <p className="text-sm text-slate-400">Upload your resume above to extract your skills.</p>
+                 </div>
+               )}
+            </div>
+          </motion.div>
 
-          <aside className="lg:col-span-4 space-y-8">
-            {/* Recommendations Widget */}
-            <div className="card-premium p-8 bg-primary">
-              <div className="flex items-center gap-3 mb-6">
-                <Target className="text-accent" size={24} />
-                <h3 className="text-xl font-bold text-white">
-                  Prioritized Missing Skills
-                </h3>
-              </div>
-
-              <div className="space-y-6">
-                {recommendations?.length > 0 && (
-                  <div>
-                    <h4 className="flex items-center gap-2 text-[10px] font-black uppercase text-accent tracking-[.2em] mb-3">
-                      <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                      Global Gap Focus
+          {/* RIGHT: GAPS & QUICK LINKS */}
+          <aside className="lg:col-span-4 space-y-6">
+            
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.5 }} className="bg-slate-900 rounded-3xl p-6 sm:p-8 shadow-lg border border-slate-800">
+              <h3 className="text-xl font-black text-white mb-6 flex items-center gap-2">
+                <Target className="text-fuchsia-400" size={20} /> Prioritized Gaps
+              </h3>
+              
+              <div className="space-y-4">
+                {recommendations?.length > 0 ? (
+                  <>
+                    <h4 className="flex items-center gap-2 text-[10px] font-black uppercase text-fuchsia-400 tracking-[.2em] mb-4">
+                      <div className="w-1.5 h-1.5 rounded-full bg-fuchsia-400 animate-pulse" /> Global Gap Focus
                     </h4>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {recommendations.slice(0, 5).map((rec, idx) => (
-                        <div
-                          key={idx}
-                          className="bg-white/10 border border-white/10 p-4 rounded-xl hover:bg-white/20 transition-all cursor-default"
-                        >
-                          <p className="font-bold text-white text-sm">
-                            {rec.name || rec}
-                          </p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <TrendingUp size={12} className="text-accent" />
-                            <span className="text-[10px] text-slate-300 font-bold uppercase">
+                        <div key={idx} className="bg-white/5 border border-white/10 p-4 rounded-2xl hover:bg-white/10 transition-colors">
+                          <p className="font-bold text-white text-sm mb-2">{rec.name || rec}</p>
+                          <div className="flex items-center gap-2">
+                            <TrendingUp size={12} className="text-fuchsia-400" />
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                               {rec.importance_category ? rec.importance_category.replace(/_/g, ' ') : 'Market Gap'}
                             </span>
                           </div>
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
-
-                {!loading && skills.length === 0 && (
-                  <div className="text-center py-6">
-                    <p className="text-slate-400 text-xs italic">
-                      Personalized roadmap appears after CV analysis.
-                    </p>
+                  </>
+                ) : (
+                  <div className="py-8 text-center text-slate-400 text-sm">
+                    {loading ? "Analyzing gaps..." : hasSkills ? "All caught up! Excellent profile match." : "Upload CV to view personalized gaps."}
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
 
-            {/* Quick Actions */}
-            <div className="card-premium p-6">
-              <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest mb-4">
-                Quick Links
-              </h4>
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 }} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200">
+              <h4 className="text-xs font-black uppercase text-slate-400 tracking-widest mb-4">Quick Links</h4>
               <nav className="space-y-2">
-                <a
-                  href="/jobs"
-                  className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-all group"
-                >
-                  <span className="font-bold text-slate-700 group-hover:text-primary">
-                    Browse Jobs
-                  </span>
-                  <Search
-                    size={16}
-                    className="text-slate-400 group-hover:text-primary"
-                  />
-                </a>
-                <a
-                  href="/market"
-                  className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-all group"
-                >
-                  <span className="font-bold text-slate-700 group-hover:text-primary">
-                    Market Trends
-                  </span>
-                  <TrendingUp
-                    size={16}
-                    className="text-slate-400 group-hover:text-primary"
-                  />
-                </a>
+                <Link to="/jobs" className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/50 transition-all group">
+                  <span className="font-bold text-slate-700 group-hover:text-indigo-700 text-sm">Browse Jobs Matrix</span>
+                  <div className="bg-white p-1.5 rounded-lg shadow-sm text-slate-400 group-hover:text-indigo-600 transition-colors">
+                    <Search size={16} />
+                  </div>
+                </Link>
+                <Link to="/market" className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/50 transition-all group">
+                  <span className="font-bold text-slate-700 group-hover:text-indigo-700 text-sm">Market Intelligence</span>
+                  <div className="bg-white p-1.5 rounded-lg shadow-sm text-slate-400 group-hover:text-indigo-600 transition-colors">
+                    <TrendingUp size={16} />
+                  </div>
+                </Link>
               </nav>
-            </div>
+            </motion.div>
+
           </aside>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

@@ -1,17 +1,39 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { adminAPI } from '../../api/endpoints';
-import { Search, ChevronLeft, ChevronRight, Eye, ShieldAlert, ShieldCheck, Users } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { adminAPI } from '../../api/endpoints';
+import { 
+  Users, 
+  Search, 
+  Trash2, 
+  Eye, 
+  ChevronLeft, 
+  ChevronRight,
+  ShieldAlert,
+  ShieldCheck,
+  User as UserIcon
+} from 'lucide-react';
 import Swal from 'sweetalert2';
 
-export default function AdminUsers() {
+// Helper function to get user initials for the avatar
+const getInitials = (name) => {
+  if (!name) return '?';
+  const parts = name.split(' ');
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+};
+
+const AdminUsers = () => {
   const navigate = useNavigate();
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Pagination & Search State (URL Synced)
   const [searchParams, setSearchParams] = useSearchParams();
   const initialPage = parseInt(searchParams.get('page')) || 1;
   const initialSearch = searchParams.get('search') || '';
 
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState(initialSearch);
   const [activeSearch, setActiveSearch] = useState(initialSearch);
   const [currentPage, setCurrentPage] = useState(initialPage);
@@ -23,40 +45,33 @@ export default function AdminUsers() {
       const response = await adminAPI.getAdminUsers(currentPage, activeSearch);
       if (response.data && response.data.success) {
         setUsers(response.data.data.data);
-        setTotalPages(response.data.data.last_page);
-        setCurrentPage(response.data.data.current_page);
+        setTotalPages(response.data.data.last_page || 1);
+        setCurrentPage(response.data.data.current_page || 1);
         window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        setUsers([]);
       }
     } catch (err) {
       console.error('Failed to fetch admin users:', err);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Failed to load users list.',
-        toast: true,
-        position: 'top-end',
-        showConfirmButton: false,
-        timer: 3000
-      });
+      setUsers([]);
     } finally {
       setLoading(false);
     }
   }, [currentPage, activeSearch]);
 
-  // Debounced search logic
+  // Debounce logic
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      // Only reset page if the search actually changed from initial
       if (searchInput !== activeSearch) {
         setActiveSearch(searchInput);
-        setCurrentPage(1); // Reset to page 1 on new search
+        setCurrentPage(1);
       }
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchInput, activeSearch]);
 
-  // URL Synchronization
+  // URL Sync logic
   useEffect(() => {
     const params = {};
     if (currentPage > 1) params.page = currentPage;
@@ -67,172 +82,197 @@ export default function AdminUsers() {
 
   useEffect(() => {
     fetchUsers();
-  }, [currentPage, activeSearch, fetchUsers]);
+  }, [fetchUsers]);
 
-  const handleToggleBan = async (id, name, isBanned) => {
-    const actionText = isBanned ? 'unban' : 'ban';
-    const actionColor = isBanned ? '#10b981' : '#ef4444'; // Green for unban, Red for ban
-    const iconType = isBanned ? 'question' : 'warning';
-
+  const handleToggleBan = async (id, name, isCurrentlyBanned) => {
+    const actionText = isCurrentlyBanned ? 'unban' : 'ban';
     const result = await Swal.fire({
-      title: `${isBanned ? 'Unban' : 'Ban'} User?`,
+      title: `${isCurrentlyBanned ? 'Unban' : 'Ban'} User?`,
       text: `Are you sure you want to ${actionText} "${name}"?`,
-      icon: iconType,
+      icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: actionColor,
-      cancelButtonColor: '#94a3b8',
-      confirmButtonText: `Yes, ${actionText} them!`
+      confirmButtonColor: isCurrentlyBanned ? '#10b981' : '#f43f5e',
+      cancelButtonColor: '#cbd5e1',
+      confirmButtonText: `Yes, ${actionText} user`
     });
 
     if (result.isConfirmed) {
+      // Optimistic UI Update: We flip the is_banned status
+      setUsers((prev) => prev.map((u) => u.id === id ? { ...u, is_banned: !isCurrentlyBanned } : u));
       try {
-        const response = await adminAPI.toggleUserBan(id);
-        if (response.data && response.data.success) {
-          Swal.fire({
-            icon: 'success',
-            title: 'Success!',
-            text: response.data.message,
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000
-          });
-          // Optimistically update the user state
-          setUsers((prevUsers) =>
-            prevUsers.map((user) =>
-              user.id === id ? { ...user, is_banned: response.data.data.is_banned } : user
-            )
-          );
-        }
+        await adminAPI.toggleUserBan(id);
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: `User ${isCurrentlyBanned ? 'unbanned' : 'banned'} successfully`,
+          showConfirmButton: false,
+          timer: 2000
+        });
       } catch (err) {
-        console.error('Failed to toggle ban status:', err);
+        console.error('Failed to toggle user ban status:', err);
+        // Revert if failed
+        setUsers((prev) => prev.map((u) => u.id === id ? { ...u, is_banned: isCurrentlyBanned } : u));
         Swal.fire({
           icon: 'error',
           title: 'Error',
           text: err.response?.data?.message || `Failed to ${actionText} user.`,
-          toast: true,
-          position: 'top-end',
-          showConfirmButton: false,
-          timer: 3000
+          confirmButtonColor: '#6366f1'
         });
       }
     }
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto min-h-screen">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-             <Users className="text-primary" />
-             Users Management
-          </h1>
-          <p className="text-slate-500 mt-1 font-medium text-sm">Review, manage, and moderate all users in the system.</p>
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      
+      {/* Header Section */}
+      <div>
+        <h1 className="text-3xl font-black text-slate-800 flex items-center gap-3">
+          <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl">
+            <Users className="w-7 h-7" />
+          </div>
+          User Management
+        </h1>
+        <p className="text-slate-500 mt-2 text-sm font-medium">
+          View, manage, and moderate user accounts registered on Career Compass.
+        </p>
+      </div>
+
+      {/* Toolbar */}
+      <div className="bg-white p-2 border border-slate-200 rounded-2xl shadow-sm flex flex-col lg:flex-row justify-between items-stretch gap-2">
+        <div className="relative flex-1 flex items-center bg-slate-50 rounded-xl px-4 py-3">
+          <Search className="text-slate-400 mr-3" size={20} />
+          <input
+            type="text"
+            placeholder="Search users by name, email, or role..."
+            className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-slate-700 font-medium placeholder-slate-400"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
+          {loading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600 ml-3"></div>}
         </div>
       </div>
 
-      {/* Search Input Card */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 mb-6 flex items-center px-4">
-        <Search className="text-slate-400 mr-3" size={20} />
-        <input
-          type="text"
-          placeholder="Search by user name or email..."
-          className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-slate-700 font-medium placeholder-slate-400"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-        />
-        {loading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary ml-3"></div>}
-      </div>
-
-      {/* Users Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      {/* Table Card */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider hidden md:table-cell">ID</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">User Basics</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider hidden lg:table-cell">Job Title</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+          <table className="w-full text-left border-collapse min-w-[800px]">
+            <thead className="bg-slate-50/80 text-slate-500 uppercase text-xs font-bold tracking-wider border-b border-slate-200">
+              <tr>
+                <th className="p-5 w-2/5">User Details</th>
+                <th className="p-5">Profession</th>
+                <th className="p-5 text-center">Account Status</th>
+                <th className="p-5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {users.length > 0 ? (
-                users.map((user) => (
-                  <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4 md:table-cell hidden">
-                       <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-md">#{user.id}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-slate-900 mb-1">{user.name}</div>
-                      <div className="text-xs text-slate-500 font-medium">{user.email}</div>
-                      <div className="lg:hidden mt-1 text-xs text-slate-400">{user.job_title || 'No title set'}</div>
-                    </td>
-                    <td className="px-6 py-4 hidden lg:table-cell">
-                       <span className="text-sm font-medium text-slate-700">{user.job_title || <span className="text-slate-400 italic">Not set</span>}</span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                       {user.is_banned ? (
-                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">
-                               Banned
-                           </span>
-                       ) : (
-                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200">
-                               Active
-                           </span>
-                       )}
-                    </td>
-                    <td className="px-6 py-4 flex justify-end gap-2">
-                      <button
-                        onClick={() => navigate(`/admin/users/${user.id}`)}
-                        className="text-slate-400 hover:text-blue-500 p-2 rounded-xl hover:bg-blue-50 transition-colors inline-block"
-                        title="View Profile"
-                      >
-                        <Eye size={20} />
-                      </button>
-                      <button
-                        onClick={() => handleToggleBan(user.id, user.name, user.is_banned)}
-                        className={`p-2 rounded-xl transition-colors inline-block ${
-                            user.is_banned 
-                            ? 'text-slate-400 hover:text-green-500 hover:bg-green-50' 
-                            : 'text-slate-400 hover:text-red-500 hover:bg-red-50'
-                        }`}
-                        title={user.is_banned ? 'Unban User' : 'Ban User'}
-                      >
-                        {user.is_banned ? <ShieldCheck size={20} /> : <ShieldAlert size={20} />}
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
+              {loading && users.length === 0 ? (
+                 <tr>
+                 <td colSpan="4" className="p-12 text-center">
+                   <div className="flex flex-col items-center justify-center text-slate-400 space-y-3">
+                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                     <p className="font-medium text-sm">Loading users...</p>
+                   </div>
+                 </td>
+               </tr>
+              ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-slate-500 font-medium">
-                    {loading ? 'Searching users...' : 'No users found.'}
+                  <td colSpan="4" className="p-12 text-center">
+                    <div className="flex flex-col items-center justify-center text-slate-400 space-y-3">
+                      <ShieldAlert className="w-12 h-12 text-slate-300 stroke-1" />
+                      <p className="font-medium text-sm text-slate-500">No users found.</p>
+                      {activeSearch && <p className="text-xs">Try adjusting your search criteria.</p>}
+                    </div>
                   </td>
                 </tr>
+              ) : (
+                users.map((user) => (
+                  <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
+                    
+                    {/* User Details Column */}
+                    <td className="p-5">
+                      <div className="flex items-center gap-4">
+                        <div className="w-11 h-11 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center font-black text-sm shrink-0 shadow-sm">
+                          {getInitials(user.name)}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-800 text-sm">{user.name}</span>
+                          <span className="text-xs text-slate-500 mt-0.5 font-medium">{user.email}</span>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/*Profession Column */}
+                    <td className="p-5">
+                       <div className="flex flex-col items-start gap-2">
+                          
+                          <span className="flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded border border-slate-200">
+                            <UserIcon size={12} className="text-slate-400" />
+                            {user.job_title || 'No Job Title'}
+                          </span>
+                       </div>
+                    </td>
+
+                    {/* Status Column */}
+                    <td className="p-5 text-center">
+                        <div className="flex items-center justify-center gap-3">
+                          <span className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md ${
+                            !user.is_banned ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                          }`}>
+                            {!user.is_banned ? 'Active' : 'Banned'}
+                          </span>
+                        </div>
+                    </td>
+
+                    {/* Actions Column */}
+                    <td className="p-5 text-right">
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => navigate(`/admin/users/${user.id}`)}
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                          title="View Profile"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleToggleBan(user.id, user.name, user.is_banned)}
+                          className={`p-2 rounded-xl transition-all ${
+                            user.is_banned 
+                              ? 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50' 
+                              : 'text-slate-400 hover:text-rose-600 hover:bg-rose-50'
+                          }`}
+                          title={user.is_banned ? 'Unban User' : 'Ban User'}
+                        >
+                          {user.is_banned ? <ShieldCheck className="w-4 h-4" /> : <ShieldAlert className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </td>
+                    
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
         </div>
 
-        {/* Server-Side Pagination Controls */}
-        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50">
+        {/* Unified Server-Side Pagination */}
+        <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-slate-50">
           <span className="text-sm font-semibold text-slate-500">
-            Page {currentPage} of {totalPages}
+            Page <span className="text-slate-800">{currentPage}</span> of <span className="text-slate-800">{totalPages}</span>
           </span>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
               disabled={currentPage <= 1 || loading}
-              className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50 flex items-center gap-1 bg-white"
+              className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all disabled:opacity-40 disabled:hover:bg-white flex items-center gap-1 bg-white shadow-sm"
             >
                <ChevronLeft size={16} /> Prev
             </button>
             <button
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage >= totalPages || loading}
-              className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50 flex items-center gap-1 bg-white"
+              className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all disabled:opacity-40 disabled:hover:bg-white flex items-center gap-1 bg-white shadow-sm"
             >
                Next <ChevronRight size={16} />
             </button>
@@ -241,4 +281,6 @@ export default function AdminUsers() {
       </div>
     </div>
   );
-}
+};
+
+export default AdminUsers;

@@ -49,7 +49,7 @@ Route::get('/jobs/{id}', [JobController::class, 'show'])->whereNumber('id');
 Route::middleware('auth:sanctum')->group(function () {
     // Get authenticated user
     Route::get('/user', function (Request $request) {
-        return $request->user();
+        return $request->user()->load('skills');
     });
 
     // Profile Management
