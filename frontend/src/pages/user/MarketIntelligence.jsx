@@ -1,187 +1,57 @@
-import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Cell,
-  Legend,
-} from "recharts";
+  TrendingUp, Briefcase, DollarSign, Activity, Target, BarChart3, Sparkles, AlertCircle, RefreshCw
+} from 'lucide-react';
 import {
-  Briefcase,
-  Layers,
-  Zap,
-  Clock,
-  Search,
-  TrendingUp,
-  Award,
-  Target,
-  AlertCircle,
-  RefreshCw,
-  ChevronRight,
-  Star,
-} from "lucide-react";
-import { marketIntelligenceAPI } from "../../api/endpoints";
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis,
+  CartesianGrid, Tooltip, ResponsiveContainer, Cell
+} from 'recharts';
+import { marketIntelligenceAPI } from '../../api/endpoints';
 
-/* ─── Constants ─────────────────────────────────────────────────────────── */
-const PRIMARY = "#6366f1";
-const SECONDARY = "#8b5cf6";
-const ACCENT = "#06b6d4";
-const SUCCESS = "#10b981";
-const WARNING = "#f59e0b";
+// --- BULLETPROOF HELPERS ---
+export const safeArray = (arr) => Array.isArray(arr) ? arr : [];
+export const formatNumber = (num) => (Number(num) || 0).toLocaleString();
 
-const CATEGORY_STYLE = {
-  essential: {
-    label: "Essential",
-    bg: "bg-red-50",
-    text: "text-red-700",
-    bar: "#ef4444",
-  },
-  important: {
-    label: "Important",
-    bg: "bg-amber-50",
-    text: "text-amber-700",
-    bar: "#f59e0b",
-  },
-  nice_to_have: {
-    label: "Nice to Have",
-    bg: "bg-blue-50",
-    text: "text-blue-700",
-    bar: "#6366f1",
-  },
-};
-
-const SUGGESTED_ROLES = [
-  "Software Engineer",
-  "Frontend Developer",
-  "Backend Developer",
-  "Data Scientist",
-  "DevOps Engineer",
-  "Full Stack",
-  "React Developer",
-];
-
-/* ─── Skeleton loader ────────────────────────────────────────────────────── */
-function Skeleton({ className = "" }) {
-  return (
-    <div className={`animate-pulse bg-slate-200 rounded-xl ${className}`} />
-  );
+// --- BUILD TREND DATA (API may not provide time-series; fallback to empty or derived) ---
+function buildTrendData(overview, topSkillsFromOverview) {
+  const arr = safeArray(topSkillsFromOverview);
+  if (arr.length === 0) return [];
+  // Use top skills as proxy for "trend" - one point per skill (or empty)
+  return arr.slice(0, 7).map((s, i) => ({
+    date: s?.name ?? `Day ${i + 1}`,
+    count: Number(s?.count ?? s?.demand_count ?? 0) || 0,
+  }));
 }
 
-/* ─── Custom chart tooltip ────────────────────────────────────────────────── */
-function CustomTooltip({ active, payload, label }) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="bg-slate-800 text-white px-4 py-3 rounded-xl shadow-xl text-sm">
-      <p className="font-bold mb-1 truncate max-w-[180px]">{label}</p>
-      {payload.map((p, i) => (
-        <p key={i} className="flex items-center gap-2">
-          <span
-            className="w-2 h-2 rounded-full inline-block"
-            style={{ background: p.color }}
-          />
-          {p.name}:{" "}
-          <span className="font-bold">
-            {typeof p.value === "number" ? p.value.toLocaleString() : p.value}
-          </span>
-        </p>
-      ))}
-    </div>
-  );
-}
-
-/* ─── Stat Card ───────────────────────────────────────────────────────────── */
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  sub,
-  color,
-  loading,
-  delay = 0,
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay }}
-      className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 hover:shadow-premium transition-all"
-    >
-      {loading ? (
-        <>
-          <Skeleton className="h-10 w-10 rounded-xl mb-4" />
-          <Skeleton className="h-8 w-24 mb-2" />
-          <Skeleton className="h-4 w-32" />
-        </>
-      ) : (
-        <>
-          <div
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4`}
-            style={{ background: `${color}18` }}
-          >
-            <Icon size={24} style={{ color }} />
-          </div>
-          <p className="text-3xl font-black text-slate-900 mb-1">{value}</p>
-          <p className="text-sm font-semibold text-slate-500">{label}</p>
-          {sub && <p className="text-xs text-slate-400 mt-1">{sub}</p>}
-        </>
-      )}
-    </motion.div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════ */
 export default function MarketIntelligence() {
-  /* ─── State ────────────────────────────────────────────────────────────── */
   const [overview, setOverview] = useState(null);
-  const [topSkillsPrev, setTopSkillsPrev] = useState([]); // overview.top_skills
+  const [topSkillsOverview, setTopSkillsOverview] = useState([]);
   const [trendingSkills, setTrendingSkills] = useState([]);
-  const [typeFilter, setTypeFilter] = useState("all"); // 'all' | 'technical' | 'soft'
+  const [typeFilter, setTypeFilter] = useState('all');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
-  // Role search
-  const [roleInput, setRoleInput] = useState("");
-  const [roleData, setRoleData] = useState(null);
-  const [roleLoading, setRoleLoading] = useState(false);
-  const [roleError, setRoleError] = useState("");
-
-  /* ─── Initial data load ─────────────────────────────────────────────────── */
-  const loadMarketData = useCallback(async (type = "all") => {
+  const fetchMarketData = useCallback(async (type = 'all') => {
     try {
       setLoading(true);
-      setError("");
+      setError('');
       const [overviewRes, skillsRes] = await Promise.all([
         marketIntelligenceAPI.getOverview(),
-        marketIntelligenceAPI.getTrendingSkills(
-          15,
-          type === "all" ? null : type,
-        ),
+        marketIntelligenceAPI.getTrendingSkills(15, type === 'all' ? null : type),
       ]);
 
-      const ov =
-        overviewRes.data?.overview ??
-        overviewRes.data?.data ??
-        overviewRes.data;
+      const ov = overviewRes.data?.overview ?? overviewRes.data?.data ?? overviewRes.data ?? null;
       setOverview(ov);
-      setTopSkillsPrev(overviewRes.data?.top_skills ?? []);
+      setTopSkillsOverview(safeArray(overviewRes.data?.top_skills ?? []));
 
       const rawSkills = skillsRes.data?.skills ?? skillsRes.data?.data ?? [];
-      setTrendingSkills(Array.isArray(rawSkills) ? rawSkills : []);
+      setTrendingSkills(safeArray(rawSkills));
     } catch (err) {
-      console.error("Market data load failed:", err);
+      console.error('Market data load failed:', err);
       setError(
-        err.response?.data?.message ||
-          "Failed to load market data. Please ensure the backend is running.",
+        err.response?.data?.message ??
+          'Failed to load market data. Please ensure the backend is running.',
       );
     } finally {
       setLoading(false);
@@ -189,559 +59,233 @@ export default function MarketIntelligence() {
   }, []);
 
   useEffect(() => {
-    loadMarketData(typeFilter);
-  }, [typeFilter, loadMarketData]);
+    fetchMarketData(typeFilter);
+  }, [typeFilter, fetchMarketData]);
 
-  /* ─── Role search ────────────────────────────────────────────────────────── */
-  const searchRole = async (role) => {
-    const q = (role ?? roleInput).trim();
-    if (!q) return;
-    try {
-      setRoleLoading(true);
-      setRoleError("");
-      setRoleData(null);
-      const res = await marketIntelligenceAPI.getSkillDemand(q);
-      setRoleData(res.data);
-    } catch (err) {
-      const msg = err.response?.data?.message || `No data found for "${q}"`;
-      setRoleError(msg);
-    } finally {
-      setRoleLoading(false);
-    }
-  };
+  // --- Derived data (crash-proof) ---
+  const totalJobs = Number(overview?.total_jobs) || 0;
+  const totalRoles = Number(overview?.total_roles) || 0;
+  const avgSkillsPerJob = overview?.average_skills_per_job ?? '—';
+  const lastUpdate = overview?.last_data_update ?? 'N/A';
+  const topSkillName = topSkillsOverview[0]?.name ?? trendingSkills[0]?.name ?? 'N/A';
 
-  /* ─── Derived chart data ─────────────────────────────────────────────────── */
-  const trendingChartData = trendingSkills.slice(0, 15).map((s) => ({
-    name: s.name,
-    demand: s.demand_count,
-    importance: Math.round(s.average_importance ?? 0),
-    type: s.type,
-    category: s.category ?? "nice_to_have",
-  }));
+  // Trend chart: use top skills count as proxy when no time-series exists
+  const trendChartData = buildTrendData(overview, topSkillsOverview);
+  const hasTrendData = trendChartData.length > 0 && trendChartData.some((d) => d.count > 0);
 
-  const roleChartData = (roleData?.all_skills ?? []).slice(0, 12).map((s) => ({
-    name: s.name,
-    percentage: s.percentage,
-    category: s.importance_category ?? "nice_to_have",
-  }));
+  // Skills bar chart: vertical, need { name, value }
+  const skillsBarData = safeArray(trendingSkills).slice(0, 8).map((s) => ({
+    name: String(s?.name ?? ''),
+    value: Number(s?.demand_count ?? s?.count ?? 0) || 0,
+  })).filter((d) => d.name);
 
-  /* ─── Render ─────────────────────────────────────────────────────────────── */
-  return (
-    <div className="min-h-screen bg-slate-50 pb-20">
-      {/* ── Hero Header ──────────────────────────────────────────────────── */}
-      <div className="bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 text-white px-4 pt-10 pb-16">
-        <div className="max-w-7xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
-                <TrendingUp size={22} />
-              </div>
-              <span className="text-indigo-200 font-semibold text-sm uppercase tracking-widest">
-                Live Data
-              </span>
-            </div>
-            <h1 className="text-4xl lg:text-5xl font-black mb-2">
-              Market Intelligence
-            </h1>
-            <p className="text-indigo-200 text-lg max-w-xl">
-              Real-time job market insights, trending skills, and role-specific
-              demand analysis.
-            </p>
-          </motion.div>
+  // AI summary text (dynamic from overview)
+  const aiSummary = overview
+    ? `Based on ${formatNumber(totalJobs)} analyzed job listings across ${formatNumber(totalRoles)} unique roles, the market shows strong demand for skills like ${safeArray(topSkillsOverview).slice(0, 3).map((s) => s?.name).filter(Boolean).join(', ') || 'various technical skills'}. On average, each job requires ${avgSkillsPerJob} skills. ${lastUpdate !== 'N/A' ? `Data last updated ${lastUpdate}.` : ''}`
+    : 'Loading market insights...';
+
+  // --- SKELETON LOADING STATE ---
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f8fafc] py-8 px-4 sm:px-6 lg:px-8 font-sans pb-24">
+        <div className="max-w-7xl mx-auto space-y-6 animate-pulse">
+          <div className="flex justify-between items-end gap-4">
+            <div className="h-20 w-64 bg-slate-200 rounded-2xl" />
+            <div className="h-10 w-32 bg-slate-200 rounded-xl" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-32 bg-white rounded-3xl border border-slate-200" />
+            ))}
+          </div>
+          <div className="grid lg:grid-cols-12 gap-8">
+            <div className="lg:col-span-8 h-[340px] bg-white rounded-3xl border border-slate-200" />
+            <div className="lg:col-span-4 h-[340px] bg-white rounded-3xl border border-slate-200" />
+          </div>
+          <div className="h-48 bg-slate-200 rounded-3xl" />
         </div>
       </div>
+    );
+  }
 
-      <div className="max-w-7xl mx-auto px-4 -mt-8">
-        {/* ── Error Banner ─────────────────────────────────────────────────── */}
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 bg-red-50 border border-red-100 rounded-2xl p-4 flex items-center gap-3 text-red-700"
+  return (
+    <div className="min-h-screen bg-[#f8fafc] py-8 px-4 sm:px-6 lg:px-8 font-sans pb-24">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* HEADER */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-lg text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-3">
+              <Activity size={14} className="animate-pulse" /> Live Market Data
+            </div>
+            <h1 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight">
+              Market Intelligence
+            </h1>
+            <p className="text-slate-500 font-medium mt-1">Real-time insights on skill demand, salaries, and hiring trends.</p>
+          </div>
+          <button
+            onClick={() => fetchMarketData(typeFilter)}
+            className="px-4 py-2 bg-white border border-slate-200 text-slate-600 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 rounded-xl font-bold flex items-center justify-center gap-2 text-sm shadow-sm transition-all"
           >
-            <AlertCircle size={20} className="shrink-0" />
-            <span className="flex-1 font-medium">{error}</span>
-            <button
-              onClick={() => loadMarketData(typeFilter)}
-              className="flex items-center gap-1 text-xs font-bold hover:underline"
-            >
-              <RefreshCw size={14} /> Retry
-            </button>
-          </motion.div>
-        )}
-
-        {/* ── Stat Cards ───────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-          <StatCard
-            loading={loading}
-            delay={0.05}
-            icon={Briefcase}
-            color={PRIMARY}
-            label="Total Jobs Analyzed"
-            value={(overview?.total_jobs ?? 0).toLocaleString()}
-            sub="Across all sources"
-          />
-          <StatCard
-            loading={loading}
-            delay={0.1}
-            icon={Target}
-            color={SECONDARY}
-            label="Unique Job Roles"
-            value={(overview?.total_roles ?? 0).toLocaleString()}
-            sub="Distinct titles"
-          />
-          <StatCard
-            loading={loading}
-            delay={0.15}
-            icon={Layers}
-            color={ACCENT}
-            label="Avg Skills / Job"
-            value={overview?.average_skills_per_job ?? "—"}
-            sub="Required per posting"
-          />
-          <StatCard
-            loading={loading}
-            delay={0.2}
-            icon={Clock}
-            color={SUCCESS}
-            label="Data Freshness"
-            value={overview?.last_data_update ?? "N/A"}
-            sub="Last scrape run"
-          />
+            <RefreshCw size={16} /> Refresh Data
+          </button>
         </div>
 
-        {/* ── Trending Skills Bar Chart ─────────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="bg-white rounded-3xl shadow-sm border border-slate-100 p-7 mb-8"
-        >
-          {/* Chart header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Zap size={20} className="text-indigo-500" />
-                <h2 className="text-2xl font-black text-slate-900">
-                  Top Trending Skills
-                </h2>
-              </div>
-              <p className="text-slate-500 text-sm">
-                Most demanded skills across all job postings
-              </p>
-            </div>
-
-            {/* Type filter pills */}
-            <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-xl">
-              {["all", "technical", "soft"].map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setTypeFilter(t)}
-                  className={`px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${
-                    typeFilter === t
-                      ? "bg-white text-indigo-600 shadow-sm"
-                      : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  {t === "all"
-                    ? "All Skills"
-                    : t === "technical"
-                      ? "💻 Technical"
-                      : "🤝 Soft"}
-                </button>
-              ))}
-              <button
-                onClick={() => loadMarketData(typeFilter)}
-                className="ml-1 p-1.5 text-slate-400 hover:text-indigo-600 transition"
-                title="Refresh"
-              >
-                <RefreshCw size={14} />
-              </button>
-            </div>
+        {/* ERROR STATE */}
+        {error && (
+          <div className="bg-rose-50 text-rose-600 p-4 rounded-2xl flex items-center gap-3 border border-rose-100 font-bold text-sm">
+            <AlertCircle size={18} />
+            <span className="flex-1">{error}</span>
+            <button onClick={() => fetchMarketData(typeFilter)} className="flex items-center gap-1 text-xs underline hover:no-underline">
+              <RefreshCw size={14} /> Retry
+            </button>
           </div>
-
-          {loading ? (
-            <Skeleton className="h-72 w-full" />
-          ) : trendingChartData.length === 0 ? (
-            <div className="h-72 flex items-center justify-center text-slate-400 font-medium">
-              No skill data available yet. Run the scraper to collect job data.
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={320}>
-              <BarChart
-                data={trendingChartData}
-                margin={{ top: 5, right: 10, left: 0, bottom: 70 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis
-                  dataKey="name"
-                  angle={-38}
-                  textAnchor="end"
-                  tick={{ fontSize: 11, fill: "#64748b", fontWeight: 600 }}
-                  interval={0}
-                />
-                <YAxis
-                  tick={{ fontSize: 11, fill: "#94a3b8" }}
-                  axisLine={false}
-                  tickLine={false}
-                  label={{
-                    value: "Job Demand",
-                    angle: -90,
-                    position: "insideLeft",
-                    offset: 10,
-                    style: { fontSize: 11, fill: "#94a3b8" },
-                  }}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="demand" name="Job Demand" radius={[6, 6, 0, 0]}>
-                  {trendingChartData.map((entry, idx) => (
-                    <Cell
-                      key={idx}
-                      fill={idx < 3 ? PRIMARY : idx < 7 ? SECONDARY : "#a5b4fc"}
-                      opacity={0.9}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </motion.div>
-
-        {/* ── Skill Card Grid ───────────────────────────────────────────────── */}
-        {!loading && trendingSkills.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="mb-8"
-          >
-            <div className="flex items-center gap-2 mb-5">
-              <Star size={18} className="text-amber-500" />
-              <h2 className="text-xl font-black text-slate-900">
-                Skill Breakdown
-              </h2>
-            </div>
-
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-              {trendingSkills.slice(0, 10).map((skill, idx) => {
-                const catStyle =
-                  CATEGORY_STYLE[skill.category] ?? CATEGORY_STYLE.nice_to_have;
-                const maxDemand = trendingSkills[0]?.demand_count || 1;
-                const pct = Math.round((skill.demand_count / maxDemand) * 100);
-                return (
-                  <motion.div
-                    key={skill.id ?? idx}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.3 + idx * 0.04 }}
-                    className="bg-white rounded-2xl border border-slate-100 p-5 hover:shadow-premium transition-all group"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <span className="text-2xl font-black text-slate-200 group-hover:text-indigo-100 transition">
-                        #{idx + 1}
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide ${catStyle.bg} ${catStyle.text}`}
-                      >
-                        {catStyle.label}
-                      </span>
-                    </div>
-
-                    <h3 className="font-bold text-slate-900 text-sm leading-tight mb-1">
-                      {skill.name}
-                    </h3>
-                    <p className="text-xs text-slate-400 mb-3 capitalize">
-                      {skill.type}
-                    </p>
-
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs text-slate-500">
-                        <span>Demand</span>
-                        <span className="font-bold text-slate-700">
-                          {skill.demand_count} jobs
-                        </span>
-                      </div>
-                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${pct}%` }}
-                          transition={{
-                            delay: 0.5 + idx * 0.05,
-                            duration: 0.8,
-                            ease: "easeOut",
-                          }}
-                          className="h-full rounded-full"
-                          style={{ background: catStyle.bar }}
-                        />
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </motion.div>
         )}
 
-        {/* ── Role Search Section ───────────────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
-          className="bg-white rounded-3xl shadow-sm border border-slate-100 p-7 mb-8"
-        >
-          <div className="flex items-center gap-2 mb-2">
-            <Search size={20} className="text-indigo-500" />
-            <h2 className="text-2xl font-black text-slate-900">
-              Role Skill Demand
-            </h2>
-          </div>
-          <p className="text-slate-500 text-sm mb-6">
-            Enter a job role to see which skills are most demanded and their
-            relative importance.
-          </p>
-
-          {/* Search input */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              searchRole();
-            }}
-            className="flex gap-3 mb-5"
-          >
-            <div className="flex-1 flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus-within:border-indigo-400 transition">
-              <Search size={16} className="text-slate-400 shrink-0" />
-              <input
-                type="text"
-                value={roleInput}
-                onChange={(e) => setRoleInput(e.target.value)}
-                placeholder="e.g. Backend Developer, Data Scientist…"
-                className="flex-1 bg-transparent text-sm font-medium text-slate-800 placeholder-slate-400 outline-none"
-              />
-              {roleInput && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRoleInput("");
-                    setRoleData(null);
-                    setRoleError("");
-                  }}
-                  className="text-slate-400 hover:text-slate-600 text-lg leading-none"
-                >
-                  ×
-                </button>
-              )}
-            </div>
-            <button
-              type="submit"
-              disabled={!roleInput.trim() || roleLoading}
-              className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 disabled:opacity-50 transition-all flex items-center gap-2"
-            >
-              {roleLoading ? (
-                <RefreshCw size={16} className="animate-spin" />
-              ) : (
-                <ChevronRight size={16} />
-              )}
-              Analyze
-            </button>
-          </form>
-
-          {/* Suggested roles */}
-          <div className="flex flex-wrap gap-2 mb-6">
-            {SUGGESTED_ROLES.map((r) => (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+          {/* TYPE FILTER (all | technical | soft) */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {['all', 'technical', 'soft'].map((t) => (
               <button
-                key={r}
-                onClick={() => {
-                  setRoleInput(r);
-                  searchRole(r);
-                }}
-                className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-100 transition"
+                key={t}
+                onClick={() => setTypeFilter(t)}
+                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                  typeFilter === t ? 'bg-slate-900 text-white' : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'
+                }`}
               >
-                {r}
+                {t === 'all' ? 'All Skills' : t === 'technical' ? 'Technical' : 'Soft'}
               </button>
             ))}
           </div>
 
-          {/* Role error */}
-          {roleError && (
-            <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-100 rounded-xl text-amber-700 text-sm font-medium mb-4">
-              <AlertCircle size={18} />
-              {roleError}
+          {/* QUICK STATS ROW */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 relative overflow-hidden group">
+              <div className="absolute -right-4 -top-4 w-24 h-24 bg-indigo-50 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500" />
+              <div className="flex items-start justify-between relative z-10 mb-4">
+                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl"><Briefcase size={20} /></div>
+              </div>
+              <h3 className="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-1">Active Listings</h3>
+              <p className="text-3xl font-black text-slate-800">{formatNumber(totalJobs)}</p>
             </div>
-          )}
 
-          {/* Role loading skeleton */}
-          {roleLoading && (
-            <div className="space-y-4">
-              <Skeleton className="h-6 w-48" />
-              <Skeleton className="h-64 w-full" />
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 relative overflow-hidden group">
+              <div className="absolute -right-4 -top-4 w-24 h-24 bg-emerald-50 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500" />
+              <div className="flex items-start justify-between relative z-10 mb-4">
+                <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl"><TrendingUp size={20} /></div>
+              </div>
+              <h3 className="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-1">Unique Roles</h3>
+              <p className="text-3xl font-black text-slate-800">{formatNumber(totalRoles)}</p>
             </div>
-          )}
 
-          {/* Role results */}
-          <AnimatePresence mode="wait">
-            {roleData && !roleLoading && (
-              <motion.div
-                key={roleData.role_title}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-              >
-                {/* Summary stats */}
-                <div className="flex flex-wrap gap-4 mb-6">
-                  <div className="bg-indigo-50 rounded-2xl px-5 py-3">
-                    <p className="text-xs text-indigo-500 font-semibold mb-0.5">
-                      Role
-                    </p>
-                    <p className="font-black text-indigo-900">
-                      {roleData.role_title}
-                    </p>
-                  </div>
-                  <div className="bg-slate-50 rounded-2xl px-5 py-3">
-                    <p className="text-xs text-slate-500 font-semibold mb-0.5">
-                      Jobs Analyzed
-                    </p>
-                    <p className="font-black text-slate-900">
-                      {(roleData.total_jobs_analyzed ?? 0).toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="bg-slate-50 rounded-2xl px-5 py-3">
-                    <p className="text-xs text-slate-500 font-semibold mb-0.5">
-                      Unique Skills
-                    </p>
-                    <p className="font-black text-slate-900">
-                      {roleData.total_unique_skills ?? 0}
-                    </p>
-                  </div>
-                </div>
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 relative overflow-hidden group">
+              <div className="absolute -right-4 -top-4 w-24 h-24 bg-fuchsia-50 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500" />
+              <div className="flex items-start justify-between relative z-10 mb-4">
+                <div className="p-3 bg-fuchsia-50 text-fuchsia-600 rounded-2xl"><DollarSign size={20} /></div>
+              </div>
+              <h3 className="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-1">Avg Skills / Job</h3>
+              <p className="text-3xl font-black text-slate-800">{avgSkillsPerJob}</p>
+            </div>
 
-                {/* BarChart for role skills */}
-                {roleChartData.length > 0 ? (
-                  <div className="mb-6">
-                    <h3 className="text-base font-bold text-slate-700 mb-4">
-                      Top Skills by Demand %
-                    </h3>
-                    <ResponsiveContainer width="100%" height={280}>
-                      <BarChart
-                        data={roleChartData}
-                        margin={{ top: 5, right: 10, left: 0, bottom: 60 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                        <XAxis
-                          dataKey="name"
-                          angle={-35}
-                          textAnchor="end"
-                          tick={{
-                            fontSize: 11,
-                            fill: "#64748b",
-                            fontWeight: 600,
-                          }}
-                          interval={0}
-                        />
-                        <YAxis
-                          tick={{ fontSize: 11, fill: "#94a3b8" }}
-                          axisLine={false}
-                          tickLine={false}
-                          tickFormatter={(v) => `${v}%`}
-                        />
-                        <Tooltip
-                          content={<CustomTooltip />}
-                          formatter={(v) => [`${v}%`, "Demand"]}
-                        />
-                        <Bar
-                          dataKey="percentage"
-                          name="Demand %"
-                          radius={[6, 6, 0, 0]}
-                        >
-                          {roleChartData.map((entry, i) => (
-                            <Cell
-                              key={i}
-                              fill={
-                                CATEGORY_STYLE[entry.category]?.bar ?? PRIMARY
-                              }
-                              opacity={0.85}
-                            />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 relative overflow-hidden group">
+              <div className="absolute -right-4 -top-4 w-24 h-24 bg-amber-50 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500" />
+              <div className="flex items-start justify-between relative z-10 mb-4">
+                <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl"><Target size={20} /></div>
+              </div>
+              <h3 className="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-1">Top Skill Demand</h3>
+              <p className="text-3xl font-black text-slate-800 truncate" title={topSkillName}>{topSkillName}</p>
+            </div>
+          </div>
+
+          {/* CHARTS ROW */}
+          <div className="grid lg:grid-cols-12 gap-8">
+            {/* LEFT CHART: DEMAND TREND (AREA CHART) */}
+            <div className="lg:col-span-8 bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl"><Activity size={20} /></div>
+                  <div>
+                    <h2 className="text-lg font-black text-slate-800">Market Demand Trend</h2>
+                    <p className="text-xs font-bold text-slate-400">Top skills by demand (proxy)</p>
                   </div>
-                ) : null}
-
-                {/* Skills by category */}
-                {["essential", "important", "nice_to_have"].map((cat) => {
-                  const skills = roleData.skills_by_category?.[cat] ?? [];
-                  if (!skills.length) return null;
-                  const style = CATEGORY_STYLE[cat];
-                  return (
-                    <div key={cat} className="mb-5">
-                      <div
-                        className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wide mb-3 ${style.bg} ${style.text}`}
-                      >
-                        <Award size={12} />
-                        {style.label} Skills
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {skills.map((s, i) => (
-                          <div
-                            key={i}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold border ${style.bg} ${style.text} border-current border-opacity-20`}
-                          >
-                            <span>{s.name}</span>
-                            <span className="opacity-60">
-                              {s.percentage?.toFixed(0)}%
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-
-        {/* ── Insights Footer ───────────────────────────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 rounded-3xl p-8 text-white"
-        >
-          <h2 className="text-2xl font-black mb-6 flex items-center gap-3">
-            <span className="text-2xl">💡</span> How to Use This Data
-          </h2>
-          <div className="grid sm:grid-cols-3 gap-6">
-            {[
-              {
-                icon: "🎯",
-                title: "Data-Driven Learning",
-                desc: "Focus on skills ranked Essential — they appear in 70%+ of job postings for your target role.",
-              },
-              {
-                icon: "📊",
-                title: "Live Market Signals",
-                desc: "Data is refreshed automatically twice weekly from real job postings across multiple sources.",
-              },
-              {
-                icon: "🚀",
-                title: "Gap Analysis",
-                desc: "Use Role Skill Demand to compare with your own profile via the Gap Analysis feature.",
-              },
-            ].map((item) => (
-              <div key={item.title} className="flex flex-col gap-3">
-                <span className="text-3xl">{item.icon}</span>
-                <div>
-                  <p className="font-bold text-white mb-1">{item.title}</p>
-                  <p className="text-indigo-200 text-sm leading-relaxed">
-                    {item.desc}
-                  </p>
                 </div>
               </div>
-            ))}
+
+              <div className="h-[300px] w-full">
+                {hasTrendData ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={trendChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorTrend" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 600 }} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 600 }} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', border: 'none', color: '#fff', fontWeight: 'bold' }}
+                        itemStyle={{ color: '#818cf8' }}
+                      />
+                      <Area type="monotone" dataKey="count" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorTrend)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-slate-400 font-medium text-sm">
+                    No trend data available yet. Run the scraper to collect job data.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* RIGHT CHART: TOP SKILLS (BAR CHART) */}
+            <div className="lg:col-span-4 bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="p-2 bg-fuchsia-50 text-fuchsia-600 rounded-xl"><BarChart3 size={20} /></div>
+                <div>
+                  <h2 className="text-lg font-black text-slate-800">Top Skills</h2>
+                  <p className="text-xs font-bold text-slate-400">Most requested by employers</p>
+                </div>
+              </div>
+
+              <div className="h-[300px] w-full">
+                {skillsBarData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={skillsBarData} layout="vertical" margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                      <XAxis type="number" hide />
+                      <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: '#475569', fontSize: 11, fontWeight: 700 }} width={90} />
+                      <Tooltip
+                        cursor={{ fill: '#f8fafc' }}
+                        contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', border: 'none', color: '#fff', fontWeight: 'bold' }}
+                      />
+                      <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20} fill="#c026d3">
+                        {safeArray(skillsBarData).map((_, i) => (
+                          <Cell key={i} fill="#c026d3" />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-slate-400 font-medium text-sm">
+                    No skill data available yet.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* INSIGHTS / AI SUMMARY SECTION */}
+          <div className="bg-slate-900 rounded-3xl p-8 shadow-lg border border-slate-800 relative overflow-hidden">
+            <div className="absolute right-0 top-0 opacity-10 pointer-events-none">
+              <Sparkles size={150} className="text-indigo-400" />
+            </div>
+            <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3 relative z-10">
+              <Sparkles className="text-indigo-400" size={24} /> AI Market Summary
+            </h3>
+            <div className="text-slate-300 font-medium leading-relaxed max-w-3xl relative z-10 space-y-4">
+              <p>{aiSummary}</p>
+            </div>
           </div>
         </motion.div>
       </div>

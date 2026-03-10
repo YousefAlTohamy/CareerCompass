@@ -53,12 +53,7 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'User registered successfully',
             'data'    => [
-                'user'  => [
-                    'id'    => $user->id,
-                    'name'  => $user->name,
-                    'email' => $user->email,
-                    'role'  => $user->role,
-                ],
+                'user'  => $user,
                 'token' => $token,
             ],
         ], 201);
@@ -147,12 +142,7 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'Login successful',
             'data'    => [
-                'user'  => [
-                    'id'    => $user->id,
-                    'name'  => $user->name,
-                    'email' => $user->email,
-                    'role'  => $user->role,
-                ],
+                'user'  => $user,
                 'token' => $token,
             ],
         ]);

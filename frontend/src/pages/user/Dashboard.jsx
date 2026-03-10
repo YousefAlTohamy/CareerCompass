@@ -317,7 +317,14 @@ export default function Dashboard() {
                <Zap size={12} className="text-fuchsia-400" /> Next Best Action
              </span>
              
-             {hasSkills ? (
+             {loading ? (
+               <div className="space-y-4 animate-pulse">
+                 <div className="h-4 w-24 bg-white/10 rounded" />
+                 <div className="h-10 w-2/3 bg-white/10 rounded-xl" />
+                 <div className="h-4 w-1/2 bg-white/10 rounded" />
+                 <div className="h-12 w-40 bg-white/10 rounded-xl" />
+               </div>
+             ) : hasSkills ? (
                <>
                  <h2 className="text-3xl md:text-4xl font-black text-white">Ready to bridge the gap?</h2>
                  <p className="text-slate-400 font-medium">Run a gap analysis against the live market.</p>

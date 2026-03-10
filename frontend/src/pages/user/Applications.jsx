@@ -1,38 +1,42 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Briefcase,
-  MapPin,
-  Clock,
-  Trash2,
-  ExternalLink,
-  AlertCircle,
-  CheckCircle2,
-  Calendar,
-  ChevronRight,
-  Filter,
-  RefreshCw,
-} from 'lucide-react';
 import { Link } from 'react-router-dom';
+import {
+  Briefcase, MapPin, Calendar, ChevronRight, Trash2, ExternalLink, Activity,
+  BookmarkPlus, Send, Users, CheckCircle2, XCircle, Target, AlertCircle, Archive
+} from 'lucide-react';
 import applicationsAPI from '../../api/applications';
-import ProcessingAnimation from '../../components/ProcessingAnimation';
 import Swal from 'sweetalert2';
 
-/* ─── Status configuration ───────────────────────────────────────────────── */
-const STATUS_CONFIG = {
-  saved:        { label: 'Saved',        color: 'bg-slate-100 text-slate-600 border-slate-200' },
-  applied:      { label: 'Applied',      color: 'bg-blue-50 text-blue-600 border-blue-100' },
-  interviewing: { label: 'Interviewing', color: 'bg-amber-50 text-amber-600 border-amber-100' },
-  offered:      { label: 'Offered',      color: 'bg-emerald-50 text-emerald-600 border-emerald-100' },
-  rejected:     { label: 'Rejected',     color: 'bg-red-50 text-red-600 border-red-100' },
-  archived:     { label: 'Archived',     color: 'bg-gray-100 text-gray-500 border-gray-200' },
+// --- STATUS CONFIGURATION (API uses: saved, applied, interviewing, offered, rejected, archived) ---
+export const statusConfig = {
+  saved:        { label: 'Saved',        color: 'bg-slate-100 text-slate-700 border-slate-200', icon: BookmarkPlus },
+  applied:      { label: 'Applied',      color: 'bg-indigo-50 text-indigo-700 border-indigo-200', icon: Send },
+  interviewing: { label: 'Interviewing', color: 'bg-amber-50 text-amber-700 border-amber-200', icon: Users },
+  offered:      { label: 'Offer Received', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: CheckCircle2 },
+  rejected:     { label: 'Rejected',     color: 'bg-rose-50 text-rose-700 border-rose-200', icon: XCircle },
+  archived:     { label: 'Archived',     color: 'bg-slate-100 text-slate-500 border-slate-200', icon: Archive },
 };
+
+// --- RELATIVE DATE HELPER ---
+function getRelativeDate(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  return date.toLocaleDateString();
+}
 
 export default function Applications() {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('all');
+  const [activeTab, setActiveTab] = useState('all');
 
   useEffect(() => {
     loadApplications();
@@ -44,7 +48,6 @@ export default function Applications() {
       setLoading(true);
       setError(null);
       const response = await applicationsAPI.getApplications();
-      // Guard: use optional chaining + fallback to empty array
       setApplications(response.data?.data ?? []);
     } catch (err) {
       console.error('Failed to load applications:', err);
@@ -55,14 +58,13 @@ export default function Applications() {
   };
 
   /* ─── Status update ──────────────────────────────────────────────── */
-  const updateStatus = async (id, newStatus) => {
-    // Optimistic update
+  const handleStatusChange = async (id, newStatus) => {
     setApplications((prev) =>
       prev.map((app) => (app.id === id ? { ...app, status: newStatus } : app))
     );
     try {
       await applicationsAPI.updateApplicationStatus(id, newStatus);
-      const statusLabel = STATUS_CONFIG[newStatus]?.label || newStatus;
+      const statusLabel = statusConfig[newStatus]?.label || newStatus;
       Swal.fire({
         toast: true,
         position: 'top-end',
@@ -74,17 +76,16 @@ export default function Applications() {
       });
     } catch (err) {
       console.error('Failed to update status:', err);
-      // Rollback on error
       loadApplications();
       setError('Failed to update status. Please try again.');
     }
   };
 
   /* ─── Delete ─────────────────────────────────────────────────────── */
-  const deleteApplication = async (id) => {
+  const handleDelete = async (id) => {
     const result = await Swal.fire({
       title: 'Are you sure?',
-      text: "Remove this job from your tracker?",
+      text: 'Remove this job from your tracker?',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#6366f1',
@@ -97,13 +98,12 @@ export default function Applications() {
         title: 'font-black text-slate-800',
         content: 'font-medium text-slate-600',
         confirmButton: 'rounded-xl font-bold px-6 py-3',
-        cancelButton: 'rounded-xl font-bold px-6 py-3'
-      }
+        cancelButton: 'rounded-xl font-bold px-6 py-3',
+      },
     });
 
     if (!result.isConfirmed) return;
 
-    // Optimistic removal
     setApplications((prev) => prev.filter((app) => app.id !== id));
     try {
       await applicationsAPI.deleteApplication(id);
@@ -130,258 +130,227 @@ export default function Applications() {
 
   /* ─── Derived state ──────────────────────────────────────────────── */
   const filteredApps =
-    filter === 'all'
+    activeTab === 'all'
       ? applications
-      : applications.filter((app) => app.status === filter);
+      : applications.filter((app) => app.status === activeTab);
 
-  /* ─── Loading ────────────────────────────────────────────────────── */
-  if (loading) return <ProcessingAnimation isVisible={true} />;
+  const interviewCount = applications.filter((a) => a.status === 'interviewing').length;
 
-  /* ─── Render ─────────────────────────────────────────────────────── */
+  /* ─── SKELETON LOADING STATE ─────────────────────────────────────── */
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f8fafc] py-10 px-4 sm:px-6 lg:px-8 font-sans pb-24">
+        <div className="max-w-5xl mx-auto space-y-6 animate-pulse">
+          <div className="h-32 bg-white rounded-3xl border border-slate-200" />
+          <div className="flex gap-2 pb-2">
+            <div className="h-10 w-24 bg-slate-200 rounded-xl" />
+            <div className="h-10 w-20 bg-slate-200 rounded-xl" />
+            <div className="h-10 w-20 bg-slate-200 rounded-xl" />
+          </div>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-32 bg-white rounded-3xl border border-slate-200" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ─── RENDER ─────────────────────────────────────────────────────── */
   return (
-    <div className="min-h-screen bg-slate-50 pt-8 pb-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#f8fafc] py-10 px-4 sm:px-6 lg:px-8 font-sans pb-24">
+      <div className="max-w-5xl mx-auto space-y-8">
+        {/* HEADER SECTION */}
+        <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
 
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-          <div>
-            <motion.h1
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="text-4xl font-black text-primary tracking-tight"
-            >
-              Career <span className="text-secondary font-medium italic">Tracker</span>
-            </motion.h1>
-            <p className="text-slate-500 mt-2 font-medium">
-              Manage your professional pipeline and interview stages.
-            </p>
+          <div className="relative z-10">
+            <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3 mb-2">
+              <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl">
+                <Activity size={24} strokeWidth={2.5} />
+              </div>
+              Application Tracker
+            </h1>
+            <p className="text-slate-500 font-medium">Manage your saved opportunities and track your interview progress.</p>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Refresh button */}
-            <button
-              onClick={loadApplications}
-              className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-primary hover:border-primary transition-all shadow-sm"
-              title="Refresh"
-            >
-              <RefreshCw size={18} />
-            </button>
-
-            {/* Status filter */}
-            <div className="flex items-center gap-3 bg-white p-1 rounded-xl shadow-sm border border-slate-200">
-              <Filter size={18} className="ml-3 text-slate-400" />
-              <select
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                className="bg-transparent border-none text-sm font-bold text-slate-700 focus:ring-0 cursor-pointer pr-8"
-              >
-                <option value="all">All Applications</option>
-                {Object.entries(STATUS_CONFIG).map(([key, config]) => (
-                  <option key={key} value={key}>{config.label}</option>
-                ))}
-              </select>
+          {/* QUICK STATS */}
+          <div className="flex gap-4 relative z-10">
+            <div className="bg-slate-50 px-5 py-3 rounded-2xl border border-slate-100 text-center">
+              <p className="text-2xl font-black text-slate-800">{applications.length}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Tracked</p>
+            </div>
+            <div className="bg-indigo-50 px-5 py-3 rounded-2xl border border-indigo-100 text-center">
+              <p className="text-2xl font-black text-indigo-600">{interviewCount}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Interviews</p>
             </div>
           </div>
         </div>
 
         {/* Error banner */}
         {error && (
-          <div className="mb-8 p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 text-red-600 font-medium">
+          <div className="p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-3 text-rose-600 font-medium">
             <AlertCircle size={20} />
             <span className="flex-1">{error}</span>
-            <button
-              onClick={loadApplications}
-              className="text-xs font-bold underline hover:no-underline"
-            >
+            <button onClick={loadApplications} className="text-xs font-bold underline hover:no-underline">
               Retry
             </button>
           </div>
         )}
 
-        {/* Stats bar */}
-        {applications.length > 0 && (
-          <div className="flex flex-wrap gap-3 mb-8">
-            {Object.entries(STATUS_CONFIG).map(([key, conf]) => {
-              const count = applications.filter((a) => a.status === key).length;
-              if (!count) return null;
-              return (
-                <button
-                  key={key}
-                  onClick={() => setFilter(filter === key ? 'all' : key)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider border transition-all ${conf.color} ${
-                    filter === key ? 'ring-2 ring-offset-1 ring-current' : ''
-                  }`}
-                >
-                  {conf.label} · {count}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Empty state */}
-        {!loading && filteredApps.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-slate-200"
+        {/* TABS (FILTERS) */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 hide-scrollbar">
+          <button
+            onClick={() => setActiveTab('all')}
+            className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${
+              activeTab === 'all' ? 'bg-slate-900 text-white shadow-md' : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'
+            }`}
           >
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-300">
-              <Briefcase size={40} />
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 mb-2">
-              {filter === 'all' ? 'No applications tracked yet.' : `No "${STATUS_CONFIG[filter]?.label}" applications.`}
-            </h3>
-            <p className="text-slate-500 max-w-sm mx-auto mb-8">
-              {filter === 'all'
-                ? 'Start by saving jobs you like from the Jobs page.'
-                : 'Try selecting a different filter above.'}
-            </p>
-            {filter === 'all' ? (
-              <Link to="/jobs" className="btn-primary inline-flex items-center gap-2">
-                Discover Jobs <ChevronRight size={18} />
-              </Link>
-            ) : (
-              <button
-                onClick={() => setFilter('all')}
-                className="btn-primary inline-flex items-center gap-2"
-              >
-                Show All <ChevronRight size={18} />
-              </button>
-            )}
-          </motion.div>
-        )}
+            All Roles
+          </button>
+          {Object.entries(statusConfig).map(([key, config]) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(activeTab === key ? 'all' : key)}
+              className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${
+                activeTab === key ? 'bg-slate-900 text-white shadow-md' : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'
+              }`}
+            >
+              {config.label}
+            </button>
+          ))}
+        </div>
 
-        {/* Applications grid */}
-        <div className="grid gap-6">
+        {/* APPLICATIONS LIST */}
+        <div className="space-y-4">
+          {/* EMPTY STATE */}
+          {filteredApps.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-3xl p-16 text-center border border-slate-200 border-dashed shadow-sm"
+            >
+              <Briefcase size={48} className="mx-auto text-slate-300 mb-4" />
+              <h3 className="text-xl font-black text-slate-700 mb-2">
+                {activeTab === 'all' ? 'Your tracker is empty' : `No "${statusConfig[activeTab]?.label}" applications`}
+              </h3>
+              <p className="text-slate-500 font-medium mb-6">
+                {activeTab === 'all'
+                  ? 'Start browsing jobs and save them to track your progress.'
+                  : 'Try selecting a different filter above.'}
+              </p>
+              {activeTab === 'all' ? (
+                <Link
+                  to="/jobs"
+                  className="inline-flex items-center gap-2 bg-indigo-600 text-white font-bold py-3 px-6 rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+                >
+                  Explore Jobs <ChevronRight size={18} />
+                </Link>
+              ) : (
+                <button
+                  onClick={() => setActiveTab('all')}
+                  className="inline-flex items-center gap-2 bg-indigo-600 text-white font-bold py-3 px-6 rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+                >
+                  Show All <ChevronRight size={18} />
+                </button>
+              )}
+            </motion.div>
+          )}
+
+          {/* APPLICATION CARDS */}
           <AnimatePresence mode="popLayout">
-            {filteredApps.map((app, index) => (
-              <motion.div
-                key={app.id}
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ delay: index * 0.05 }}
-                className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-premium transition-all p-6"
-              >
-                <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+            {filteredApps.map((app, index) => {
+              const StatusIcon = statusConfig[app.status]?.icon ?? BookmarkPlus;
+              return (
+                <motion.div
+                  key={app.id}
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="bg-white rounded-3xl p-5 md:p-6 shadow-sm border border-slate-200 hover:shadow-md hover:border-indigo-200 transition-all group"
+                >
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    {/* Left: Job Info */}
+                    <div className="flex-1">
+                      <div className="flex flex-wrap items-center gap-3 mb-3">
+                        <span
+                          className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border flex items-center gap-1.5 ${
+                            statusConfig[app.status]?.color ?? statusConfig.saved.color
+                          }`}
+                        >
+                          <StatusIcon size={12} /> {statusConfig[app.status]?.label ?? app.status}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                          <Calendar size={12} /> Added {getRelativeDate(app.created_at)}
+                        </span>
+                      </div>
 
-                  {/* Job Primary Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between mb-2 gap-3">
-                      <Link to="/jobs" className="group/title min-w-0">
-                        <h3 className="text-xl font-bold text-slate-900 group-hover/title:text-primary transition-colors truncate">
-                          {app.job?.title ?? 'Untitled Job'}
-                        </h3>
-                      </Link>
-                      {/* Mobile status badge */}
-                      <div
-                        className={`lg:hidden shrink-0 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${
-                          STATUS_CONFIG[app.status]?.color ?? STATUS_CONFIG.saved.color
-                        }`}
-                      >
-                        {STATUS_CONFIG[app.status]?.label ?? app.status}
+                      <h3 className="text-xl font-black text-slate-800 mb-1 group-hover:text-indigo-600 transition-colors">
+                        {app.job?.title ?? 'Untitled Job'}
+                      </h3>
+
+                      <div className="flex flex-wrap items-center gap-4 text-sm font-bold text-slate-500">
+                        <span className="text-slate-700">{app.job?.company ?? '—'}</span>
+                        {app.job?.location && (
+                          <span className="flex items-center gap-1">
+                            <MapPin size={14} /> {app.job.location}
+                          </span>
+                        )}
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-y-2 gap-x-4 text-sm font-medium text-slate-500">
-                      {app.job?.company && (
-                        <span className="flex items-center gap-1.5 text-slate-900 font-bold">
-                          <Briefcase size={16} className="text-primary" />
-                          {app.job.company}
-                        </span>
-                      )}
-                      {app.job?.location && (
-                        <span className="flex items-center gap-1.5">
-                          <MapPin size={16} />
-                          {app.job.location}
-                        </span>
-                      )}
-                      <span className="flex items-center gap-1.5">
-                        <Calendar size={16} />
-                        Added {new Date(app.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Status picker & Actions */}
-                  <div className="flex flex-wrap items-center gap-4 border-t lg:border-t-0 pt-4 lg:pt-0">
-
-                    {/* Desktop status badge */}
-                    <div className="hidden lg:block">
-                      <div
-                        className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider border transition-all ${
-                          STATUS_CONFIG[app.status]?.color ?? STATUS_CONFIG.saved.color
-                        }`}
-                      >
-                        {STATUS_CONFIG[app.status]?.label ?? app.status}
-                      </div>
-                    </div>
-
-                    {/* Status dropdown */}
-                    <div className="relative flex-1 lg:flex-none">
+                    {/* Right: Actions & Status Update */}
+                    <div className="flex flex-col sm:flex-row items-center gap-3 md:pl-6 md:border-l border-slate-100 shrink-0">
+                      {/* Status Updater Dropdown */}
                       <select
                         value={app.status}
-                        onChange={(e) => updateStatus(app.id, e.target.value)}
-                        className="w-full lg:w-auto bg-slate-50 border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:ring-primary focus:border-primary px-4 py-2 cursor-pointer"
+                        onChange={(e) => handleStatusChange(app.id, e.target.value)}
+                        className="w-full sm:w-auto bg-slate-50 border border-slate-200 text-slate-700 text-sm font-bold rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer appearance-none"
                       >
-                        {Object.entries(STATUS_CONFIG).map(([key, config]) => (
-                          <option key={key} value={key}>{config.label}</option>
+                        {Object.entries(statusConfig).map(([key, config]) => (
+                          <option key={key} value={key}>
+                            {config.label}
+                          </option>
                         ))}
                       </select>
-                    </div>
 
-                    {/* Action buttons */}
-                    <div className="flex items-center gap-2">
-                      {/* Gap Analysis – corrected route from /gap-analysis/job/:id → /gap-analysis/:id */}
-                      <Link
-                        to={`/gap-analysis/${app.job?.id}`}
-                        className="p-2.5 bg-primary/5 text-primary hover:bg-primary hover:text-white rounded-xl transition-all"
-                        title="View Gap Analysis"
-                      >
-                        <CheckCircle2 size={20} />
-                      </Link>
-
-                      {/* Apply Link (original job URL) */}
-                      {app.job?.url && (
-                        <a
-                          href={app.job.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2.5 bg-slate-50 text-slate-600 hover:bg-slate-900 hover:text-white rounded-xl transition-all"
-                          title="Apply on job site"
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <Link
+                          to={`/gap-analysis/${app.job?.id}`}
+                          className="flex-1 sm:flex-none flex items-center justify-center p-2.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl transition-colors"
+                          title="View Gap Analysis"
                         >
-                          <ExternalLink size={20} />
-                        </a>
-                      )}
+                          <Target size={18} />
+                        </Link>
 
-                      {/* Remove */}
-                      <button
-                        onClick={() => deleteApplication(app.id)}
-                        className="p-2.5 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-all"
-                        title="Remove from tracker"
-                      >
-                        <Trash2 size={20} />
-                      </button>
+                        {app.job?.url && (
+                          <a
+                            href={app.job.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 sm:flex-none flex items-center justify-center p-2.5 bg-slate-50 text-slate-600 hover:bg-slate-900 hover:text-white rounded-xl transition-colors"
+                            title="Apply on job site"
+                          >
+                            <ExternalLink size={18} />
+                          </a>
+                        )}
+
+                        <button
+                          onClick={() => handleDelete(app.id)}
+                          className="flex-1 sm:flex-none flex items-center justify-center p-2.5 bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white rounded-xl transition-colors"
+                          title="Remove from Tracker"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                {/* Footer row */}
-                <div className="mt-6 pt-6 border-t border-slate-50 flex items-center justify-between text-xs font-medium text-slate-400">
-                  <div className="flex items-center gap-2">
-                    <Clock size={14} />
-                    Last updated {new Date(app.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                  {app.applied_at && (
-                    <div className="text-secondary font-bold">
-                      Applied on {new Date(app.applied_at).toLocaleDateString()}
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
         </div>
       </div>
