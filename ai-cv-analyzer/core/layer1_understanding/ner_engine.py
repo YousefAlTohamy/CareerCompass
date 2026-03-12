@@ -1,9 +1,9 @@
 import logging
 from typing import List, Dict
+import os
 
 try:
-    from transformers import pipeline, AutoModelForTokenClassification, AutoTokenizer
-    # Suppress verbose warnings unless error
+    from transformers import pipeline
     import warnings
     warnings.filterwarnings("ignore")
     TRANSFORMERS_AVAILABLE = True
@@ -17,33 +17,33 @@ class SkillNEREngine:
     _ner_pipeline = None
 
     def __new__(cls):
-        # Singleton pattern to ensure the large model is loaded only once in memory
         if cls._instance is None:
             cls._instance = super(SkillNEREngine, cls).__new__(cls)
             cls._instance._load_model()
         return cls._instance
 
     def _load_model(self):
-        """
-        Loads the Custom fine-tuned NER model or a pre-trained fallback.
-        """
         if not TRANSFORMERS_AVAILABLE:
             logger.error("HuggingFace Transformers not installed.")
             return
 
-        logger.info("Loading NER Transformer Model into memory...")
+        logger.info("Loading Custom NER Transformer Model into memory...")
         try:
             import os
+            # 1. جلب المسار المطلق للملف الحالي (ner_engine.py)
+            current_dir = os.path.dirname(os.path.abspath(__file__))
             
-            # The path where the Colab weights should be placed
-            custom_model_path = os.path.join("models", "ner_weights", "career_compass_ner_final")
+            # 2. الرجوع خطوتين للخلف للوصول لمجلد ai-cv-analyzer الأساسي
+            base_dir = os.path.abspath(os.path.join(current_dir, "..", ".."))
             
-            # Check if the user has downloaded the fine-tuned weights
+            # 3. بناء المسار الصحيح للموديل
+            custom_model_path = os.path.join(base_dir, "models", "ner_weights", "career_compass_ner_final")
+            
             if os.path.exists(custom_model_path):
-                logger.info(f"Custom Fine-Tuned Model found at {custom_model_path}. Loading...")
+                logger.info(f"✅ Custom Fine-Tuned Model found at {custom_model_path}. Loading...")
                 MODEL_NAME = custom_model_path
             else:
-                logger.warning(f"Custom model not found at {custom_model_path}. Falling back to pre-trained generic model.")
+                logger.warning(f"❌ Custom model not found at {custom_model_path}! Falling back to pre-trained generic model.")
                 MODEL_NAME = "dslim/bert-base-NER"  
             
             self._ner_pipeline = pipeline(
@@ -58,52 +58,51 @@ class SkillNEREngine:
             self._ner_pipeline = None
 
     def extract_entities(self, text: str) -> Dict[str, List[str]]:
-        """
-        Process the raw text and extract entities (Skills, Roles, Orgs).
-        """
         if self._ner_pipeline is None or not text:
-            return {"skills": [], "roles": [], "organizations": []}
+            return {"skills": [], "roles": [], "education": [], "certifications": []}
 
         try:
-            # Text can be very long. BERT models have a max length of 512 tokens.
-            # We truncate or chunk the text for inference.
-            # Simple chunking by paragraph for safety:
-            chunks = text.split("\n\n")
+            # Safe chunking by newlines to avoid cutting entities in half
+            chunks = [chunk for chunk in text.split("\n") if len(chunk.strip()) > 2]
             all_entities = []
             
-            for chunk in chunks:
-                if len(chunk.strip()) < 5:
-                    continue
-                # Truncate chunk to approx BERT token limit
-                safe_chunk = chunk[:2000]
-                results = self._ner_pipeline(safe_chunk)
-                all_entities.extend(results)
+            # Combine small lines into manageable chunks (~2000 chars) for BERT
+            current_chunk = ""
+            for line in chunks:
+                if len(current_chunk) + len(line) < 2000:
+                    current_chunk += line + " . "
+                else:
+                    all_entities.extend(self._ner_pipeline(current_chunk))
+                    current_chunk = line + " . "
+            if current_chunk:
+                all_entities.extend(self._ner_pipeline(current_chunk))
 
-            # Map the entities (Generic processing)
-            # In a Custom Skill NER, labels would be 'B-SKILL', 'I-SKILL'
-            skills = set()
-            roles = set()
-            orgs = set()
+            skills, roles, education, certifications = set(), set(), set(), set()
 
             for entity in all_entities:
                 word = entity.get("word", "").replace("#", "").strip()
                 label = entity.get("entity_group", "")
                 
-                # Mapping generic NER to CV concepts for demonstration
-                # 'MISC' or 'ORG' often capture technologies in generic models
-                if label in ["MISC", "SKILL"] and len(word) > 2:
+                # Filter out generic or very short noise
+                if len(word) < 2:
+                    continue
+                    
+                if label == "SKILL":
                     skills.add(word)
-                elif label == "PER" and "engineer" in word.lower():
+                elif label == "ROLE":
                     roles.add(word)
-                elif label == "ORG":
-                    orgs.add(word)
+                elif label == "EDU":
+                    education.add(word)
+                elif label == "CERT":
+                    certifications.add(word)
 
             return {
                 "skills": list(skills),
                 "roles": list(roles),
-                "organizations": list(orgs)
+                "education": list(education),
+                "certifications": list(certifications)
             }
             
         except Exception as e:
             logger.error(f"NER Extraction failed: {e}")
-            return {"skills": [], "roles": [], "organizations": []}
+            return {"skills": [], "roles": [], "education": [], "certifications": []}

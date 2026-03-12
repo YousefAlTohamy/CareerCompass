@@ -182,6 +182,11 @@ async def parse_cv(cv_file: UploadFile = File(...)):
         entities  = _ner_engine.extract_entities(raw_text)
         cv_skills = entities.get("skills", [])
 
+        # سطرين للطباعة عشان نشوف الداتا في التيرمنال وتتأكد إن الموديل شغال
+        logger.info(f"====== EXTRACTED ENTITIES ======")
+        logger.info(str(entities))
+        logger.info(f"================================")
+
         # Layer 2 — domain classification
         domain_probs      = _classifier.predict_domain(raw_text)
         primary_domain    = max(domain_probs, key=domain_probs.get) if domain_probs else "Unknown"
@@ -190,8 +195,12 @@ async def parse_cv(cv_file: UploadFile = File(...)):
         # Contact extraction
         contact_info = extract_contacts(raw_text)
 
+        # تحديث الـ Return عشان يبعت كل الداتا الجديدة للارافيل
         return {
             "skills":             cv_skills,
+            "roles":              entities.get("roles", []),
+            "education":          entities.get("education", []),
+            "certifications":     entities.get("certifications", []),
             "domain":             primary_domain,
             "domain_confidence":  domain_confidence,
             "contact_info":       contact_info,

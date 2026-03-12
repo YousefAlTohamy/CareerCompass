@@ -64,7 +64,7 @@ async def analyze_full_cv(file: UploadFile = File(...)) -> Dict[str, Any]:
     raw_text, extraction_method = process_document(file.filename, file_bytes)
     
     if not raw_text:
-         raise HTTPException(status_code=422, detail="Failed to extract any text from the document.")
+        raise HTTPException(status_code=422, detail="Failed to extract any text from the document.")
 
     ner_engine = SkillNEREngine()
     entities = ner_engine.extract_entities(raw_text)
@@ -85,7 +85,8 @@ async def analyze_full_cv(file: UploadFile = File(...)) -> Dict[str, Any]:
         "layer1_understanding": {
             "skills": entities.get("skills", []),
             "roles": entities.get("roles", []),
-            "organizations": entities.get("organizations", [])
+            "education": entities.get("education", []),
+            "certifications": entities.get("certifications", [])
         },
         "layer2_classification": {
             "primary_domain": primary_domain,
