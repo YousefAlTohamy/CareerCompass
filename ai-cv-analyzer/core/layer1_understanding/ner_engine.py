@@ -62,11 +62,11 @@ class SkillNEREngine:
             return {"skills": [], "roles": [], "education": [], "certifications": []}
 
         try:
-            # Safe chunking by newlines to avoid cutting entities in half
+            import re
             chunks = [chunk for chunk in text.split("\n") if len(chunk.strip()) > 2]
             all_entities = []
+            logger.info("🚨🚨🚨 REGEX FILTER IS RUNNING 🚨🚨🚨")
             
-            # Combine small lines into manageable chunks (~2000 chars) for BERT
             current_chunk = ""
             for line in chunks:
                 if len(current_chunk) + len(line) < 2000:
@@ -80,21 +80,39 @@ class SkillNEREngine:
             skills, roles, education, certifications = set(), set(), set(), set()
 
             for entity in all_entities:
-                word = entity.get("word", "").replace("#", "").strip()
+                word = entity.get("word", "").replace("#", "")
                 label = entity.get("entity_group", "")
                 
-                # Filter out generic or very short noise
-                if len(word) < 2:
-                    continue
+                # 1. تنظيف الكلمة من النقاط (Bullets) والرموز الخاصة مع الاحتفاظ بحروف البرمجة زي (C++, C#)
+                clean_word = re.sub(r'[^a-zA-Z0-9\+\-\#\.\s]', '', word).strip()
+                
+                # 2. إزالة النقاط الزائدة في آخر الكلمة (مثل: Deme.)
+                clean_word = re.sub(r'\.+$', '', clean_word).strip()
+                
+                # 3. شروط التصفية الصارمة (Filter Conditions)
+                if len(clean_word) < 2 or len(clean_word) > 30:
+                    continue  # تجاهل الحروف المفردة أو الجمل الطويلة جداً
+                
+                if clean_word.isdigit() or re.match(r'^\d{4}$', clean_word):
+                    continue  # تجاهل الأرقام والتواريخ البحتة
                     
+                if re.search(r'(http|www|\.com|\.org|gmail|github|linkedin)', clean_word, re.IGNORECASE):
+                    continue  # تجاهل الروابط والإيميلات
+                    
+                # تجاهل الكلمات الشائعة التي يتم التقاطها بالخطأ
+                stop_words = {'the', 'and', 'for', 'with', 'student', 'production', 'project', 'projects'}
+                if clean_word.lower() in stop_words:
+                    continue
+
+                # 4. التوزيع
                 if label == "SKILL":
-                    skills.add(word)
+                    skills.add(clean_word)
                 elif label == "ROLE":
-                    roles.add(word)
+                    roles.add(clean_word)
                 elif label == "EDU":
-                    education.add(word)
+                    education.add(clean_word)
                 elif label == "CERT":
-                    certifications.add(word)
+                    certifications.add(clean_word)
 
             return {
                 "skills": list(skills),
