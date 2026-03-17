@@ -35,15 +35,15 @@ ai-hybrid-orchestrator/
 
 ```bash
 cd ai-hybrid-orchestrator
-uvicorn main_api:app --host 0.0.0.0 --port 8000 --reload
+uvicorn main_api:app --host 0.0.0.0 --port 8001 --reload
 ```
 
-- Swagger UI: **http://127.0.0.1:8000/docs**
-- Health check: **http://127.0.0.1:8000/**
+- Swagger UI: **http://127.0.0.1:8001/docs**
+- Health check: **http://127.0.0.1:8001/**
 
-### Startup Behaviour
+### Startup & Lifecycle (FastAPI Lifespan)
 
-On startup, the gateway loads all 3 heavy AI models **once** into memory (Singleton via FastAPI `lifespan`):
+On startup, the gateway utilizes an **async context manager (Lifespan)** to load all heavy AI models exactly **once** into memory as Singletons. This prevents multi-gigabyte memory bloat during concurrent requests:
 
 | Model                      | Loaded By            | Purpose                                |
 | -------------------------- | -------------------- | -------------------------------------- |
@@ -142,6 +142,25 @@ $response = Http::attach('cv_file', $fileContents, $fileName)
 
 ---
 
+### `POST /test-source` & `POST /scrape-jobs`
+
+**Diagnostic and Background Scraping Orchestration.**
+
+These endpoints are consumed by Laravel's `TestSources` diagnostics and `ProcessMarketScraping` background jobs. They perform automated URL injection and credential management:
+
+- **Diagnostic Routing**: `/test-source` validates a single source configuration by constructing technical endpoints on-the-fly.
+- **Bulk Orchestration**: `/scrape-jobs` loops through multiple active sources in a single request, aggregating jobs for the primary database.
+
+> [!TIP]
+> **Adzuna API Injector**:
+> The gateway features a specialized **Adzuna Injector**. If a source endpoint contains `adzuna.com`, the orchestrator automatically:
+> 1. Injects `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` from the local `.env` file.
+> 2. Maps standard Laravel search keys (`q`, `search`) to Adzuna's `what` parameter.
+> 3. Maps `limit` to `results_per_page`.
+> This allows the Laravel admin panel to remain source-agnostic while the Python gateway handles the technical API specifics.
+
+---
+
 ### `POST /api/v1/hybrid-match`
 
 **Compute a weighted hybrid match score between a CV and a job description.**
@@ -196,7 +215,9 @@ info = extract_contacts(raw_cv_text)
 | Phone    | Optional `+country` · optional `(area)` · 7–15 digit blocks        |
 | LinkedIn | `linkedin.com/in/<handle>` — adds `https://` if missing            |
 | GitHub   | `github.com/<user>` — adds `https://` if missing                   |
-| Location | Keyword-anchored: `Location:` · `Address:` · `Based in:` · `City:` |
+| Location | **Heuristic Anchors**: `Location:` · `Address:` · `City:` · `Residing in:` |
+
+**Location Hygiene**: Location strings are stripped of punctuation and filtered by length (2–120 characters) to avoid extracting non-address paragraph noise.
 
 ---
 
@@ -226,14 +247,15 @@ Final Score = (Semantic Score × 60%) + (TF-IDF Score × 40%)
 
 ## Namespace Isolation
 
-Both engines expose a top-level `core/` package. Resolved in both `main_api.py` and `test_api.py` by:
+Both engines (`ai-job-miner` and `ai-cv-analyzer`) expose a top-level `core/` package, creating a collision risk. To solve this, the gateway implements a **Dynamic Cache Purging** strategy:
 
-1. **`_wipe_core()`** — removes all `core` and `core.*` entries from `sys.modules`
-2. **`_set_path_exclusive(root)`** — rebuilds `sys.path` with only `root` as the active engine
-3. Load **ai-cv-analyzer** exclusively first → its `core` wins
-4. Call `_wipe_core()` again → wipe cv-analyzer's `core.*` from the cache
-5. Load **ai-job-miner** exclusively → `core.engine` is re-discovered cleanly
-6. Restore both roots to `sys.path` for runtime intra-package imports
+1. **`_wipe_core()`**: Strictly iterates through `sys.modules` and deletes any keys belonging to the `core` or `core.*` namespace.
+2. **`_set_path_exclusive(root)`**: Dynamically modifies `sys.path` to ensure ONLY the target engine's root is at index 0, while explicitly removing the competing engine's path.
+3. **Sequential Bootstrapping**:
+   - `ai-cv-analyzer` is loaded first -> its logic is cached.
+   - `_wipe_core()` is triggered.
+   - `ai-job-miner` is loaded -> its `core.engine` is re-bootstrapped without namespace pollution.
+4. **Path Restoration**: After final imports, both roots are restored to the environment for intra-package runtime imports.
 
 ---
 
@@ -273,5 +295,5 @@ pip install fastapi uvicorn python-multipart aiohttp beautifulsoup4 \
 | Phase 1–5    | ai-job-miner 5-phase scraping pipeline                                            | ✅     |
 | Phase 6a     | ai-cv-analyzer 3-layer ML pipeline                                                | ✅     |
 | Phase 6b     | Hybrid Orchestrator Facade (CLI runner)                                           | ✅     |
-| **Phase 6c** | **FastAPI Gateway + Contact Extractor**                                           | ✅     |
-| Phase 7      | Laravel integration — update `CvController`, `JobController` to call this gateway | 🔜     |
+| Phase 6c     | FastAPI Gateway + Contact Extractor                                               | ✅     |
+| **Phase 7**  | **Zero-Knowledge Contextual Refactor (DateLexer/SectionSegmenter)**               | ✅     |

@@ -4,6 +4,12 @@
 > **Layer 2 — Professional Domain Classification (Zero-Shot BART-MNLI)**  
 > **Layer 3 — Semantic Matching Engine (Sentence-BERT + Cosine Similarity)**
 
+### 🔍 Weighted Scoring Breakdown
+The final score is a composite of semantic context and absolute keyword verification:
+1. **Semantic Similarity (60%)**: Uses `all-MiniLM-L6-v2` to calculate the cosine distance between the CV text and Job Description.
+2. **Skill Overlap (40%)**: Strict Jaccard-style intersection of extracted skills vs. required job skills.
+
+> **Result**: A score $\geq 75\%$ indicates a high-fidelity match suitable for the "Recommended" carousel.
 A **3-Layer Deep Learning pipeline** that converts any CV file into a structured profile and intelligently matches it against a job description using both semantic embeddings and hard-skill overlap scoring.
 
 ---
@@ -36,6 +42,9 @@ A **3-Layer Deep Learning pipeline** that converts any CV file into a structured
 | **Framework** | FastAPI — async REST API gateway on port `8002`                                |
 | **ML Models** | `dslim/bert-base-NER`, `facebook/bart-large-mnli`, `all-MiniLM-L6-v2`          |
 | **OCR Stack** | PyMuPDF (text PDFs), EasyOCR + OpenCV (scanned images)                         |
+| **Lifecycle** | **Singleton Pattern** — all models pre-loaded at startup on port `8002`        |
+- **Port 8002 Clash**: Ensure no legacy services are running on `8002`. This port was explicitly isolated from the main orchestrator (`8001`) to allow concurrent model testing.
+- **Memory Overhead**: The 3-layer stack consumes ~4GB RAM on startup due to singleton model loading.
 | **Goal**      | Replace brittle keyword matching with transformer-based semantic understanding |
 
 ---
@@ -91,6 +100,9 @@ ai-cv-analyzer/
 | `ocr_pipeline.py`        | Scanned images & image-PDFs | EasyOCR + OpenCV pre-processing          |
 | `universal_extractor.py` | Any file                    | Smart router: text → OCR fallback        |
 | `ner_engine.py`          | Raw text                    | BERT NER: Skills · Roles · Organizations |
+
+**Advanced NER Tokenization Fix:**
+The `SkillNEREngine` implements a custom **Tokenization Fragmentation Fix**. When BERT's WordPiece tokenizer splits technical terms (e.g., `##script` from `javascript`), our engine recursively merges these segments back into canonical entities, ensuring data integrity for downstream Laravel matching.
 
 **Smart fallback chain (PDF):**
 
@@ -180,10 +192,12 @@ python main.py   # starts on port 8002
 
 To ensure independence from private/gated datasets, we use a **Synthetic Data Augmentation** strategy:
 
-1. **Synthetic Engine** (`train_ner.ipynb`): Generates 5,000+ realistic BIO-tagged resume samples (Skills, Roles, Experience).
-2. **Infrastructure:** Training runs on **Google Colab** (T4 GPU) fine-tuning `distilbert-base-cased`.
-3. **Auto-Detection:** `ner_engine.py` checks for `models/ner_weights/career_compass_ner_final/` — uses it if present, falls back to `dslim/bert-base-NER` otherwise.
-4. **Verification:** Colab notebook generates an F1-Score report for each training run.
+- **Goal**: Fine-tune `bert-base-NER` specifically for diverse technical resume formats.
+- **Data Engine**: `generate_tech_dataset.py` utilizes **Google Gemini-2.0-flash** to generate 1,000+ synthetic, "visually messy" resume snippets across random tech domains (DevOps, AI, Mobile, etc.).
+- **Annotation**: Automates BIO-tagging for internal model training with zero human intervention.
+- **Infrastructure:** Training runs on **Google Colab** (T4 GPU) fine-tuning `distilbert-base-cased`.
+- **Auto-Detection:** `ner_engine.py` checks for `models/ner_weights/career_compass_ner_final/` — uses it if present, falls back to `dslim/bert-base-NER` otherwise.
+- **Verification:** Colab notebook generates an F1-Score report for each training run.
 
 See [HOW_TO_TRAIN_MODEL.md](HOW_TO_TRAIN_MODEL.md) for the full step-by-step guide.
 

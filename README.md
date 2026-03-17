@@ -12,7 +12,7 @@ CareerCompass is an **advanced AI-powered career development platform** that com
 - **Smart Gap Analysis & Match Scoring**: Priority-based skill roadmap with dynamically calculated AI match scores rendered naturally in the jobs feed
 - **Seamless Discovery UX**: Intelligent React upload bounds capturing CV changes and gracefully routing users to real-time market opportunities
 - **Job Application Tracker**: Kanban-style lifecycle visualization for tracked applications
-- **Strict Payload Integrities**: External user requests are rigorously sanitized through Regex-powered `FormRequest` validations prior to backend processing
+- **Strict Payload Integrities**: External user requests are rigorously sanitized through **Regex-powered `FormRequest` validations** prior to backend processing
 - **Secure Split Routing Boundaries**: Frontend is rigidly divided into `ProtectedRoute`-shielded `/admin/*` schemas and consumer `/user/*` layouts
 - **Robust RBAC Layer**: All critical endpoints are shielded by `IsAdmin` middleware, universally bypassed initially by the safe `AdminUserSeeder` protocol
 
@@ -47,6 +47,8 @@ graph TB
 ```
 
 > **Security Note:** The `IsAdmin` middleware acts as a rigid backend ingress shield, bridging directly to the `ProtectedRoute` boundaries in the React SPA UI to enforce Role-Based Access Control (RBAC).
+>
+> **Security Boundary Handshake:** All administrative requests undergo a dual-verification process. The backend `IsAdmin` middleware validates the JWT payload against the `role` enum in the database. If unauthorized, a 403 Forbidden is emitted, which the frontend `Axios` interceptors catch to trigger an immediate fallback to the guest landing zone.
 
 ### Components
 
@@ -96,12 +98,12 @@ CareerCompass/
 │   │   │   ├── useOnDemandScraping.js      # Trigger on-demand scraping
 │   │   │   └── useScrapingStatus.js        # Poll scraping job status
 │   │   ├── pages/
-│   │   │   ├── admin/
+│   │   │   ├── admin/                      # 🔐 Secure Admin Domain (RBAC-protected)
 │   │   │   │   ├── AdminDashboard.jsx      # Admin — system-wide statistics overview
 │   │   │   │   ├── AdminJobs.jsx           # Admin — centralized job listings management
 │   │   │   │   ├── AdminSources.jsx        # Admin — scraping source management
 │   │   │   │   └── AdminUsers.jsx          # Admin — user base control and ban management
-│   │   │   ├── user/
+│   │   │   ├── user/                       # 👤 Standard User Domain
 │   │   │   │   ├── Applications.jsx        # Job Application Tracker (Kanban-style statuses)
 │   │   │   │   ├── Dashboard.jsx           # Main dashboard + 5s animated New Role Discovery UX
 │   │   │   │   ├── GapAnalysis.jsx         # Priority-based skill gap analysis
@@ -326,6 +328,9 @@ php artisan db:seed --class=AdminUserSeeder
 php artisan migrate:fresh --seed
 ```
 
+> [!IMPORTANT]
+> **Admin Ingress Protocol**: The `AdminUserSeeder.php` is the **critical bootstrap vector** for the platform. Because the standard registration logic is a dedicated "User-Only Sinkhole" (shielding the admin enum from unauthorized elevation), this seeder is the only method to cross the RBAC threshold initially.
+
 > **🔑 Default Admin Credentials (Crucial)**:
 > Upon running the `AdminUserSeeder`, a master administrative account is generated. This seeder is the **only** vector to bypass the RBAC guards initially, as the standard frontend React registration flow rigidly restricts all new sign-ups to the standard `user` enum:
 >
@@ -448,12 +453,12 @@ Use Task Scheduler to run `php artisan schedule:run` every minute.
 
 Once all services are started, check the following URLs:
 
-| Service     | URL                              | Expected Response                               |
+| Service | URL | Expected Response |
 | ----------- | -------------------------------- | ----------------------------------------------- |
-| Frontend    | http://localhost:5173            | React login/register UI                         |
-| Backend API | http://127.0.0.1:8000/api/health | `{"status": "ok"}`                              |
-| AI Gateway  | http://127.0.0.1:8001            | `{"status": "operational", "version": "1.0.0"}` |
-| AI Gateway  | http://127.0.0.1:8001/docs       | Swagger UI                                      |
+| Frontend | http://localhost:5173 | React login/register UI |
+| Backend API | http://127.0.0.1:8000/api/health | `{"status": "ok"}` |
+| AI Gateway | http://127.0.0.1:8001 | `{"status": "operational", "version": "1.0.0"}` |
+| AI Gateway | http://127.0.0.1:8001/docs | Swagger UI |
 
 > **Tip**: After logging in, you can access distinct dashboard views at `/user/dashboard` and the admin portal at `/admin/` (requires Admin Role). The secure `ProtectedRoute.jsx` component seamlessly intercepts any standard user attempting to traverse into the `/admin/` domain and safely deflects them backward.
 
@@ -463,93 +468,100 @@ Once all services are started, check the following URLs:
 
 ### Authentication & Health (Public)
 
-| Method | Endpoint        | Description                 |
+| Method | Endpoint | Description |
 | ------ | --------------- | --------------------------- |
-| GET    | `/api/health`   | Health check (version info) |
-| POST   | `/api/register` | Create new user account     |
-| POST   | `/api/login`    | Login and get token         |
+| GET | `/api/health` | Health check (version info) |
+| POST | `/api/register` | Create new user account |
+| POST | `/api/login` | Login and get token |
 
 > **Note**: Incoming payloads for registration, profile updates, and CV uploads are actively filtered by **strict Regex Validations** inside Laravel's `FormRequest` buffers. This layer guarantees comprehensive data sanitization (e.g. normalizing phone digits, asserting dense password entropy via regex dictionaries, and shielding URL schemas) significantly prior to Eloquent ORM mapping.
 
+> [!TIP]
+> **Technical Sidebar: Endpoint Hardening**:
+> The API utilizes a **Defensive Multi-Layer Validation** strategy:
+> 1. **Structural Validation**: Ensures required fields are present and types are correct.
+> 2. **Regex Constraints**: Enforces dense password entropy and strictly validates CV file-header signatures (PDF/Image).
+> 3. **RBAC Interceptors**: Universal `IsAdmin` middleware guards for all `/api/admin/*` routing, preventing unauthorized ingress at the network layer.
+
 ### User & Skills (Protected)
 
-| Method | Endpoint                | Auth | Description                                                                               |
+| Method | Endpoint | Auth | Description |
 | ------ | ----------------------- | ---- | ----------------------------------------------------------------------------------------- |
-| GET    | `/api/user`             | ✅   | Get current user                                                                          |
-| POST   | `/api/logout`           | ✅   | Logout (revoke tokens)                                                                    |
-| POST   | `/api/upload-cv`        | ✅   | Upload CV → streams to FastApi → returns `job_title`, `is_new_role` boolean, + `contacts` |
-| GET    | `/api/user/skills`      | ✅   | View user's skills                                                                        |
-| DELETE | `/api/user/skills/{id}` | ✅   | Remove a skill                                                                            |
+| GET | `/api/user` | ✅ | Get current user |
+| POST | `/api/logout` | ✅ | Logout (revoke tokens) |
+| POST | `/api/upload-cv` | ✅ | Upload CV → streams to FastApi → returns `job_title`, `is_new_role` boolean, + `contacts` |
+| GET | `/api/user/skills` | ✅ | View user's skills |
+| DELETE | `/api/user/skills/{id}` | ✅ | Remove a skill |
 
 > **Frontend Behavior**: The `upload-cv` response explicitly returns `is_new_role`. If the AI detected a domain change, React will silently sync the AuthContext payload, suppress immediate success popups, and dynamically transition the screen to a 5-second `ProcessingAnimation` indicating "Discovering market opportunities..." before cleanly piping the user into the `/jobs` page algorithm.
 
 ### Jobs (Public + Protected)
 
-| Method | Endpoint                       | Auth | Description                                                          |
+| Method | Endpoint | Auth | Description |
 | ------ | ------------------------------ | ---- | -------------------------------------------------------------------- |
-| GET    | `/api/jobs`                    | ❌   | Browse all jobs (paginated)                                          |
-| GET    | `/api/jobs/{id}`               | ❌   | View single job details                                              |
-| GET    | `/api/jobs/recommended`        | ✅   | Get AI-recommended jobs based on user's skills                       |
-| POST   | `/api/jobs/scrape`             | ✅   | Trigger job scraping (`query`, `max_results`, `use_samples` in body) |
-| POST   | `/api/jobs/scrape-if-missing`  | ✅   | On-demand scraping with status polling                               |
-| GET    | `/api/scraping-status/{jobId}` | ✅   | Check scraping job status                                            |
+| GET | `/api/jobs` | ❌ | Browse all jobs (paginated) |
+| GET | `/api/jobs/{id}` | ❌ | View single job details |
+| GET | `/api/jobs/recommended` | ✅ | Get AI-recommended jobs based on user's skills |
+| POST | `/api/jobs/scrape` | ✅ | Trigger job scraping (`query`, `max_results`, `use_samples` in body) |
+| POST | `/api/jobs/scrape-if-missing` | ✅ | On-demand scraping with status polling |
+| GET | `/api/scraping-status/{jobId}` | ✅ | Check scraping job status |
 
 ### Application Tracker (Protected)
 
-| Method | Endpoint                 | Auth | Description                                    |
+| Method | Endpoint | Auth | Description |
 | ------ | ------------------------ | ---- | ---------------------------------------------- |
-| GET    | `/api/applications`      | ✅   | List all tracked job applications              |
-| POST   | `/api/applications`      | ✅   | Save/track a job (updateOrCreate — safe dedup) |
-| GET    | `/api/applications/{id}` | ✅   | Get a specific application with job details    |
-| PATCH  | `/api/applications/{id}` | ✅   | Update application status or notes             |
-| DELETE | `/api/applications/{id}` | ✅   | Remove application from tracker                |
+| GET | `/api/applications` | ✅ | List all tracked job applications |
+| POST | `/api/applications` | ✅ | Save/track a job (updateOrCreate — safe dedup) |
+| GET | `/api/applications/{id}` | ✅ | Get a specific application with job details |
+| PATCH | `/api/applications/{id}` | ✅ | Update application status or notes |
+| DELETE | `/api/applications/{id}` | ✅ | Remove application from tracker |
 
 ### Gap Analysis (Protected)
 
-| Method | Endpoint                            | Auth | Description                                       |
+| Method | Endpoint | Auth | Description |
 | ------ | ----------------------------------- | ---- | ------------------------------------------------- |
-| GET    | `/api/gap-analysis/job/{id}`        | ✅   | Analyze match with job (essential/important/nice) |
-| POST   | `/api/gap-analysis/batch`           | ✅   | Batch analyze multiple jobs                       |
-| GET    | `/api/gap-analysis/recommendations` | ✅   | Get priority-based skill roadmap                  |
+| GET | `/api/gap-analysis/job/{id}` | ✅ | Analyze match with job (essential/important/nice) |
+| POST | `/api/gap-analysis/batch` | ✅ | Batch analyze multiple jobs |
+| GET | `/api/gap-analysis/recommendations` | ✅ | Get priority-based skill roadmap |
 
 ### Market Intelligence (Protected)
 
-| Method | Endpoint                             | Auth | Description                           |
+| Method | Endpoint | Auth | Description |
 | ------ | ------------------------------------ | ---- | ------------------------------------- |
-| GET    | `/api/market/overview`               | ✅   | Get market overview statistics        |
-| GET    | `/api/market/role-statistics/{role}` | ✅   | Get statistics for specific job role  |
-| GET    | `/api/market/trending-skills`        | ✅   | Get trending skills with demand data  |
-| GET    | `/api/market/skill-demand/{role}`    | ✅   | Get skill demand breakdown for a role |
+| GET | `/api/market/overview` | ✅ | Get market overview statistics |
+| GET | `/api/market/role-statistics/{role}` | ✅ | Get statistics for specific job role |
+| GET | `/api/market/trending-skills` | ✅ | Get trending skills with demand data |
+| GET | `/api/market/skill-demand/{role}` | ✅ | Get skill demand breakdown for a role |
 
 ### Admin — Control Panel & Scraping (Rigidly Protected by `IsAdmin` Middleware)
 
-| Method | Endpoint                                  | Auth | Description                      |
+| Method | Endpoint | Auth | Description |
 | ------ | ----------------------------------------- | ---- | -------------------------------- |
-| GET    | `/api/admin/dashboard/stats`              | ✅   | Get system-wide metrics Overview |
-| GET    | `/api/admin/jobs`                         | ✅   | View all centralized jobs        |
-| DELETE | `/api/admin/jobs/{id}`                    | ✅   | Delete a centralized job entry   |
-| GET    | `/api/admin/users`                        | ✅   | List and analyze user base       |
-| POST   | `/api/admin/users/{id}/toggle-ban`        | ✅   | Toggle user platform ban status  |
-| GET    | `/api/admin/scraping-sources`             | ✅   | List all scraping sources        |
-| POST   | `/api/admin/scraping-sources`             | ✅   | Create a new source              |
-| PUT    | `/api/admin/scraping-sources/{id}`        | ✅   | Update a source                  |
-| DELETE | `/api/admin/scraping-sources/{id}`        | ✅   | Delete a source                  |
-| PATCH  | `/api/admin/scraping-sources/{id}/toggle` | ✅   | Toggle active/inactive status    |
-| POST   | `/api/admin/scraping-sources/test`        | ✅   | Run diagnostics on all sources   |
-| GET    | `/api/admin/target-roles`                 | ✅   | List all target job roles        |
-| POST   | `/api/admin/target-roles`                 | ✅   | Create a new target role         |
-| PATCH  | `/api/admin/target-roles/{id}/toggle`     | ✅   | Toggle target role active status |
-| DELETE | `/api/admin/target-roles/{id}`            | ✅   | Delete a target role             |
-| POST   | `/api/admin/scraping/run-full`            | ✅   | Trigger full market scraping     |
+| GET | `/api/admin/dashboard/stats` | ✅ | Get system-wide metrics Overview |
+| GET | `/api/admin/jobs` | ✅ | View all centralized jobs |
+| DELETE | `/api/admin/jobs/{id}` | ✅ | Delete a centralized job entry |
+| GET | `/api/admin/users` | ✅ | List and analyze user base |
+| POST | `/api/admin/users/{id}/toggle-ban` | ✅ | Toggle user platform ban status |
+| GET | `/api/admin/scraping-sources` | ✅ | List all scraping sources |
+| POST | `/api/admin/scraping-sources` | ✅ | Create a new source |
+| PUT | `/api/admin/scraping-sources/{id}` | ✅ | Update a source |
+| DELETE | `/api/admin/scraping-sources/{id}` | ✅ | Delete a source |
+| PATCH | `/api/admin/scraping-sources/{id}/toggle` | ✅ | Toggle active/inactive status |
+| POST | `/api/admin/scraping-sources/test` | ✅ | Run diagnostics on all sources |
+| GET | `/api/admin/target-roles` | ✅ | List all target job roles |
+| POST | `/api/admin/target-roles` | ✅ | Create a new target role |
+| PATCH | `/api/admin/target-roles/{id}/toggle` | ✅ | Toggle target role active status |
+| DELETE | `/api/admin/target-roles/{id}` | ✅ | Delete a target role |
+| POST | `/api/admin/scraping/run-full` | ✅ | Trigger full market scraping |
 
 ### AI Gateway Endpoints — Phase 6 (Port 8000)
 
-| Method | Endpoint                   | Description                                                              |
+| Method | Endpoint | Description |
 | ------ | -------------------------- | ------------------------------------------------------------------------ |
-| GET    | `/`                        | Health check — `{"status": "operational", "version": "1.0.0"}`           |
-| POST   | `/api/v1/parse-cv`         | Upload CV (PDF/DOCX/image) → skills + domain + contact_info              |
-| POST   | `/api/v1/scrape-on-demand` | `source_url` (Form) → up to 5 parsed job dicts via ai-job-miner          |
-| POST   | `/api/v1/hybrid-match`     | JSON body (`cv_text`, `job_description`, skills) → weighted hybrid score |
+| GET | `/` | Health check — `{"status": "operational", "version": "1.0.0"}` |
+| POST | `/api/v1/parse-cv` | Upload CV (PDF/DOCX/image) → skills + domain + contact_info |
+| POST | `/api/v1/scrape-on-demand` | `source_url` (Form) → up to 5 parsed job dicts via ai-job-miner |
+| POST | `/api/v1/hybrid-match` | JSON body (`cv_text`, `job_description`, skills) → weighted hybrid score |
 
 ---
 
@@ -857,20 +869,15 @@ curl -s -X POST http://127.0.0.1:8000/api/register \
 - [x] **Phase 18: Personalized Recommended Jobs on Jobs Page** - Added `GET /api/jobs/recommended` endpoint (`JobController::getRecommended`) that reads the user's persisted `job_title`, strips seniority prefixes, LIKE-queries `job_postings`, and returns top 10 matching jobs. Fixed route conflict by adding `->whereNumber('id')` constraint to the public `/jobs/{id}` wildcard. Added `🎯 Recommended For You` horizontal-scroll snap carousel to `Jobs.jsx` with skeleton loaders, apply buttons, and gap analysis integration.
 - [x] **Phase 19: Premium UI Redesign** - Completely overhauled the frontend visual design with Framer Motion animations, scroll-aware glassmorphism Navbar, role-based admin Settings icon, new `ProcessingAnimation.jsx` overlay, renamed `/market-intelligence` route to `/market`, and applied premium Tailwind design tokens across all pages.
 - [x] **Phase 20: Full Frontend Integration & Market Intelligence Dashboard** - Completed end-to-end integration of the Jobs Portal and Applications Tracker: fixed `PUT → PATCH` mismatch in `applicationsAPI`, forwarded `params` in `jobsAPI.getJobs()` to enable search, added per-card **📌 Track** button with toast feedback in `Jobs.jsx`, fixed null-safety and gap-analysis route in `Applications.jsx`, added optimistic status updates and a refresh button. Rebuilt `MarketIntelligence.jsx` as a fully interactive recharts dashboard with animated stat cards, a Top-15 Trending Skills BarChart, filterable skill type pills, a skill card grid with demand progress bars, and a Role Skill Demand section with a searchable results chart and skill-category breakdown. Updated `Navbar.jsx` so the user avatar pill navigates to `/profile` with a hover dropdown (Profile + Logout) and a mobile `View Profile` shortcut.
-- [x] **Phase 21: Security, Structure & Branding Updates** - Implemented robust Role-Based Access Control (RBAC) securely segregating admin utilities and user areas. Restructured frontend pages into dedicated `/admin` and `/user` directories for a scalable architecture. Enhanced backend API validations for improved data integrity, and updated site branding with a custom SVG favicon and appropriate document titles.
-  - **Application Tracker**: Full Kanban 6-stage lifecycle (saved, applied, interviewing, offered, rejected, archived).
-  - **Visualization**: `recharts` integration driving the Market Intelligence dashboard.
-  - **Strict Regex Integrities**: Backend payload validation for robust data integrity boundaries.
+- [x] **Phase 21: Security, Structure & Branding Updates** - Implemented robust **Role-Based Access Control (RBAC)** securely segregating admin utilities and user areas. Restructured frontend pages into dedicated `/admin` and `/user` directories for a scalable architecture.
 - [x] **Phase 22: Comprehensive API Documentation Update** - Performed a 360-degree deep scan across all microservices (Laravel Backend, Python AI Engine, React Frontend) and comprehensively updated the `CareerCompass.postman_collection.json`. Added new endpoints for Recommended Jobs, Advanced CV Parsing, Target Roles Admin CRUD, and the complete Job Application Tracker lifecycle, ensuring perfectly aligned payloads, parameters, and authentication headers.
 - [x] **Phase 23: AI Gateway & Hybrid Orchestrator** - Renamed `ai-engine-scraping` → `ai-job-miner` and `ai-engine-v2` → `ai-cv-analyzer` to reflect domain roles. Built the `ai-hybrid-orchestrator` Facade with:
   - **`contact_extractor.py`**: Regex-based extractor for email, phone, LinkedIn, GitHub, and location.
   - **`hybrid_runner.py`**: CLI pipeline combining all 3 AI models (BERT-NER + BART-MNLI + MiniLM) with a weighted `Final = (Semantic × 60%) + (TF-IDF × 40%)` scoring formula.
   - **`main_api.py`**: FastAPI microservice (port 8000) with 3 Laravel-ready endpoints: `POST /api/v1/parse-cv`, `POST /api/v1/scrape-on-demand`, `POST /api/v1/hybrid-match`. Implements singleton model loading via FastAPI `lifespan`, CORS middleware, strict `try/except` error handling, and Pydantic request validation. Resolves `core/` namespace collision between engines via sequential `sys.path` swapping.
 - [x] **Phase 24: Architecture Hardening & Memory Optimization** - A massive stabilization update addressing edge-case AI data formats and memory leaks:
-  - **Service Layer Extraction**: Refactored massive `CvController` and `GapAnalysisController` files by extracting their heavy business logic into strictly-typed `CvProcessingService` and `GapAnalysisService` classes, firmly adhering to the Single Responsibility Principle and fixing a major memory leak in the Recommendations loop.
+  - **Service Layer Extraction**: Refactored massive `CvController` and `GapAnalysisController` files by extracting heavy business logic into strictly-typed `CvProcessingService` and `GapAnalysisService` classes, firmly adhering to the **Single Responsibility Principle (SRP)** and mitigating critical memory leaks.
   - **Scraping Format Resiliency**: Bulletproofed the FastAPI Gateway endpoint models with Python `Union` to safely catch empty array brackets `[]` from PHP, preventing 422 validations.
-  - **SQL String Safety**: Implemented a defensive `castToString()` parser array handler across all background Laravel queue jobs. When the NLP engine unpredictably returns `list` formats instead of scalar strings (such as locations), Laravel cleanly implodes them, fully preventing the fatal `PDO Array to string conversion` exceptions.
-  - **React Routing Security**: Hardened the public authentication flow by wrapping `Login` and `Register` components locally with a `<GuestRoute>` component to prevent authenticated users from navigating backward. Improved Profile layouts and fixed Dashboard `motion` import crashes.
   - **Scraping Scope Scopes**: Seeded `LinkedIn Egypt/MENA` as a primary HTML parsing source and narrowed the `Adzuna` API targeting via the central Database Seeder. Added missing `.env.example` templates to the hybrid orchestrator.
 - [x] **Phase 25: Master Admin Control Panel** - Expanded the `ProtectedRoute` boundaries into a comprehensive suite of Admin functionalities.
   - Added new React pages for `AdminDashboard.jsx`, `AdminJobs.jsx`, and `AdminUsers.jsx`.
@@ -1118,6 +1125,7 @@ composer dump-autoload
 - Make sure `GapAnalysisResource.php` uses the `toArray_()` helper (not `SkillResource::collection()`)
 - Clear caches: `php artisan cache:clear` and `php artisan config:clear`
 - Ensure the user has uploaded a CV and has at least some skills on their profile
+- **Zero-Knowledge Component Failure**: If the AI gateway fails to classify sections, ensure the `all-MiniLM-L6-v2` model is fully loaded in Layer 3.
 
 ### AI Gateway Import Errors
 
@@ -1193,6 +1201,20 @@ lsof -ti:8001 | xargs kill -9
 - **API Testing Guide**: [backend-api/TESTING.md](backend-api/TESTING.md)
 - **AI Gateway API Docs**: http://127.0.0.1:8001/docs (Interactive Swagger UI - when running)
 - **Postman Collection**: Import `CareerCompass.postman_collection.json` for 30+ ready-to-use API requests
+
+---
+
+## 🗺️ Roadmap
+
+| Phase           | Feature                                              | Status |
+| --------------- | ---------------------------------------------------- | ------ |
+| **Layer 1**     | Universal document extraction (PDF, DOCX, Image/OCR) | ✅     |
+| **Layer 2**     | Zero-shot domain classification (BART-MNLI)          | ✅     |
+| **Layer 3**     | Semantic matching engine (SBERT + cosine similarity) | ✅     |
+| **API**         | FastAPI gateway (`/analyze-cv`, `/match-job`)        | ✅     |
+| **Fine-Tuning** | Synthetic data engine + Colab training pipeline      | ✅     |
+| **Integration** | Hybrid Orchestrator Facade with `ai-job-miner`       | ✅     |
+| **Phase 7**     | Zero-Knowledge Contextual Engine Refactor            | ✅     |
 
 ---
 

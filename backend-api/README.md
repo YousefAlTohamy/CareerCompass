@@ -26,6 +26,15 @@ The Backend API is a Laravel 12-based RESTful service that handles user authenti
 - **MySQL Database** - Complex relational schema with built-in migrations
 - **CORS Enabled** - Ready for frontend integration
 
+### 🛡️ Technical Core (Senior Engineering)
+
+| Feature | Implementation Detail |
+| :--- | :--- |
+| **Weighted Match Algorithm** | Uses **GapAnalysisService** with multiplier-based scoring (Essential: 5x, Important: 3x, Nice-to-have: 1x). |
+| **Fuzzy Skill Normalization** | Mitigates string variance (e.g., `React.js` vs `ReactJS`) via a custom regex-based normalization FSM. |
+| **Self-Expanding Discovery** | If a CV reveals a new job title, the **CvProcessingService** auto-injects it into `target_job_roles` and dispatches a background scraping job. |
+| **Circuit Breaker Logic** | External AI Gateway calls are wrapped in Guzzle timeouts and retry handlers to prevent backend hanging. |
+
 ---
 
 ## 🏗️ Architecture
@@ -94,8 +103,17 @@ backend-api/
 - **Composer** 2.x - [Download](https://getcomposer.org/)
 - **MySQL** 8.x - [Download](https://dev.mysql.com/downloads/installer/)
 - **AI Engine** - Must be running on port 8001
+- **Service-to-Gateway Handshake** - Documented in `app/Services/CvProcessingService.php`
 
-### Installation
+### 🔄 Service Layer Extraction
+
+The backend utilizes strictly-typed **Service Contracts** to decouple business logic from HTTP controllers.
+
+1. **`CvProcessingService`**: Manages the multi-part file upload to the AI Gateway, parses the JSON payload, and updates user profile metadata.
+2. **`GapAnalysisService`**: Executes a high-precision loop comparing the user's skill-set against job requirements, calculating a weighted match percentage.
+
+> [!NOTE]
+> **AI Gateway Integration**: All communication with the Python microservice is handled via **Laravel's HTTP Client (Guzzle)**. Requests are strictly timed out (30s) and utilize `attach()` for stream-based file transfers to maintain low peak-memory usage.
 
 #### 1️⃣ Navigate to Backend Directory
 
@@ -228,6 +246,9 @@ curl http://127.0.0.1:8000/api/health
 ---
 
 ## 🔌 API Endpoints
+
+> [!IMPORTANT]
+> **Endpoint Hardening**: Every endpoint in this API is strictly guarded by **Laravel FormRequests**. This ensures that input objects (PDF files, Scraping URLs, JSON payloads) are validated against strict regex and type rules *before* reaching the controller logic, preventing SQL injection or malformed payload crashes.
 
 ### Authentication (Public)
 

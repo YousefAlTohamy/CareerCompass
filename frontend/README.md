@@ -20,9 +20,17 @@ The CareerCompass frontend is a modern, responsive React application built with 
 - **Profile Management** - View and manage skills, update profile
 - **Admin Dashboard** - Manage dynamic scraping sources and target job roles
 - **Strict Role-Based Routing** - Safe segregation between `/user/*` features and `/admin/*` portals
-- **Error Handling** - Comprehensive error boundaries and user feedback
 - **Responsive Design** - Mobile-first, works on all screen sizes
 - **Fast Development** - Hot Module Replacement (HMR) with Vite
+
+### 🛡️ Technical Excellence (Premium Engineering)
+
+| Feature | Implementation Detail |
+| :--- | :--- |
+| **Reactive Polling Architecture** | `useScrapingStatus` implements a stateful polling loop with **automatic timeout detection (60s)** and unmount cleanup. |
+| **Stateful Async Wrappers** | `useAsync` hook encapsulates loading, data, and granular error states (`err.response.data.message`) into a unified UI interface. |
+| **Premium Transitions** | Leverages **Framer Motion's** `AnimatePresence` and `motion.div` to provide fluid, non-jarring page transitions. |
+| **Session Persistence** | Automatic token management via `AuthContext` with proactive session cleanup via **Axios 401 Interceptors**. |
 
 ---
 
@@ -171,6 +179,9 @@ The dev server features:
 
 ## 🗺️ Routes & Pages
 
+> [!IMPORTANT]
+> **Domain Isolation**: The frontend enforces strict boundaries between `/user/*` and `/admin/*`. The `ProtectedRoute` logic prevents context leaks by auto-redirecting Admins away from User-specific dashboards and vice-versa, ensuring a clean operational environment.
+
 ### Public Routes (No Authentication Required)
 
 | Route       | Page     | Description                         |
@@ -259,7 +270,7 @@ Animated full-screen or boxed overlay utilizing CSS transitions to map the steps
 | `useAuthHandler`      | Manages login tokens locally and configures axios headers implicitly                    |
 | `useAsync`            | A robust generic wrapper capturing state limits like (loading / data / error) safely    |
 | `useOnDemandScraping` | Encapsulates trigger and API response states for demanding live jobs specifically       |
-| `useScrapingStatus`   | Configures polling mechanisms that check backend every 3s continuously until completion |
+| `useScrapingStatus`   | Stateful polling loop; features **Automatic Timeout Detection** (20 polls / 60s) and internal cleanup. |
 | `useAuth`             | Wrapper accessing the `AuthContext` to evaluate user presence seamlessly                |
 
 ---
@@ -271,8 +282,9 @@ Animated full-screen or boxed overlay utilizing CSS transitions to map the steps
 1. **User registers/logs in** → Backend returns JWT token
 2. **Token stored** in `localStorage` via `AuthContext`
 3. **Axios interceptor** adds token to all API requests automatically
-4. **Protected routes** check auth state before rendering
-5. **On logout** → Token removed from storage and state
+4. **401 Interceptor** (Proactive Clean): If the API returns a `401 Unauthorized` (expired token), the interceptor auto-purges local storage and redirects the user to `/login`, preventing "ghost" sessions.
+5. **Protected routes** check auth state before rendering
+6. **On logout** → Token removed from storage and state
 
 ### Using Authentication in Components
 
