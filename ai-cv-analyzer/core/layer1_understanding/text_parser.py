@@ -1,10 +1,36 @@
 import logging
 import io
 import fitz  # PyMuPDF
+import re
 from docx import Document
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+def clean_extracted_text(text: str) -> str:
+    """
+    ينظف النص المستخرج لمنع الكلمات من الالتصاق ببعضها (Gluing)
+    ويساعد نموذج الذكاء الاصطناعي على قراءة المهارات ككلمات منفصلة تماماً.
+    """
+    if not text:
+        return ""
+        
+    # 1. استبدال النزول لسطر جديد بمسافة لمنع التصاق أخر كلمة في السطر بأول كلمة في السطر اللي بعده
+    text = text.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+    
+    # 2. إضافة مسافات حول علامات الترقيم (الفاصلة، النقطتين، الشرطة، النقطة، علامة العطف)
+    # عشان لو الـ PDF قاري "Testing&QA:PHPUnit" يحولها لـ "Testing & QA : PHPUnit"
+    text = re.sub(r'([:,|•·/&])', r' \1 ', text)
+    
+    # 3. التأكد من وجود مسافة بعد الفاصلة أو النقطة لو كانت لازقة في حرف
+    # مثلا: "Laravel,MySQL" تتحول إلى "Laravel, MySQL"
+    text = re.sub(r'(?<=[a-zA-Z])([,.:])(?=[a-zA-Z])', r'\1 ', text)
+
+    # 4. مسح أي مسافات زيادة متكررة
+    text = re.sub(r'\s+', ' ', text)
+    
+    return text.strip()
+
 
 def extract_text_from_pdf(file_bytes: bytes) -> Optional[str]:
     """
@@ -17,8 +43,9 @@ def extract_text_from_pdf(file_bytes: bytes) -> Optional[str]:
         total_images = 0
         
         for page in doc:
+            # إضافة مسافة قبل النزول لسطر جديد كضمان إضافي
             page_text = page.get_text()
-            text += page_text + "\n"
+            text += page_text + " \n "
             total_images += len(page.get_images())
             
         doc.close()
@@ -30,7 +57,9 @@ def extract_text_from_pdf(file_bytes: bytes) -> Optional[str]:
             logger.info("PDF appears to be image-based (scanned). Deferring to OCR pipeline.")
             return None
             
-        return text if text else None
+        # 🔴 تطبيق خوارزمية التنظيف قبل إرسال النص للذكاء الاصطناعي
+        cleaned_text = clean_extracted_text(text)
+        return cleaned_text if cleaned_text else None
         
     except Exception as e:
         logger.error(f"Failed to extract text from PDF: {e}")
@@ -47,7 +76,14 @@ def extract_text_from_docx(file_bytes: bytes) -> Optional[str]:
         for para in doc.paragraphs:
             if para.text.strip():
                 full_text.append(para.text)
-        return "\n".join(full_text)
+                
+        # دمج كل البراجرافات بمسافة أمان
+        text = " ".join(full_text)
+        
+        # 🔴 تطبيق خوارزمية التنظيف
+        cleaned_text = clean_extracted_text(text)
+        return cleaned_text if cleaned_text else None
+        
     except Exception as e:
         logger.error(f"Failed to extract text from DOCX: {e}")
         return None
