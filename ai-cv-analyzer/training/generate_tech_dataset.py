@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-load_dotenv(override=True)
+env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+load_dotenv(dotenv_path=env_path, override=True)
 print("🚀 Starting Smart AI-Driven Dataset Generation (Enterprise Edition)...")
 
 api_key = os.getenv("GEMINI_API_KEY")
@@ -54,9 +55,9 @@ def clean_json_response(text):
         text = text[:-3]
     return text.strip()
 
-target_total_samples = 1000
+target_total_samples = 5000
 samples_per_batch = 10
-filename = 'train_real_tech_1000.json'
+filename = 'train_real_tech.json'
 existing_samples = 0
 
 if os.path.exists(filename):
@@ -79,27 +80,40 @@ with open(filename, 'a', encoding='utf-8') as f:
     batch_idx = 0
     total_saved_now = existing_samples
     
+    # 3. قائمة بأفضل الموديلات المتاحة في حسابك لتوليد النصوص
+    available_models = [
+        # عائلة 2.5
+        'gemini-2.5-flash',
+        'gemini-2.5-flash-lite',
+        'gemini-2.5-pro',
+        # عائلة 2.0
+        'gemini-2.0-flash',
+        'gemini-2.0-flash-001',
+        'gemini-2.0-flash-lite',
+        'gemini-2.0-flash-lite-001',
+        # الأسماء العامة (Latest)
+        'gemini-flash-latest',
+        'gemini-flash-lite-latest',
+        'gemini-pro-latest',
+        # عائلة 3 و 3.1 (النسخ التجريبية المتاحة في حسابك)
+        'gemini-3.1-pro-preview',
+        'gemini-3.1-flash-lite-preview',
+        'gemini-3-pro-preview',
+        'gemini-3-flash-preview'
+    ]
+    
+    current_model_idx = 0
+    models_tried_this_batch = 0
+
     while batch_idx < batches_needed:
+        active_model = available_models[current_model_idx]
+        
         try:
-            # 3. نظام الموديل البديل (Fallback System)
-            active_model = 'gemini-2.0-flash'
-            try:
-                response = client.models.generate_content(
-                    model=active_model, 
-                    contents=system_prompt,
-                    config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.85)
-                )
-            except Exception as e:
-                if "429" in str(e) or "404" in str(e) or "quota" in str(e).lower():
-                    print(f"   ⚠️ {active_model} is busy/exhausted. Falling back to gemini-1.5-flash...")
-                    active_model = 'gemini-1.5-flash'
-                    response = client.models.generate_content(
-                        model=active_model, 
-                        contents=system_prompt,
-                        config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.85)
-                    )
-                else:
-                    raise e
+            response = client.models.generate_content(
+                model=active_model, 
+                contents=system_prompt,
+                config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.85)
+            )
             
             # تنظيف وتحويل النص
             clean_text = clean_json_response(response.text)
@@ -114,16 +128,28 @@ with open(filename, 'a', encoding='utf-8') as f:
                 total_saved_now += len(batch_data)
                 print(f"[{batch_idx+1}/{batches_needed}] ✅ Generated {len(batch_data)} snippets via {active_model}. (Total: {total_saved_now})")
                 
+            # لو نجحنا، ننتقل للباتش اللي بعده ونصفر عداد المحاولات
             batch_idx += 1
-            time.sleep(5) 
+            models_tried_this_batch = 0
+            time.sleep(4) 
             
         except Exception as e:
-            error_msg = str(e)
-            if "429" in error_msg or "Quota" in error_msg or "exhausted" in error_msg.lower():
-                print(f"⚠️ Both models hit rate limit! Cooling down for 60s...")
-                time.sleep(60)
+            error_msg = str(e).lower()
+            if "429" in error_msg or "quota" in error_msg or "exhausted" in error_msg or "limit: 0" in error_msg:
+                models_tried_this_batch += 1
+                
+                # لو جربنا كل الموديلات في القائمة وكلهم رفضوا، نريح دقيقة كاملة
+                if models_tried_this_batch >= len(available_models):
+                    print("⚠️ All models are currently exhausted! Cooling down for 60 seconds...")
+                    time.sleep(60)
+                    models_tried_this_batch = 0 # تصفير العداد بعد الراحة
+                else:
+                    # ننقل على الموديل اللي عليه الدور في القائمة
+                    current_model_idx = (current_model_idx + 1) % len(available_models)
+                    print(f"   ⚠️ {active_model} busy. Switching to {available_models[current_model_idx]}...")
+                    time.sleep(2) # انتظار بسيط قبل تجربة الموديل الجديد
             else:
-                print(f"[{batch_idx+1}/{batches_needed}] ❌ JSON Parse Error, retrying... ({e})")
+                print(f"[{batch_idx+1}/{batches_needed}] ❌ Error, retrying... ({e})")
                 time.sleep(5)
 
 print(f"🎉 DONE! Successfully reached {total_saved_now} diverse tech resume samples.")
