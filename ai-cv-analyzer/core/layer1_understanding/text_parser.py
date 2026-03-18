@@ -9,25 +9,30 @@ logger = logging.getLogger(__name__)
 
 def clean_extracted_text(text: str) -> str:
     """
-    ينظف النص المستخرج لمنع الكلمات من الالتصاق ببعضها (Gluing)
-    ويساعد نموذج الذكاء الاصطناعي على قراءة المهارات ككلمات منفصلة تماماً.
+    مشرط الجراح: فك الكلمات الملتصقة وتنظيف النص المستخرج من الـ PDF/Docx
     """
     if not text:
         return ""
-        
-    # 1. استبدال النزول لسطر جديد بمسافة لمنع التصاق أخر كلمة في السطر بأول كلمة في السطر اللي بعده
-    text = text.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
     
-    # 2. إضافة مسافات حول علامات الترقيم (الفاصلة، النقطتين، الشرطة، النقطة، علامة العطف)
-    # عشان لو الـ PDF قاري "Testing&QA:PHPUnit" يحولها لـ "Testing & QA : PHPUnit"
-    text = re.sub(r'([:,|•·/&])', r' \1 ', text)
+    # 1. فك الكلمات الملتصقة (حرف صغير يليه حرف كبير)
+    # StripeHP -> Stripe HP | Doctorvel -> Doctor vel
+    text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)
     
-    # 3. التأكد من وجود مسافة بعد الفاصلة أو النقطة لو كانت لازقة في حرف
-    # مثلا: "Laravel,MySQL" تتحول إلى "Laravel, MySQL"
-    text = re.sub(r'(?<=[a-zA-Z])([,.:])(?=[a-zA-Z])', r'\1 ', text)
+    # 2. فك التصاق الكلمات بالعلامات (نقطة أو فاصلة لازقة في كلمة)
+    # developer.Experience -> developer. Experience
+    text = re.sub(r'([.,:;!?])([a-zA-Z])', r'\1 \2', text)
+    
+    # 3. فك التصاق الرموز والقوائم (Bullets)
+    # •Laravel -> • Laravel
+    text = re.sub(r'([•·\-\*])([a-zA-Z])', r'\1 \2', text)
 
-    # 4. مسح أي مسافات زيادة متكررة
+    # 4. معالجة اختصارات التكنولوجيا المشهورة (حالات خاصة)
+    # SQLInjection -> SQL Injection
+    text = re.sub(r'([A-Z]{2,})([A-Z][a-z])', r'\1 \2', text)
+
+    # 5. تنظيف المسافات الزائدة والحروف غير القابلة للطباعة
     text = re.sub(r'\s+', ' ', text)
+    text = "".join(char for char in text if char.isprintable() or char.isspace())
     
     return text.strip()
 
@@ -43,10 +48,8 @@ def extract_text_from_pdf(file_bytes: bytes) -> Optional[str]:
         total_images = 0
         
         for page in doc:
-            # إضافة مسافة قبل النزول لسطر جديد كضمان إضافي
-            page_text = page.get_text()
-            text += page_text + " \n "
-            total_images += len(page.get_images())
+            # إضافة مسافة وسطر جديد بعد كل صفحة لضمان الفصل
+            text += page.get_text() + " \n "
             
         doc.close()
         
