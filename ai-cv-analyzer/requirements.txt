@@ -23,3 +23,5 @@ numpy==1.26.4
 pandas==2.2.0
 datasets==4.7.0
 google-genai==1.67.0
+python-dateutil==2.9.0   # experience_engine (date parsing)
+rapidfuzz==3.12.2       # canonicalizer (skill deduplication)

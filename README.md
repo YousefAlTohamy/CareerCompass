@@ -203,7 +203,7 @@ CareerCompass/
 │
 ├── ai-cv-analyzer/           # Phase 6: 3-Layer ML CV Analysis Engine
 │   ├── core/
-│   │   ├── layer1_understanding/           # text_parser, ocr_pipeline, ner_engine, universal_extractor
+│   │   ├── layer1_understanding/           # V2 pipeline: spatial_parser, advanced_ner, ocr_pipeline
 │   │   ├── layer2_classification/          # BART-MNLI zero-shot domain classifier
 │   │   └── layer3_matching/               # MiniLM embedder + IntelligentMatcher
 │   ├── models/                             # Fine-tuned NER weights (git-ignored)

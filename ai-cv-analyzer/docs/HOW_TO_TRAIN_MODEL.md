@@ -40,7 +40,7 @@ Training an AI Model on a CPU takes days. We must enable the Tesla T4 GPU.
 1. Extract the downloaded `career_compass_ner_final.zip`.
 2. Go to your local machine: `Graduation-project \ ai-cv-analyzer \ models \ ner_weights \`.
 3. Paste the `career_compass_ner_final` folder right there.
-4. Restart your FastAPI server on port `8002`. The `ner_engine.py` will automatically detect your custom model, proving your technical depth to the committee!
+4. Restart your FastAPI server on port `8002`. The NER engine (`advanced_ner.py`) will automatically detect your custom model, proving your technical depth to the committee!
 
 ### 🎯 Categories Recognized
 Your model is now fine-tuned to extract:

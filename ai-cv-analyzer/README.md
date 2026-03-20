@@ -64,10 +64,14 @@ ai-cv-analyzer/
 │
 ├── core/                            # The 3 Layers of Intelligence
 │   ├── layer1_understanding/
-│   │   ├── text_parser.py           # PyMuPDF (PDF) + python-docx (DOCX) extraction
-│   │   ├── ocr_pipeline.py          # EasyOCR + OpenCV for scanned images
-│   │   ├── universal_extractor.py   # Smart router: picks extraction method by file type
-│   │   └── ner_engine.py            # BERT NER: extracts skills, roles, orgs (Singleton)
+│   │   ├── orchestrator.py          # V2/V3 Facade: spatial → NER → experience → canonicalizer
+│   │   ├── spatial_parser.py        # pdfplumber: PDF text extraction (layout-aware)
+│   │   ├── section_segmenter.py     # Semantic segmenter for CV sections
+│   │   ├── advanced_ner.py          # BERT NER: skills, roles, orgs (Singleton)
+│   │   ├── experience_engine.py     # Experience parsing + date normalization
+│   │   ├── canonicalizer.py         # Skill deduplication (rapidfuzz fuzzy match)
+│   │   ├── schema.py                # Pydantic models (CVParseResult, etc.)
+│   │   └── ocr_pipeline.py          # EasyOCR + OpenCV (retained for future scanned PDFs)
 │   │
 │   ├── layer2_classification/
 │   │   └── classifier.py            # BART-MNLI zero-shot domain classifier (Singleton)
@@ -87,40 +91,29 @@ ai-cv-analyzer/
 
 ## Core 3-Layer Architecture
 
-### 1️⃣ Layer 1: Universal Understanding & OCR
+### 1️⃣ Layer 1: Universal Understanding (V2/V3 Pipeline)
 
 **Files:** `core/layer1_understanding/`
 
-**Goal:** Convert any document format (PDF · DOCX · PNG/JPG) into clean raw text.
+**Goal:** Convert PDF documents into structured CV data (skills, experience, profile) via the V2 pipeline.
 
-| Module                   | Handles                     | Method                                   |
-| ------------------------ | --------------------------- | ---------------------------------------- |
-| `text_parser.py`         | Text-based PDFs             | PyMuPDF (`fitz`) — fast, lossless        |
-| `text_parser.py`         | Word documents (`.docx`)    | `python-docx` — paragraph extraction     |
-| `ocr_pipeline.py`        | Scanned images & image-PDFs | EasyOCR + OpenCV pre-processing          |
-| `universal_extractor.py` | Any file                    | Smart router: text → OCR fallback        |
-| `ner_engine.py`          | Raw text                    | BERT NER: Skills · Roles · Organizations |
+| Module                | Handles                     | Method                                          |
+| --------------------- | --------------------------- | ----------------------------------------------- |
+| `spatial_parser.py`   | Text-based PDFs             | pdfplumber — layout-aware extraction            |
+| `section_segmenter.py`| Raw text                    | Semantic segmentation into CV sections          |
+| `advanced_ner.py`     | Segments                    | BERT NER: Skills · Roles · Organizations        |
+| `experience_engine.py`| Experience blocks           | Date parsing + role/company extraction          |
+| `canonicalizer.py`    | Raw skills                  | rapidfuzz fuzzy deduplication                   |
+| `ocr_pipeline.py`     | Scanned images (future)     | EasyOCR + OpenCV — retained for future use      |
 
-**Advanced NER Tokenization Fix:**
-The `SkillNEREngine` implements a custom **Tokenization Fragmentation Fix**. When BERT's WordPiece tokenizer splits technical terms (e.g., `##script` from `javascript`), our engine recursively merges these segments back into canonical entities, ensuring data integrity for downstream Laravel matching.
-
-**Smart fallback chain (PDF):**
+**V2 Pipeline Flow:**
 
 ```
-PDF → PyMuPDF  →  has text? → return text
-                ↓ no text (scanned)
-              Render pages as images → EasyOCR → return OCR text
+PDF → spatial_parser (pdfplumber) → section_segmenter → advanced_ner
+    → experience_engine → canonicalizer → CVParseResult (Pydantic)
 ```
 
-**NER model auto-detection:**
-
-```python
-# ner_engine.py — loads custom weights if present, generic BERT-NER otherwise
-if os.path.exists("models/ner_weights/career_compass_ner_final"):
-    MODEL_NAME = "models/ner_weights/career_compass_ner_final"  # fine-tuned
-else:
-    MODEL_NAME = "dslim/bert-base-NER"   # HuggingFace fallback — never crashes
-```
+**NER model auto-detection:** `advanced_ner.py` loads custom weights from `models/ner_weights/career_compass_ner_final/` if present, otherwise falls back to `dslim/bert-base-NER`.
 
 ---
 
@@ -196,7 +189,7 @@ To ensure independence from private/gated datasets, we use a **Synthetic Data Au
 - **Data Engine**: `generate_tech_dataset.py` utilizes **Google Gemini-2.0-flash** to generate 1,000+ synthetic, "visually messy" resume snippets across random tech domains (DevOps, AI, Mobile, etc.).
 - **Annotation**: Automates BIO-tagging for internal model training with zero human intervention.
 - **Infrastructure:** Training runs on **Google Colab** (T4 GPU) fine-tuning `distilbert-base-cased`.
-- **Auto-Detection:** `ner_engine.py` checks for `models/ner_weights/career_compass_ner_final/` — uses it if present, falls back to `dslim/bert-base-NER` otherwise.
+- **Auto-Detection:** `advanced_ner.py` checks for `models/ner_weights/career_compass_ner_final/` — uses it if present, falls back to `dslim/bert-base-NER` otherwise.
 - **Verification:** Colab notebook generates an F1-Score report for each training run.
 
 See [HOW_TO_TRAIN_MODEL.md](HOW_TO_TRAIN_MODEL.md) for the full step-by-step guide.
@@ -234,9 +227,7 @@ See [HOW_TO_TRAIN_MODEL.md](HOW_TO_TRAIN_MODEL.md) for the full step-by-step gui
 
 ```python
 # hybrid_runner.py imports from ai-cv-analyzer:
-from core.layer1_understanding.universal_extractor import process_document
-from core.layer1_understanding.ner_engine          import SkillNEREngine
-from core.layer2_classification.classifier         import CVDomainClassifier
+from core.layer1_understanding.orchestrator        import CVOrchestrator
 from core.layer3_matching.similarity               import IntelligentMatcher
 ```
 
