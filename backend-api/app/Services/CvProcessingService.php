@@ -28,8 +28,8 @@ class CvProcessingService implements CvProcessingServiceInterface
 
     public function __construct()
     {
-        $this->gatewayUrl = config('services.ai_gateway.url', 'http://127.0.0.1:8001');
-        $this->timeout    = (int) config('services.ai_gateway.timeout', 120);
+        $this->gatewayUrl = rtrim(config('services.ai_cv_analyzer.url', 'http://127.0.0.1:8002'), '/');
+        $this->timeout    = (int) config('services.ai_cv_analyzer.timeout', 120);
     }
 
     /**
