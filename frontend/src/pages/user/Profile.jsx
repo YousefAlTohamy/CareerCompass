@@ -164,6 +164,12 @@ export default function Profile() {
   const hasExperiences = experiences.length > 0;
   const hasSkills = skills.length > 0;
 
+  // Contact info: prioritise the nested contact_info JSON object from the profile
+  const contactInfo = profile?.contact_info || data?.profile?.contact_info || {};
+  const userPhone = contactInfo.phone || profile?.phone || user?.phone;
+  const userLinkedin = contactInfo.linkedin_url || profile?.linkedin_url || user?.linkedin_url;
+  const userGithub = contactInfo.github_url || profile?.github_url || user?.github_url;
+
   if (loading) {
     return (
       <div className="min-h-[80vh] flex flex-col justify-center items-center space-y-4">
@@ -499,7 +505,7 @@ export default function Profile() {
                             <div className="bg-white p-2 rounded-lg shadow-sm text-slate-400"><Phone size={18} /></div>
                             <div>
                               <p className="text-xs font-bold text-slate-500 mb-0.5">Phone Number</p>
-                              <p className="font-medium text-slate-800">{profile?.phone ?? user?.phone ?? <span className="text-slate-400 italic">Not provided</span>}</p>
+                              <p className="font-medium text-slate-800">{userPhone ?? <span className="text-slate-400 italic">Not provided</span>}</p>
                             </div>
                           </div>
 
@@ -534,14 +540,14 @@ export default function Profile() {
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                        
                        {/* LinkedIn Card */}
-                       {(profile?.linkedin_url ?? user?.linkedin_url) ? (
-                         <a href={profile?.linkedin_url ?? user?.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 bg-white hover:bg-blue-50 p-4 rounded-xl border border-slate-200 hover:border-blue-200 transition-colors group">
+                       {userLinkedin ? (
+                         <a href={userLinkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 bg-white hover:bg-blue-50 p-4 rounded-xl border border-slate-200 hover:border-blue-200 transition-colors group">
                             <div className="bg-blue-100 p-2.5 rounded-lg text-blue-600 group-hover:scale-110 transition-transform">
                               <Linkedin size={20} />
                             </div>
                             <div className="overflow-hidden">
                               <div className="text-slate-800 font-bold">LinkedIn Profile</div>
-                              <div className="text-xs font-medium text-slate-500 truncate mt-0.5">{profile?.linkedin_url ?? user?.linkedin_url}</div>
+                              <div className="text-xs font-medium text-slate-500 truncate mt-0.5">{userLinkedin}</div>
                             </div>
                          </a>
                        ) : (
@@ -555,14 +561,14 @@ export default function Profile() {
                        )}
 
                        {/* GitHub Card */}
-                       {(profile?.github_url ?? user?.github_url) ? (
-                         <a href={profile?.github_url ?? user?.github_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 bg-white hover:bg-slate-100 p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors group">
+                       {userGithub ? (
+                         <a href={userGithub} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 bg-white hover:bg-slate-100 p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors group">
                             <div className="bg-slate-200 p-2.5 rounded-lg text-slate-700 group-hover:scale-110 transition-transform">
                               <Github size={20} />
                             </div>
                             <div className="overflow-hidden">
                               <div className="text-slate-800 font-bold">GitHub Profile</div>
-                              <div className="text-xs font-medium text-slate-500 truncate mt-0.5">{profile?.github_url ?? user?.github_url}</div>
+                              <div className="text-xs font-medium text-slate-500 truncate mt-0.5">{userGithub}</div>
                             </div>
                          </a>
                        ) : (
