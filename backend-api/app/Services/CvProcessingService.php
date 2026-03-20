@@ -123,17 +123,25 @@ class CvProcessingService implements CvProcessingServiceInterface
         $contact = $aiData['contact_info'] ?? [];
         $contact = is_array($contact) ? $contact : [];
 
-        $user->update([
-            'job_title'    => $aiData['domain']              ?? $user->job_title,
-            'phone'        => ($contact['phone']        ?? '') ?: $user->phone,
-            'location'     => ($contact['location']     ?? '') ?: $user->location,
-            'linkedin_url' => ($contact['linkedin_url'] ?? '') ?: $user->linkedin_url,
-            'github_url'   => ($contact['github_url']   ?? '') ?: $user->github_url,
+        $profile = $user->profile()->firstOrCreate([], []);
+
+        $contactInfo = $profile->contact_info ?? [];
+        if (!is_array($contactInfo)) {
+            $contactInfo = [];
+        }
+        $contactInfo['phone']        = ($contact['phone']        ?? '') ?: ($contactInfo['phone'] ?? null);
+        $contactInfo['linkedin_url'] = ($contact['linkedin_url'] ?? '') ?: ($contactInfo['linkedin_url'] ?? null);
+        $contactInfo['github_url']   = ($contact['github_url']   ?? '') ?: ($contactInfo['github_url'] ?? null);
+
+        $profile->update([
+            'headline'     => $aiData['domain'] ?? $profile->headline,
+            'location'     => ($contact['location'] ?? '') ?: $profile->location,
+            'contact_info' => $contactInfo,
         ]);
 
         Log::info('User profile updated from CV parse', [
-            'user_id'   => $user->id,
-            'job_title' => $user->job_title,
+            'user_id'  => $user->id,
+            'headline' => $profile->headline,
         ]);
     }
 

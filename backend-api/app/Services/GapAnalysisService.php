@@ -182,7 +182,8 @@ class GapAnalysisService implements GapAnalysisServiceInterface
     {
         try {
             if ($jobTitle) {
-                $user->update(['job_title' => $jobTitle]);
+                $profile = $user->profile()->firstOrCreate([], []);
+                $profile->update(['headline' => $jobTitle]);
             }
 
             if ($matchedSkills && (is_array($matchedSkills) || $matchedSkills instanceof \Countable) && count($matchedSkills) > 0) {

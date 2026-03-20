@@ -20,8 +20,8 @@ class AdminUserController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            // Exclude admin role and eager load skills
-            $query = User::with('skills')->where(function ($q) {
+            // Exclude admin role and eager load skills + profile
+            $query = User::with(['skills', 'profile'])->where(function ($q) {
                 $q->whereNull('role')->orWhere('role', '!=', 'admin');
             });
 
@@ -59,8 +59,8 @@ class AdminUserController extends Controller
     public function show($id): JsonResponse
     {
         try {
-            // Include skills relation if it exists, otherwise just findOrFail
-            $user = User::with('skills')->findOrFail($id);
+            // Include skills + profile relations
+            $user = User::with(['skills', 'profile'])->findOrFail($id);
             return response()->json([
                 'success' => true,
                 'data' => $user

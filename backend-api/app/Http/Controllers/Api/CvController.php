@@ -43,8 +43,8 @@ class CvController extends Controller
 
             $result = $this->cvService->processCv($cvFile, $user);
 
-            // Return unified response
-            $user->refresh();
+            // Return unified response (load profile for accessor compatibility)
+            $user->refresh()->load('profile');
 
             Log::info('CV parsed and profile updated via AI Gateway', [
                 'user_id'     => $user->id,

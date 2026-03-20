@@ -32,6 +32,7 @@ class Skill extends Model
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'user_skills')
+            ->withPivot('confidence_score', 'evidence')
             ->withTimestamps();
     }
 

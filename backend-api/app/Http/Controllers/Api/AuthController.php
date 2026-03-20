@@ -47,7 +47,9 @@ class AuthController extends Controller
             'role'     => 'user',
         ]);
 
+        // Profile is auto-created via User model's booted() created event
         $token = $user->createToken('auth-token')->plainTextToken;
+        $user->load('profile');
 
         return response()->json([
             'success' => true,
@@ -84,12 +86,36 @@ class AuthController extends Controller
             'skills.*'     => 'string|max:255',
         ]);
 
-        $user->update($validated);
+        // Update user auth fields
+        $user->update([
+            'name'  => $validated['name'],
+            'email' => $validated['email'],
+        ]);
+
+        // Update profile (create if missing)
+        $profile = $user->profile()->firstOrCreate(
+            ['user_id' => $user->id],
+            []
+        );
+        $contactInfo = $profile->contact_info ?? [];
+        if (isset($validated['phone'])) {
+            $contactInfo['phone'] = $validated['phone'];
+        }
+        if (isset($validated['linkedin_url'])) {
+            $contactInfo['linkedin_url'] = $validated['linkedin_url'];
+        }
+        if (isset($validated['github_url'])) {
+            $contactInfo['github_url'] = $validated['github_url'];
+        }
+        $profile->update([
+            'headline'     => $validated['job_title'] ?? $profile->headline,
+            'location'     => $validated['location'] ?? $profile->location,
+            'contact_info' => $contactInfo,
+        ]);
 
         if ($request->has('skills')) {
             $skillIds = [];
             foreach ($request->skills as $skillName) {
-                // Ignore empty or whitespace-only skills
                 if (trim($skillName) === '') {
                     continue;
                 }
@@ -99,7 +125,7 @@ class AuthController extends Controller
             $user->skills()->sync($skillIds);
         }
 
-        $user->load('skills');
+        $user->load(['skills', 'profile']);
 
         return response()->json([
             'success' => true,
@@ -137,6 +163,7 @@ class AuthController extends Controller
         $user->tokens()->delete();
 
         $token = $user->createToken('auth-token')->plainTextToken;
+        $user->load('profile');
 
         return response()->json([
             'success' => true,

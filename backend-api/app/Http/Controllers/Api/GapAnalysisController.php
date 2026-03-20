@@ -46,15 +46,13 @@ class GapAnalysisController extends Controller
             // Perform gap analysis
             $analysis = $this->gapAnalysisService->performGapAnalysis($user, $job);
 
-            // ── Persist job_title from the current job if not already set ────────
-            // The primary source of job_title is /parse-cv (CvController).
-            // This is a fallback: if the user analysed a job before uploading a CV,
-            // we seed job_title from the job being analysed using the Sanctum guard.
+            // ── Persist headline from the current job if not already set ────────
+            // The primary source is /parse-cv (CvController). Fallback: seed from analyzed job.
             if (empty($user->job_title) && auth('sanctum')->check()) {
-                auth('sanctum')->user()->update([
-                    'job_title' => $job->title,
-                ]);
-                $user->refresh(); // reload so $detectedTitle picks up the new value
+                $authUser = auth('sanctum')->user();
+                $authProfile = $authUser->profile()->firstOrCreate([], []);
+                $authProfile->update(['headline' => $job->title]);
+                $user->refresh();
             }
 
             // ── Persist matched skills + recommended jobs ─────────────────────

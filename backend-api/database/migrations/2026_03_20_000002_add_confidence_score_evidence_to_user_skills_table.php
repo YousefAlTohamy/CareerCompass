@@ -8,12 +8,12 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     * Adds nullable job_title column to users table to persist the CV-extracted job title.
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->string('job_title')->nullable()->after('email');
+        Schema::table('user_skills', function (Blueprint $table) {
+            $table->decimal('confidence_score', 8, 2)->nullable()->after('skill_id');
+            $table->string('evidence')->nullable()->after('confidence_score');
         });
     }
 
@@ -22,8 +22,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('job_title');
+        Schema::table('user_skills', function (Blueprint $table) {
+            $table->dropColumn(['confidence_score', 'evidence']);
         });
     }
 };
