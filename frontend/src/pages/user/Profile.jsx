@@ -17,9 +17,12 @@ import {
   Save,
   X,
   Link as LinkIcon,
-  ShieldCheck,
   Award,
-  Plus
+  Plus,
+  GraduationCap,
+  Target,
+  TrendingUp,
+  Info
 } from 'lucide-react';
 
 // Safe Helper function to get user initials
@@ -35,6 +38,32 @@ const getInitials = (name) => {
     return parts[0].substring(0, 2).toUpperCase();
   }
   return '?';
+};
+
+// Format date for display (handles Y-m-d strings)
+const formatDate = (dateStr) => {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+};
+
+// Format experience date range
+const formatExperienceRange = (startDate, endDate, isCurrent) => {
+  const start = formatDate(startDate) || 'N/A';
+  if (isCurrent) return `${start} – Present`;
+  const end = formatDate(endDate) || 'N/A';
+  return `${start} – ${end}`;
+};
+
+// Get confidence badge color based on score (0.0–1.0)
+const getConfidenceColor = (score) => {
+  if (score == null || score === undefined) return { bg: 'bg-slate-100', text: 'text-slate-600', bar: 'bg-slate-400' };
+  const s = parseFloat(score);
+  if (s >= 0.8) return { bg: 'bg-emerald-50', text: 'text-emerald-700', bar: 'bg-emerald-500' };
+  if (s >= 0.6) return { bg: 'bg-amber-50', text: 'text-amber-700', bar: 'bg-amber-500' };
+  if (s >= 0.4) return { bg: 'bg-orange-50', text: 'text-orange-700', bar: 'bg-orange-500' };
+  return { bg: 'bg-slate-100', text: 'text-slate-600', bar: 'bg-slate-400' };
 };
 
 export default function Profile() {
@@ -56,8 +85,9 @@ export default function Profile() {
     try {
       setLoading(true);
       const response = await authAPI.getUser();
-      setProfile(response.data);
-      setFormData(response.data || {});
+      const data = response?.data?.data ?? response?.data ?? response;
+      setProfile(data);
+      setFormData(data || {});
       setError('');
     } catch (err) {
       console.error('Failed to load profile:', err);
@@ -78,9 +108,9 @@ export default function Profile() {
       setError('');
       
       const response = await authAPI.updateProfile(formData);
-      setProfile(response.data.data);
+      const updated = response?.data?.data ?? response?.data ?? response;
+      setProfile((prev) => prev ? { ...prev, ...updated } : updated);
       
-      // Force Global Auth context to refetch new identity
       await refreshUser();
       
       setEditing(false);
@@ -122,6 +152,17 @@ export default function Profile() {
       navigate('/login');
     }
   };
+
+  // Unified data source: prefer profile from loadProfile, fallback to user from AuthContext
+  const data = profile ?? user;
+  const headline = data?.headline ?? data?.job_title ?? data?.profile?.headline ?? data?.profile?.job_title;
+  const totalYears = data?.total_experience_years ?? data?.profile?.total_experience_years;
+  const seniority = data?.seniority ?? data?.profile?.seniority;
+  const primaryDomain = data?.primary_domain ?? data?.profile?.primary_domain;
+  const experiences = Array.isArray(data?.experiences) ? data.experiences : [];
+  const skills = Array.isArray(data?.skills) ? data.skills : (Array.isArray(data?.profile?.skills) ? data.profile.skills : []);
+  const hasExperiences = experiences.length > 0;
+  const hasSkills = skills.length > 0;
 
   if (loading) {
     return (
@@ -166,20 +207,42 @@ export default function Profile() {
           <div className="p-8 md:p-10 relative z-10 flex flex-col md:flex-row items-center md:items-start gap-8">
             {/* Avatar */}
             <div className="w-32 h-32 rounded-full bg-white border-4 border-indigo-50 shadow-md text-indigo-600 flex items-center justify-center font-black text-4xl shrink-0">
-              {getInitials(profile?.name)}
+              {getInitials(profile?.name ?? user?.name)}
             </div>
             
-            {/* Main Info */}
+            {/* Main Info & Rich Profile Summary */}
             <div className="flex-1 text-center md:text-left flex flex-col items-center md:items-start w-full">
               <h2 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight mb-2">
-                {profile?.name || 'Your Name'}
+                {profile?.name ?? user?.name ?? 'Your Name'}
               </h2>
               
-              {user?.role !== 'admin' && (
-                <p className="text-lg text-slate-500 font-medium flex items-center justify-center md:justify-start gap-2 mb-6 bg-white px-4 py-1.5 rounded-lg border border-slate-100 shadow-sm w-fit">
-                  <Briefcase size={18} className="text-indigo-500" /> 
-                  {profile?.job_title || 'No Target Role Provided'}
+              {/* Prominent: Headline / Job Title */}
+              {(headline || user?.role !== 'admin') && (
+                <p className="text-lg text-slate-600 font-semibold flex items-center justify-center md:justify-start gap-2 mb-3 w-fit">
+                  <Briefcase size={18} className="text-indigo-500 shrink-0" /> 
+                  {headline || 'No Target Role Provided'}
                 </p>
+              )}
+
+              {/* Rich Profile Pills: Experience, Seniority, Domain */}
+              {(totalYears != null || seniority || primaryDomain) && user?.role !== 'admin' && (
+                <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-6">
+                  {totalYears != null && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-bold border border-indigo-100">
+                      <Calendar size={14} /> {Number(totalYears) === totalYears ? `${totalYears} yr${totalYears !== 1 ? 's' : ''}` : totalYears} experience
+                    </span>
+                  )}
+                  {seniority && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 text-violet-700 rounded-lg text-sm font-bold border border-violet-100">
+                      <TrendingUp size={14} /> {seniority}
+                    </span>
+                  )}
+                  {primaryDomain && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 text-teal-700 rounded-lg text-sm font-bold border border-teal-100">
+                      <Target size={14} /> {primaryDomain}
+                    </span>
+                  )}
+                </div>
               )}
 
               {/* Toggle Edit Mode Button */}
@@ -187,9 +250,10 @@ export default function Profile() {
                  <button
                    onClick={() => {
                      setEditing(true);
+                     const rawSkills = profile?.skills ?? data?.skills ?? [];
                      setFormData({
-                       ...profile,
-                       skills: profile?.skills ? profile.skills.map(s => s.name || s) : []
+                       ...(profile ?? data),
+                       skills: Array.isArray(rawSkills) ? rawSkills.map(s => s?.name ?? s) : []
                      });
                    }}
                    className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-sm font-bold text-sm w-full md:w-auto justify-center"
@@ -219,7 +283,7 @@ export default function Profile() {
                       type="text"
                       name="name"
                       required
-                      value={formData.name || ''}
+                      value={formData?.name ?? ''}
                       onChange={handleChange}
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800"
                     />
@@ -232,7 +296,7 @@ export default function Profile() {
                       type="email"
                       name="email"
                       required
-                      value={formData.email || ''}
+                      value={formData?.email ?? ''}
                       onChange={handleChange}
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800"
                     />
@@ -246,7 +310,7 @@ export default function Profile() {
                         <input
                           type="text"
                           name="phone"
-                          value={formData.phone || ''}
+                          value={formData?.phone ?? ''}
                           onChange={handleChange}
                           placeholder="+20 123 456 7890"
                           className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800"
@@ -259,7 +323,7 @@ export default function Profile() {
                         <input
                           type="text"
                           name="location"
-                          value={formData.location || ''}
+                          value={formData?.location ?? ''}
                           onChange={handleChange}
                           placeholder="e.g. Cairo, Egypt"
                           className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800"
@@ -272,7 +336,7 @@ export default function Profile() {
                         <input
                           type="text"
                           name="job_title"
-                          value={formData.job_title || ''}
+                          value={formData?.job_title ?? formData?.headline ?? ''}
                           onChange={handleChange}
                           placeholder="e.g. Backend Developer"
                           className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800"
@@ -285,7 +349,7 @@ export default function Profile() {
                         <input
                           type="url"
                           name="linkedin_url"
-                          value={formData.linkedin_url || ''}
+                          value={formData?.linkedin_url ?? ''}
                           onChange={handleChange}
                           placeholder="https://linkedin.com/in/..."
                           className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800"
@@ -298,7 +362,7 @@ export default function Profile() {
                         <input
                           type="url"
                           name="github_url"
-                          value={formData.github_url || ''}
+                          value={formData?.github_url ?? ''}
                           onChange={handleChange}
                           placeholder="https://github.com/..."
                           className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800"
@@ -313,16 +377,16 @@ export default function Profile() {
                       <label className="block text-sm font-bold text-slate-700">Technical & Soft Skills</label>
                       
                       <div className="flex flex-wrap gap-2 mb-3">
-                        {(formData.skills || []).map((skill, index) => (
+                        {(Array.isArray(formData?.skills) ? formData.skills : []).map((skill, index) => (
                           <span 
                             key={index} 
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold uppercase tracking-wider border border-indigo-100 group"
                           >
-                            {skill}
+                            {typeof skill === 'string' ? skill : skill?.name ?? skill}
                             <button
                               type="button"
                               onClick={() => {
-                                const updatedSkills = formData.skills.filter((_, i) => i !== index);
+                                const updatedSkills = (formData?.skills ?? []).filter((_, i) => i !== index);
                                 setFormData({ ...formData, skills: updatedSkills });
                               }}
                               className="text-indigo-400 hover:text-rose-500 hover:bg-rose-50 rounded-full p-0.5 transition-colors"
@@ -331,7 +395,7 @@ export default function Profile() {
                             </button>
                           </span>
                         ))}
-                        {(!formData.skills || formData.skills.length === 0) && (
+                        {(!formData?.skills || formData.skills.length === 0) && (
                           <span className="text-sm font-medium text-slate-400 italic py-1">No skills added yet.</span>
                         )}
                       </div>
@@ -345,10 +409,12 @@ export default function Profile() {
                             if (e.key === 'Enter') {
                               e.preventDefault();
                               if (newSkill.trim()) {
-                                if (!formData.skills?.includes(newSkill.trim())) {
+                                const existing = formData?.skills ?? [];
+                                const trimmed = newSkill.trim();
+                                if (!existing.some(s => (typeof s === 'string' ? s : s?.name) === trimmed)) {
                                   setFormData({
                                     ...formData,
-                                    skills: [...(formData.skills || []), newSkill.trim()]
+                                    skills: [...existing, trimmed]
                                   });
                                 }
                                 setNewSkill('');
@@ -361,13 +427,17 @@ export default function Profile() {
                         <button
                           type="button"
                           onClick={() => {
-                            if (newSkill.trim() && !formData.skills?.includes(newSkill.trim())) {
-                              setFormData({
-                                ...formData,
-                                skills: [...(formData.skills || []), newSkill.trim()]
-                              });
+                            if (newSkill.trim()) {
+                              const existing = formData?.skills ?? [];
+                              const trimmed = newSkill.trim();
+                              if (!existing.some(s => (typeof s === 'string' ? s : s?.name) === trimmed)) {
+                                setFormData({
+                                  ...formData,
+                                  skills: [...existing, trimmed]
+                                });
+                              }
+                              setNewSkill('');
                             }
-                            setNewSkill('');
                           }}
                           className="flex items-center justify-center gap-1 px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl font-bold transition-all border border-slate-200"
                         >
@@ -394,7 +464,7 @@ export default function Profile() {
                     type="button"
                     onClick={() => {
                       setEditing(false);
-                      setFormData(profile);
+                      setFormData(profile ?? data ?? {});
                       setError('');
                     }}
                     disabled={saving}
@@ -419,7 +489,7 @@ export default function Profile() {
                         <div className="bg-white p-2 rounded-lg shadow-sm text-slate-400"><Mail size={18} /></div>
                         <div className="overflow-hidden">
                           <p className="text-xs font-bold text-slate-500 mb-0.5">Email Address</p>
-                          <p className="font-medium text-slate-800 truncate" title={profile?.email}>{profile?.email}</p>
+                          <p className="font-medium text-slate-800 truncate" title={profile?.email ?? user?.email}>{profile?.email ?? user?.email}</p>
                         </div>
                       </div>
 
@@ -429,7 +499,7 @@ export default function Profile() {
                             <div className="bg-white p-2 rounded-lg shadow-sm text-slate-400"><Phone size={18} /></div>
                             <div>
                               <p className="text-xs font-bold text-slate-500 mb-0.5">Phone Number</p>
-                              <p className="font-medium text-slate-800">{profile?.phone || <span className="text-slate-400 italic">Not provided</span>}</p>
+                              <p className="font-medium text-slate-800">{profile?.phone ?? user?.phone ?? <span className="text-slate-400 italic">Not provided</span>}</p>
                             </div>
                           </div>
 
@@ -437,7 +507,7 @@ export default function Profile() {
                             <div className="bg-white p-2 rounded-lg shadow-sm text-slate-400"><MapPin size={18} /></div>
                             <div className="overflow-hidden">
                               <p className="text-xs font-bold text-slate-500 mb-0.5">Location</p>
-                              <p className="font-medium text-slate-800 truncate" title={profile?.location}>{profile?.location || <span className="text-slate-400 italic">Not provided</span>}</p>
+                              <p className="font-medium text-slate-800 truncate" title={profile?.location ?? user?.location ?? data?.profile?.location}>{profile?.location ?? user?.location ?? data?.profile?.location ?? <span className="text-slate-400 italic">Not provided</span>}</p>
                             </div>
                           </div>
                         </>
@@ -448,7 +518,7 @@ export default function Profile() {
                         <div>
                           <p className="text-xs font-bold text-slate-500 mb-0.5">Member Since</p>
                           <p className="font-medium text-slate-800">
-                            {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : 'N/A'}
+                            {(profile?.created_at ?? user?.created_at) ? new Date(profile?.created_at ?? user?.created_at).toLocaleDateString() : 'N/A'}
                           </p>
                         </div>
                       </div>
@@ -464,14 +534,14 @@ export default function Profile() {
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                        
                        {/* LinkedIn Card */}
-                       {profile?.linkedin_url ? (
-                         <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 bg-white hover:bg-blue-50 p-4 rounded-xl border border-slate-200 hover:border-blue-200 transition-colors group">
+                       {(profile?.linkedin_url ?? user?.linkedin_url) ? (
+                         <a href={profile?.linkedin_url ?? user?.linkedin_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 bg-white hover:bg-blue-50 p-4 rounded-xl border border-slate-200 hover:border-blue-200 transition-colors group">
                             <div className="bg-blue-100 p-2.5 rounded-lg text-blue-600 group-hover:scale-110 transition-transform">
                               <Linkedin size={20} />
                             </div>
                             <div className="overflow-hidden">
                               <div className="text-slate-800 font-bold">LinkedIn Profile</div>
-                              <div className="text-xs font-medium text-slate-500 truncate mt-0.5">{profile.linkedin_url}</div>
+                              <div className="text-xs font-medium text-slate-500 truncate mt-0.5">{profile?.linkedin_url ?? user?.linkedin_url}</div>
                             </div>
                          </a>
                        ) : (
@@ -485,14 +555,14 @@ export default function Profile() {
                        )}
 
                        {/* GitHub Card */}
-                       {profile?.github_url ? (
-                         <a href={profile.github_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 bg-white hover:bg-slate-100 p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors group">
+                       {(profile?.github_url ?? user?.github_url) ? (
+                         <a href={profile?.github_url ?? user?.github_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 bg-white hover:bg-slate-100 p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors group">
                             <div className="bg-slate-200 p-2.5 rounded-lg text-slate-700 group-hover:scale-110 transition-transform">
                               <Github size={20} />
                             </div>
                             <div className="overflow-hidden">
                               <div className="text-slate-800 font-bold">GitHub Profile</div>
-                              <div className="text-xs font-medium text-slate-500 truncate mt-0.5">{profile.github_url}</div>
+                              <div className="text-xs font-medium text-slate-500 truncate mt-0.5">{profile?.github_url ?? user?.github_url}</div>
                             </div>
                          </a>
                        ) : (
@@ -509,30 +579,125 @@ export default function Profile() {
                    </div>
                 )}
 
-                {/* Extracted Skills (View Mode) */}
+                {/* Experiences Timeline Section */}
                 {user?.role !== 'admin' && (
                   <div>
                     <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-5 flex items-center gap-2">
-                      <Award size={16} /> Extracted & Manual Skills
+                      <GraduationCap size={16} /> Work Experience
+                    </h3>
+                    
+                    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                      {hasExperiences ? (
+                        <div className="divide-y divide-slate-100">
+                          {(experiences || [])
+                            .sort((a, b) => {
+                              const dateA = a?.end_date ? new Date(a.end_date) : new Date();
+                              const dateB = b?.end_date ? new Date(b.end_date) : new Date();
+                              return dateB - dateA;
+                            })
+                            .map((exp, index) => (
+                              <div key={exp?.id ?? index} className="p-6 hover:bg-slate-50/50 transition-colors">
+                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                                  <div className="flex-1">
+                                    <h4 className="text-lg font-bold text-slate-800">{exp?.title ?? 'Untitled Role'}</h4>
+                                    <p className="text-indigo-600 font-semibold text-sm mt-0.5">{exp?.company ?? '—'}</p>
+                                    {exp?.location && (
+                                      <p className="text-slate-500 text-sm flex items-center gap-1 mt-1">
+                                        <MapPin size={14} /> {exp.location}
+                                      </p>
+                                    )}
+                                    <p className="text-slate-500 text-xs font-medium mt-2">
+                                      {formatExperienceRange(exp?.start_date, exp?.end_date, exp?.is_current)}
+                                    </p>
+                                    {exp?.description && (
+                                      <p className="text-slate-600 text-sm mt-3 leading-relaxed whitespace-pre-wrap">{exp.description}</p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+                          <GraduationCap className="w-14 h-14 text-slate-200 mb-4 stroke-1" />
+                          <p className="text-slate-600 font-semibold">No work experience listed yet</p>
+                          <p className="text-sm text-slate-400 mt-2 max-w-sm">
+                            Upload your CV to populate your experiences automatically, or add them when editing your profile.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Skills with Confidence & Evidence */}
+                {user?.role !== 'admin' && (
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-5 flex items-center gap-2">
+                      <Award size={16} /> Skills
                     </h3>
                     
                     <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                      {Array.isArray(profile?.skills) && profile.skills.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {profile.skills.map((skill, index) => (
-                            <span 
-                              key={index} 
-                              className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold uppercase tracking-wider border border-indigo-100"
-                            >
-                              {skill.name || skill}
-                            </span>
-                          ))}
+                      {hasSkills ? (
+                        <div className="flex flex-wrap gap-3">
+                          {(skills || []).map((skill, index) => {
+                            const name = skill?.name ?? skill;
+                            const confidence = skill?.confidence_score;
+                            const evidence = skill?.evidence;
+                            const colors = getConfidenceColor(confidence);
+                            const percent = confidence != null ? Math.round(parseFloat(confidence) * 100) : null;
+
+                            return (
+                              <div
+                                key={skill?.id ?? index}
+                                className={`relative group flex flex-col rounded-xl border ${colors.bg} ${colors.text} border-slate-200/60 overflow-hidden min-w-[160px] max-w-[220px]`}
+                              >
+                                <div className="p-3">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="font-bold text-sm uppercase tracking-wider truncate">
+                                      {name}
+                                    </span>
+                                    {evidence && (
+                                      <span
+                                        className="shrink-0 p-0.5 rounded-full hover:bg-white/50 cursor-help"
+                                        title={evidence}
+                                      >
+                                        <Info size={14} className="opacity-70" />
+                                      </span>
+                                    )}
+                                  </div>
+                                  {percent != null && (
+                                    <div className="mt-2">
+                                      <div className="h-1.5 bg-white/60 rounded-full overflow-hidden">
+                                        <div
+                                          className={`h-full rounded-full transition-all ${colors.bar}`}
+                                          style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
+                                        />
+                                      </div>
+                                      <p className="text-xs font-medium mt-1 opacity-80">AI confidence: {percent}%</p>
+                                    </div>
+                                  )}
+                                  {evidence && (
+                                    <p className="text-xs opacity-75 mt-1 truncate" title={evidence}>
+                                      {evidence}
+                                    </p>
+                                  )}
+                                </div>
+                                {/* Tooltip on hover for full evidence */}
+                                {evidence && (
+                                  <div className="absolute bottom-full left-0 right-0 mb-1 mx-2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 shadow-lg">
+                                    {evidence}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       ) : (
                         <div className="flex flex-col items-center justify-center py-6 text-center">
                           <Award className="w-12 h-12 text-slate-200 mb-3 stroke-1" />
                           <p className="text-slate-500 font-medium">No skills extracted for your profile yet.</p>
-                          <p className="text-xs text-slate-400 mt-1">Skills are automatically extracted when you upload a CV, or you can add them manually by editing your profile.</p>
+                          <p className="text-xs text-slate-400 mt-1">Upload your CV to populate your skills automatically, or add them manually by editing your profile.</p>
                         </div>
                       )}
                     </div>

@@ -7,6 +7,7 @@ pydantic==2.6.1
 PyMuPDF==1.25.3
 easyocr==1.7.1
 python-docx==1.1.0
+pdfplumber==0.11.9
 opencv-python-headless==4.9.0.80
 transformers==4.37.2
 torch==2.5.1 --index-url https://download.pytorch.org/whl/cu124
@@ -20,3 +21,7 @@ scikit-learn==1.4.1.post1
 python-dotenv==1.0.1
 numpy==1.26.4
 pandas==2.2.0
+datasets==4.7.0
+google-genai==1.67.0
+python-dateutil==2.9.0   # experience_engine (date parsing)
+rapidfuzz==3.12.2       # canonicalizer (skill deduplication)

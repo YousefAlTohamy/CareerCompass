@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CvUploadRequest;
 use App\Http\Resources\SkillResource;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\Contracts\CvProcessingServiceInterface;
 use Illuminate\Http\JsonResponse;
@@ -43,8 +44,12 @@ class CvController extends Controller
 
             $result = $this->cvService->processCv($cvFile, $user);
 
-            // Return unified response
-            $user->refresh();
+            // Return unified response with full user data via UserResource
+            $user->refresh()->load(['profile', 'experiences', 'skills', 'cvAnalysis']);
+
+            $userData = (new UserResource($user))->toArray($request);
+            $userData['domain_confidence'] = $result['aiData']['domain_confidence'] ?? null;
+            $userData['extraction_method'] = $result['aiData']['extraction_method'] ?? null;
 
             Log::info('CV parsed and profile updated via AI Gateway', [
                 'user_id'     => $user->id,
@@ -57,19 +62,8 @@ class CvController extends Controller
                 'success'     => true,
                 'message'     => 'CV parsed successfully.',
                 'is_new_role' => $result['isNewRole'],
-                'user'        => [
-                    'id'                => $user->id,
-                    'name'              => $user->name,
-                    'email'             => $user->email,
-                    'job_title'         => $user->job_title,
-                    'domain_confidence' => $result['aiData']['domain_confidence'] ?? null,
-                    'phone'             => $user->phone,
-                    'location'          => $user->location,
-                    'linkedin_url'      => $user->linkedin_url,
-                    'github_url'        => $user->github_url,
-                    'extraction_method' => $result['aiData']['extraction_method'] ?? null,
-                ],
-                'skills' => SkillResource::collection(
+                'user'        => $userData,
+                'skills'      => SkillResource::collection(
                     $user->skills()->orderBy('name')->get()
                 ),
             ]);

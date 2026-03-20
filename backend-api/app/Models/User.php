@@ -4,6 +4,8 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -12,6 +14,15 @@ class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasApiTokens;
+
+    protected static function booted(): void
+    {
+        static::created(function (User $user): void {
+            if (!$user->relationLoaded('profile') && !$user->profile()->exists()) {
+                $user->profile()->create([]);
+            }
+        });
+    }
 
     /**
      * The attributes that are mass assignable.
@@ -22,13 +33,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'job_title',
         'role',
-        // Contact info — populated by AI Gateway contact extractor on CV upload
-        'phone',
-        'location',
-        'linkedin_url',
-        'github_url',
     ];
 
     /**
@@ -42,20 +47,118 @@ class User extends Authenticatable
     ];
 
     /**
+     * The accessors to append to the model's array form.
+     *
+     * @var list<string>
+     */
+    protected $appends = [
+        'job_title',
+        'phone',
+        'location',
+        'linkedin_url',
+        'github_url',
+    ];
+
+    /**
+     * Get the profile relation.
+     */
+    public function profile(): HasOne
+    {
+        return $this->hasOne(UserProfile::class);
+    }
+
+    /**
+     * Get the experiences relation.
+     */
+    public function experiences(): HasMany
+    {
+        return $this->hasMany(UserExperience::class, 'user_id');
+    }
+
+    /**
+     * Get the CV analyses relation.
+     */
+    public function cvAnalyses(): HasMany
+    {
+        return $this->hasMany(CvAnalysis::class, 'user_id');
+    }
+
+    /**
+     * Get the latest CV analysis (singular) for this user.
+     * Used when we expect at most one analysis per user (from CV upload).
+     */
+    public function cvAnalysis()
+    {
+        return $this->hasOne(CvAnalysis::class, 'user_id')->latestOfMany();
+    }
+
+    /**
      * Get the skills that belong to the user.
      */
     public function skills(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(Skill::class, 'user_skills')
+            ->withPivot('confidence_score', 'evidence')
             ->withTimestamps();
     }
 
     /**
      * Get the applications for the user.
      */
-    public function applications(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function applications(): HasMany
     {
         return $this->hasMany(Application::class);
+    }
+
+    /**
+     * Get job_title (backward compat alias for profile->headline).
+     */
+    public function getJobTitleAttribute(): ?string
+    {
+        return $this->relationLoaded('profile') ? ($this->profile?->headline) : ($this->profile?->headline);
+    }
+
+    /**
+     * Get phone from contact_info (backward compat).
+     */
+    public function getPhoneAttribute(): ?string
+    {
+        $contact = $this->profile?->contact_info;
+        return is_array($contact) ? ($contact['phone'] ?? null) : null;
+    }
+
+    /**
+     * Get location (backward compat).
+     */
+    public function getLocationAttribute(): ?string
+    {
+        return $this->profile?->location;
+    }
+
+    /**
+     * Get linkedin_url from contact_info (backward compat).
+     */
+    public function getLinkedinUrlAttribute(): ?string
+    {
+        $contact = $this->profile?->contact_info;
+        return is_array($contact) ? ($contact['linkedin_url'] ?? null) : null;
+    }
+
+    /**
+     * Get github_url from contact_info (backward compat).
+     */
+    public function getGithubUrlAttribute(): ?string
+    {
+        $contact = $this->profile?->contact_info;
+        return is_array($contact) ? ($contact['github_url'] ?? null) : null;
+    }
+
+    /**
+     * Get or create the user's profile.
+     */
+    public function profileOrCreate(): UserProfile
+    {
+        return $this->profile ?? $this->profile()->create([]);
     }
 
     /**

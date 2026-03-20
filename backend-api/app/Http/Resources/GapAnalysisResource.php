@@ -10,11 +10,14 @@ class GapAnalysisResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
+     * Includes cv_analysis (strengths, gaps, red_flags, completeness_score) from user's CvAnalysis when available.
      *
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
     {
+        $cvAnalysis = $this->resource['cv_analysis'] ?? null;
+
         return [
             'job' => [
                 'id' => $this->resource['job']->id,
@@ -57,6 +60,15 @@ class GapAnalysisResource extends JsonResource
             'missing_skills' => $this->toArray_($this->resource['missing_skills']),
             'recommendations' => $this->resource['recommendations'] ?? [],
             'recommended_jobs' => $this->formatRecommendedJobs($this->resource['recommended_jobs'] ?? collect()),
+
+            // CV analysis from V3 parser (persisted during CV upload)
+            'cv_analysis' => $cvAnalysis ? [
+                'parsing_status'     => $cvAnalysis->parsing_status ?? null,
+                'completeness_score' => $cvAnalysis->completeness_score,
+                'strengths'          => $cvAnalysis->strengths ?? [],
+                'gaps'               => $cvAnalysis->gaps ?? [],
+                'red_flags'          => $cvAnalysis->red_flags ?? [],
+            ] : null,
         ];
     }
 

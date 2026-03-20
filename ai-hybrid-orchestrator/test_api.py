@@ -40,10 +40,8 @@ _wipe_core()
 _set_path_exclusive(_CV_ANALYZER_ROOT)
 
 # cv-analyzer imports (resolve before job-miner to claim 'core' first)
-from core.layer1_understanding.universal_extractor import process_document       # noqa
-from core.layer1_understanding.ner_engine          import SkillNEREngine         # noqa
-from core.layer2_classification.classifier         import CVDomainClassifier     # noqa
-from core.layer3_matching.similarity               import IntelligentMatcher     # noqa
+from core.layer1_understanding.orchestrator import CVOrchestrator  # noqa
+from core.layer3_matching.similarity        import IntelligentMatcher  # noqa
 
 _wipe_core()
 _set_path_exclusive(_JOB_MINER_ROOT)

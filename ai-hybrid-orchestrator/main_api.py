@@ -51,9 +51,7 @@ def _set_path_exclusive(root: Path) -> None:
 _wipe_core()
 _set_path_exclusive(_CV_ANALYZER_ROOT)
 
-from core.layer1_understanding.universal_extractor import process_document      # noqa: E402
-from core.layer1_understanding.ner_engine          import SkillNEREngine        # noqa: E402
-from core.layer2_classification.classifier         import CVDomainClassifier    # noqa: E402
+from core.layer1_understanding.orchestrator        import CVOrchestrator        # noqa: E402
 from core.layer3_matching.similarity               import IntelligentMatcher    # noqa: E402
 
 # ── Phase 2: load ai-job-miner exclusively ───────────────────────────────────
@@ -92,18 +90,16 @@ from pydantic import BaseModel                                        # noqa: E4
 from typing import Any, Dict, Optional, Union                                # noqa: E402
 
 # ── Singleton AI models (load once on startup) ────────────────────────────────
-_ner_engine: SkillNEREngine | None     = None
-_classifier: CVDomainClassifier | None = None
+_orchestrator: CVOrchestrator | None   = None
 _matcher:    IntelligentMatcher | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load heavy AI models once at startup; keep them alive for all requests."""
-    global _ner_engine, _classifier, _matcher
+    global _orchestrator, _matcher
     logger.info("🚀 Loading AI models…")
-    _ner_engine = SkillNEREngine()
-    _classifier = CVDomainClassifier()
+    _orchestrator = CVOrchestrator()
     _matcher    = IntelligentMatcher()
     logger.info("✅ All models ready — Gateway is live.")
     yield
@@ -170,28 +166,32 @@ async def parse_cv(cv_file: UploadFile = File(...)):
         if not file_bytes:
             raise HTTPException(status_code=422, detail="Uploaded file is empty.")
 
-        # Layer 1 — extract raw text
-        raw_text, extraction_method = process_document(filename, file_bytes)
-        if not raw_text:
+        if _orchestrator is None:
+            raise HTTPException(status_code=500, detail="AI orchestrator is not initialized.")
+
+        result = _orchestrator.process_cv(file_bytes, filename)
+        if result.parsing_status in ("no_text", "empty_file", "error"):
             raise HTTPException(
                 status_code=422,
-                detail="Could not extract text from the CV. Please upload a readable PDF, DOCX, or image.",
+                detail=f"Could not extract text from the CV (status={result.parsing_status}).",
             )
 
-        # Layer 1 — NER
-        entities  = _ner_engine.extract_entities(raw_text)
-        cv_skills = entities.get("skills", [])
+        cv_skills = [it.name for it in (result.skills.items or []) if getattr(it, "name", None)]
+        cv_roles = [it.title for it in (result.experience.items or []) if getattr(it, "title", None)]
 
-        # Layer 2 — domain classification
-        domain_probs      = _classifier.predict_domain(raw_text)
-        primary_domain    = max(domain_probs, key=domain_probs.get) if domain_probs else "Unknown"
-        domain_confidence = f"{round(domain_probs.get(primary_domain, 0.0) * 100, 1)}%"
+        primary_domain = result.analysis.primary_domain or "Unknown"
+        domain_confidence = "N/A"
+        extraction_method = "v3-orchestrator"
 
         # Contact extraction
-        contact_info = extract_contacts(raw_text)
+        contact_info = extract_contacts(_build_cv_raw_text(result))
 
+        # تحديث الـ Return عشان يبعت كل الداتا الجديدة للارافيل
         return {
             "skills":             cv_skills,
+            "roles":              cv_roles,
+            "education":          [],
+            "certifications":     [],
             "domain":             primary_domain,
             "domain_confidence":  domain_confidence,
             "contact_info":       contact_info,
@@ -543,4 +543,28 @@ async def hybrid_match(body: HybridMatchRequest):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main_api:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main_api:app", host="0.0.0.0", port=8001, reload=True)
+
+
+def _build_cv_raw_text(result) -> str:
+    parts: list[str] = []
+    try:
+        if getattr(result.profile, "headline", None):
+            parts.append(str(result.profile.headline))
+        if getattr(result.profile, "summary", None):
+            parts.append(str(result.profile.summary))
+    except Exception:
+        pass
+
+    try:
+        for exp in (result.experience.items or []):
+            desc = getattr(exp, "description", None) or []
+            tech = getattr(exp, "technologies", None) or []
+            if isinstance(desc, list):
+                parts.extend([str(x) for x in desc if str(x).strip()])
+            if isinstance(tech, list):
+                parts.extend([str(x) for x in tech if str(x).strip()])
+    except Exception:
+        pass
+
+    return "\n".join(p for p in parts if p and str(p).strip()).strip()

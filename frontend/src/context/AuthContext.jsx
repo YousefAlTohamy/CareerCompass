@@ -61,13 +61,17 @@ export const AuthProvider = ({ children }) => {
 
   /**
    * Refresh the stored user from GET /api/user.
+   * Laravel UserResource wraps the response in a `data` key, so unwrap it.
    * Useful after profile updates or after role changes.
    */
   const refreshUser = useCallback(async () => {
     try {
       const response = await apiClient.get('/user');
-      const freshUser = response.data;
-      persistUser(freshUser);
+      // UserResource returns { data: { id, profile, experiences, skills, ... } }
+      const freshUser = response.data?.data ?? response.data;
+      if (freshUser) {
+        persistUser(freshUser);
+      }
       return freshUser;
     } catch (error) {
       console.error('refreshUser error:', error);

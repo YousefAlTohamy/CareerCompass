@@ -6,12 +6,14 @@ import {
 } from 'recharts';
 import {
   CheckCircle2, AlertCircle, ChevronRight, Sparkles, Zap,
-  ChevronLeft, ExternalLink, GraduationCap, Briefcase, Library, Printer, Activity
+  ChevronLeft, ExternalLink, GraduationCap, Briefcase, Library, Printer, Activity,
+  Lightbulb, AlertTriangle, FileText, Upload
 } from 'lucide-react';
 import TypingEffect from '../../components/TypingEffect';
 import { gapAnalysisAPI } from '../../api/endpoints';
 import applicationsAPI from '../../api/applications';
 import { useScrapingStatus } from '../../hooks/useScrapingStatus';
+import { useAuth } from '../../context/AuthContext';
 
 // --- BULLETPROOF HELPERS (CRITICAL TO PREVENT CRASHES) ---
 export const getSkillName = (skill) => {
@@ -57,6 +59,41 @@ const PremiumMatchGauge = ({ percentage }) => {
   );
 };
 
+// --- CV Completeness Circular Progress Ring ---
+const CompletenessRing = ({ score }) => {
+  const safeScore = Math.min(100, Math.max(0, Number(score) || 0));
+  const circumference = 2 * Math.PI * 45;
+  const strokeDashoffset = circumference - (safeScore / 100) * circumference;
+  const color = safeScore >= 75 ? 'stroke-emerald-500' : safeScore >= 50 ? 'stroke-amber-500' : 'stroke-rose-500';
+
+  return (
+    <div className="relative w-28 h-28 flex items-center justify-center shrink-0">
+      <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+        <circle
+          cx="50" cy="50" r="45"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="8"
+          className="text-slate-200"
+        />
+        <circle
+          cx="50" cy="50" r="45"
+          fill="none"
+          strokeWidth="8"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          className={`${color} transition-all duration-700 ease-out`}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-2xl font-black text-slate-800 tracking-tight">{Math.round(safeScore)}%</span>
+        <span className="text-[8px] font-bold uppercase tracking-widest text-slate-400">Complete</span>
+      </div>
+    </div>
+  );
+};
+
 // --- Learning Resource Card ---
 const LearningResource = ({ skill }) => {
   const skillName = getSkillName(skill);
@@ -94,9 +131,131 @@ const LearningResource = ({ skill }) => {
   );
 };
 
+// --- General CV Health / AI Resume Analysis Section ---
+const GeneralCvHealthSection = ({ cvAnalysis, user, onNavigateToProfile = () => window.location.assign('/profile') }) => {
+  const cvData = cvAnalysis ?? user?.cv_analysis ?? null;
+  const strengths = cvData?.strengths ?? [];
+  const gaps = cvData?.gaps ?? [];
+  const redFlags = cvData?.red_flags ?? [];
+  const completenessScore = cvData?.completeness_score;
+  const hasCvAnalysis = cvData != null;
+
+  if (!hasCvAnalysis) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 border-dashed"
+      >
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+            <FileText className="w-8 h-8 text-slate-400" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-700 mb-2">AI Resume Analysis</h3>
+          <p className="text-slate-500 text-sm max-w-md mb-6">
+            Please upload your CV in your Profile to unlock deep AI analysis. Get insights on your strengths, gaps, and resume completeness.
+          </p>
+          <button
+            onClick={onNavigateToProfile}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm transition-colors"
+          >
+            <Upload size={16} /> Go to Profile
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  const safeStrengths = Array.isArray(strengths) ? strengths : [];
+  const safeGaps = Array.isArray(gaps) ? gaps : [];
+  const safeRedFlags = Array.isArray(redFlags) ? redFlags : [];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="relative bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 overflow-hidden"
+    >
+      <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+      <div className="relative z-10">
+        <h3 className="text-xl font-black text-slate-800 tracking-tight mb-6 flex items-center gap-2">
+          <Sparkles size={22} className="text-indigo-500" /> AI Resume Analysis
+        </h3>
+
+        <div className="flex flex-col md:flex-row gap-8 mb-8">
+          <CompletenessRing score={completenessScore} />
+          <div className="flex-1 flex flex-col justify-center">
+            <p className="text-slate-600 font-medium text-sm">
+              Your CV has been analyzed by our AI. Below are your identified strengths, areas to improve, and any anomalies to address.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Strengths - Green Theme */}
+          <div className="bg-emerald-50/80 rounded-2xl p-5 border border-emerald-100">
+            <h4 className="text-xs font-black text-emerald-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <CheckCircle2 size={18} className="text-emerald-600" /> Strengths
+            </h4>
+            {safeStrengths.length > 0 ? (
+              <ul className="space-y-2">
+                {safeStrengths.map((item, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-emerald-800 font-medium">
+                    <CheckCircle2 size={16} className="shrink-0 mt-0.5 text-emerald-600" />
+                    <span>{typeof item === 'string' ? item : String(item)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-emerald-600/80 text-sm italic">No strengths identified yet.</p>
+            )}
+          </div>
+
+          {/* Gaps - Amber Theme */}
+          <div className="bg-amber-50/80 rounded-2xl p-5 border border-amber-100">
+            <h4 className="text-xs font-black text-amber-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <Lightbulb size={18} className="text-amber-600" /> Gaps (Missing Sections / Info)
+            </h4>
+            {safeGaps.length > 0 ? (
+              <ul className="space-y-2">
+                {safeGaps.map((item, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-amber-800 font-medium">
+                    <Lightbulb size={16} className="shrink-0 mt-0.5 text-amber-600" />
+                    <span>{typeof item === 'string' ? item : String(item)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-amber-600/80 text-sm italic">No gaps identified. Your CV looks complete!</p>
+            )}
+          </div>
+
+          {/* Red Flags - Rose Theme (only render if not empty) */}
+          {safeRedFlags.length > 0 && (
+            <div className="bg-rose-50/80 rounded-2xl p-5 border border-rose-100">
+              <h4 className="text-xs font-black text-rose-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <AlertTriangle size={18} className="text-rose-600" /> Red Flags (Anomalies)
+              </h4>
+              <ul className="space-y-2">
+                {safeRedFlags.map((item, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-rose-800 font-medium">
+                    <AlertTriangle size={16} className="shrink-0 mt-0.5 text-rose-600" />
+                    <span>{typeof item === 'string' ? item : String(item)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 export default function GapAnalysis() {
   const { jobId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -108,9 +267,9 @@ export default function GapAnalysis() {
     try {
       setLoading(true);
       const response = await gapAnalysisAPI.analyzeJob(jobId);
-      const data = response.data.data || response.data;
+      const data = response?.data?.data ?? response?.data ?? response;
 
-      if (data.status === 'processing' && data.scraping_job_id) {
+      if (data?.status === 'processing' && data?.scraping_job_id) {
         setScrapingJobId(data.scraping_job_id);
         setLoading(false);
         return;
@@ -207,7 +366,7 @@ export default function GapAnalysis() {
     );
   }
 
-  const matchPct = Number(analysis?.match_percentage) || 0;
+  const matchPct = Number(analysis?.match_percentage) ?? 0;
   const safeMatched = Array.isArray(analysis?.matched_skills) ? analysis.matched_skills : [];
   const safeCritical = Array.isArray(analysis?.critical_skills) ? analysis.critical_skills : [];
   const safeRecs = Array.isArray(analysis?.recommendations) ? analysis.recommendations : [];
@@ -236,9 +395,16 @@ export default function GapAnalysis() {
           </button>
         </div>
 
+        {/* GENERAL CV HEALTH / AI RESUME ANALYSIS - TOP SECTION */}
+        <GeneralCvHealthSection
+          cvAnalysis={analysis?.cv_analysis}
+          user={user}
+          onNavigateToProfile={() => navigate('/profile')}
+        />
+
         <div className="grid lg:grid-cols-12 gap-6 items-start">
 
-          {/* LEFT COLUMN */}
+          {/* LEFT COLUMN - Job-Specific Gap Analysis */}
           <div className="lg:col-span-8 space-y-6">
 
             {/* OVERVIEW CARD */}

@@ -450,7 +450,12 @@ For 10,000 items at 1% FPR: m ≈ 95,850 bits (12 KB), k = 7 hash functions.
 
 ### Regex FSM Cleaners (`pipeline/cleaners.py`)
 
-> **CS Concept:** Finite State Machine — Python's `re` module compiles patterns into a DFA, giving O(n) matching with no backtracking.
+> **CS Concept:** Finite State Machine (DFA) — Python's `re` module compiles patterns into an O(n) traversal structure, ensuring predictable performance regardless of regex complexity.
+
+**Key Technical Feature: Multi-Currency Normalization**
+The `extract_salary` engine is fine-tuned for the **MENA Region**, supporting:
+- **Automatic scaling**: Handles "k" multipliers (e.g., `10k` → `10,000`).
+- **ISO 4217 Mapping**: Normalizes symbols (`$`, `£`, `€`) and regional codes (`EGP`, `SAR`, `AED`, `INR`) into standard ISO format.
 
 | Function                | Input Example                      | Output Example                              |
 | ----------------------- | ---------------------------------- | ------------------------------------------- |
@@ -502,6 +507,8 @@ Phase 4 introduces the core intelligence: a pure-mathematical matching engine an
 
 > **CS Concept:** O(n) single-pass state machine over document lines.
 
+**Logic Philosophy**: Avoids black-box ML for structural parsing. Instead, it uses a **Layered Regex Heuristic** to detect section transitions, providing 100% explainability for why a specific experience block was extracted.
+
 `HeuristicSegmenter.segment_cv` scans the CV line-by-line. At each line it either:
 
 - **Transitions state** → detects a section header via pre-compiled regex patterns per canonical section (`summary`, `experience`, `education`, `skills`, `certifications`, `projects`, …)
@@ -521,9 +528,9 @@ print(sections["skills"])       # → skills list
 
 ---
 
-### TF-IDF Matching Engine (`ai/matcher.py`)
+> **CS Concepts:** Information Retrieval (TF-IDF, Sparck Jones 1972) + Linear Algebra (Cosine Similarity).
 
-> **CS Concepts:** Information Retrieval (TF-IDF, Sparck Jones 1972) + Linear Algebra (Cosine Similarity). Zero numpy, zero scikit-learn.
+**Technical Depth**: This engine is implemented **entirely from first principles** using Python's standard library. By avoiding `numpy` and `scikit-learn`, we've achieved a zero-dependency math core that is extremely lightweight and easy to audit for graduation projects.
 
 | Step | Function            | Formula                                       | Complexity |
 | ---- | ------------------- | --------------------------------------------- | ---------- |
@@ -581,13 +588,13 @@ Phase 5 completes the engine by adding resilience, politeness, and O(1) memory s
 
 > **CS Concept:** Token Bucket traffic-shaping algorithm (RFC 4115) — O(1) per request.
 
-The `SmartAsyncClient` combines three evasion & reliability mechanisms:
+The `SmartAsyncClient` implements a **Polite Bot Protocol** by combining three evasion & reliability mechanisms:
 
 | Mechanism               | Algorithm                                                   | Purpose                                            |
 | ----------------------- | ----------------------------------------------------------- | -------------------------------------------------- |
-| **Token Bucket**        | Lazy refill: `tokens += elapsed × rate`, capped at capacity | Smooth request rate — prevents bursting            |
-| **Exponential Backoff** | `delay = min(base × 2ⁿ, max) + jitter`                      | Handles 429 / 5xx gracefully; jitter prevents herd |
-| **User-Agent Rotation** | `random.choice(8 real browser UA strings)`                  | Reduces WAF fingerprint signal                     |
+| **Token Bucket**        | Lazy refill: `tokens += elapsed × rate`, capped at capacity | **RFC 4115 Shaping**: Prevents burst-rate blocking |
+| **Exponential Backoff** | `delay = min(base × 2ⁿ, max) + jitter`                      | **Jittered Backoff**: Prevents thundering herd effect |
+| **User-Agent Rotation** | `random.choice(8 real browser UA strings)`                  | **Evasion**: Reduces static fingerprinting signal  |
 
 ```python
 async with SmartAsyncClient(rate=2.0, max_retries=4) as client:
@@ -628,7 +635,7 @@ for task in await dlq.get_retryable():
 
 > **CS Concept:** Asynchronous Generator (PEP 525) — O(1) memory footprint regardless of dataset size.
 
-`ScrapingEngine.stream_jobs` is declared with `async def … yield`. This fuses a coroutine with a generator:
+By fusing a coroutine with a generator, we achieve **Constant Memory Complexity**. Whether the engine is processing 10 URLs or 10,000, the RAM usage remains static because each job is yielded and forgotten as soon as the caller processes it.
 
 | Property             | Bulk `return list`                    | `async def … yield`          |
 | -------------------- | ------------------------------------- | ---------------------------- |
@@ -766,4 +773,4 @@ python -m spacy download en_core_web_sm
 | ✅ **5**   | Token Bucket rate limiter, Exponential Backoff, Dead Letter Queue, async generator               |
 | ✅ **5.5** | IE enhancements — `title` (`<h1>`), `location`, `job_type`, `work_model`, `working_hours` fields |
 | ✅ **6**   | Hybrid Orchestrator — Facade combining `ai-job-miner` + `ai-cv-analyzer` with weighted scoring   |
-| 🔜 **7**   | REST API wrapper (FastAPI) for Laravel integration                                               |
+| ✅ **7**   | FastAPI Gateway + Contact Extractor (Isolation & Orchestration)                                  |

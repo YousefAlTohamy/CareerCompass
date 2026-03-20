@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CvController;
+use App\Http\Resources\UserResource;
 use App\Http\Controllers\Api\GapAnalysisController;
 use App\Http\Controllers\Api\JobController;
 use App\Http\Controllers\Api\MarketIntelligenceController;
@@ -47,9 +48,10 @@ Route::get('/jobs/{id}', [JobController::class, 'show'])->whereNumber('id');
 
 // Protected routes (require authentication)
 Route::middleware('auth:sanctum')->group(function () {
-    // Get authenticated user
+    // Get authenticated user (comprehensive data via UserResource)
     Route::get('/user', function (Request $request) {
-        return $request->user()->load('skills');
+        $user = $request->user()->load(['profile', 'experiences', 'skills', 'cvAnalysis']);
+        return new UserResource($user);
     });
 
     // Profile Management
@@ -62,6 +64,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/upload-cv', [CvController::class, 'upload']);
     Route::get('/user/skills', [CvController::class, 'getUserSkills']);
     Route::delete('/user/skills/{skillId}', [CvController::class, 'removeSkill']);
+    Route::get('/user/cv-analysis', [GapAnalysisController::class, 'getCvAnalysis']);
 
     // Recommended jobs for authenticated user
     // ⚠️ Must be inside this group (auth:sanctum) and BEFORE the public /jobs/{id} wildcard

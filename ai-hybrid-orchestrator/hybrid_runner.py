@@ -72,9 +72,7 @@ def _only(root: Path):
 # Step 1 — Load ai-cv-analyzer modules
 # ==============================================================================
 with _only(_CV_ANALYZER_ROOT):
-    from core.layer1_understanding.universal_extractor import process_document
-    from core.layer1_understanding.ner_engine          import SkillNEREngine
-    from core.layer2_classification.classifier         import CVDomainClassifier
+    from core.layer1_understanding.orchestrator        import CVOrchestrator
     from core.layer3_matching.similarity               import IntelligentMatcher
 
 # Save the cv-analyzer core modules under unique aliases so they survive the
@@ -111,8 +109,7 @@ for p in (_CV_ANALYZER_ROOT, _JOB_MINER_ROOT):
 
 # ─── Module-level singletons ───────────────────────────────────────────────────
 logger.info("Loading AI models… (first run may take ~30 s)")
-_ner_engine = SkillNEREngine()
-_classifier = CVDomainClassifier()
+_orchestrator = CVOrchestrator()
 _matcher    = IntelligentMatcher()   # loads all-MiniLM-L6-v2
 logger.info("All models ready.")
 
@@ -149,14 +146,36 @@ async def process_hybrid_application(
     logger.info("  Job : %s", job_url)
     logger.info("═" * 60)
 
-    # ── Read & parse CV (needed as TF-IDF reference text) ────────────────────
+    # ── Read & parse CV via V3 Orchestrator (also used as TF-IDF reference text) ──
     cv_bytes = _read_file(cv_path)
-    cv_raw_text, extraction_method = process_document(
-        os.path.basename(cv_path), cv_bytes
-    )
+    cv_filename = os.path.basename(cv_path)
+    result = _orchestrator.process_cv(cv_bytes, cv_filename)
 
-    if not cv_raw_text:
-        return {"error": "CV text extraction failed — unsupported format or empty file."}
+    parsing_status = getattr(result, "parsing_status", "unknown")
+    if parsing_status in ("no_text", "empty_file", "error"):
+        return {
+            "error": f"CV parsing failed (status={parsing_status}).",
+            "cv": {"filename": cv_filename, "parsing_status": parsing_status},
+        }
+
+    cv_skills = [item.name for item in (result.skills.items or []) if getattr(item, "name", None)]
+    cv_roles = [item.title for item in (result.experience.items or []) if getattr(item, "title", None)]
+    if not cv_roles and getattr(result.profile, "current_title", None):
+        cv_roles = [result.profile.current_title]
+
+    primary_domain = result.analysis.primary_domain
+    total_experience_years = None
+    try:
+        total_experience_years = (
+            result.analysis.metadata.get("experience", {}).get("total_experience_years")
+            if isinstance(result.analysis.metadata, dict)
+            else None
+        )
+    except Exception:
+        total_experience_years = None
+
+    cv_raw_text = _build_cv_raw_text(result)
+    extraction_method = "v3-orchestrator"
 
     # ── Action A: Scrape & parse job listing ──────────────────────────────────
     logger.info("[A] Scraping job via ScrapingEngine…")
@@ -176,20 +195,12 @@ async def process_hybrid_application(
 
     logger.info("[A] ✓ Job scraped: '%s'", job_dict.get("title", job_url))
 
-    # ── Action B: Parse CV via ai-cv-analyzer ────────────────────────────────
+    # ── Action B: Parse CV via V3 Orchestrator ───────────────────────────────
     logger.info("[B] Analysing CV…")
 
-    entities          = _ner_engine.extract_entities(cv_raw_text)
-    cv_skills         = entities.get("skills",        [])
-    cv_roles          = entities.get("roles",         [])
-
-    domain_probs      = _classifier.predict_domain(cv_raw_text)
-    primary_domain    = max(domain_probs, key=domain_probs.get) if domain_probs else "Unknown"
-    domain_confidence = round(domain_probs.get(primary_domain, 0.0) * 100, 1)
-
     logger.info(
-        "[B] ✓ Domain: %s (%.1f%%)  |  skills: %d",
-        primary_domain, domain_confidence, len(cv_skills),
+        "[B] ✓ Status: %s  |  Domain: %s  |  skills: %d  |  exp_years: %s",
+        parsing_status, primary_domain, len(cv_skills), total_experience_years,
     )
 
     # ── Action C: Hybrid Scoring ──────────────────────────────────────────────
@@ -236,7 +247,8 @@ async def process_hybrid_application(
             "skills":            cv_skills,
             "roles":             cv_roles,
             "domain":            primary_domain,
-            "domain_confidence": f"{domain_confidence}%",
+            "parsing_status":    parsing_status,
+            "total_experience_years": total_experience_years,
         },
         "scores": {
             "semantic_score_pct": semantic_score_pct,
@@ -258,6 +270,35 @@ def _read_file(path: str) -> bytes:
             "Update MOCK_CV_PATH in hybrid_runner.py to point to a real CV."
         )
     return p.read_bytes()
+
+
+def _build_cv_raw_text(result) -> str:
+    """
+    TF-IDF fallback requires a rich raw text string.
+    Construct it from V3 CVParseResult fields without relying on legacy extractor.
+    """
+    parts: list[str] = []
+    try:
+        if getattr(result.profile, "headline", None):
+            parts.append(str(result.profile.headline))
+        if getattr(result.profile, "summary", None):
+            parts.append(str(result.profile.summary))
+    except Exception:
+        pass
+
+    try:
+        for exp in (result.experience.items or []):
+            desc = getattr(exp, "description", None) or []
+            tech = getattr(exp, "technologies", None) or []
+            if isinstance(desc, list):
+                parts.extend([str(x) for x in desc if str(x).strip()])
+            if isinstance(tech, list):
+                parts.extend([str(x) for x in tech if str(x).strip()])
+    except Exception:
+        pass
+
+    out = "\n".join(p for p in parts if p and str(p).strip()).strip()
+    return out or ""
 
 
 # ─── Local Test Block ──────────────────────────────────────────────────────────

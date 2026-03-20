@@ -1,42 +1,41 @@
 # 🧠 AI CV Analyzer
 
-> **Layer 1 — Universal Document Understanding (PDF · DOCX · Image / OCR)**  
+> **V3 AI Pipeline — Layer 1 Understanding**  
+> Universal document extraction with spatial normalization, semantic segmentation, advanced NER, canonicalization, and temporal parsing.  
 > **Layer 2 — Professional Domain Classification (Zero-Shot BART-MNLI)**  
 > **Layer 3 — Semantic Matching Engine (Sentence-BERT + Cosine Similarity)**
 
-A **3-Layer Deep Learning pipeline** that converts any CV file into a structured profile and intelligently matches it against a job description using both semantic embeddings and hard-skill overlap scoring.
+A **5-stage V3 AI pipeline** that converts any CV file into a structured, canonicalized profile and intelligently matches it against job descriptions using semantic embeddings and hard-skill overlap scoring.
 
 ---
 
 ## Table of Contents
 
-1. [Project Overview](#project-overview)
+1. [V3 AI Pipeline Architecture](#v3-ai-pipeline-architecture)
 2. [Directory Structure](#directory-structure)
-3. [Core 3-Layer Architecture](#core-3-layer-architecture)
-   - [Layer 1: Universal Understanding & OCR](#1️⃣-layer-1-universal-understanding--ocr)
-   - [Layer 2: Domain Classification](#2️⃣-layer-2-professional-domain-classification)
-   - [Layer 3: Semantic Matching Engine](#3️⃣-layer-3-semantic-matching-engine)
-4. [API Endpoints](#api-endpoints)
-5. [Model Fine-Tuning](#model-fine-tuning)
-6. [Model Evaluation Metrics](#model-evaluation-metrics)
-7. [Troubleshooting & Engineering Solutions](#️-troubleshooting--engineering-solutions)
-8. [Integration with Hybrid Orchestrator](#integration-with-hybrid-orchestrator)
-9. [Installation](#installation)
-10. [Scalability & Future Expansion](#scalability--future-expansion)
-11. [Technical Glossary](#technical-glossary)
-12. [Roadmap](#roadmap)
+3. [5-Stage V3 Pipeline (Layer 1)](#5-stage-v3-pipeline-layer-1)
+4. [Layer 2 & 3](#layer-2--3)
+5. [Pydantic CVParseResult Schema](#pydantic-cvparseresult-schema)
+6. [API Endpoints](#api-endpoints)
+7. [Running Locally (Port 8002)](#running-locally-port-8002)
+8. [Installation](#installation)
+9. [Troubleshooting](#troubleshooting)
+10. [Integration with Hybrid Orchestrator](#integration-with-hybrid-orchestrator)
 
 ---
 
-## Project Overview
+## V3 AI Pipeline Architecture
 
 | Attribute     | Detail                                                                         |
 | ------------- | ------------------------------------------------------------------------------ |
 | **Language**  | Python 3.11+                                                                   |
-| **Framework** | FastAPI — async REST API gateway on port `8002`                                |
+| **Framework** | FastAPI — async REST API gateway on port **8002**                              |
 | **ML Models** | `dslim/bert-base-NER`, `facebook/bart-large-mnli`, `all-MiniLM-L6-v2`          |
 | **OCR Stack** | PyMuPDF (text PDFs), EasyOCR + OpenCV (scanned images)                         |
-| **Goal**      | Replace brittle keyword matching with transformer-based semantic understanding |
+| **Lifecycle** | **Singleton Pattern** — all models pre-loaded at startup                       |
+| **Port**      | **8002** — explicitly isolated from ai-hybrid-orchestrator (8001)              |
+| **Memory**    | ~4GB RAM on startup due to singleton model loading                             |
+| **Goal**      | 100% precise spatial CV parsing with normalized, canonical skill output        |
 
 ---
 
@@ -55,10 +54,14 @@ ai-cv-analyzer/
 │
 ├── core/                            # The 3 Layers of Intelligence
 │   ├── layer1_understanding/
-│   │   ├── text_parser.py           # PyMuPDF (PDF) + python-docx (DOCX) extraction
-│   │   ├── ocr_pipeline.py          # EasyOCR + OpenCV for scanned images
-│   │   ├── universal_extractor.py   # Smart router: picks extraction method by file type
-│   │   └── ner_engine.py            # BERT NER: extracts skills, roles, orgs (Singleton)
+│   │   ├── orchestrator.py          # V3 Facade: spatial → NER → experience → canonicalizer
+│   │   ├── spatial_parser.py        # pdfplumber Row Grouper — layout-aware extraction
+│   │   ├── section_segmenter.py     # Semantic section segmentation (Sentence-Transformers ready)
+│   │   ├── advanced_ner.py          # BERT NER with context window validation (±3 words)
+│   │   ├── experience_engine.py     # Temporal engine — python-dateutil date parsing
+│   │   ├── canonicalizer.py         # RapidFuzz fuzzy deduplication
+│   │   ├── schema.py                # Pydantic CVParseResult, SkillItem, etc.
+│   │   └── ocr_pipeline.py          # EasyOCR + OpenCV (scanned PDFs)
 │   │
 │   ├── layer2_classification/
 │   │   └── classifier.py            # BART-MNLI zero-shot domain classifier (Singleton)
@@ -76,86 +79,95 @@ ai-cv-analyzer/
 
 ---
 
-## Core 3-Layer Architecture
+## 5-Stage V3 Pipeline (Layer 1)
 
-### 1️⃣ Layer 1: Universal Understanding & OCR
+The V3 pipeline processes PDFs through five tightly coupled stages, producing a strict **CVParseResult** JSON schema.
 
-**Files:** `core/layer1_understanding/`
+### Stage 1: Spatial Normalization (`pdfplumber` Row Grouper)
 
-**Goal:** Convert any document format (PDF · DOCX · PNG/JPG) into clean raw text.
+| Module             | File                | Purpose                                                                 |
+| ------------------ | ------------------- | ----------------------------------------------------------------------- |
+| **Spatial Parser** | `spatial_parser.py` | Layout-aware PDF text extraction using **pdfplumber** word coordinates  |
 
-| Module                   | Handles                     | Method                                   |
-| ------------------------ | --------------------------- | ---------------------------------------- |
-| `text_parser.py`         | Text-based PDFs             | PyMuPDF (`fitz`) — fast, lossless        |
-| `text_parser.py`         | Word documents (`.docx`)    | `python-docx` — paragraph extraction     |
-| `ocr_pipeline.py`        | Scanned images & image-PDFs | EasyOCR + OpenCV pre-processing          |
-| `universal_extractor.py` | Any file                    | Smart router: text → OCR fallback        |
-| `ner_engine.py`          | Raw text                    | BERT NER: Skills · Roles · Organizations |
+- **Row Grouper**: Clusters words by Y proximity (`y_tolerance` = median word height × 0.65)
+- **Column-Aware Ordering**: Splits rows on horizontal gaps (column separation), clusters segments by X position
+- **Reading Order**: Left-to-right columns, top-to-bottom within each column
+- **Output**: Ordered text string preserving logical reading flow (avoids multi-column chaos)
 
-**Smart fallback chain (PDF):**
+### Stage 2: Semantic Section Segmentation (Sentence-Transformers Ready)
 
-```
-PDF → PyMuPDF  →  has text? → return text
-                ↓ no text (scanned)
-              Render pages as images → EasyOCR → return OCR text
-```
+| Module               | File                  | Purpose                                                         |
+| -------------------- | --------------------- | --------------------------------------------------------------- |
+| **Section Segmenter**| `section_segmenter.py`| Splits ordered text into CV sections via header heuristics      |
 
-**NER model auto-detection:**
+- **Sections**: `profile_summary`, `experience`, `education`, `skills`, `projects`, `uncategorized`
+- **Architecture-Ready**: Accepts custom `header_resolver` (e.g., embeddings-based) without changing the interface
+- **Output**: `SegmentationResult` with blocks, sections dict, and analysis (found/missing sections, anomalies)
 
-```python
-# ner_engine.py — loads custom weights if present, generic BERT-NER otherwise
-if os.path.exists("models/ner_weights/career_compass_ner_final"):
-    MODEL_NAME = "models/ner_weights/career_compass_ner_final"  # fine-tuned
-else:
-    MODEL_NAME = "dslim/bert-base-NER"   # HuggingFace fallback — never crashes
-```
+### Stage 3: Advanced NER & Validation (Context Window ±3 words)
+
+| Module          | File             | Purpose                                                               |
+| --------------- | ---------------- | --------------------------------------------------------------------- |
+| **Advanced NER**| `advanced_ner.py`| BERT-based Named Entity Recognition with **context window validation**|
+
+- **Model**: `dslim/bert-base-NER` or custom `career_compass_ner_final` if present
+- **Context Window**: Configurable `context_window_words=3` — validates entities within ±3 words of surrounding tokens
+- **Entity Types**: Skills, Roles, Organizations, Education, Certifications
+- **Output**: Normalized entities grouped by category with provenance
+
+### Stage 4: Canonicalization (RapidFuzz Deduplication)
+
+| Module           | File             | Purpose                                              |
+| ---------------- | ---------------- | ---------------------------------------------------- |
+| **Canonicalizer**| `canonicalizer.py`| Skill normalization and fuzzy deduplication via **RapidFuzz** |
+
+- **Fuzzy Threshold**: Default 86 (configurable via `OrchestratorConfig`)
+- **Deduplication**: Merges variants (e.g., `Vue.js` ≡ `VueJS`) and attaches provenance
+- **Output**: `CanonicalSkill` list with `name`, `confidence_score`, `sources`, `raw_variants`
+
+### Stage 5: Temporal Engine (`python-dateutil`)
+
+| Module             | File                 | Purpose                                           |
+| ------------------ | -------------------- | ------------------------------------------------- |
+| **Experience Engine** | `experience_engine.py` | Date range extraction and total experience years |
+
+- **Date Parsing**: `python-dateutil` for robust handling of formats (Jan 2020 – Mar 2022, 05/2019 to 11/2021, etc.)
+- **Present Handling**: Normalizes "Present", "Current", "Now", "Today" to today's date
+- **Output**: `DateRange` list, `total_experience_years`, ranked current title
 
 ---
 
-### 2️⃣ Layer 2: Professional Domain Classification
+## Pydantic CVParseResult Schema
 
-**File:** `core/layer2_classification/classifier.py`
-
-**Goal:** Classify a CV into a professional domain with probability scores.
-
-- **Model:** `facebook/bart-large-mnli` (Zero-Shot Classification — no labelled training data needed)
-- **Output:** Probability distribution across domains e.g. `Backend Development: 0.92, UI/UX: 0.04`
-- **Pattern:** Singleton — model loaded once at startup, reused for all requests
+The pipeline outputs a **strict Pydantic model** — `CVParseResult` — ensuring type safety and contract consistency:
 
 ```python
-classifier = CVDomainClassifier()
-probs = classifier.predict_domain(cv_raw_text)
-# → {"Backend Development": 0.89, "Mobile App Development": 0.07, ...}
+class CVParseResult(StrictModel):
+    parsing_status: Literal["success", "empty_file", "no_text", "error"]
+    profile: Profile           # full_name, current_title, headline, summary, contact
+    stats: DocumentStats       # page_count, char_count, word_count
+    skills: SkillsSection      # items: List[SkillItem], confidence_score
+    experience: ExperienceSection  # items: List[ExperienceItem], confidence_score
+    analysis: AnalysisSection  # predicted_role, strengths, gaps, red_flags, metadata
 ```
+
+**SkillItem** includes `name`, `confidence_score`, `category`, and `evidence` (snippet indicating where the skill was found).
+
+**ExperienceItem** includes `title`, `company`, `start_date`, `end_date`, `is_current`, `description`, `technologies`, `confidence_score`.
 
 ---
 
-### 3️⃣ Layer 3: Semantic Matching Engine
+## Layer 2 & 3
 
-**Files:** `core/layer3_matching/embedder.py` · `core/layer3_matching/similarity.py`
+### Layer 2: Domain Classification
 
-**Goal:** Match a CV to a job description based on _meaning_, not just keywords.
+- **Model**: `facebook/bart-large-mnli` (Zero-Shot Classification)
+- **Output**: Probability distribution across professional domains
 
-#### Scoring Formula
+### Layer 3: Semantic Matching Engine
 
-```
-Final Match Score = (Semantic Score × 60%) + (Skill Overlap Score × 40%)
-```
-
-| Signal             | Method                                                  | Weight     |
-| ------------------ | ------------------------------------------------------- | ---------- | --- | --- |
-| **Semantic Score** | `all-MiniLM-L6-v2` → 384-dim vector → Cosine Similarity | 60%        |
-| **Skill Overlap**  | Exact set intersection: `cv_skills ∩ job_skills /       | job_skills | `   | 40% |
-
-```python
-matcher = IntelligentMatcher()
-result = matcher.calculate_match(
-    cv_data  = {"raw_text": cv_text,  "skills": ["python", "django"]},
-    job_data = {"description": jd_text, "skills": ["python", "fastapi"]},
-)
-# → {"match_score": 72.4, "semantic_score": 68.1,
-#    "skill_overlap_score": 50.0, "missing_skills": ["fastapi"]}
-```
+- **Model**: `all-MiniLM-L6-v2` — 384-dim embeddings
+- **Formula**: `Final = (Semantic × 60%) + (Skill Overlap × 40%)`
 
 ---
 
@@ -163,127 +175,69 @@ result = matcher.calculate_match(
 
 | Method | Endpoint             | Description                                                           |
 | ------ | -------------------- | --------------------------------------------------------------------- |
-| `GET`  | `/`                  | Health check — returns `{"status": "operational", "version": "v2.0"}` |
-| `POST` | `/api/v2/analyze-cv` | Upload CV file → Layer 1 (NER) + Layer 2 (classification)             |
+| `GET`  | `/`                  | Health check — `{"status": "operational", "version": "v2.0"}`         |
+| `POST` | `/api/v2/analyze-cv` | Upload CV → Layer 1 (V3 pipeline) + Layer 2 (classification)          |
 | `POST` | `/api/v2/match-job`  | JSON body → Layer 3 semantic matching                                 |
 
-**Run the server:**
+---
+
+## Running Locally (Port 8002)
 
 ```bash
 cd ai-cv-analyzer
-python main.py   # starts on port 8002
+python -m venv venv
+
+# Windows
+venv\Scripts\activate
+
+# macOS/Linux
+source venv/bin/activate
+
+pip install -r requirements.txt
+python main.py   # or: uvicorn main:app --host 0.0.0.0 --port 8002 --reload
 ```
 
----
+**Verify**: http://127.0.0.1:8002/docs (Swagger UI)
 
-## Model Fine-Tuning
-
-To ensure independence from private/gated datasets, we use a **Synthetic Data Augmentation** strategy:
-
-1. **Synthetic Engine** (`train_ner.ipynb`): Generates 5,000+ realistic BIO-tagged resume samples (Skills, Roles, Experience).
-2. **Infrastructure:** Training runs on **Google Colab** (T4 GPU) fine-tuning `distilbert-base-cased`.
-3. **Auto-Detection:** `ner_engine.py` checks for `models/ner_weights/career_compass_ner_final/` — uses it if present, falls back to `dslim/bert-base-NER` otherwise.
-4. **Verification:** Colab notebook generates an F1-Score report for each training run.
-
-See [HOW_TO_TRAIN_MODEL.md](HOW_TO_TRAIN_MODEL.md) for the full step-by-step guide.
-
----
-
-## Model Evaluation Metrics
-
-| Metric        | Definition                                         | Why it matters        |
-| ------------- | -------------------------------------------------- | --------------------- |
-| **Precision** | Of all predicted skills, how many were correct?    | Avoids hallucinations |
-| **Recall**    | Of all real skills in the CV, how many were found? | Avoids missing data   |
-| **F1-Score**  | Harmonic mean of Precision & Recall                | Gold standard for NER |
-
-**Validation approach:** 80/20 train-test split on 5,000+ synthetic samples. Target F1 > 90%.
-
----
-
-## 🛠️ Troubleshooting & Engineering Solutions
-
-| Challenge                       | Solution                                                                  | Technical Term               |
-| :------------------------------ | :------------------------------------------------------------------------ | :--------------------------- |
-| **Dataset inaccessibility**     | Custom Synthetic Data Engine generating 5,000+ labelled samples           | _Data Augmentation_          |
-| **Library version conflicts**   | Updated `evaluation_strategy` → `eval_strategy` for `transformers` v4.46+ | _API Lifecycle Management_   |
-| **Missing model parameters**    | Switched `tokenizer` → `processing_class` in `Trainer` init               | _Backward Compatibility Fix_ |
-| **OCR resource intensity**      | PyMuPDF (fast, text-only) → EasyOCR fallback (image-based)                | _Multi-Modal Fallback_       |
-| **Port conflicts**              | ai-cv-analyzer runs on port `8002`; legacy engine on `8001`               | _Port Orchestration_         |
-| **`core/` namespace collision** | Resolved in `ai-hybrid-orchestrator` via sequential sys.path swap         | _Module Isolation_           |
-
----
-
-## Integration with Hybrid Orchestrator
-
-`ai-cv-analyzer` is consumed directly by `ai-hybrid-orchestrator/hybrid_runner.py` as part of the combined Facade pipeline:
-
-```python
-# hybrid_runner.py imports from ai-cv-analyzer:
-from core.layer1_understanding.universal_extractor import process_document
-from core.layer1_understanding.ner_engine          import SkillNEREngine
-from core.layer2_classification.classifier         import CVDomainClassifier
-from core.layer3_matching.similarity               import IntelligentMatcher
-```
-
-The orchestrator calls all 3 layers sequentially, then combines the semantic score from **Layer 3** with a TF-IDF score from `ai-job-miner` to produce the final weighted match result.
+> **Port 8002** is explicitly isolated from the ai-hybrid-orchestrator (port 8001) to allow concurrent model testing and direct Laravel integration for Layer 3 matching.
 
 ---
 
 ## Installation
 
 ```bash
-# 1. Navigate into the project directory
 cd ai-cv-analyzer
-
-# 2. (Recommended) Create & activate a virtual environment
 python -m venv venv
-# Windows
-venv\Scripts\activate
-# macOS / Linux
-source venv/bin/activate
-
-# 3. Install dependencies
+venv\Scripts\activate        # Windows
+source venv/bin/activate     # macOS/Linux
 pip install -r requirements.txt
-
-# 4. (Tesseract — required for EasyOCR on Windows)
-# Download from: https://github.com/UB-Mannheim/tesseract/wiki
-# Add to PATH after installation
 ```
 
----
-
-## Scalability & Future Expansion
-
-1. **Vertical Scaling (Data):** Expand `SKILLS`/`ROLES` dictionaries in `train_ner.ipynb`; increase samples 5k → 50k+; add real datasets (CoNLL-2003, JobStack).
-2. **Architectural Upgrade:** Swap `distilbert-base-cased` → `bert-base-cased` or `roberta-large` for higher accuracy.
-3. **Entity Expansion:** Add new BIO tags (`EDUCATION`, `CERTIFICATIONS`, `GPA`) to the synthetic engine.
-4. **Hardware Acceleration:** Move from Colab T4 to A100/H100 for massive-scale training.
+**Tesseract** (for EasyOCR on scanned images): Download from [UB-Mannheim/tesseract](https://github.com/UB-Mannheim/tesseract/wiki) and add to PATH.
 
 ---
 
-## Technical Glossary
+## Troubleshooting
 
-| Term                         | Definition                                                                                            |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------- |
-| **NER**                      | Named Entity Recognition — locates and classifies entities (skills, roles, orgs) in unstructured text |
-| **BIO Tagging**              | Token labelling format: B-Begin, I-Inside, O-Outside a named entity                                   |
-| **Embeddings**               | Dense numeric vectors for text; semantically similar phrases cluster close together                   |
-| **Cosine Similarity**        | Angle-based distance metric between two vectors — core of the semantic matcher                        |
-| **Fine-Tuning**              | Training a pre-trained model further on domain-specific data (resume text)                            |
-| **Synthetic Data**           | Artificially generated labelled data used when real data is scarce or restricted                      |
-| **Zero-Shot Classification** | Classifying into labels the model has never explicitly been trained on                                |
+| Challenge                       | Solution                                                                  |
+| ------------------------------- | ------------------------------------------------------------------------- |
+| **Port 8002 in use**            | Ensure no legacy services run on 8002; ai-cv-analyzer is isolated         |
+| **`core/` namespace collision** | Resolved in ai-hybrid-orchestrator via sequential sys.path swap           |
+| **Memory overhead**             | ~4GB RAM; singleton models loaded once at startup                         |
+| **OCR resource intensity**      | PyMuPDF (fast, text-only) → EasyOCR fallback (image-based)                |
 
 ---
 
-## Roadmap
+## Integration with Hybrid Orchestrator
 
-| Phase           | Feature                                              | Status |
-| --------------- | ---------------------------------------------------- | ------ |
-| **Layer 1**     | Universal document extraction (PDF, DOCX, Image/OCR) | ✅     |
-| **Layer 2**     | Zero-shot domain classification (BART-MNLI)          | ✅     |
-| **Layer 3**     | Semantic matching engine (SBERT + cosine similarity) | ✅     |
-| **API**         | FastAPI gateway (`/analyze-cv`, `/match-job`)        | ✅     |
-| **Fine-Tuning** | Synthetic data engine + Colab training pipeline      | ✅     |
-| **Integration** | Hybrid Orchestrator Facade with `ai-job-miner`       | ✅     |
-| **Phase 7**     | Unified REST API endpoint for Laravel integration    | 🔜     |
+`ai-cv-analyzer` is consumed by:
+
+1. **ai-hybrid-orchestrator** — `hybrid_runner.py` and `main_api.py` import `CVOrchestrator` and `IntelligentMatcher`
+2. **Laravel GapAnalysisService** — calls `POST /api/v2/match-job` on port 8002 for Zero PDF Re-parsing matching
+
+See [ai-hybrid-orchestrator/README.md](../ai-hybrid-orchestrator/README.md) for the full integration flow.
+
+---
+
+**Last Updated**: March 2026  
+**Version**: V3 Pipeline — 5-Stage Layer 1 Understanding

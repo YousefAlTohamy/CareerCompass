@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\CvAnalysisResource;
 use App\Http\Resources\GapAnalysisResource;
 use App\Models\Job;
 use App\Models\User;
@@ -25,7 +26,8 @@ class GapAnalysisController extends Controller
 
     /**
      * Analyze skill gap for a specific job.
-     * Also persists the job title and extracted skills to the user's profile.
+     * Persists the job title and extracted skills to the user's profile.
+     * Includes cv_analysis (strengths, gaps, red_flags) from the user's persisted CvAnalysis when available.
      */
     public function analyzeJob(int $jobId): JsonResponse
     {
@@ -43,18 +45,19 @@ class GapAnalysisController extends Controller
                 ], 404);
             }
 
-            // Perform gap analysis
+            // Perform gap analysis (user skills vs job skills)
             $analysis = $this->gapAnalysisService->performGapAnalysis($user, $job);
 
-            // ── Persist job_title from the current job if not already set ────────
-            // The primary source of job_title is /parse-cv (CvController).
-            // This is a fallback: if the user analysed a job before uploading a CV,
-            // we seed job_title from the job being analysed using the Sanctum guard.
+            // Include CvAnalysis data from DB (saved during CV upload); null if user hasn't uploaded CV
+            $analysis['cv_analysis'] = $user->cvAnalysis;
+
+            // ── Persist headline from the current job if not already set ────────
+            // The primary source is /parse-cv (CvController). Fallback: seed from analyzed job.
             if (empty($user->job_title) && auth('sanctum')->check()) {
-                auth('sanctum')->user()->update([
-                    'job_title' => $job->title,
-                ]);
-                $user->refresh(); // reload so $detectedTitle picks up the new value
+                $authUser = auth('sanctum')->user();
+                $authProfile = $authUser->profile()->firstOrCreate([], []);
+                $authProfile->update(['headline' => $job->title]);
+                $user->refresh();
             }
 
             // ── Persist matched skills + recommended jobs ─────────────────────
@@ -192,6 +195,33 @@ class GapAnalysisController extends Controller
                 'error'   => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
+    }
+
+    /**
+     * Get the authenticated user's CV analysis (strengths, gaps, red_flags, completeness_score).
+     * Data is persisted by CvProcessingService during CV upload. Returns 404 if no CV has been uploaded.
+     *
+     * GET /user/cv-analysis
+     */
+    public function getCvAnalysis(): JsonResponse
+    {
+        /** @var User $user */
+        $user = auth()->user();
+
+        $cvAnalysis = $user->cvAnalysis;
+
+        if (!$cvAnalysis) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No CV analysis found. Please upload your CV first.',
+                'data'    => null,
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data'    => new CvAnalysisResource($cvAnalysis),
+        ]);
     }
 
     /**
