@@ -15,12 +15,12 @@ class SkillResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
-            'name' => $this->name,
-            'type' => $this->type,
-            'added_at' => $this->whenPivotLoaded('user_skills', function () {
-                return $this->pivot->created_at;
-            }),
+            'id'                => $this->id,
+            'name'              => $this->name,
+            'type'              => $this->type,
+            'confidence_score'  => $this->whenPivotLoaded('user_skills', fn () => $this->pivot->confidence_score),
+            'evidence'          => $this->whenPivotLoaded('user_skills', fn () => $this->pivot->evidence),
+            'added_at'          => $this->whenPivotLoaded('user_skills', fn () => $this->pivot->created_at),
         ];
     }
 }

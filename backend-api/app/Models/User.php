@@ -84,6 +84,15 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the latest CV analysis (singular) for this user.
+     * Used when we expect at most one analysis per user (from CV upload).
+     */
+    public function cvAnalysis()
+    {
+        return $this->hasOne(CvAnalysis::class, 'user_id')->latestOfMany();
+    }
+
+    /**
      * Get the skills that belong to the user.
      */
     public function skills(): \Illuminate\Database\Eloquent\Relations\BelongsToMany

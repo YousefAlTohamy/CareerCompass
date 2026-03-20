@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -49,13 +50,13 @@ class AuthController extends Controller
 
         // Profile is auto-created via User model's booted() created event
         $token = $user->createToken('auth-token')->plainTextToken;
-        $user->load('profile');
+        $user->load(['profile', 'experiences', 'skills', 'cvAnalysis']);
 
         return response()->json([
             'success' => true,
             'message' => 'User registered successfully',
             'data'    => [
-                'user'  => $user,
+                'user'  => new UserResource($user),
                 'token' => $token,
             ],
         ], 201);
@@ -125,12 +126,12 @@ class AuthController extends Controller
             $user->skills()->sync($skillIds);
         }
 
-        $user->load(['skills', 'profile']);
+        $user->load(['profile', 'experiences', 'skills', 'cvAnalysis']);
 
         return response()->json([
             'success' => true,
             'message' => 'Profile updated successfully',
-            'data'    => $user,
+            'data'    => new UserResource($user),
         ]);
     }
 
@@ -163,13 +164,13 @@ class AuthController extends Controller
         $user->tokens()->delete();
 
         $token = $user->createToken('auth-token')->plainTextToken;
-        $user->load('profile');
+        $user->load(['profile', 'experiences', 'skills', 'cvAnalysis']);
 
         return response()->json([
             'success' => true,
             'message' => 'Login successful',
             'data'    => [
-                'user'  => $user,
+                'user'  => new UserResource($user),
                 'token' => $token,
             ],
         ]);
