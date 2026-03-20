@@ -39,7 +39,7 @@ const formatExperienceYears = (years) => {
 
 // --- Profile Completeness Ring (0-100) ---
 const ProfileCompletenessRing = ({ score }) => {
-  const safeScore = Math.min(100, Math.max(0, Number(score) ?? 0));
+  const safeScore = Math.min(100, Math.max(0, Number(score) || 0));
   const circumference = 2 * Math.PI * 32;
   const strokeDashoffset = circumference - (safeScore / 100) * circumference;
   const color = safeScore >= 75 ? "stroke-emerald-500" : safeScore >= 50 ? "stroke-amber-500" : "stroke-slate-300";
@@ -93,9 +93,10 @@ const SkillChip = ({ skill, onRemove }) => {
 };
 
 const ReadinessScore = ({ score }) => {
+  const safeScore = Number(score) || 0;
   const data = [
-    { name: "Readiness", value: score, color: "#4f46e5" },
-    { name: "Remaining", value: 100 - score, color: "#f1f5f9" },
+    { name: "Readiness", value: safeScore, color: "#4f46e5" },
+    { name: "Remaining", value: 100 - safeScore, color: "#f1f5f9" },
   ];
 
   return (
@@ -118,7 +119,7 @@ const ReadinessScore = ({ score }) => {
         </PieChart>
       </ResponsiveContainer>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-sm font-black text-slate-900">{score}%</span>
+        <span className="text-sm font-black text-slate-900">{safeScore}%</span>
       </div>
     </div>
   );
@@ -341,20 +342,20 @@ export default function Dashboard() {
 
   const hasSkills = (skills?.length ?? 0) > 0;
   const hasCvAnalysis = user?.cv_analysis != null;
-  const completenessScore = user?.cv_analysis?.completeness_score ?? 0;
+  const completenessScore = Number(user?.cv_analysis?.completeness_score) || 0;
   const totalExperience = user?.profile?.total_experience_years ?? user?.total_experience_years;
   const headline = user?.headline ?? user?.job_title ?? user?.profile?.headline ?? user?.profile?.job_title;
   const seniority = user?.seniority ?? user?.profile?.seniority;
-  const userSkills = user?.skills ?? [];
+  const userSkills = Array.isArray(user?.skills) ? user.skills : [];
   const skillsCount = userSkills?.length ?? skills?.length ?? 0;
 
   // Top 3-5 skills by confidence_score descending
-  const topSkillsByConfidence = [...(userSkills ?? [])]
+  const topSkillsByConfidence = [...(userSkills || [])]
     .filter((s) => s?.name ?? s)
     .sort((a, b) => (Number(b?.confidence_score ?? 0) || 0) - (Number(a?.confidence_score ?? 0) || 0))
     .slice(0, 5);
 
-  const displaySkills = hasSkills ? skills : userSkills;
+  const displaySkills = hasSkills ? (Array.isArray(skills) ? skills : []) : userSkills;
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto pb-20 space-y-8 font-sans bg-slate-50 min-h-screen">
@@ -494,7 +495,7 @@ export default function Dashboard() {
             <div>
               <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Profile Completeness</h3>
               <p className="text-xl font-black text-slate-800 mt-0.5">
-                {Math.round(completenessScore)}%
+                {Math.round(completenessScore) || 0}%
               </p>
             </div>
           </motion.div>
@@ -584,7 +585,7 @@ export default function Dashboard() {
               ) : (displaySkills?.length ?? 0) > 0 ? (
                 <>
                   <div className="flex flex-wrap gap-2 bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-8 min-h-[100px]">
-                    {displaySkills.map((skill, idx) => (
+                    {(displaySkills || []).map((skill, idx) => (
                       <SkillChip
                         key={skill?.id ?? idx}
                         skill={skill}

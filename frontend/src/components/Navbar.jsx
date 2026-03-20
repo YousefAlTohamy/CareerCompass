@@ -11,6 +11,10 @@ export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
+  const displayName = user?.name?.trim();
+  const userInitial = displayName ? displayName.charAt(0).toUpperCase() : 'U';
+  const userFirstName = displayName ? displayName.split(/\s+/)[0] : 'User';
+
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
@@ -77,10 +81,10 @@ export default function Navbar() {
               <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
                 <Link to="/profile" className="flex items-center gap-2.5 p-1.5 pr-4 rounded-full border border-slate-200 bg-white hover:border-indigo-200 hover:shadow-sm transition-all group">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center text-white font-black text-xs shadow-inner">
-                    {user.name.charAt(0).toUpperCase()}
+                    {userInitial}
                   </div>
                   <span className="text-sm font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">
-                    {user.name.split(' ')[0]}
+                    {userFirstName}
                   </span>
                 </Link>
                 <button 
@@ -157,10 +161,10 @@ export default function Navbar() {
                   <div className="flex items-center justify-between bg-slate-50 p-4 rounded-2xl border border-slate-100">
                      <Link to="/profile" onClick={() => setIsOpen(false)} className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center text-white font-black shadow-inner">
-                           {user.name.charAt(0).toUpperCase()}
+                           {userInitial}
                         </div>
                         <div>
-                          <span className="font-bold text-slate-800 block text-sm">{user.name}</span>
+                          <span className="font-bold text-slate-800 block text-sm">{displayName ?? 'User'}</span>
                           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">View Profile</span>
                         </div>
                      </Link>

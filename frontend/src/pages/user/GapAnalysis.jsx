@@ -61,7 +61,7 @@ const PremiumMatchGauge = ({ percentage }) => {
 
 // --- CV Completeness Circular Progress Ring ---
 const CompletenessRing = ({ score }) => {
-  const safeScore = Math.min(100, Math.max(0, Number(score) ?? 0));
+  const safeScore = Math.min(100, Math.max(0, Number(score) || 0));
   const circumference = 2 * Math.PI * 45;
   const strokeDashoffset = circumference - (safeScore / 100) * circumference;
   const color = safeScore >= 75 ? 'stroke-emerald-500' : safeScore >= 50 ? 'stroke-amber-500' : 'stroke-rose-500';

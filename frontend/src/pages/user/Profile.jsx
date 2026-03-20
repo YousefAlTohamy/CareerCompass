@@ -159,10 +159,10 @@ export default function Profile() {
   const totalYears = data?.total_experience_years ?? data?.profile?.total_experience_years;
   const seniority = data?.seniority ?? data?.profile?.seniority;
   const primaryDomain = data?.primary_domain ?? data?.profile?.primary_domain;
-  const experiences = data?.experiences ?? [];
-  const skills = data?.skills ?? data?.profile?.skills ?? [];
-  const hasExperiences = Array.isArray(experiences) && experiences.length > 0;
-  const hasSkills = Array.isArray(skills) && skills.length > 0;
+  const experiences = Array.isArray(data?.experiences) ? data.experiences : [];
+  const skills = Array.isArray(data?.skills) ? data.skills : (Array.isArray(data?.profile?.skills) ? data.profile.skills : []);
+  const hasExperiences = experiences.length > 0;
+  const hasSkills = skills.length > 0;
 
   if (loading) {
     return (
@@ -377,7 +377,7 @@ export default function Profile() {
                       <label className="block text-sm font-bold text-slate-700">Technical & Soft Skills</label>
                       
                       <div className="flex flex-wrap gap-2 mb-3">
-                        {(formData?.skills ?? []).map((skill, index) => (
+                        {(Array.isArray(formData?.skills) ? formData.skills : []).map((skill, index) => (
                           <span 
                             key={index} 
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold uppercase tracking-wider border border-indigo-100 group"
@@ -589,7 +589,7 @@ export default function Profile() {
                     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                       {hasExperiences ? (
                         <div className="divide-y divide-slate-100">
-                          {[...experiences]
+                          {(experiences || [])
                             .sort((a, b) => {
                               const dateA = a?.end_date ? new Date(a.end_date) : new Date();
                               const dateB = b?.end_date ? new Date(b.end_date) : new Date();
@@ -640,7 +640,7 @@ export default function Profile() {
                     <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                       {hasSkills ? (
                         <div className="flex flex-wrap gap-3">
-                          {skills.map((skill, index) => {
+                          {(skills || []).map((skill, index) => {
                             const name = skill?.name ?? skill;
                             const confidence = skill?.confidence_score;
                             const evidence = skill?.evidence;
