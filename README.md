@@ -18,7 +18,15 @@ CareerCompass is an **advanced AI-powered career development platform** that com
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Architecture — 3-Layer AI System
+
+The platform uses a **3-Layer AI architecture** working in harmony with Laravel and React:
+
+| Layer | Name | Service | Purpose |
+| ----- | ---- | ------- | ------- |
+| **Layer 1** | Understanding | ai-cv-analyzer (8002) | V3 Pipeline: Spatial normalization, NER, canonicalization, temporal parsing |
+| **Layer 2** | Classification | ai-cv-analyzer | BART-MNLI zero-shot domain classification |
+| **Layer 3** | Matching | ai-cv-analyzer + ai-hybrid-orchestrator | Semantic + TF-IDF hybrid scoring; Zero PDF Re-parsing |
 
 ```mermaid
 graph TB
@@ -28,19 +36,20 @@ graph TB
     Laravel --> MySQL[(MySQL<br/>Database)]
     Laravel --> Redis[(Redis Cache<br/>& Queues)]
     Laravel <--> Gateway[AI Gateway<br/>Port 8001]
+    Laravel <--> CVAnalyzer[ai-cv-analyzer<br/>Port 8002]
     Gateway --> JobMiner[ai-job-miner<br/>5-phase Scraper]
-    Gateway --> CVAnalyzer[ai-cv-analyzer<br/>3-layer ML]
-    Gateway --> Wuzzuf[🌐 Wuzzuf.net]
-    Gateway --> Remotive[🌐 Remotive API]
-    Gateway --> Adzuna[🌐 Adzuna US API]
+    Gateway --> CVAnalyzer
+    JobMiner --> Wuzzuf[🌐 Wuzzuf.net]
+    JobMiner --> Remotive[🌐 Remotive API]
+    JobMiner --> Adzuna[🌐 Adzuna US API]
     Queue --> Laravel
     Scheduler[Laravel Scheduler<br/>Automated Tasks] --> Queue
 
     style Frontend fill:#61dafb
     style Laravel fill:#ff2d20
     style Gateway fill:#6c3483
-    style JobMiner fill:#1e8449
     style CVAnalyzer fill:#2e86c1
+    style JobMiner fill:#1e8449
     style MySQL fill:#4479a1
     style Redis fill:#dc382d
     style Queue fill:#00d084
@@ -54,15 +63,24 @@ graph TB
 
 | Component          | Technology                 | Port | Purpose                                                      |
 | ------------------ | -------------------------- | ---- | ------------------------------------------------------------ |
-| **Frontend**       | React 19 + Vite + Recharts | 5173 | UI, strict boundaries (`/admin/*` & `/user/*`), auth state   |
-| **Backend API**    | Laravel 12                 | 8000 | Business logic, `IsAdmin` RBAC, db management, token mgmt    |
+| **Frontend**       | React 19 + Vite + Recharts | 5173 | V3 UI: Dashboard, Profile, Gap Analysis, Error Boundary      |
+| **Backend API**    | Laravel 12                 | 8000 | Business logic, normalized DB, `IsAdmin` RBAC, token mgmt    |
 | **Queue Worker**   | Laravel Queue              | -    | Background processing for scraping & calculations            |
-| **AI Gateway**     | Python/FastAPI             | 8001 | ai-hybrid-orchestrator: orchestrates CV parse & match scores |
+| **AI Gateway**     | Python/FastAPI             | 8001 | ai-hybrid-orchestrator: parse-cv, scrape-on-demand, hybrid-match |
+| **ai-cv-analyzer** | Python Transformers        | 8002 | V3 Pipeline: Layer 1–3 (Understanding, Classification, Matching) |
 | **ai-job-miner**   | Python (async)             | -    | 5-phase heuristic scraper + TF-IDF engine (used by Gateway)  |
-| **ai-cv-analyzer** | Python Transformers        | -    | BERT+BART+MiniLM pipelines (used by Gateway)                 |
-| **Database**       | MySQL                      | 3306 | Data persistence                                             |
+| **Database**       | MySQL                      | 3306 | Normalized schema: users, user_profiles, user_experiences, cv_analyses |
 | **Cache/Queue**    | Redis (opt)                | 6379 | Fast caching and queue management (production)               |
 | **Scheduler**      | Laravel Cron               | -    | Automated market data updates (every 48 hours)               |
+
+### Key Technical Achievements (V3 Refactor)
+
+| Achievement | Description |
+| ----------- | ----------- |
+| **100% Precise Spatial CV Parsing** | pdfplumber Row Grouper + column-aware ordering eliminates multi-column misreads |
+| **Normalized Database** | Separation of `users` (Auth) and `user_profiles` (CV data); `user_experiences`, `cv_analyses`; enriched `user_skills` pivot (`confidence_score`, `evidence`) |
+| **Canonicalized Skill Matching** | RapidFuzz deduplication; skills stored once; Zero PDF Re-parsing for gap analysis |
+| **Zero-Downtime Migration** | Legacy data migrated from `users` to `user_profiles`; fallback to DB-based fuzzy matching when AI API is unreachable |
 
 ---
 
@@ -201,16 +219,16 @@ CareerCompass/
 │   ├── run_engine.py                       # Local microservice test runner
 │   └── README.md
 │
-├── ai-cv-analyzer/           # Phase 6: 3-Layer ML CV Analysis Engine
+├── ai-cv-analyzer/           # V3 AI Pipeline — Layer 1–3 (port 8002)
 │   ├── core/
-│   │   ├── layer1_understanding/           # V2 pipeline: spatial_parser, advanced_ner, ocr_pipeline
+│   │   ├── layer1_understanding/           # V3: spatial_parser, section_segmenter, advanced_ner, experience_engine, canonicalizer
 │   │   ├── layer2_classification/          # BART-MNLI zero-shot domain classifier
-│   │   └── layer3_matching/               # MiniLM embedder + IntelligentMatcher
-│   ├── models/                             # Fine-tuned NER weights (git-ignored)
-│   ├── main.py                             # FastAPI gateway (port 8002)
+│   │   └── layer3_matching/                # MiniLM embedder + IntelligentMatcher
+│   ├── models/                              # Fine-tuned NER weights (git-ignored)
+│   ├── main.py                              # FastAPI gateway (port 8002)
 │   └── README.md
 │
-├── ai-hybrid-orchestrator/   # Phase 6: Facade + FastAPI Gateway (port 8000)
+├── ai-hybrid-orchestrator/   # Facade + FastAPI Gateway (port 8001)
 │   ├── contact_extractor.py               # Regex: email, phone, LinkedIn, GitHub, location
 │   ├── hybrid_runner.py                   # CLI runner for local testing
 │   ├── main_api.py                        # FastAPI: /parse-cv, /scrape-on-demand, /hybrid-match
@@ -304,9 +322,11 @@ DB_PASSWORD=your_mysql_password
 # Queue Configuration (use 'database' for development, 'redis' for production)
 QUEUE_CONNECTION=database
 
-# AI Engine Configuration
-AI_ENGINE_URL=http://127.0.0.1:8001
-AI_ENGINE_TIMEOUT=60
+# AI Microservices (both required for full functionality)
+AI_CV_ANALYZER_URL=http://127.0.0.1:8002
+AI_CV_ANALYZER_TIMEOUT=120
+AI_GATEWAY_URL=http://127.0.0.1:8001
+AI_GATEWAY_TIMEOUT=30
 
 # Frontend URL (for CORS)
 FRONTEND_URL=http://localhost:5173
@@ -362,7 +382,7 @@ uvicorn main_api:app --host 0.0.0.0 --port 8001 --reload
 
 ## ▶️ Running the Application
 
-### 🎯 Option 1: Automated Launcher (Windows Only - Recommended)
+### 🎯 Option 1: Automated Launcher (Windows — Recommended)
 
 The easiest way to start all services on Windows:
 
@@ -371,52 +391,56 @@ The easiest way to start all services on Windows:
 start_all.bat
 ```
 
-This will launch **five** separate terminal windows:
+This launches **six** separate terminal windows:
 
-- **Frontend** (React) - http://localhost:5173
-- **Backend API** (Laravel) - http://127.0.0.1:8000
-- **AI Engine** (Python) - http://127.0.0.1:8001
-- **Queue Worker** (Laravel) - Background job processing
-- **Scheduler** (Laravel) - Automated periodic tasks
+| Service | URL | Purpose |
+| ------- | --- | ------- |
+| **Frontend** | http://localhost:5173 | React V3 UI |
+| **Backend API** | http://127.0.0.1:8000 | Laravel REST API |
+| **AI CV Analyzer** | http://127.0.0.1:8002 | V3 pipeline, Layer 3 match-job |
+| **AI Gateway** | http://127.0.0.1:8001 | parse-cv, scrape-on-demand, hybrid-match |
+| **Queue Worker** | - | Background job processing |
+| **Scheduler** | - | Automated tasks (48h scraping, daily skill calc) |
+
+> **Environment Setup**: Ensure `backend-api/.env` has `AI_CV_ANALYZER_URL=http://127.0.0.1:8002` and `AI_GATEWAY_URL=http://127.0.0.1:8001` for full functionality.
 
 ### 🔧 Option 2: Manual Start (All Operating Systems)
 
-Open **four separate terminal windows** and run each service:
+Open **five separate terminal windows** and run each service:
 
-**Terminal 1 - Frontend (React + Vite):**
-
+**Terminal 1 - Frontend:**
 ```bash
-cd frontend
-npm run dev
-# Frontend available at http://localhost:5173
+cd frontend && npm run dev
+# http://localhost:5173
 ```
 
-**Terminal 2 - Backend API (Laravel):**
-
+**Terminal 2 - Backend API:**
 ```bash
-cd backend-api
-php artisan serve --port=8000
-# API available at http://127.0.0.1:8000
+cd backend-api && php artisan serve --port=8000
+# http://127.0.0.1:8000
 ```
 
-**Terminal 3 - AI Gateway (Python + FastAPI):**
+**Terminal 3 - AI CV Analyzer (port 8002):**
+```bash
+cd ai-cv-analyzer
+python -m venv venv && venv\Scripts\activate   # Windows
+# source venv/bin/activate                      # macOS/Linux
+pip install -r requirements.txt
+python main.py
+# http://127.0.0.1:8002
+```
 
+**Terminal 4 - AI Gateway (port 8001):**
 ```bash
 cd ai-hybrid-orchestrator
-venv\Scripts\activate        # Windows
-# OR
-source venv/bin/activate     # macOS/Linux
-
+venv\Scripts\activate        # Windows | source venv/bin/activate (macOS/Linux)
 uvicorn main_api:app --reload --port 8001
-# AI Gateway available at http://127.0.0.1:8001
+# http://127.0.0.1:8001
 ```
 
-**Terminal 4 - Queue Worker (Laravel):**
-
+**Terminal 5 - Queue Worker:**
 ```bash
-cd backend-api
-php artisan queue:work --queue=high,default --tries=3 --timeout=300
-# Queue Worker processing background jobs
+cd backend-api && php artisan queue:work --queue=high,default --tries=3 --timeout=300
 ```
 
 ### 📅 Optional: Activate Scheduler (Automated Market Updates)
@@ -451,12 +475,11 @@ Use Task Scheduler to run `php artisan schedule:run` every minute.
 
 ### ✅ Verify Everything is Running
 
-Once all services are started, check the following URLs:
-
 | Service | URL | Expected Response |
 | ----------- | -------------------------------- | ----------------------------------------------- |
 | Frontend | http://localhost:5173 | React login/register UI |
 | Backend API | http://127.0.0.1:8000/api/health | `{"status": "ok"}` |
+| AI CV Analyzer | http://127.0.0.1:8002/docs | Swagger UI (V3 pipeline) |
 | AI Gateway | http://127.0.0.1:8001 | `{"status": "operational", "version": "1.0.0"}` |
 | AI Gateway | http://127.0.0.1:8001/docs | Swagger UI |
 
@@ -1068,7 +1091,9 @@ curl -s -X POST http://127.0.0.1:8000/api/register \
 **Laravel (`backend-api/.env`):**
 
 ```env
-# AI Gateway (ai-hybrid-orchestrator / Phase 6)
+# AI Microservices
+AI_CV_ANALYZER_URL=http://127.0.0.1:8002
+AI_CV_ANALYZER_TIMEOUT=120
 AI_GATEWAY_URL=http://127.0.0.1:8001
 AI_GATEWAY_TIMEOUT=30
 QUEUE_CONNECTION=database
@@ -1302,11 +1327,12 @@ php artisan migrate:fresh --seed
 # (Optional) Run `php artisan db:seed --class=AdminUserSeeder` for admin access
 cd ..
 
-# 4. Start services (4 terminals)
+# 4. Start services (5 terminals)
 # Terminal 1: cd frontend && npm run dev
 # Terminal 2: cd backend-api && php artisan serve --port=8000
-# Terminal 3: cd ai-hybrid-orchestrator && uvicorn main_api:app --reload --port 8001 --host 0.0.0.0
-# Terminal 4: cd backend-api && php artisan queue:work --queue=high,default --tries=3
+# Terminal 3: cd ai-cv-analyzer && python main.py  # Port 8002
+# Terminal 4: cd ai-hybrid-orchestrator && uvicorn main_api:app --reload --port 8001 --host 0.0.0.0
+# Terminal 5: cd backend-api && php artisan queue:work --queue=high,default --tries=3
 ```
 
 ### 🧪 Test Your Setup:
@@ -1326,8 +1352,8 @@ Import `CareerCompass.postman_collection.json` into Postman for comprehensive AP
 ---
 
 **Last Updated**: March 2026
-**Project Status**: ✅ **Phase 25 Complete — Master Admin Control Panel**
-**Components**: Frontend (React 19 + Vite + Framer Motion + Recharts) + Backend API (Laravel 12) + Queue Worker + Scheduler + **AI Gateway (FastAPI/8001)** + ai-job-miner + ai-cv-analyzer
+**Project Status**: ✅ **V3 AI Pipeline + Database Normalization + React V3 UI**
+**Components**: Frontend (React 19 + Vite + Framer Motion + Recharts) + Backend API (Laravel 12) + Queue Worker + Scheduler + **AI Gateway (8001)** + **ai-cv-analyzer (8002)** + ai-job-miner
 **API Endpoints**: 55+ total (Laravel APIs + AI Gateway APIs + Market Intelligence + Admin Control Panel + Application Tracker)
 **Scraping Sources**: Wuzzuf (HTML) • Remotive API (free) • Adzuna US API — all 3 verified with `scrape:test-sources`
 **Key Features**: Role-Based Access Control (RBAC) • **Admin Control Panel (Dashboard/Users/Jobs)** • CV Analysis • Hybrid AI Matching (Semantic + TF-IDF) • Contact Info Extraction • Multi-Source Job Scraping • Gap Analysis • Market Intelligence Dashboard • Skill Importance Ranking • Real-time Polling • Scraping Source Management • Dynamic NLP Extraction • Application Tracker • Recommended Jobs • Premium Animated UI • Interactive Recharts Charts

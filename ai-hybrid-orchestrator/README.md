@@ -1,15 +1,71 @@
 # ai-hybrid-orchestrator
 
-> **Facade Pattern** — a single entry-point combining `ai-job-miner` + `ai-cv-analyzer` into one unified hybrid pipeline, now exposed as a **FastAPI microservice** for Laravel integration.
+> **Layer 3 Matching — Facade Pattern**  
+> A single entry-point combining `ai-job-miner` + `ai-cv-analyzer` into one unified hybrid pipeline, exposed as a **FastAPI microservice** for Laravel integration.
 
 ---
 
 ## Overview
 
-| Engine             | Directory            | Role                                                                    |
-| ------------------ | -------------------- | ----------------------------------------------------------------------- |
-| **AI Job Miner**   | `../ai-job-miner/`   | 5-phase heuristic scraping + TF-IDF matching                            |
-| **AI CV Analyzer** | `../ai-cv-analyzer/` | BERT NER · BART-MNLI domain classification · MiniLM semantic embeddings |
+| Engine             | Directory            | Role                                                                 |
+| ------------------ | -------------------- | -------------------------------------------------------------------- |
+| **AI Job Miner**   | `../ai-job-miner/`   | 5-phase heuristic scraping + TF-IDF matching                         |
+| **AI CV Analyzer** | `../ai-cv-analyzer/` | V3 Pipeline: BERT NER · BART-MNLI · MiniLM semantic embeddings       |
+
+**Port**: 8001 (consumed by Laravel as AI Gateway)
+
+---
+
+## hybrid_runner.py — Facade Entry Point
+
+`hybrid_runner.py` acts as the **CLI Facade** for the full hybrid pipeline:
+
+1. Loads ai-cv-analyzer modules first (`CVOrchestrator`, `IntelligentMatcher`)
+2. Resolves `core/` namespace collision via `_only()` context manager — wipes `sys.modules`, sets exclusive `sys.path`
+3. Loads ai-job-miner modules (`ScrapingEngine`, `match_score`)
+4. Orchestrates: CV parse (V3) → Job scrape → Hybrid scoring
+
+**Usage:**
+```bash
+cd ai-hybrid-orchestrator
+python hybrid_runner.py   # Edit MOCK_CV_PATH / MOCK_JOB_URL at bottom for testing
+```
+
+---
+
+## Zero PDF Re-parsing Optimization (Phase 12)
+
+When Laravel performs **job matching** (e.g., gap analysis), it does **not** re-analyze the user's PDF. Instead:
+
+### How It Works
+
+1. **Laravel** (`GapAnalysisService`) builds a `MatchRequest`-style payload from **canonicalized database data**:
+   - **cv_skills**: Plucked from `user_skills` + `skills` (pre-canonicalized at CV upload)
+   - **cv_text**: Concatenation of `user_profiles.headline`, `user_profiles.summary`, and `user_experiences.description`
+   - **job_skills**: From `job_skills` pivot
+   - **job_description**: Raw `jobs.description` text
+
+2. Laravel sends this payload to either:
+   - **ai-cv-analyzer** `POST /api/v2/match-job` (port 8002) — Layer 3 semantic matching
+   - **ai-hybrid-orchestrator** `POST /api/v1/hybrid-match` (port 8001) — Semantic + TF-IDF hybrid
+
+3. **No PDF re-parsing** — all data comes from the normalized Laravel database. This:
+   - Eliminates redundant AI inference
+   - Reduces latency
+   - Ensures consistency (single source of truth)
+
+---
+
+## Fallback Mechanism (TF-IDF if Semantic API Unreachable)
+
+If the semantic/Layer 3 match API (e.g., ai-cv-analyzer port 8002) is **unreachable**:
+
+- **GapAnalysisService** falls back to **DB-based fuzzy matching**:
+  - Uses `normalizeSkillName()` for fuzzy skill comparison
+  - Computes weighted match from job importance categories (Essential 5x, Important 3x, Nice-to-have 1x)
+  - Returns the same structure as the AI path — seamless UX
+
+- **hybrid-match** endpoint uses **TF-IDF** (pure Python cosine similarity) as the 40% component; if the semantic embedder fails, the request would error. For resilience, Laravel’s gap analysis uses the fallback above when the external API is down.
 
 ---
 
@@ -18,18 +74,17 @@
 ```
 ai-hybrid-orchestrator/
 ├── __init__.py              # Package marker
-├── contact_extractor.py     # Regex contact info extractor (email, phone, LinkedIn, GitHub, location)
-├── hybrid_runner.py         # Standalone CLI pipeline runner (for testing)
-├── main_api.py              # FastAPI gateway — 3 endpoints consumed by Laravel
-├── test_api.py              # End-to-end test runner using FastAPI TestClient (5 test groups)
-├── .env.example             # Template for API credentials (loads environment variables automatically)
-├── hybrid_output.txt        # Output from last CLI test run
+├── contact_extractor.py     # Regex: email, phone, LinkedIn, GitHub, location
+├── hybrid_runner.py         # CLI Facade — full pipeline runner
+├── main_api.py              # FastAPI gateway — 3 Laravel endpoints
+├── test_api.py              # End-to-end TestClient (5 test groups)
+├── .env.example             # Template for API credentials
 └── README.md                # This file
 ```
 
 ---
 
-## FastAPI Microservice — `main_api.py`
+## FastAPI Microservice — main_api.py
 
 ### Run Server
 
@@ -39,11 +94,11 @@ uvicorn main_api:app --host 0.0.0.0 --port 8001 --reload
 ```
 
 - Swagger UI: **http://127.0.0.1:8001/docs**
-- Health check: **http://127.0.0.1:8001/**
+- Health: **http://127.0.0.1:8001/**
 
-### Startup & Lifecycle (FastAPI Lifespan)
+### Startup (FastAPI Lifespan)
 
-On startup, the gateway utilizes an **async context manager (Lifespan)** to load all heavy AI models exactly **once** into memory as Singletons. This prevents multi-gigabyte memory bloat during concurrent requests:
+Heavy AI models are loaded **once** at startup as singletons:
 
 | Model                      | Loaded By            | Purpose                                |
 | -------------------------- | -------------------- | -------------------------------------- |
@@ -57,129 +112,33 @@ On startup, the gateway utilizes an **async context manager (Lifespan)** to load
 
 ### `GET /`
 
-**Health check.**
-
-```json
-{
-  "status": "operational",
-  "version": "1.0.0",
-  "service": "Career Compass AI Gateway"
-}
-```
-
----
+Health check.
 
 ### `POST /api/v1/parse-cv`
 
-**Upload a CV file → extract skills, domain, and contact info.**
-
-| Parameter | Type         | Description            |
-| --------- | ------------ | ---------------------- |
-| `cv_file` | `UploadFile` | PDF · DOCX · PNG · JPG |
-
-**Example response:**
-
-```json
-{
-  "skills": ["Python", "TensorFlow", "Flutter"],
-  "domain": "Mobile App Development",
-  "domain_confidence": "65.7%",
-  "extraction_method": "pymupdf",
-  "contact_info": {
-    "email": "ahmed@example.com",
-    "phone": "+20 101 234 5678",
-    "linkedin_url": "https://linkedin.com/in/ahmedkhames",
-    "github_url": "https://github.com/ahmedkhames",
-    "location": "Cairo, Egypt"
-  }
-}
-```
-
-**Laravel call (Guzzle):**
-
-```php
-$response = Http::attach('cv_file', $fileContents, $fileName)
-                ->post(config('services.ai_gateway.url') . '/api/v1/parse-cv');
-```
-
----
+Upload CV (PDF/DOCX/PNG/JPG) → skills, domain, contact_info, extraction_method.
 
 ### `POST /api/v1/scrape-on-demand`
 
-**Scrape a job listing URL — returns up to 5 parsed job dicts.**
-
-| Parameter    | Type        | Description                              |
-| ------------ | ----------- | ---------------------------------------- |
-| `source_url` | `Form(str)` | Full URL of the job listing or job board |
-
-**Example response:**
-
-```json
-{
-  "scraped": 2,
-  "jobs": [
-    {
-      "url": "https://example.com/jobs/python-dev",
-      "title": "Senior Python Developer",
-      "job_type": "Full-time",
-      "work_model": "Remote",
-      "location": "Cairo, Egypt",
-      "working_hours": "40 hours/week",
-      "salary": {
-        "min_salary": 90000,
-        "max_salary": 120000,
-        "currency": "USD"
-      },
-      "experience": { "min_exp": 4, "max_exp": 6 },
-      "skills": ["python", "django", "docker"],
-      "match_score": 0.87
-    }
-  ]
-}
-```
-
-> **Note on PHP Interoperability**: The Pydantic payload models natively use `Union[dict, list, str, None]` typing definitions. This ensures that when Laravel sends empty associative arrays `[]` (which PHP strictly evaluates as lists rather than Javascript `{}` objects), the FastAPI gateway gracefully catches and evaluates it natively, permanently mitigating `422 Unprocessable Entity` crashes.
-
----
-
-### `POST /test-source` & `POST /scrape-jobs`
-
-**Diagnostic and Background Scraping Orchestration.**
-
-These endpoints are consumed by Laravel's `TestSources` diagnostics and `ProcessMarketScraping` background jobs. They perform automated URL injection and credential management:
-
-- **Diagnostic Routing**: `/test-source` validates a single source configuration by constructing technical endpoints on-the-fly.
-- **Bulk Orchestration**: `/scrape-jobs` loops through multiple active sources in a single request, aggregating jobs for the primary database.
-
-> [!TIP]
-> **Adzuna API Injector**:
-> The gateway features a specialized **Adzuna Injector**. If a source endpoint contains `adzuna.com`, the orchestrator automatically:
-> 1. Injects `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` from the local `.env` file.
-> 2. Maps standard Laravel search keys (`q`, `search`) to Adzuna's `what` parameter.
-> 3. Maps `limit` to `results_per_page`.
-> This allows the Laravel admin panel to remain source-agnostic while the Python gateway handles the technical API specifics.
-
----
+Scrape job listing URL → up to 5 parsed job dicts.
 
 ### `POST /api/v1/hybrid-match`
 
-**Compute a weighted hybrid match score between a CV and a job description.**
+Compute weighted hybrid match score.
 
-**Formula:** `Final = (Semantic × 60%) + (TF-IDF × 40%)`
-
-**Request body (JSON):**
-
+**Request:**
 ```json
 {
-  "cv_text": "Ahmed Khames, Python developer with 5 years...",
-  "cv_skills": ["python", "django", "docker"],
-  "job_description": "We need a Python/Django backend engineer...",
-  "job_skills": ["python", "django", "kubernetes", "fastapi"]
+  "cv_text": "...",
+  "cv_skills": ["python", "django"],
+  "job_description": "...",
+  "job_skills": ["python", "fastapi"]
 }
 ```
 
-**Example response:**
+**Formula:** `Final = (Semantic × 60%) + (TF-IDF × 40%)`
 
+**Response:**
 ```json
 {
   "hybrid_match_score": 74.3,
@@ -192,108 +151,44 @@ These endpoints are consumed by Laravel's `TestSources` diagnostics and `Process
 
 ---
 
-## Contact Extractor — `contact_extractor.py`
-
-Standalone Regex-based utility. No ML required.
-
-```python
-from contact_extractor import extract_contacts
-
-info = extract_contacts(raw_cv_text)
-# {
-#   "email":        "ahmed@example.com",
-#   "phone":        "+20 101 234 5678",
-#   "linkedin_url": "https://linkedin.com/in/ahmedkhames",
-#   "github_url":   "https://github.com/ahmedkhames",
-#   "location":     "Cairo, Egypt"
-# }
-```
-
-| Pattern  | Matches                                                            |
-| -------- | ------------------------------------------------------------------ |
-| Email    | RFC-5321 simplified — `name@domain.tld`                            |
-| Phone    | Optional `+country` · optional `(area)` · 7–15 digit blocks        |
-| LinkedIn | `linkedin.com/in/<handle>` — adds `https://` if missing            |
-| GitHub   | `github.com/<user>` — adds `https://` if missing                   |
-| Location | **Heuristic Anchors**: `Location:` · `Address:` · `City:` · `Residing in:` |
-
-**Location Hygiene**: Location strings are stripped of punctuation and filtered by length (2–120 characters) to avoid extracting non-address paragraph noise.
-
----
-
-## Hybrid Pipeline (CLI mode)
-
-The standalone `hybrid_runner.py` runs the full pipeline from the command line:
-
-```bash
-cd ai-hybrid-orchestrator
-python hybrid_runner.py  # edit MOCK_CV_PATH / MOCK_JOB_URL at the bottom
-```
-
----
-
-## Hybrid Scoring Formula
-
-```
-Final Score = (Semantic Score × 60%) + (TF-IDF Score × 40%)
-```
-
-| Signal             | Model                                | Weight  |
-| ------------------ | ------------------------------------ | ------- |
-| **Semantic Score** | `all-MiniLM-L6-v2` cosine similarity | **60%** |
-| **TF-IDF Score**   | Pure-Python cosine similarity        | **40%** |
-
----
-
 ## Namespace Isolation
 
-Both engines (`ai-job-miner` and `ai-cv-analyzer`) expose a top-level `core/` package, creating a collision risk. To solve this, the gateway implements a **Dynamic Cache Purging** strategy:
+Both engines expose `core/` — collision resolved via:
 
-1. **`_wipe_core()`**: Strictly iterates through `sys.modules` and deletes any keys belonging to the `core` or `core.*` namespace.
-2. **`_set_path_exclusive(root)`**: Dynamically modifies `sys.path` to ensure ONLY the target engine's root is at index 0, while explicitly removing the competing engine's path.
-3. **Sequential Bootstrapping**:
-   - `ai-cv-analyzer` is loaded first -> its logic is cached.
-   - `_wipe_core()` is triggered.
-   - `ai-job-miner` is loaded -> its `core.engine` is re-bootstrapped without namespace pollution.
-4. **Path Restoration**: After final imports, both roots are restored to the environment for intra-package runtime imports.
+1. **`_wipe_core()`**: Removes `core` and `core.*` from `sys.modules`
+2. **`_set_path_exclusive(root)`**: Ensures only target engine root is at `sys.path[0]`
+3. **Sequential bootstrapping**: CV-analyzer → wipe → job-miner → restore both roots
 
 ---
 
-## Testing — `test_api.py`
+## Testing
 
 ```bash
 cd ai-hybrid-orchestrator
 python test_api.py
 ```
 
-`TestClient` is used as a **context manager** (`with TestClient(app) as client:`) to trigger the FastAPI `lifespan` event — this is what loads the 3 AI model singletons before any endpoint is called.
-
-| Test Group                                   | What is verified                                                                                                                                  |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Test 0** — `GET /`                         | Health check returns `{"status": "operational"}`                                                                                                  |
-| **Test 1** — `POST /api/v1/parse-cv`         | Runs against `ai-cv-analyzer/test.pdf` — checks all keys: `skills`, `domain`, `domain_confidence`, `contact_info` (5 fields), `extraction_method` |
-| **Test 2** — `POST /api/v1/scrape-on-demand` | Hits Remotive API — checks `jobs` list returned                                                                                                   |
-| **Test 3** — `POST /api/v1/hybrid-match`     | Dummy backend engineer CV vs JD — checks `hybrid_match_score`, `semantic_score`, `tfidf_score`, `missing_skills`, `formula`                       |
-| **Test 4** — Validation guards               | 4a: `.txt` → 422 · 4b: `ftp://` → 422 · 4c: blank `cv_text` → 422                                                                                 |
-
----
-
-## Dependencies
-
-```bash
-pip install fastapi uvicorn python-multipart aiohttp beautifulsoup4 \
-            sentence-transformers scikit-learn pymupdf python-docx \
-            opencv-python-headless transformers torch spacy
-```
+| Test Group           | What is verified                                                                 |
+| -------------------- | -------------------------------------------------------------------------------- |
+| Test 0 — `GET /`     | Health check                                                                     |
+| Test 1 — parse-cv    | Skills, domain, contact_info, extraction_method                                  |
+| Test 2 — scrape      | Jobs list from Remotive                                                          |
+| Test 3 — hybrid-match| hybrid_match_score, semantic_score, tfidf_score, missing_skills                  |
+| Test 4 — Validation  | .txt → 422, ftp:// → 422, blank cv_text → 422                                   |
 
 ---
 
 ## Roadmap
 
-| Phase        | Feature                                                                           | Status |
-| ------------ | --------------------------------------------------------------------------------- | ------ |
-| Phase 1–5    | ai-job-miner 5-phase scraping pipeline                                            | ✅     |
-| Phase 6a     | ai-cv-analyzer 3-layer ML pipeline                                                | ✅     |
-| Phase 6b     | Hybrid Orchestrator Facade (CLI runner)                                           | ✅     |
-| Phase 6c     | FastAPI Gateway + Contact Extractor                                               | ✅     |
-| **Phase 7**  | **Zero-Knowledge Contextual Refactor (DateLexer/SectionSegmenter)**               | ✅     |
+| Phase   | Feature                                               | Status |
+| ------- | ----------------------------------------------------- | ------ |
+| Phase 1–5 | ai-job-miner 5-phase scraping                         | ✅     |
+| Phase 6a | ai-cv-analyzer 3-layer ML pipeline                    | ✅     |
+| Phase 6b | Hybrid Orchestrator Facade (CLI runner)               | ✅     |
+| Phase 6c | FastAPI Gateway + Contact Extractor                   | ✅     |
+| Phase 7 | Zero-Knowledge Contextual Refactor                    | ✅     |
+| Phase 12| Zero PDF Re-parsing (MatchRequest from DB)            | ✅     |
+
+---
+
+**Last Updated**: March 2026
