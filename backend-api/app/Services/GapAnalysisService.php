@@ -9,19 +9,315 @@ use App\Models\Skill;
 use App\Models\User;
 use App\Services\Contracts\GapAnalysisServiceInterface;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 
+/**
+ * Gap Analysis Service — Layer 3 Job Matching Engine
+ *
+ * Performs highly accurate job matching by leveraging:
+ * - Canonical skills from user_skills + skills tables (no raw PDF parsing during match)
+ * - Rich profile data (headline, summary, experiences) for semantic matching
+ * - Python AI Layer 3 endpoint (semantic + TF-IDF skill overlap)
+ *
+ * Phase 12: Job Matching Engine Optimization — uses normalized DB data only.
+ */
 class GapAnalysisService implements GapAnalysisServiceInterface
 {
+    /**
+     * AI Gateway base URL (ai-cv-analyzer, typically port 8002).
+     * Set AI_GATEWAY_URL in .env to point at the match-job endpoint.
+     */
+    private string $gatewayUrl;
+
+    private int $timeout;
+
+    public function __construct()
+    {
+        $this->gatewayUrl = rtrim(config('services.ai_gateway.url', 'http://127.0.0.1:8001'), '/');
+        $this->timeout    = (int) config('services.ai_gateway.timeout', 60);
+    }
+
     /**
      * Perform weighted gap analysis between a user and a job.
      * Specific Job Gap Analysis.
      *
+     * Uses Layer 3 AI matching when user has populated profile/skills.
+     * NEVER re-parses PDF — uses canonical DB relations only.
+     *
      * @param User $user
-     * @param Job $job
+     * @param Job  $job
      * @return array<string, mixed>
+     *
+     * @throws RuntimeException When user has no profile data and no skills (must upload CV first)
      */
     public function performGapAnalysis(User $user, Job $job): array
+    {
+        // Ensure relations are loaded for payload construction
+        $user->loadMissing(['profile', 'skills', 'experiences']);
+        $job->loadMissing('skills');
+
+        // ── Edge case: Job has no skill requirements ─────────────────────────
+        if ($job->skills->isEmpty()) {
+            return [
+                'job'                         => $job,
+                'match_percentage'            => 0,
+                'total_required'              => 0,
+                'matched_count'               => 0,
+                'missing_count'               => 0,
+                'matched_skills'              => collect(),
+                'missing_skills'              => collect(),
+                'critical_skills'             => collect(),
+                'nice_to_have_skills'         => collect(),
+                'missing_essential_skills'    => collect(),
+                'missing_important_skills'    => collect(),
+                'missing_nice_to_have_skills' => collect(),
+                'technical_required'          => 0,
+                'technical_matched'           => 0,
+                'soft_required'               => 0,
+                'soft_matched'                => 0,
+                'recommendations'             => [
+                    'This job listing has no specific skill requirements listed.',
+                ],
+            ];
+        }
+
+        // ── Edge case: User has no profile and no skills ─────────────────────
+        if (!$this->userHasMatchableData($user)) {
+            throw new RuntimeException(
+                'No profile or skills found. Please upload your CV first to populate your profile and skills.'
+            );
+        }
+
+        // ── Build ideal AI payload from normalized DB tables ─────────────────
+        $payload = $this->buildLayer3Payload($user, $job);
+
+        // ── Call Layer 3 matching API ───────────────────────────────────────
+        $aiResult = $this->callLayer3MatchApi($payload);
+
+        // ── Map AI response to GapAnalysisController / GapAnalysisResource format ─
+        if ($aiResult !== null) {
+            return $this->mapAiResponseToAnalysisFormat($aiResult, $job);
+        }
+
+        // ── Fallback: DB-based fuzzy matching when AI is unavailable ─────────
+        Log::warning('Layer 3 match-job API unavailable; falling back to DB-based matching', [
+            'user_id' => $user->id,
+            'job_id'  => $job->id,
+        ]);
+
+        return $this->performDbBasedGapAnalysis($user, $job);
+    }
+
+    /**
+     * Check if user has sufficient data for matching (profile or skills).
+     * Prevents matching when user has never uploaded a CV or filled their profile.
+     */
+    private function userHasMatchableData(User $user): bool
+    {
+        $hasSkills = $user->skills->isNotEmpty();
+
+        $profile = $user->profile;
+        $hasProfileData = $profile
+            && (trim((string) ($profile->headline ?? '')) !== '' || trim((string) ($profile->summary ?? '')) !== '');
+
+        $hasExperiences = $user->experiences->isNotEmpty();
+
+        return $hasSkills || $hasProfileData || $hasExperiences;
+    }
+
+    /**
+     * Build the ideal Layer 3 payload from canonicalized, normalized DB data.
+     *
+     * Payload structure:
+     * - cv_skills: Canonical skill names from user_skills relation (plucked from skills table)
+     * - cv_text: Concatenation of headline + summary + all experience descriptions
+     * - job_skills: Canonical skill names from job_skills pivot
+     * - job_description: Raw job description text
+     *
+     * No PDF parsing occurs here; all data comes from the database.
+     *
+     * @return array{cv_skills: list<string>, cv_text: string, job_skills: list<string>, job_description: string}
+     */
+    private function buildLayer3Payload(User $user, Job $job): array
+    {
+        // cv_skills: pluck canonical skill names directly from user's skills relation
+        $cvSkills = $user->skills()->pluck('name')->filter()->values()->toArray();
+
+        // cv_text: concatenate rich profile data for semantic matching
+        $cvTextParts = [];
+        $profile = $user->profile;
+        if ($profile) {
+            if (trim((string) ($profile->headline ?? '')) !== '') {
+                $cvTextParts[] = $profile->headline;
+            }
+            if (trim((string) ($profile->summary ?? '')) !== '') {
+                $cvTextParts[] = $profile->summary;
+            }
+        }
+        foreach ($user->experiences as $exp) {
+            if (trim((string) ($exp->description ?? '')) !== '') {
+                $cvTextParts[] = $exp->description;
+            }
+        }
+        $cvText = implode("\n\n", $cvTextParts);
+
+        // job_skills: canonical skill names from job's skills relation
+        $jobSkills = $job->skills->pluck('name')->filter()->values()->toArray();
+
+        // job_description: raw description from Job model
+        $jobDescription = trim((string) ($job->description ?? ''));
+
+        return [
+            'cv_skills'        => $cvSkills,
+            'cv_text'          => $cvText,
+            'job_skills'       => $jobSkills,
+            'job_description'  => $jobDescription,
+        ];
+    }
+
+    /**
+     * Call the Python AI Layer 3 match-job endpoint.
+     *
+     * POST /api/v2/match-job
+     * Request: { cv_text, cv_skills, job_description, job_skills }
+     * Response: { status: "success", layer3_matching: { match_score, semantic_score, skill_overlap_score, missing_skills } }
+     *
+     * @param array{cv_skills: list<string>, cv_text: string, job_skills: list<string>, job_description: string} $payload
+     * @return array{layer3_matching: array{match_score: float, semantic_score: float, skill_overlap_score: float, missing_skills: list<string>}}|null
+     */
+    private function callLayer3MatchApi(array $payload): ?array
+    {
+        $url = "{$this->gatewayUrl}/api/v2/match-job";
+
+        try {
+            $response = Http::timeout($this->timeout)
+                ->acceptJson()
+                ->post($url, $payload);
+
+            if ($response->failed()) {
+                Log::error('Layer 3 match-job API returned error', [
+                    'status' => $response->status(),
+                    'body'   => substr((string) $response->body(), 0, 500),
+                ]);
+                return null;
+            }
+
+            $data = $response->json();
+            if (!is_array($data) || ($data['status'] ?? '') !== 'success') {
+                Log::warning('Layer 3 match-job API returned unexpected response', ['data' => $data]);
+                return null;
+            }
+
+            $layer3 = $data['layer3_matching'] ?? null;
+            if (!is_array($layer3)) {
+                return null;
+            }
+
+            return $data;
+        } catch (\Throwable $e) {
+            Log::error('Layer 3 match-job API request failed', [
+                'url'   => $url,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Map the AI layer3_matching response into the format expected by GapAnalysisController / GapAnalysisResource.
+     *
+     * AI returns: match_score, semantic_score, skill_overlap_score, missing_skills (list of skill names)
+     * We must produce: full analysis array with job, match_percentage, matched_skills, missing_skills (full objects with pivot), etc.
+     */
+    private function mapAiResponseToAnalysisFormat(array $aiResponse, Job $job): array
+    {
+        $layer3  = $aiResponse['layer3_matching'] ?? [];
+        $jobSkills = $job->skills;
+
+        $matchPercentage = (float) ($layer3['match_score'] ?? 0);
+        $aiMissingNames  = array_map('strval', $layer3['missing_skills'] ?? []);
+
+        // Build missing_skills: job skills whose names are in aiMissingNames
+        $aiMissingLower   = array_map('mb_strtolower', $aiMissingNames);
+        $missingJobSkills = $jobSkills->filter(fn($s) => in_array(mb_strtolower((string) $s->name), $aiMissingLower));
+        $matchedJobSkills = $jobSkills->filter(fn($s) => !in_array(mb_strtolower((string) $s->name), $aiMissingLower));
+
+        $totalRequired = $jobSkills->count();
+        $toSkillArray  = function ($skill) {
+            $cat = mb_strtolower($skill->pivot->importance_category ?? 'nice_to_have');
+            if (in_array($cat, ['high', 'critical'])) $cat = 'essential';
+            if (in_array($cat, ['medium'])) $cat = 'important';
+            if (in_array($cat, ['low'])) $cat = 'nice_to_have';
+            return [
+                'id'                  => $skill->id,
+                'name'                => $skill->name,
+                'type'                => $skill->type,
+                'importance_score'    => $skill->pivot->importance_score ?? 50,
+                'importance_category' => $cat,
+            ];
+        };
+
+        $matchedSkillsArr  = $matchedJobSkills->map($toSkillArray)->values();
+        $missingSkillsArr  = $missingJobSkills->map($toSkillArray)->values();
+
+        $getWeight = function ($category) {
+            $category = strtolower($category ?? '');
+            if (in_array($category, ['essential', 'critical', 'high'])) return 5;
+            if (in_array($category, ['important', 'medium'])) return 3;
+            return 1;
+        };
+
+        $missingSkillsArr = $missingSkillsArr->sortByDesc(fn($s) => $getWeight($s['importance_category'] ?? 'nice_to_have'))->values();
+
+        $criticalSkills   = $missingSkillsArr->filter(fn($s) => ($s['importance_score'] ?? 0) > 60)->values();
+        $niceToHaveSkills = $missingSkillsArr->filter(fn($s) => ($s['importance_score'] ?? 0) <= 60)->values();
+
+        $missingEssential  = $missingSkillsArr->where('importance_category', 'essential')->values();
+        $missingImportant  = $missingSkillsArr->where('importance_category', 'important')->values();
+        $missingNiceToHave = $missingSkillsArr->whereNotIn('importance_category', ['essential', 'important'])->values();
+
+        $technicalRequired = $jobSkills->where('type', 'technical')->count();
+        $technicalMatched  = $matchedSkillsArr->where('type', 'technical')->count();
+        $softRequired      = $jobSkills->where('type', 'soft')->count();
+        $softMatched       = $matchedSkillsArr->where('type', 'soft')->count();
+
+        $recommendations = $this->generateRecommendations(
+            $matchPercentage,
+            $missingSkillsArr,
+            $missingEssential,
+            $missingImportant
+        );
+
+        return [
+            'job'                         => $job,
+            'match_percentage'            => round($matchPercentage, 2),
+            'total_required'              => $totalRequired,
+            'matched_count'               => $matchedJobSkills->count(),
+            'missing_count'               => $missingJobSkills->count(),
+            'matched_skills'              => $matchedSkillsArr,
+            'missing_skills'              => $missingSkillsArr,
+            'critical_skills'             => $criticalSkills,
+            'nice_to_have_skills'         => $niceToHaveSkills,
+            'missing_essential_skills'    => $missingEssential,
+            'missing_important_skills'    => $missingImportant,
+            'missing_nice_to_have_skills' => $missingNiceToHave,
+            'technical_required'          => $technicalRequired,
+            'technical_matched'           => $technicalMatched,
+            'soft_required'               => $softRequired,
+            'soft_matched'                => $softMatched,
+            'recommendations'             => $recommendations,
+        ];
+    }
+
+    /**
+     * DB-based gap analysis (fallback when Layer 3 API is unavailable).
+     * Original logic preserved for resilience.
+     *
+     * @return array<string, mixed>
+     */
+    private function performDbBasedGapAnalysis(User $user, Job $job): array
     {
         $userSkills   = $user->skills;
         $userSkillIds = $userSkills->pluck('id');
@@ -52,19 +348,14 @@ class GapAnalysisService implements GapAnalysisServiceInterface
             ];
         }
 
-        // ── Fuzzy matching: matched vs missing ────────────────────────────────
-        $matchedJobSkills  = collect();
-        $missingJobSkills  = collect();
+        $matchedJobSkills = collect();
+        $missingJobSkills = collect();
 
         foreach ($jobSkills as $jobSkill) {
             $matched = false;
-
-            // 1. Exact ID match (fast path)
             if ($userSkillIds->contains($jobSkill->id)) {
                 $matched = true;
             }
-
-            // 2. Fuzzy name match
             if (!$matched) {
                 $normJobName = $this->normalizeSkillName((string) $jobSkill->name);
                 foreach ($userSkills as $uSkill) {
@@ -74,7 +365,6 @@ class GapAnalysisService implements GapAnalysisServiceInterface
                     }
                 }
             }
-
             if ($matched) {
                 $matchedJobSkills->push($jobSkill);
             } else {
@@ -82,14 +372,11 @@ class GapAnalysisService implements GapAnalysisServiceInterface
             }
         }
 
-        // ── Build structured skill arrays ─────────────────────────────────────
         $toSkillArray = function ($skill) {
             $cat = mb_strtolower($skill->pivot->importance_category ?? 'nice_to_have');
-            // normalize category names
             if (in_array($cat, ['high', 'critical'])) $cat = 'essential';
             if (in_array($cat, ['medium'])) $cat = 'important';
             if (in_array($cat, ['low'])) $cat = 'nice_to_have';
-
             return [
                 'id'                  => $skill->id,
                 'name'                => $skill->name,
@@ -99,50 +386,37 @@ class GapAnalysisService implements GapAnalysisServiceInterface
             ];
         };
 
-        $matchedSkillsArr  = $matchedJobSkills->map($toSkillArray);
-        $missingSkillsArr  = $missingJobSkills->map($toSkillArray);
+        $matchedSkillsArr = $matchedJobSkills->map($toSkillArray);
+        $missingSkillsArr = $missingJobSkills->map($toSkillArray);
 
-        // ── Smart Weighted match percentage ──────────────────────────────────────
         $getWeight = function ($category) {
             $category = strtolower($category ?? '');
             if (in_array($category, ['essential', 'critical', 'high'])) return 5;
             if (in_array($category, ['important', 'medium'])) return 3;
-            return 1; // nice_to_have, low, or default
+            return 1;
         };
 
-        // Edge case: zero intersection
-        if ($matchedJobSkills->count() === 0) {
-            $matchPercentage = 0;
-        } else {
-            $totalWeight = $jobSkills->sum(fn($s) => $getWeight($s->pivot->importance_category ?? 'nice_to_have'));
-            $matchedWeight = $matchedSkillsArr->sum(fn($s) => $getWeight($s['importance_category'] ?? 'nice_to_have'));
+        $totalWeight   = $jobSkills->sum(fn($s) => $getWeight($s->pivot->importance_category ?? 'nice_to_have'));
+        $matchedWeight = $matchedSkillsArr->sum(fn($s) => $getWeight($s['importance_category'] ?? 'nice_to_have'));
+        $matchPercentage = $totalWeight > 0
+            ? min(100, ($matchedWeight / $totalWeight) * 100)
+            : ($totalRequired > 0 ? ($matchedJobSkills->count() / $totalRequired) * 100 : 0);
+        $matchPercentage = round((float) $matchPercentage, 2);
 
-            $matchPercentage = $totalWeight > 0
-                ? min(100, ($matchedWeight / $totalWeight) * 100)
-                : ($totalRequired > 0 ? ($matchedJobSkills->count() / $totalRequired) * 100 : 0);
-        }
-
-        $matchPercentage = round((float)$matchPercentage, 2);
-
-        // Sort missing skills by importance (Essential > Important > Nice-to-have)
         $missingSkillsArr = collect($missingSkillsArr)->sortByDesc(fn($s) => $getWeight($s['importance_category']))->values();
 
-        // ── Categorise missing skills ──────────────────────────────────────────
         $criticalSkills   = $missingSkillsArr->filter(fn($s) => ($s['importance_score'] ?? 0) > 60)->values();
         $niceToHaveSkills = $missingSkillsArr->filter(fn($s) => ($s['importance_score'] ?? 0) <= 60)->values();
 
-        // Legacy category breakdown
         $missingEssential  = collect($missingSkillsArr)->where('importance_category', 'essential')->values();
         $missingImportant  = collect($missingSkillsArr)->where('importance_category', 'important')->values();
         $missingNiceToHave = collect($missingSkillsArr)->whereNotIn('importance_category', ['essential', 'important'])->values();
 
-        // ── Breakdown by skill type ───────────────────────────────────────────
         $technicalRequired = $jobSkills->where('type', 'technical')->count();
         $technicalMatched  = $matchedSkillsArr->where('type', 'technical')->count();
         $softRequired      = $jobSkills->where('type', 'soft')->count();
         $softMatched       = $matchedSkillsArr->where('type', 'soft')->count();
 
-        // ── Recommendations ───────────────────────────────────────────────────
         $recommendations = $this->generateRecommendations(
             $matchPercentage,
             collect($missingSkillsArr),
@@ -157,7 +431,7 @@ class GapAnalysisService implements GapAnalysisServiceInterface
             'matched_count'               => $matchedJobSkills->count(),
             'missing_count'               => $missingJobSkills->count(),
             'matched_skills'              => $matchedSkillsArr,
-            'missing_skills'              => $missingSkillsArr, // Sorted array
+            'missing_skills'              => $missingSkillsArr,
             'critical_skills'             => $criticalSkills,
             'nice_to_have_skills'         => $niceToHaveSkills,
             'missing_essential_skills'    => $missingEssential,
@@ -199,7 +473,7 @@ class GapAnalysisService implements GapAnalysisServiceInterface
                     if (is_object($skillData) && isset($skillData->type)) {
                         $type = $skillData->type;
                     } elseif (is_array($skillData) && isset($skillData['type'])) {
-                        $type = $skillData['type'];
+                        $type = $skillData->type;
                     }
 
                     if (!$name) continue;
@@ -290,7 +564,6 @@ class GapAnalysisService implements GapAnalysisServiceInterface
         $words   = explode(' ', (string) $cleanTitle);
         $keyword = implode(' ', array_slice($words, 0, 2));
 
-        // Load jobs and their skills
         return Job::with('skills')->where(function ($query) use ($keyword, $cleanTitle) {
             $query->where('title', 'LIKE', '%' . $keyword . '%')
                 ->orWhere('title', 'LIKE', '%' . $cleanTitle . '%');
@@ -400,7 +673,6 @@ class GapAnalysisService implements GapAnalysisServiceInterface
             ? round(($matchedMarketWeight / $totalMarketWeight) * 100)
             : 0;
 
-        // Sort descending by weighted market importance
         $globalMissingSkills = $globalMissingSkills->sortByDesc('weighted_importance')->values();
         $globalMatchedSkills = $globalMatchedSkills->sortByDesc('weighted_importance')->values();
 
@@ -423,7 +695,7 @@ class GapAnalysisService implements GapAnalysisServiceInterface
                 'important'    => $important,
                 'nice_to_have' => $niceToHave,
             ],
-            'top_20_skills' => $globalMissingSkills->take(20)->values(), // top 20 missing
+            'top_20_skills' => $globalMissingSkills->take(20)->values(),
             'matched_skills' => $globalMatchedSkills,
             'missing_skills' => $globalMissingSkills,
         ];
