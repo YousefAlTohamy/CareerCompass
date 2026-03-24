@@ -24,6 +24,7 @@ class UserResource extends JsonResource
             'name'       => $this->name,
             'email'      => $this->email,
             'role'       => $this->role,
+            'created_at' => $this->created_at,
 
             // Backward compatibility: job_title maps to profile->headline
             'job_title'  => $profile?->headline ?? null,

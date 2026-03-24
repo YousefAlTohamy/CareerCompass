@@ -10,13 +10,22 @@ env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
 load_dotenv(dotenv_path=env_path, override=True)
 print("🚀 Starting Smart AI-Driven Dataset Generation (Enterprise Edition)...")
 
-api_key = os.getenv("GEMINI_API_KEY")
-if not api_key:
-    raise ValueError("❌ GEMINI_API_KEY is missing! Please add it to your .env file.")
+# 1. قراءة جميع المفاتيح كقائمة
+api_keys_str = os.getenv("GEMINI_API_KEYS")
+if not api_keys_str:
+    raise ValueError("❌ GEMINI_API_KEYS is missing! Please add them to your .env file separated by commas.")
 
-client = genai.Client(api_key=api_key)
+api_keys = [key.strip() for key in api_keys_str.split(',') if key.strip()]
+if not api_keys:
+    raise ValueError("❌ No valid keys found in GEMINI_API_KEYS!")
 
-# 1. تطوير الـ Prompt (إضافة Soft Skills وعشوائية لارافيل والمجالات الأخرى)
+print(f"🔑 Loaded {len(api_keys)} API keys.")
+current_key_idx = 0
+
+# تهيئة الاتصال بأول مفتاح
+client = genai.Client(api_key=api_keys[current_key_idx])
+
+# إعداد الـ Prompt (كما هو)
 system_prompt = """
 You are an expert Tech Recruiter and Data Annotator.
 Generate 10 completely unique, highly realistic, and visually messy snippets from Technical Resumes.
@@ -44,7 +53,6 @@ Output MUST be a valid JSON array of objects. Example:
 ]
 """
 
-# 2. دالة تنظيف الـ JSON (لحماية السكربت من فزلكة الموديل)
 def clean_json_response(text):
     text = text.strip()
     if text.startswith('```json'):
@@ -55,7 +63,7 @@ def clean_json_response(text):
         text = text[:-3]
     return text.strip()
 
-target_total_samples = 5000
+target_total_samples = 50000
 samples_per_batch = 10
 filename = 'train_real_tech.json'
 existing_samples = 0
@@ -80,22 +88,17 @@ with open(filename, 'a', encoding='utf-8') as f:
     batch_idx = 0
     total_saved_now = existing_samples
     
-    # 3. قائمة بأفضل الموديلات المتاحة في حسابك لتوليد النصوص
     available_models = [
-        # عائلة 2.5
         'gemini-2.5-flash',
         'gemini-2.5-flash-lite',
         'gemini-2.5-pro',
-        # عائلة 2.0
         'gemini-2.0-flash',
         'gemini-2.0-flash-001',
         'gemini-2.0-flash-lite',
         'gemini-2.0-flash-lite-001',
-        # الأسماء العامة (Latest)
         'gemini-flash-latest',
         'gemini-flash-lite-latest',
         'gemini-pro-latest',
-        # عائلة 3 و 3.1 (النسخ التجريبية المتاحة في حسابك)
         'gemini-3.1-pro-preview',
         'gemini-3.1-flash-lite-preview',
         'gemini-3-pro-preview',
@@ -115,7 +118,6 @@ with open(filename, 'a', encoding='utf-8') as f:
                 config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.85)
             )
             
-            # تنظيف وتحويل النص
             clean_text = clean_json_response(response.text)
             batch_data = json.loads(clean_text)
             
@@ -126,9 +128,8 @@ with open(filename, 'a', encoding='utf-8') as f:
                 f.flush()
                 os.fsync(f.fileno())
                 total_saved_now += len(batch_data)
-                print(f"[{batch_idx+1}/{batches_needed}] ✅ Generated {len(batch_data)} snippets via {active_model}. (Total: {total_saved_now})")
+                print(f"[{batch_idx+1}/{batches_needed}] ✅ Generated {len(batch_data)} snippets via {active_model} (Key #{current_key_idx + 1}). (Total: {total_saved_now})")
                 
-            # لو نجحنا، ننتقل للباتش اللي بعده ونصفر عداد المحاولات
             batch_idx += 1
             models_tried_this_batch = 0
             time.sleep(4) 
@@ -138,16 +139,28 @@ with open(filename, 'a', encoding='utf-8') as f:
             if "429" in error_msg or "quota" in error_msg or "exhausted" in error_msg or "limit: 0" in error_msg:
                 models_tried_this_batch += 1
                 
-                # لو جربنا كل الموديلات في القائمة وكلهم رفضوا، نريح دقيقة كاملة
+                # إذا استنفدنا كل الموديلات المتاحة للمفتاح الحالي
                 if models_tried_this_batch >= len(available_models):
-                    print("⚠️ All models are currently exhausted! Cooling down for 60 seconds...")
-                    time.sleep(60)
-                    models_tried_this_batch = 0 # تصفير العداد بعد الراحة
+                    current_key_idx += 1
+                    
+                    # هل لدينا مفاتيح أخرى لم نستخدمها بعد؟
+                    if current_key_idx < len(api_keys):
+                        print(f"🔄 All models exhausted for Key #{current_key_idx}. Switching to API Key #{current_key_idx + 1}...")
+                        client = genai.Client(api_key=api_keys[current_key_idx])
+                        models_tried_this_batch = 0  # تصفير عداد الموديلات للمفتاح الجديد
+                        current_model_idx = 0        # الرجوع لأول موديل في القائمة
+                    else:
+                        # إذا استنفدنا جميع المفاتيح وجميع الموديلات
+                        print("⚠️ All API Keys AND all models are currently exhausted! Cooling down for 60 seconds...")
+                        time.sleep(60)
+                        models_tried_this_batch = 0
+                        current_key_idx = 0 # العودة للمفتاح الأول بعد فترة الراحة
+                        client = genai.Client(api_key=api_keys[current_key_idx])
                 else:
-                    # ننقل على الموديل اللي عليه الدور في القائمة
+                    # نقل إلى الموديل التالي بنفس المفتاح
                     current_model_idx = (current_model_idx + 1) % len(available_models)
-                    print(f"   ⚠️ {active_model} busy. Switching to {available_models[current_model_idx]}...")
-                    time.sleep(2) # انتظار بسيط قبل تجربة الموديل الجديد
+                    print(f"   ⚠️ {active_model} busy on Key #{current_key_idx + 1}. Switching to {available_models[current_model_idx]}...")
+                    time.sleep(2)
             else:
                 print(f"[{batch_idx+1}/{batches_needed}] ❌ Error, retrying... ({e})")
                 time.sleep(5)
