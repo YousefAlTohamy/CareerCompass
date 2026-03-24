@@ -25,7 +25,7 @@ current_key_idx = 0
 # تهيئة الاتصال بأول مفتاح
 client = genai.Client(api_key=api_keys[current_key_idx])
 
-# إعداد الـ Prompt (كما هو)
+# إعداد الـ Prompt
 system_prompt = """
 You are an expert Tech Recruiter and Data Annotator.
 Generate 10 completely unique, highly realistic, and visually messy snippets from Technical Resumes.
@@ -106,7 +106,8 @@ with open(filename, 'a', encoding='utf-8') as f:
     ]
     
     current_model_idx = 0
-    models_tried_this_batch = 0
+    # إضافة set لتخزين الموديلات اللي استنفدت الكوتا الخاصة بها للمفتاح الحالي
+    exhausted_models = set() 
 
     while batch_idx < batches_needed:
         active_model = available_models[current_model_idx]
@@ -131,35 +132,39 @@ with open(filename, 'a', encoding='utf-8') as f:
                 print(f"[{batch_idx+1}/{batches_needed}] ✅ Generated {len(batch_data)} snippets via {active_model} (Key #{current_key_idx + 1}). (Total: {total_saved_now})")
                 
             batch_idx += 1
-            models_tried_this_batch = 0
             time.sleep(4) 
             
         except Exception as e:
             error_msg = str(e).lower()
             if "429" in error_msg or "quota" in error_msg or "exhausted" in error_msg or "limit: 0" in error_msg:
-                models_tried_this_batch += 1
                 
-                # إذا استنفدنا كل الموديلات المتاحة للمفتاح الحالي
-                if models_tried_this_batch >= len(available_models):
+                # 1. تخزين الموديل اللي حصل فيه المشكلة في الـ set
+                exhausted_models.add(active_model)
+                
+                # 2. التحقق: هل خزنّا كل الموديلات المتاحة؟
+                if len(exhausted_models) >= len(available_models):
                     current_key_idx += 1
                     
                     # هل لدينا مفاتيح أخرى لم نستخدمها بعد؟
                     if current_key_idx < len(api_keys):
                         print(f"🔄 All models exhausted for Key #{current_key_idx}. Switching to API Key #{current_key_idx + 1}...")
                         client = genai.Client(api_key=api_keys[current_key_idx])
-                        models_tried_this_batch = 0  # تصفير عداد الموديلات للمفتاح الجديد
-                        current_model_idx = 0        # الرجوع لأول موديل في القائمة
+                        exhausted_models.clear() # تصفير القائمة عشان نبدأ على نظافة مع المفتاح الجديد
+                        current_model_idx = 0        
                     else:
                         # إذا استنفدنا جميع المفاتيح وجميع الموديلات
                         print("⚠️ All API Keys AND all models are currently exhausted! Cooling down for 60 seconds...")
                         time.sleep(60)
-                        models_tried_this_batch = 0
-                        current_key_idx = 0 # العودة للمفتاح الأول بعد فترة الراحة
+                        exhausted_models.clear() # تصفير القائمة
+                        current_key_idx = 0 # العودة للمفتاح الأول
+                        current_model_idx = 0 # تصفير العداد للبدء من أول موديل مجدداً
                         client = genai.Client(api_key=api_keys[current_key_idx])
                 else:
-                    # نقل إلى الموديل التالي بنفس المفتاح
-                    current_model_idx = (current_model_idx + 1) % len(available_models)
-                    print(f"   ⚠️ {active_model} busy on Key #{current_key_idx + 1}. Switching to {available_models[current_model_idx]}...")
+                    # 3. البحث عن الموديل التالي اللي لسه مش موجود في قائمة المستنفذين
+                    while available_models[current_model_idx] in exhausted_models:
+                        current_model_idx = (current_model_idx + 1) % len(available_models)
+                        
+                    print(f"   ⚠️ {active_model} exhausted on Key #{current_key_idx + 1}. Stored and switching to {available_models[current_model_idx]}...")
                     time.sleep(2)
             else:
                 print(f"[{batch_idx+1}/{batches_needed}] ❌ Error, retrying... ({e})")

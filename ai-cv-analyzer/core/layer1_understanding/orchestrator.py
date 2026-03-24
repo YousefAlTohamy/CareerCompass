@@ -107,7 +107,7 @@ class CVOrchestrator:
 
         current_title = self._rank_current_title(exp_text) or (entities.get("roles") or [None])[0]
 
-        experience_items = self._build_experience_items(exp_text)
+        experience_items = self._build_experience_items(exp_text, predicted_title=current_title)
         experience_section = ExperienceSection(
             items=experience_items,
             confidence_score=_aggregate_confidence(
@@ -188,10 +188,10 @@ class CVOrchestrator:
             ),
         )
 
-    def _build_experience_items(self, experience_text: str) -> List[ExperienceItem]:
+    def _build_experience_items(self, experience_text: str, predicted_title: Optional[str] = None) -> List[ExperienceItem]:
         """
-        Phase-3-lite: populate only temporal fields + raw bullets as description.
-        (No company/title extraction beyond heuristics; Phase 5+ can improve.)
+        Phase-4: Advanced Segmentation.
+        Splits experience text into blocks by date, then uses NER to extract real Company, Location, and Role per block.
         """
         if not experience_text.strip():
             return []
@@ -199,35 +199,61 @@ class CVOrchestrator:
         ranges = self._experience.extract_date_ranges(experience_text)
         merged = _merge_best_ranges(ranges)
 
-        items: List[ExperienceItem] = []
-        for r in merged:
-            items.append(
-                ExperienceItem(
-                    title=None,
-                    company=None,
-                    location=None,
-                    start_date=r.start,
-                    end_date=r.end,
-                    is_current=(r.end == date.today()),
-                    description=_extract_bullets(experience_text),
-                    technologies=[],
-                    confidence_score=0.80,
-                )
-            )
+        if not merged:
+            # Fallback if no dates are found
+            entities = self._ner.extract_entities(experience_text)
+            comp = entities.get("orgs", ["Unknown Company"])[0] if entities.get("orgs") else "Unknown Company"
+            loc = entities.get("locations", [None])[0] if entities.get("locations") else None
+            role = entities.get("roles", [predicted_title or "Professional Experience"])[0] if entities.get("roles") else (predicted_title or "Professional Experience")
 
-        # If we couldn't detect ranges, still return a single textual item.
-        if not items:
-            items.append(
+            return [
                 ExperienceItem(
-                    title=None,
-                    company=None,
-                    location=None,
+                    title=role,
+                    company=comp,
+                    location=loc,
                     start_date=None,
                     end_date=None,
                     is_current=None,
                     description=_extract_bullets(experience_text),
                     technologies=[],
                     confidence_score=0.45,
+                )
+            ]
+
+        # Order ranges by their appearance in the text to chunk the text accurately
+        positioned_ranges = []
+        for r in merged:
+            idx = experience_text.lower().find(r.source_text.lower())
+            positioned_ranges.append((max(0, idx), r))
+
+        positioned_ranges.sort(key=lambda x: x[0])
+
+        items: List[ExperienceItem] = []
+        for i, (idx, r) in enumerate(positioned_ranges):
+            # Define text block boundaries for this specific experience
+            block_start = 0 if i == 0 else positioned_ranges[i-1][0] + len(positioned_ranges[i-1][1].source_text)
+            block_end = positioned_ranges[i+1][0] if i + 1 < len(positioned_ranges) else len(experience_text)
+
+            block_text = experience_text[block_start:block_end].strip()
+
+            # Extract specific entities for THIS block using the initialized NER engine
+            entities = self._ner.extract_entities(block_text)
+
+            comp = entities.get("orgs", ["Unknown Company"])[0] if entities.get("orgs") else "Unknown Company"
+            loc = entities.get("locations", [None])[0] if entities.get("locations") else None
+            role = entities.get("roles", [predicted_title or "Professional Experience"])[0] if entities.get("roles") else (predicted_title or "Professional Experience")
+
+            items.append(
+                ExperienceItem(
+                    title=role,
+                    company=comp,
+                    location=loc,
+                    start_date=r.start,
+                    end_date=r.end,
+                    is_current=(r.end == date.today()),
+                    description=_extract_bullets(block_text),
+                    technologies=[],
+                    confidence_score=0.85,
                 )
             )
 
@@ -331,4 +357,3 @@ def _merge_best_ranges(ranges) -> List[Any]:
         if len(getattr(r, "source_text", "")) > len(getattr(existing, "source_text", "")):
             uniq[key] = r
     return sorted(uniq.values(), key=lambda x: (x.start, x.end))
-
