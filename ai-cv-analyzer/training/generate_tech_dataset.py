@@ -106,8 +106,8 @@ with open(filename, 'a', encoding='utf-8') as f:
     ]
     
     current_model_idx = 0
-    # إضافة set لتخزين الموديلات اللي استنفدت الكوتا الخاصة بها للمفتاح الحالي
     exhausted_models = set() 
+    unavailable_counts = {} # لتتبع عدد أخطاء 503 لكل موديل
 
     while batch_idx < batches_needed:
         active_model = available_models[current_model_idx]
@@ -119,6 +119,10 @@ with open(filename, 'a', encoding='utf-8') as f:
                 config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.85)
             )
             
+            # تصفير العداد إذا نجح الموديل في توليد الرد
+            if active_model in unavailable_counts:
+                unavailable_counts[active_model] = 0
+
             clean_text = clean_json_response(response.text)
             batch_data = json.loads(clean_text)
             
@@ -136,37 +140,50 @@ with open(filename, 'a', encoding='utf-8') as f:
             
         except Exception as e:
             error_msg = str(e).lower()
-            if "429" in error_msg or "quota" in error_msg or "exhausted" in error_msg or "limit: 0" in error_msg:
-                
-                # 1. تخزين الموديل اللي حصل فيه المشكلة في الـ set
+            
+            is_quota = "429" in error_msg or "quota" in error_msg or "exhausted" in error_msg or "limit: 0" in error_msg
+            is_unavailable = "503" in error_msg or "unavailable" in error_msg or "high demand" in error_msg
+            
+            # معالجة خطأ 503
+            if is_unavailable:
+                unavailable_counts[active_model] = unavailable_counts.get(active_model, 0) + 1
+                if unavailable_counts[active_model] < 3:
+                    print(f"[{batch_idx+1}/{batches_needed}] ⚠️ 503 Error ({unavailable_counts[active_model]}/3). Retrying in 5s... ({active_model})")
+                    time.sleep(5)
+                    continue # إعادة المحاولة مع نفس الموديل
+                else:
+                    print(f"🚨 {active_model} returned 503 error 3 times! Treating it as exhausted and switching...")
+                    is_quota = True # تفعيل منطق التحويل للموديل أو المفتاح التالي
+
+            if is_quota:
                 exhausted_models.add(active_model)
                 
-                # 2. التحقق: هل خزنّا كل الموديلات المتاحة؟
                 if len(exhausted_models) >= len(available_models):
                     current_key_idx += 1
                     
-                    # هل لدينا مفاتيح أخرى لم نستخدمها بعد؟
                     if current_key_idx < len(api_keys):
                         print(f"🔄 All models exhausted for Key #{current_key_idx}. Switching to API Key #{current_key_idx + 1}...")
                         client = genai.Client(api_key=api_keys[current_key_idx])
-                        exhausted_models.clear() # تصفير القائمة عشان نبدأ على نظافة مع المفتاح الجديد
+                        exhausted_models.clear() 
+                        unavailable_counts.clear() 
                         current_model_idx = 0        
                     else:
-                        # إذا استنفدنا جميع المفاتيح وجميع الموديلات
                         print("⚠️ All API Keys AND all models are currently exhausted! Cooling down for 60 seconds...")
                         time.sleep(60)
-                        exhausted_models.clear() # تصفير القائمة
-                        current_key_idx = 0 # العودة للمفتاح الأول
-                        current_model_idx = 0 # تصفير العداد للبدء من أول موديل مجدداً
+                        exhausted_models.clear()
+                        unavailable_counts.clear()
+                        current_key_idx = 0 
+                        current_model_idx = 0 
                         client = genai.Client(api_key=api_keys[current_key_idx])
                 else:
-                    # 3. البحث عن الموديل التالي اللي لسه مش موجود في قائمة المستنفذين
                     while available_models[current_model_idx] in exhausted_models:
                         current_model_idx = (current_model_idx + 1) % len(available_models)
                         
-                    print(f"   ⚠️ {active_model} exhausted on Key #{current_key_idx + 1}. Stored and switching to {available_models[current_model_idx]}...")
+                    print(f"   ⚠️ Switching from {active_model} to {available_models[current_model_idx]}...")
                     time.sleep(2)
-            else:
+            
+            elif not is_unavailable:
+                # أخطاء أخرى غير 503 و غير الـ Quota
                 print(f"[{batch_idx+1}/{batches_needed}] ❌ Error, retrying... ({e})")
                 time.sleep(5)
 
