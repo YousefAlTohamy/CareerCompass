@@ -274,6 +274,60 @@ async def process_hybrid_application(
     }
 
 
+# ==============================================================================
+# V3 Match Job Workflow
+# ==============================================================================
+
+def run_hybrid_workflow(
+    cv_bytes: bytes, 
+    filename: str, 
+    job_dict: dict | None = None,
+    orchestrator=None,
+    matcher=None
+) -> dict:
+    """
+    Synchronous hybrid workflow for CV parsing and JD matching.
+    """
+    logger.info("═" * 60)
+    logger.info(f"V3 Hybrid Workflow started for {filename}")
+    
+    orch = orchestrator or _orchestrator
+    mtch = matcher or _matcher
+
+    # 1. Parse CV
+    result = orch.process_cv(cv_bytes, filename)
+    
+    parsing_status = getattr(result, "parsing_status", "unknown")
+    if parsing_status in ("no_text", "empty_file", "error"):
+        return {
+            "status": "error",
+            "message": f"CV parsing failed (status={parsing_status}).",
+            "cv_analysis": {},
+            "match": {}
+        }
+    
+    cv_analysis = result.model_dump()
+    
+    # 2. Match if job_data is present
+    match_output = {
+        "match_score": 0.0,
+        "missing_skills": [],
+        "red_flags": []
+    }
+    
+    if job_dict and (job_dict.get("title") or job_dict.get("description")):
+        logger.info(f"Job Data provided. Triggering IntelligentMatcher for role: {job_dict.get('title', 'Unknown')}")
+        match_output = mtch.calculate_match(result, job_dict)
+    else:
+        logger.info("No Job Data provided. Skipping IntelligentMatcher.")
+        
+    return {
+        "status": "success",
+        "cv_analysis": cv_analysis,
+        "match": match_output
+    }
+
+
 # ─── Helper ────────────────────────────────────────────────────────────────────
 
 def _read_file(path: str) -> bytes:

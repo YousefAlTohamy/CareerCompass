@@ -538,6 +538,49 @@ async def hybrid_match(body: HybridMatchRequest):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Endpoint 5 — POST /api/v3/match-job
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.post("/api/v3/match-job", tags=["CV Analysis & Matching"])
+@app.post("/api/v3/analyze-cv", tags=["CV Analysis & Matching"], include_in_schema=False)
+async def match_job_v3(cv: UploadFile = File(...), job_data: Optional[str] = Form(None)):
+    """
+    V3 Gateway Endpoint for processing a CV and optionally matching it against a Job Description.
+    """
+    import json
+    from hybrid_runner import run_hybrid_workflow
+    
+    filename = cv.filename or "upload"
+    
+    # ── Read bytes ───────────────────────────────────────
+    file_bytes = await cv.read()
+    if not file_bytes:
+        raise HTTPException(status_code=422, detail="Uploaded file is empty.")
+        
+    job_dict = {}
+    if job_data:
+        try:
+            job_dict = json.loads(job_data)
+        except json.JSONDecodeError:
+            logger.warning(f"Invalid JSON in job_data: {job_data}")
+            
+    logger.info(f"Incoming /api/v3/match-job | File: {filename} | Title: {job_dict.get('title', 'N/A')}")
+    
+    try:
+        # We pass the globally loaded models to avoid duplicate inference memory duplication
+        return run_hybrid_workflow(
+            cv_bytes=file_bytes, 
+            filename=filename, 
+            job_dict=job_dict,
+            orchestrator=_orchestrator,
+            matcher=_matcher
+        )
+    except Exception as e:
+        logger.exception("V3 Match failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Entry point
 # ─────────────────────────────────────────────────────────────────────────────
 
