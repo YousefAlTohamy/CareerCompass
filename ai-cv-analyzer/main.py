@@ -1,3 +1,15 @@
+import os
+from dotenv import load_dotenv
+
+# لازم السطر ده يكون في الأول عشان يحمل التوكن قبل ما موديلز الذكاء الاصطناعي تشتغل
+load_dotenv() 
+
+import logging
+import time
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from typing import Dict, Any
+
 import logging
 import time
 from fastapi import FastAPI, UploadFile, File, HTTPException
