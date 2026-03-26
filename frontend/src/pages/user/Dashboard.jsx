@@ -207,6 +207,8 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { user, refreshUser } = useAuth();
   const [skills, setSkills] = useState([]);
+  const [jobTitle, setJobTitle] = useState("");
+  const [jobDescription, setJobDescription] = useState("");
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [isDiscovering, setIsDiscovering] = useState(false);
@@ -264,6 +266,8 @@ export default function Dashboard() {
 
     const formData = new FormData();
     formData.append("cv", file);
+    if (jobTitle.trim()) formData.append("job_title", jobTitle.trim());
+    if (jobDescription.trim()) formData.append("job_description", jobDescription.trim());
 
     try {
       setUploading(true);
@@ -295,6 +299,8 @@ export default function Dashboard() {
       });
       await loadSkills();
       await loadRecommendations();
+      setJobTitle("");
+      setJobDescription("");
     } catch (error) {
       console.error("CV upload error:", error);
       Swal.fire({
@@ -342,10 +348,13 @@ export default function Dashboard() {
 
   const hasSkills = (skills?.length ?? 0) > 0;
   const hasCvAnalysis = user?.cv_analysis != null;
+  const matchScore = user?.cv_analysis?.match_score;
+  const primaryDomain = user?.cv_analysis?.primary_domain;
+  const summary = user?.cv_analysis?.summary;
   const completenessScore = Number(user?.cv_analysis?.completeness_score) || 0;
   const totalExperience = user?.profile?.total_experience_years ?? user?.total_experience_years;
   const headline = user?.headline ?? user?.job_title ?? user?.profile?.headline ?? user?.profile?.job_title;
-  const seniority = user?.seniority ?? user?.profile?.seniority;
+  const seniority = user?.cv_analysis?.seniority ?? user?.seniority ?? user?.profile?.seniority;
   const userSkills = Array.isArray(user?.skills) ? user.skills : [];
   const skillsCount = userSkills?.length ?? skills?.length ?? 0;
 
@@ -451,36 +460,113 @@ export default function Dashboard() {
           >
             <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
             <div className="relative z-10">
-              <h3 className="text-lg font-black text-slate-800 mb-4 flex items-center gap-2">
+              <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
                 <Sparkles size={20} className="text-indigo-500" /> AI Insights Snapshot
               </h3>
-              <div className="flex flex-col md:flex-row md:items-center gap-6">
-                <div className="flex-1 space-y-2">
+              <div className="flex flex-col md:flex-row md:items-start gap-8">
+                <div className="flex-1 space-y-4">
                   {headline && (
                     <p className="text-xl font-bold text-slate-800">{headline}</p>
                   )}
-                  {seniority && (
-                    <p className="text-sm font-semibold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg w-fit border border-indigo-100">
-                      {seniority}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {seniority && (
+                      <p className="text-sm font-semibold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100">
+                        {seniority.charAt(0).toUpperCase() + seniority.slice(1)}
+                      </p>
+                    )}
+                    {primaryDomain && (
+                      <p className="text-sm font-semibold text-violet-600 bg-violet-50 px-3 py-1 rounded-lg border border-violet-100">
+                        {primaryDomain}
+                      </p>
+                    )}
+                    {matchScore != null && matchScore > 0 && (
+                      <p className="text-sm font-black text-emerald-700 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200 flex items-center gap-1 shadow-sm">
+                        <Target size={14} /> JD Match: {matchScore}%
+                      </p>
+                    )}
+                  </div>
+                  {summary && (
+                    <p className="text-sm text-slate-600 bg-slate-50 border border-slate-100 p-4 rounded-xl leading-relaxed shadow-sm">
+                      {summary}
                     </p>
                   )}
                 </div>
                 {topSkillsByConfidence.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {topSkillsByConfidence.map((skill, i) => (
-                      <span
-                        key={skill?.id ?? i}
-                        className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold uppercase tracking-wider border border-indigo-100"
-                      >
-                        {skill?.name ?? skill}
-                      </span>
-                    ))}
+                  <div className="w-full md:w-1/3 space-y-2">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Top Confirmed Skills</p>
+                    <div className="flex flex-wrap gap-2">
+                      {topSkillsByConfidence.map((skill, i) => (
+                        <span
+                          key={skill?.id ?? i}
+                          className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold uppercase tracking-wider border border-indigo-100 shadow-sm"
+                        >
+                          {skill?.name ?? skill}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
             </div>
           </motion.div>
         )}
+
+        {/* ADVANCED MATCHING / UPLOAD CARD */}
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+            <div className="relative z-10">
+              <h3 className="text-lg font-black text-slate-800 mb-2 flex items-center gap-2">
+                <Target size={20} className="text-indigo-500" /> Advanced JD Matching
+              </h3>
+              <p className="text-sm text-slate-500 mb-6 max-w-2xl">
+                Target a specific role? Paste a job title and description to receive a tailored Match Score, gap analysis, and tailored AI recommendations when you upload your CV.
+              </p>
+              
+              <div className="grid md:grid-cols-12 gap-6 mb-6">
+                <div className="md:col-span-4">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Target Job Title <span className="text-slate-300 normal-case font-normal ml-1">(Optional)</span></label>
+                  <input 
+                    type="text" 
+                    value={jobTitle} 
+                    onChange={e => setJobTitle(e.target.value)} 
+                    placeholder="e.g. Senior Frontend Engineer" 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow focus:bg-white" 
+                  />
+                </div>
+                <div className="md:col-span-8">
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Job Description <span className="text-slate-300 normal-case font-normal ml-1">(Optional)</span></label>
+                  <textarea 
+                    value={jobDescription} 
+                    onChange={e => setJobDescription(e.target.value)} 
+                    rows={3} 
+                    placeholder="Paste the job requirements here..." 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow resize-none focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-4">
+                <label className="cursor-pointer inline-block w-full sm:w-auto">
+                  <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleCVUpload} disabled={uploading} />
+                  <div className={`bg-indigo-600 hover:bg-indigo-700 transition-colors text-white font-bold py-3.5 px-8 rounded-xl flex justify-center items-center gap-2 shadow-md ${uploading ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                    <Upload size={18} /> {uploading ? "Analyzing..." : ((jobTitle || jobDescription) ? "Scan CV vs Job Description" : "Upload CV & Analyze")}
+                  </div>
+                </label>
+                {(jobTitle || jobDescription) && (
+                  <button 
+                    onClick={() => { setJobTitle(''); setJobDescription(''); }}
+                    className="text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors px-4 py-2"
+                  >
+                    Clear Fields
+                  </button>
+                )}
+              </div>
+            </div>
+        </motion.div>
 
         {/* 4 STAT CARDS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
