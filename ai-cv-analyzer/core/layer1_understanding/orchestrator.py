@@ -21,6 +21,7 @@ from core.layer1_understanding.schema import (
 )
 from core.layer1_understanding.section_segmenter import SemanticSegmenter
 from core.layer1_understanding.spatial_parser import SpatialTextExtraction, extract_spatial_text_from_pdf
+from core.layer2_classification.classifier import CVDomainClassifier
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,8 @@ class CVOrchestrator:
         self._ner = AdvancedNEREngine()
         self._experience = ExperienceEngine()
         self._canonicalizer = DataCanonicalizer(fuzzy_threshold=self._config.canonical_fuzzy_threshold)
+        # Layer 2: domain classification (singleton — model loaded once).
+        self._classifier = CVDomainClassifier()
 
     def process_cv(self, pdf_bytes: bytes, filename: Optional[str] = None) -> CVParseResult:
         """
@@ -101,10 +104,9 @@ class CVOrchestrator:
             confidence_score=_aggregate_confidence([s.confidence_score for s in canonical_skills], default=0.0),
         )
 
-        # Experience: temporal total years + best current title guess.
+        # Experience: build items, then derive total years from the items themselves
+        # (so current roles are counted correctly via _compute_total_experience_years).
         exp_text = segments.sections.get("experience", "")
-        total_years = self._experience.calculate_total_experience_years(exp_text) if exp_text else 0.0
-
         current_title = self._rank_current_title(exp_text) or (entities.get("roles") or [None])[0]
 
         experience_items = self._build_experience_items(exp_text, predicted_title=current_title)
@@ -114,6 +116,29 @@ class CVOrchestrator:
                 [it.confidence_score for it in experience_items],
                 default=0.0,
             ),
+        )
+
+        total_years = _compute_total_experience_years(experience_items)
+
+        # ── Layer 2: Domain Classification ──────────────────────────────────
+        domain_probs = self._classifier.predict_domain(ordered_text)
+        primary_domain = _pick_best_domain(domain_probs)
+
+        # ── Seniority ────────────────────────────────────────────────────────
+        seniority = _derive_seniority(total_years)
+
+        # ── Strengths: top-5 high-confidence skills ───────────────────────────
+        strengths = [
+            sk.name
+            for sk in sorted(canonical_skills, key=lambda s: s.confidence_score, reverse=True)
+            if sk.confidence_score > 0.85
+        ][:5]
+
+        # ── Analysis summary prose ────────────────────────────────────────────
+        domain_label = primary_domain or "Professional"
+        years_label = f"{total_years:.1f}" if total_years != int(total_years) else str(int(total_years))
+        analysis_summary = (
+            f"Professional {domain_label} with {years_label} year(s) of experience."
         )
 
         stats = DocumentStats(
@@ -132,11 +157,11 @@ class CVOrchestrator:
         )
 
         analysis = AnalysisSection(
-            summary=None,
+            summary=analysis_summary,
             predicted_role=current_title,
-            seniority=None,
-            primary_domain=None,
-            strengths=[],
+            seniority=seniority,
+            primary_domain=primary_domain,
+            strengths=strengths,
             gaps=[],
             red_flags=[],
             confidence_score=_aggregate_confidence(
@@ -155,6 +180,9 @@ class CVOrchestrator:
                 "extraction": {
                     "spatial_status": spatial.status,
                     "word_count_spatial": spatial.word_count,
+                },
+                "classification": {
+                    "domain_scores": domain_probs,
                 },
             },
         )
@@ -191,7 +219,11 @@ class CVOrchestrator:
     def _build_experience_items(self, experience_text: str, predicted_title: Optional[str] = None) -> List[ExperienceItem]:
         """
         Phase-4: Advanced Segmentation.
-        Splits experience text into blocks by date, then uses NER to extract real Company, Location, and Role per block.
+        Splits experience text into blocks by date, then uses NER to extract real
+        Company, Location, and Role per block.
+
+        When NER cannot find an ORG in a block, a heuristic fallback scans the
+        first few lines of the block for the most likely company name.
         """
         if not experience_text.strip():
             return []
@@ -202,9 +234,17 @@ class CVOrchestrator:
         if not merged:
             # Fallback if no dates are found
             entities = self._ner.extract_entities(experience_text)
-            comp = entities.get("orgs", ["Unknown Company"])[0] if entities.get("orgs") else "Unknown Company"
+            comp = (
+                entities.get("orgs", [])[0]
+                if entities.get("orgs")
+                else _guess_company_from_lines(experience_text)
+            )
             loc = entities.get("locations", [None])[0] if entities.get("locations") else None
-            role = entities.get("roles", [predicted_title or "Professional Experience"])[0] if entities.get("roles") else (predicted_title or "Professional Experience")
+            role = (
+                entities.get("roles", [])[0]
+                if entities.get("roles")
+                else (predicted_title or "Professional Experience")
+            )
 
             return [
                 ExperienceItem(
@@ -220,7 +260,7 @@ class CVOrchestrator:
                 )
             ]
 
-        # Order ranges by their appearance in the text to chunk the text accurately
+        # Order ranges by their appearance in the text to chunk the text accurately.
         positioned_ranges = []
         for r in merged:
             idx = experience_text.lower().find(r.source_text.lower())
@@ -230,18 +270,29 @@ class CVOrchestrator:
 
         items: List[ExperienceItem] = []
         for i, (idx, r) in enumerate(positioned_ranges):
-            # Define text block boundaries for this specific experience
-            block_start = 0 if i == 0 else positioned_ranges[i-1][0] + len(positioned_ranges[i-1][1].source_text)
-            block_end = positioned_ranges[i+1][0] if i + 1 < len(positioned_ranges) else len(experience_text)
+            # Define text block boundaries for this specific experience.
+            block_start = 0 if i == 0 else positioned_ranges[i - 1][0] + len(positioned_ranges[i - 1][1].source_text)
+            block_end = positioned_ranges[i + 1][0] if i + 1 < len(positioned_ranges) else len(experience_text)
 
             block_text = experience_text[block_start:block_end].strip()
 
-            # Extract specific entities for THIS block using the initialized NER engine
+            # Extract specific entities for THIS block using the initialized NER engine.
             entities = self._ner.extract_entities(block_text)
 
-            comp = entities.get("orgs", ["Unknown Company"])[0] if entities.get("orgs") else "Unknown Company"
+            # Company: prefer NER org, then heuristic line scan, then generic label.
+            comp = (
+                entities.get("orgs", [])[0]
+                if entities.get("orgs")
+                else _guess_company_from_lines(block_text)
+            )
             loc = entities.get("locations", [None])[0] if entities.get("locations") else None
-            role = entities.get("roles", [predicted_title or "Professional Experience"])[0] if entities.get("roles") else (predicted_title or "Professional Experience")
+            role = (
+                entities.get("roles", [])[0]
+                if entities.get("roles")
+                else (predicted_title or "Professional Experience")
+            )
+
+            is_current = r.end >= date.today()
 
             items.append(
                 ExperienceItem(
@@ -249,8 +300,8 @@ class CVOrchestrator:
                     company=comp,
                     location=loc,
                     start_date=r.start,
-                    end_date=r.end,
-                    is_current=(r.end == date.today()),
+                    end_date=None if is_current else r.end,
+                    is_current=is_current,
                     description=_extract_bullets(block_text),
                     technologies=[],
                     confidence_score=0.85,
@@ -306,6 +357,43 @@ def _aggregate_confidence(values: Sequence[float], *, default: float) -> float:
     return float(min(1.0, sum(vals) / len(vals)))
 
 
+# Sentinel keys returned by CVDomainClassifier when the model is unavailable.
+_DOMAIN_SENTINEL_KEYS: frozenset = frozenset({"Unknown", "Error"})
+
+
+def _pick_best_domain(domain_probs: Dict[str, float]) -> Optional[str]:
+    """
+    Return the domain label with the highest probability score.
+    Returns *None* if the result is a sentinel (Unknown / Error) or empty.
+    """
+    if not domain_probs:
+        return None
+    best = max(domain_probs, key=lambda k: domain_probs[k])
+    if best in _DOMAIN_SENTINEL_KEYS:
+        return None
+    return best
+
+
+def _derive_seniority(total_years: float) -> Optional[str]:
+    """
+    Map total years of experience to a seniority Literal that matches the schema:
+    ``"intern" | "junior" | "mid" | "senior"``
+
+    Thresholds:
+    - 0 years          → ``"intern"``
+    - > 0 and < 2      → ``"junior"``
+    - 2 ≤ years ≤ 5   → ``"mid"``
+    - > 5              → ``"senior"``
+    """
+    if total_years <= 0:
+        return "intern"
+    if total_years < 2:
+        return "junior"
+    if total_years <= 5:
+        return "mid"
+    return "senior"
+
+
 _DATEY_RE = re.compile(r"\b(?:\d{4}|present|current|now|today|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\b", re.IGNORECASE)
 
 
@@ -327,19 +415,38 @@ def _clean_title_line(line: str) -> Optional[str]:
     return s
 
 
-_BULLET_RE = re.compile(r"^\s*(?:[\-\*\u2022•·]|[0-9]{1,2}[.)])\s+")
+# Matches common bullet styles:
+# - Unicode bullets: •, ·, ‣, ▸, ▪, ◦, ○, –, —
+# - ASCII: -, *, >
+# - Numbered lists: 1. 2) a. b)
+# - Custom markers like ✓, ✗, ★
+_BULLET_RE = re.compile(
+    r"^\s*"
+    r"(?:"
+    r"[\u2022\u00b7\u2023\u25b8\u25aa\u25e6\u25cb\u2013\u2014\u2012\u2043]"
+    r"|[\-\*\>]"
+    r"|[\u2713\u2717\u2714\u2718\u2605\u2606]"
+    r"|[0-9]{1,2}[.)]"
+    r"|[a-zA-Z][.)]"
+    r")"
+    r"\s+"
+)
 
 
 def _extract_bullets(text: str) -> List[str]:
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
     bullets: List[str] = []
     for ln in lines:
-        ln2 = _BULLET_RE.sub("", ln).strip()
-        if ln2 and ln2 != ln:
-            bullets.append(ln2)
+        stripped = _BULLET_RE.sub("", ln).strip()
+        if stripped and stripped != ln:
+            bullets.append(stripped)
     if bullets:
         return bullets[:30]
-    return lines[:30]
+    # No bullets found: return non-header, non-date lines as raw descriptions.
+    return [
+        ln for ln in lines[:30]
+        if not _looks_like_date_line(ln) and len(ln) > 15
+    ] or lines[:30]
 
 
 def _merge_best_ranges(ranges) -> List[Any]:
@@ -357,3 +464,77 @@ def _merge_best_ranges(ranges) -> List[Any]:
         if len(getattr(r, "source_text", "")) > len(getattr(existing, "source_text", "")):
             uniq[key] = r
     return sorted(uniq.values(), key=lambda x: (x.start, x.end))
+
+
+# Regex: lines that are clearly job-title-like or date-like (skip for company detection).
+_TITLE_KEYWORDS_RE = re.compile(
+    r"\b(?:engineer|developer|architect|analyst|manager|intern|senior|junior|lead|"
+    r"specialist|consultant|coordinator|director|officer|president|designer|"
+    r"scientist|researcher|head|staff|associate|principal|freelance|contractor)\b",
+    re.IGNORECASE,
+)
+
+
+def _guess_company_from_lines(block_text: str, max_lines: int = 3) -> str:
+    """
+    Heuristic fallback to guess a company name when NER finds no ORG entity.
+
+    Scans the first *max_lines* non-empty lines of the block, skipping:
+    - Lines that look like dates (contain years / month names).
+    - Lines that look like job titles (contain role keywords).
+    - Very short lines (< 3 chars) or very long lines (> 60 chars).
+    - Lines that are only punctuation / symbols.
+
+    The first surviving candidate is returned; otherwise "Professional Experience".
+    """
+    lines = [ln.strip() for ln in block_text.splitlines() if ln.strip()]
+    for ln in lines[:max(max_lines, 5)]:
+        if _looks_like_date_line(ln):
+            continue
+        if _TITLE_KEYWORDS_RE.search(ln):
+            continue
+        # Skip section headers or dividers
+        lowered = ln.lower()
+        if lowered in {"experience", "work experience", "employment", "employment history"}:
+            continue
+        # Sanity length check
+        if len(ln) < 3 or len(ln) > 60:
+            continue
+        # Must have at least one alphabetic character
+        if not any(ch.isalpha() for ch in ln):
+            continue
+        # Reject lines that are mostly digits (phone numbers etc.)
+        alpha = sum(ch.isalpha() for ch in ln)
+        digits = sum(ch.isdigit() for ch in ln)
+        if digits > alpha:
+            continue
+        # Strip common trailing punctuation and return.
+        candidate = re.sub(r"[\s,;:|/\-]+$", "", ln).strip()
+        if candidate:
+            return candidate
+    return "Professional Experience"
+
+
+def _compute_total_experience_years(items: List[Any]) -> float:
+    """
+    Accumulate total work experience in fractional years from ExperienceItem objects.
+
+    - If ``is_current`` is True, treats today's date as the end date.
+    - Overlapping ranges are NOT de-duplicated (keep it simple; the engine uses
+      non-overlapping blocks anyway).
+    """
+    today = date.today()
+    total_days = 0
+    for item in items:
+        start = getattr(item, "start_date", None)
+        end = getattr(item, "end_date", None)
+        is_current = getattr(item, "is_current", False)
+
+        if start is None:
+            continue
+        effective_end = today if is_current or end is None else end
+        delta = (effective_end - start).days
+        if delta > 0:
+            total_days += delta
+
+    return round(total_days / 365.25, 2)
