@@ -240,8 +240,8 @@ async def match_job_v3(
     except Exception:
         raise HTTPException(status_code=422, detail="job_data must be valid JSON.")
 
-    if not jd.get("description"):
-        raise HTTPException(status_code=422, detail="job_data must include a 'description' field.")
+    # Allow empty job_data for pure CV analysis
+    has_job = bool(jd.get("title") or jd.get("description"))
 
     # ── Layer 1 + 2: CV Understanding (orchestrator handles both) ─────────
     try:
@@ -273,7 +273,15 @@ async def match_job_v3(
     # ── Layer 3: Intelligent Matching ─────────────────────────────────────
     try:
         matcher = _get_matcher()
-        match_result = matcher.calculate_match(cv_result, jd, cv_raw_text=cv_raw_text)
+        if has_job:
+            match_result = matcher.calculate_match(cv_result, jd, cv_raw_text=cv_raw_text)
+            match_dict = match_result.to_dict()
+            missing_skills_list = match_result.missing_skills
+            red_flags_list = match_result.red_flags
+        else:
+            match_dict = {"match_score": 0.0, "missing_skills": [], "red_flags": []}
+            missing_skills_list = []
+            red_flags_list = []
     except Exception as exc:
         logger.exception("V3 match-job matching failed: %s", exc)
         raise HTTPException(status_code=500, detail="Matching engine failed.")
@@ -281,19 +289,19 @@ async def match_job_v3(
     # ── Enrich analysis with gaps & red_flags ─────────────────────────────
     # Pydantic models are immutable; serialise, patch, return as plain dict.
     result_dict: Dict[str, Any] = cv_result.model_dump(mode="json")
-    result_dict["analysis"]["gaps"] = match_result.missing_skills
-    result_dict["analysis"]["red_flags"] = match_result.red_flags
+    result_dict["analysis"]["gaps"] = missing_skills_list
+    result_dict["analysis"]["red_flags"] = red_flags_list
 
     dt_ms = (time.perf_counter() - t0) * 1000.0
     logger.info(
         "V3 match-job completed score=%.1f time_ms=%.1f",
-        match_result.match_score, dt_ms,
+        match_dict.get("match_score", 0.0), dt_ms,
     )
 
     return {
         "status": "success",
         "cv_analysis": result_dict,
-        "match": match_result.to_dict(),
+        "match": match_dict,
     }
 
 if __name__ == "__main__":

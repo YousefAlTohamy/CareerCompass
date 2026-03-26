@@ -132,7 +132,7 @@ class CvProcessingService implements CvProcessingServiceInterface
             $response = Http::timeout($this->timeout)
                 ->asMultipart()
                 ->attach(
-                    'cv',
+                    'file',
                     fopen($file->getPathname(), 'r'),
                     (string) $fileName
                 )

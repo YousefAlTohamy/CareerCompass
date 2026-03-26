@@ -84,10 +84,12 @@ logger = logging.getLogger("gateway")
 logger.setLevel(logging.DEBUG)
 
 # ── FastAPI ───────────────────────────────────────────────────────────────────
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile   # noqa: E402
-from fastapi.middleware.cors import CORSMiddleware                    # noqa: E402
-from pydantic import BaseModel                                        # noqa: E402
-from typing import Any, Dict, Optional, Union                                # noqa: E402
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Request
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Any, Dict, Optional, Union
 
 # ── Singleton AI models (load once on startup) ────────────────────────────────
 _orchestrator: CVOrchestrator | None   = None
@@ -127,6 +129,18 @@ app.add_middleware(
 # ─────────────────────────────────────────────────────────────────────────────
 # Health
 # ─────────────────────────────────────────────────────────────────────────────
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    error_msg = f"Validation Error: {exc.errors()}"
+    logger.error(error_msg)
+    try:
+        body = await request.body()
+        logger.error(f"Request body: {body}")
+    except Exception:
+        pass
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+
 
 @app.get("/", tags=["Health"])
 def health_check():
@@ -543,17 +557,20 @@ async def hybrid_match(body: HybridMatchRequest):
 
 @app.post("/api/v3/match-job", tags=["CV Analysis & Matching"])
 @app.post("/api/v3/analyze-cv", tags=["CV Analysis & Matching"], include_in_schema=False)
-async def match_job_v3(cv: UploadFile = File(...), job_data: Optional[str] = Form(None)):
+async def match_job_v3(
+    file: UploadFile = File(...),
+    job_data: str = Form("{}")
+):
     """
     V3 Gateway Endpoint for processing a CV and optionally matching it against a Job Description.
     """
     import json
     from hybrid_runner import run_hybrid_workflow
     
-    filename = cv.filename or "upload"
+    filename = file.filename or "upload"
     
     # ── Read bytes ───────────────────────────────────────
-    file_bytes = await cv.read()
+    file_bytes = await file.read()
     if not file_bytes:
         raise HTTPException(status_code=422, detail="Uploaded file is empty.")
         
