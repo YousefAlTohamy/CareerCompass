@@ -2,19 +2,15 @@ import os
 from dotenv import load_dotenv
 
 # لازم السطر ده يكون في الأول عشان يحمل التوكن قبل ما موديلز الذكاء الاصطناعي تشتغل
-load_dotenv() 
+load_dotenv()
 
+import json
 import logging
 import time
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, Form, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Dict, Any
+from typing import Any, Dict, List, Optional
 
-import logging
-import time
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from typing import Dict, Any
 
 # Import Layer 1: Understanding (V2 Pipeline)
 from core.layer1_understanding.orchestrator import CVOrchestrator
@@ -50,10 +46,10 @@ async def startup_event():
     logger.info("Initializing AI Engine v2 Models (This may take a moment)...")
     CVDomainClassifier()
     # IntelligentMatcher initializes the SemanticEmbedder automatically
-    IntelligentMatcher()
+    _get_matcher()
     # V2 pipeline facade (loads AdvancedNEREngine lazily/once)
     try:
-        CVOrchestrator()
+        _get_orchestrator()
     except Exception as e:
         logger.warning("CVOrchestrator prewarm failed (will retry on request): %s", e)
     logger.info("All AI Models loaded successfully into memory.")
@@ -125,6 +121,7 @@ async def analyze_full_cv(file: UploadFile = File(...)) -> Dict[str, Any]:
 
 
 _V2_ORCHESTRATOR: CVOrchestrator | None = None
+_MATCHER: IntelligentMatcher | None = None
 
 
 def _get_orchestrator() -> CVOrchestrator:
@@ -132,6 +129,13 @@ def _get_orchestrator() -> CVOrchestrator:
     if _V2_ORCHESTRATOR is None:
         _V2_ORCHESTRATOR = CVOrchestrator()
     return _V2_ORCHESTRATOR
+
+
+def _get_matcher() -> IntelligentMatcher:
+    global _MATCHER
+    if _MATCHER is None:
+        _MATCHER = IntelligentMatcher()
+    return _MATCHER
 
 
 @app.post("/api/v3/analyze-cv", response_model=CVParseResult)
@@ -172,29 +176,124 @@ async def analyze_cv_v3(file: UploadFile = File(...)) -> CVParseResult:
     return result
 
 from pydantic import BaseModel
+
+
 class MatchRequest(BaseModel):
+    """Legacy request body for /api/v2/match-job."""
     cv_text: str
     cv_skills: list[str]
     job_description: str
     job_skills: list[str]
 
+
 @app.post("/api/v2/match-job")
 def match_job(request: MatchRequest) -> Dict[str, Any]:
     """
-    Layer 3 endpoint: Compares a user's CV to a specific job description.
+    Layer 3 endpoint (v2, legacy): raw-text-based job matching.
     """
-    logger.info("--> Executing Layer 3: Intelligent Matching")
-    
-    matcher = IntelligentMatcher()
-    
+    logger.info("--\u003e Executing Layer 3 (legacy): Intelligent Matching")
+    matcher = _get_matcher()
     cv_data = {"raw_text": request.cv_text, "skills": request.cv_skills}
     job_data = {"description": request.job_description, "skills": request.job_skills}
-    
-    match_results = matcher.calculate_match(cv_data, job_data)
-    
+    match_results = matcher.calculate_match_legacy(cv_data, job_data)
+    return {"status": "success", "layer3_matching": match_results}
+
+
+@app.post("/api/v3/match-job")
+async def match_job_v3(
+    file: UploadFile = File(..., description="CV PDF file"),
+    job_data: str = Form(..., description="JSON string with job description fields"),
+) -> Dict[str, Any]:
+    """
+    V3 Hybrid Matching endpoint.
+
+    Accepts a CV PDF and a JSON job description, runs the full V2 pipeline
+    on the CV, then applies the 3-factor IntelligentMatcher.
+
+    The ``job_data`` form field must be a JSON string with the following shape::
+
+        {
+          "title": "Backend Developer",
+          "description": "We are looking for...",
+          "required_skills": ["Node.js", "Docker"],
+          "seniority_level": "senior",    // optional
+          "domain": "Backend Development"  // optional
+        }
+
+    Response adds a ``match`` block to the standard ``CVParseResult`` JSON,
+    and the ``analysis.gaps`` / ``analysis.red_flags`` fields are populated.
+    """
+    t0 = time.perf_counter()
+    logger.info("V3 match-job request: CV='%s'", file.filename)
+
+    # ── Read PDF ──────────────────────────────────────────────────────────
+    try:
+        file_bytes = await file.read()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Failed to read file: {exc}")
+    if not file_bytes:
+        raise HTTPException(status_code=400, detail="Empty file uploaded.")
+
+    # ── Parse JD payload ─────────────────────────────────────────────────
+    try:
+        jd: Dict[str, Any] = json.loads(job_data)
+    except Exception:
+        raise HTTPException(status_code=422, detail="job_data must be valid JSON.")
+
+    if not jd.get("description"):
+        raise HTTPException(status_code=422, detail="job_data must include a 'description' field.")
+
+    # ── Layer 1 + 2: CV Understanding (orchestrator handles both) ─────────
+    try:
+        orchestrator = _get_orchestrator()
+        cv_result: CVParseResult = orchestrator.process_cv(file_bytes, file.filename)
+    except Exception as exc:
+        logger.exception("V3 match-job CV analysis failed: %s", exc)
+        raise HTTPException(status_code=500, detail="CV analysis failed.")
+
+    if cv_result.parsing_status != "success":
+        raise HTTPException(
+            status_code=422,
+            detail=f"Could not extract text from CV (status={cv_result.parsing_status}).",
+        )
+
+    # Retrieve raw text for semantic embedding — stored in extraction metadata.
+    cv_raw_text: str = ""
+    extraction_meta = cv_result.analysis.metadata.get("extraction", {})
+    # The spatial parser word count can confirm text was extracted.
+    # We re-build a proxy text from skills + title for the embedding when raw text isn't stored.
+    if cv_result.profile.current_title:
+        cv_raw_text += cv_result.profile.current_title + ". "
+    cv_raw_text += " ".join(sk.name for sk in cv_result.skills.items)
+    if cv_result.analysis.primary_domain:
+        cv_raw_text += " " + cv_result.analysis.primary_domain
+    if cv_result.analysis.summary:
+        cv_raw_text = cv_result.analysis.summary + " " + cv_raw_text
+
+    # ── Layer 3: Intelligent Matching ─────────────────────────────────────
+    try:
+        matcher = _get_matcher()
+        match_result = matcher.calculate_match(cv_result, jd, cv_raw_text=cv_raw_text)
+    except Exception as exc:
+        logger.exception("V3 match-job matching failed: %s", exc)
+        raise HTTPException(status_code=500, detail="Matching engine failed.")
+
+    # ── Enrich analysis with gaps & red_flags ─────────────────────────────
+    # Pydantic models are immutable; serialise, patch, return as plain dict.
+    result_dict: Dict[str, Any] = cv_result.model_dump(mode="json")
+    result_dict["analysis"]["gaps"] = match_result.missing_skills
+    result_dict["analysis"]["red_flags"] = match_result.red_flags
+
+    dt_ms = (time.perf_counter() - t0) * 1000.0
+    logger.info(
+        "V3 match-job completed score=%.1f time_ms=%.1f",
+        match_result.match_score, dt_ms,
+    )
+
     return {
         "status": "success",
-        "layer3_matching": match_results
+        "cv_analysis": result_dict,
+        "match": match_result.to_dict(),
     }
 
 if __name__ == "__main__":

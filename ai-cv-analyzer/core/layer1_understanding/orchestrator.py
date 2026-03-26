@@ -80,7 +80,20 @@ class CVOrchestrator:
         )
 
         # Canonicalization with provenance: skills can come from multiple sections later.
-        skills_raw = entities.get("skills", [])
+        # NER may prefix taxonomy-confirmed skills with "__TAXONOMY__:" to signal a
+        # boosted confidence score of 0.98.
+        _TAXONOMY_PREFIX = "__TAXONOMY__:"
+        skills_raw_inner = entities.get("skills", [])
+        # Separate taxonomy-confirmed from regular; strip the prefix for canonicalization.
+        taxonomy_names: set = {
+            s[len(_TAXONOMY_PREFIX):].lower()
+            for s in skills_raw_inner
+            if s.startswith(_TAXONOMY_PREFIX)
+        }
+        skills_raw = [
+            s[len(_TAXONOMY_PREFIX):] if s.startswith(_TAXONOMY_PREFIX) else s
+            for s in skills_raw_inner
+        ]
         canonical_skills = self._canonicalizer.canonicalize_skills(
             skills_raw,
             skill_confidence=0.78,
@@ -90,10 +103,12 @@ class CVOrchestrator:
         skill_items: List[SkillItem] = []
         for sk in canonical_skills:
             evidence = ", ".join(sk.sources) if sk.sources else None
+            # Taxonomy-verified skills always get confidence 0.98.
+            conf = 0.98 if sk.name.lower() in taxonomy_names else sk.confidence_score
             skill_items.append(
                 SkillItem(
                     name=sk.name,
-                    confidence_score=sk.confidence_score,
+                    confidence_score=min(1.0, conf),
                     category="hard",
                     evidence=evidence,
                 )
@@ -134,12 +149,21 @@ class CVOrchestrator:
             if sk.confidence_score > 0.85
         ][:5]
 
-        # ── Analysis summary prose ────────────────────────────────────────────
-        domain_label = primary_domain or "Professional"
-        years_label = f"{total_years:.1f}" if total_years != int(total_years) else str(int(total_years))
-        analysis_summary = (
-            f"Professional {domain_label} with {years_label} year(s) of experience."
-        )
+        # ── Analysis summary prose (seniority-aware) ─────────────────────────
+        domain_label = primary_domain or "Technology"
+        if seniority in ("intern", "junior"):
+            analysis_summary = (
+                f"Aspiring {domain_label} professional with foundational experience."
+            )
+        elif seniority == "senior":
+            analysis_summary = (
+                f"Expert {domain_label} leader with extensive background in the field."
+            )
+        else:  # mid
+            years_label = f"{total_years:.1f}" if total_years != int(total_years) else str(int(total_years))
+            analysis_summary = (
+                f"Professional {domain_label} with {years_label} year(s) of experience."
+            )
 
         stats = DocumentStats(
             page_count=spatial.page_count,

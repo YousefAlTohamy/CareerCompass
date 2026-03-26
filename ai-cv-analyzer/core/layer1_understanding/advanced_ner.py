@@ -197,7 +197,14 @@ class AdvancedNEREngine:
                         window=context_window_words,
                         taxonomy=self._TECH_TAXONOMY,
                     ):
-                        grouped["skills"].append(ent_text)
+                        # Skills confirmed via the taxonomy get a boosted confidence.
+                        normalized_skill = ent_text.lower().strip(" ,;:()[]{}")
+                        if normalized_skill in self._TECH_TAXONOMY:
+                            # Use a special sentinel so the orchestrator can
+                            # boost the SkillItem confidence_score to 0.98.
+                            grouped["skills"].append("__TAXONOMY__:" + ent_text)
+                        else:
+                            grouped["skills"].append(ent_text)
                 elif base == "ROLE":
                     grouped["roles"].append(ent_text)
                 elif base == "EDU":
@@ -491,6 +498,47 @@ _TECH_MODIFIERS = {
 }
 
 
+# Broad, generic single-word terms that should never appear as standalone
+# hard skills regardless of what the NER model labels them.
+_GENERIC_SKILL_EXCLUSION: frozenset = frozenset({
+    "engineering",
+    "development",
+    "software",
+    "ability",
+    "abilities",
+    "team",
+    "teamwork",
+    "analysis",
+    "management",
+    "communication",
+    "leadership",
+    "problem",
+    "solving",
+    "approach",
+    "methodology",
+    "methodologies",
+    "strategy",
+    "planning",
+    "execution",
+    "implementation",
+    "support",
+    "maintenance",
+    "monitoring",
+    "reporting",
+    "coordination",
+    "collaboration",
+    "research",
+    "knowledge",
+    "understanding",
+    "experience",
+    "skills",
+    "skill",
+    "work",
+    "project",
+    "projects",
+})
+
+
 def _should_keep_skill(
     skill: str,
     start: int,
@@ -504,11 +552,13 @@ def _should_keep_skill(
     Decide whether a detected skill entity should be kept.
 
     Priority:
-    1. If the normalised skill name is in *taxonomy* (the engine's _TECH_TAXONOMY),
-       accept immediately with high confidence — no context-window check needed.
-    2. If the skill is a generic noun, require a technical modifier within ±window
-       words (context-window filter).
-    3. Everything else passes by default.
+    1. REJECT immediately if the skill is a 100%-match against
+       _GENERIC_SKILL_EXCLUSION (broad words, not technical terms).
+    2. If the normalised skill name is in *taxonomy*, accept immediately
+       — no context-window check needed.
+    3. If the skill is a generic noun, require a technical modifier within
+       ±window words (context-window filter).
+    4. Everything else passes by default.
     """
     clean = skill.strip()
     if not clean:
@@ -520,6 +570,14 @@ def _should_keep_skill(
             return False
 
     normalized = clean.lower().strip(" ,;:()[]{}")
+    # Strip trailing punctuation for comparison (e.g. "Engineering." → "engineering")
+    normalized_bare = re.sub(r"[^\w#+.\-]", "", normalized).strip()
+
+    # ── Exclusion guard: broad generic words ────────────────────────────────
+    # Only single-word matches are blocked; multi-word phrases ("Software Engineering")
+    # pass through so they can be classified as roles.
+    if " " not in normalized_bare and normalized_bare in _GENERIC_SKILL_EXCLUSION:
+        return False
 
     # ── Fast-path: known technology taxonomy ────────────────────────────────
     if taxonomy and normalized in taxonomy:
@@ -627,11 +685,17 @@ def _normalize_name_candidate(line: str) -> Optional[str]:
     if not (1 <= len(parts) <= 5):
         return None
 
+    # Strip trailing non-alphabetic punctuation from each token before matching.
+    # e.g. "Engineering." → "engineering", "Software," → "software"
+    # This prevents "Software Engineering." from slipping through the bad-token check.
+    def _bare(token: str) -> str:
+        return re.sub(r"[^\w]+$", "", token).lower()
+
     # Reject if it looks like a section header rather than a name.
-    lowered = " ".join(parts).lower()
+    lowered = " ".join(_bare(p) for p in parts)
     if lowered in _NAME_BAD_TOKENS:
         return None
-    if any(tok in _NAME_BAD_TOKENS for tok in lowered.split()):
+    if any(_bare(tok) in _NAME_BAD_TOKENS for tok in parts):
         # Allow "John Doe - Software Engineer" to pass by trimming trailing title.
         if "-" in s or "|" in s:
             head = re.split(r"[-|]", s, maxsplit=1)[0].strip()
