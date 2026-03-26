@@ -84,40 +84,57 @@ class CvProcessingService implements CvProcessingServiceInterface
     }
 
     /**
-     * Call the V3 Python AI CV Parser endpoint (/api/v3/analyze-cv).
-     * Expects CVParseResult JSON schema: profile, stats, skills, experience, analysis.
+     * Call the V3 Python AI Match-Job endpoint (/api/v3/match-job).
      *
-     * Note: V3 is served by ai-cv-analyzer (typically port 8002). Set AI_GATEWAY_URL
-     * in .env to point at that service when using this integration.
+     * Sends the CV PDF and a (possibly empty) job description as multipart form data.
+     * Unwraps the {status, cv_analysis, match} envelope so the rest of the service
+     * continues to work with the flat CVParseResult shape.
      *
-     * @param UploadedFile $file
-     * @return array<string, mixed> Raw V3 API response
+     * @param  UploadedFile        $file
+     * @param  array<string,mixed> $jobPayload  Optional JD payload. Defaults to empty JD.
+     * @return array<string, mixed>  Flat CVParseResult merged with a top-level "match" key
      *
      * @throws \Illuminate\Http\Client\ConnectionException
      * @throws \RuntimeException
      */
-    private function callV3Gateway(UploadedFile $file): array
+    private function callV3Gateway(UploadedFile $file, array $jobPayload = []): array
     {
         $fileName = $file->getClientOriginalName();
-        $url      = "{$this->gatewayUrl}/api/v3/analyze-cv";
+        $url      = "{$this->gatewayUrl}/api/v3/match-job";
 
-        Log::info('Sending CV to V3 AI Gateway', [
+        // Default empty JD so the analysis pipeline still runs fully.
+        if (empty($jobPayload['description'])) {
+            $jobPayload = [
+                'title'           => '',
+                'description'     => '',
+                'required_skills' => [],
+            ];
+        }
+
+        Log::info('Sending CV to V3 match-job endpoint', [
             'url'       => $url,
             'file_name' => $fileName,
             'file_size' => $file->getSize(),
+            'jd_title'  => $jobPayload['title'] ?? '(none)',
         ]);
 
         try {
             $response = Http::timeout($this->timeout)
+                ->asMultipart()
                 ->attach(
                     'file',
                     fopen($file->getPathname(), 'r'),
                     (string) $fileName
                 )
+                ->attach(
+                    'job_data',
+                    json_encode($jobPayload, JSON_THROW_ON_ERROR),
+                    'job_data.json'
+                )
                 ->post($url);
 
             if ($response->failed()) {
-                Log::error('V3 AI Gateway returned an error', [
+                Log::error('V3 match-job endpoint returned an error', [
                     'status' => $response->status(),
                     'body'   => Str::limit($response->body(), 500),
                 ]);
@@ -127,27 +144,43 @@ class CvProcessingService implements CvProcessingServiceInterface
                 );
             }
 
-            $data = $response->json();
-            if (!is_array($data)) {
+            $envelope = $response->json();
+            if (!is_array($envelope)) {
                 throw new RuntimeException('AI Gateway returned invalid JSON.');
             }
 
-            Log::info('V3 AI Gateway response received', [
-                'parsing_status' => $data['parsing_status'] ?? null,
-                'primary_domain' => $data['analysis']['primary_domain'] ?? null,
-                'skills_count'   => isset($data['skills']['items']) ? count($data['skills']['items']) : 0,
-                'experience_count' => isset($data['experience']['items']) ? count($data['experience']['items']) : 0,
+            // ── Unwrap envelope ────────────────────────────────────────────────
+            // /api/v3/match-job returns:
+            // { "status": "success", "cv_analysis": { ...CVParseResult... }, "match": { ... } }
+            // Flatten cv_analysis back to the top level that the rest of the service expects,
+            // and attach the "match" block as a first-class key.
+            $cvAnalysis = $envelope['cv_analysis'] ?? $envelope;
+            $matchBlock = $envelope['match'] ?? [];
+
+            // Promote parsing_status to top level (Python sets it inside cv_analysis)
+            if (!isset($cvAnalysis['parsing_status'])) {
+                $cvAnalysis['parsing_status'] = 'success';
+            }
+            $cvAnalysis['match'] = is_array($matchBlock) ? $matchBlock : [];
+
+            Log::info('V3 match-job response received', [
+                'parsing_status' => $cvAnalysis['parsing_status'] ?? null,
+                'primary_domain' => $cvAnalysis['analysis']['primary_domain'] ?? null,
+                'match_score'    => $matchBlock['match_score'] ?? null,
+                'skills_count'   => isset($cvAnalysis['skills']['items']) ? count($cvAnalysis['skills']['items']) : 0,
+                'missing_skills' => count($matchBlock['missing_skills'] ?? []),
             ]);
 
-            return $data;
+            return $cvAnalysis;
+
         } catch (RuntimeException $e) {
             throw $e;
         } catch (\Throwable $e) {
-            Log::error('V3 AI Gateway request failed', [
+            Log::error('V3 match-job request failed', [
                 'url'   => $url,
                 'error' => $e->getMessage(),
             ]);
-            throw new RuntimeException('Failed to communicate with the AI CV parser.', 0, $e);
+            throw new RuntimeException('Failed to communicate with the AI CV analyzer.', 0, $e);
         }
     }
 
@@ -344,30 +377,52 @@ class CvProcessingService implements CvProcessingServiceInterface
     }
 
     /**
-     * Create or update CvAnalysis record with parsing_status, completeness_score, strengths, gaps, red_flags, raw_json_output.
+     * Create or update CvAnalysis record with all analysis fields including
+     * match_score, seniority, primary_domain, summary, gaps, and red_flags.
      */
     private function persistCvAnalysis(User $user, array $v3Response): void
     {
-        $analysis = $v3Response['analysis'] ?? [];
+        $analysis   = $v3Response['analysis'] ?? [];
+        $matchBlock = $v3Response['match'] ?? [];
 
         $completenessScore = null;
         if (isset($analysis['confidence_score'])) {
             $completenessScore = (int) round((float) $analysis['confidence_score'] * 100);
         }
 
+        // match_score: from the match block (0-100 float from Python MatchResult)
+        $matchScore = isset($matchBlock['match_score'])
+            ? (float) $matchBlock['match_score']
+            : null;
+
+        // Gaps & red_flags: prefer match block (populated when a real JD is provided),
+        // fall back to analysis section (always present, may be empty).
+        $gaps      = !empty($matchBlock['missing_skills'])  ? $matchBlock['missing_skills']  : ($analysis['gaps']      ?? []);
+        $redFlags  = !empty($matchBlock['red_flags'])       ? $matchBlock['red_flags']        : ($analysis['red_flags'] ?? []);
+
         CvAnalysis::updateOrCreate(
             ['user_id' => $user->id],
             [
                 'parsing_status'     => (string) ($v3Response['parsing_status'] ?? 'success'),
                 'completeness_score' => $completenessScore,
+                'match_score'        => $matchScore,
+                'seniority'          => $analysis['seniority'] ?? null,
+                'primary_domain'     => $analysis['primary_domain'] ?? null,
+                'summary'            => $analysis['summary'] ?? null,
                 'strengths'          => $analysis['strengths'] ?? [],
-                'gaps'               => $analysis['gaps'] ?? [],
-                'red_flags'          => $analysis['red_flags'] ?? [],
+                'gaps'               => $gaps,
+                'red_flags'          => $redFlags,
                 'raw_json_output'    => $v3Response,
             ]
         );
 
-        Log::info('CvAnalysis persisted for user', ['user_id' => $user->id]);
+        Log::info('CvAnalysis persisted for user', [
+            'user_id'        => $user->id,
+            'match_score'    => $matchScore,
+            'seniority'      => $analysis['seniority'] ?? null,
+            'primary_domain' => $analysis['primary_domain'] ?? null,
+            'missing_skills' => count($gaps),
+        ]);
     }
 
     /**

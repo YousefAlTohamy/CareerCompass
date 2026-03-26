@@ -16,6 +16,10 @@ class CvAnalysis extends Model
         'user_id',
         'parsing_status',
         'completeness_score',
+        'match_score',
+        'seniority',
+        'primary_domain',
+        'summary',
         'strengths',
         'gaps',
         'red_flags',
@@ -28,10 +32,12 @@ class CvAnalysis extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'strengths' => 'array',
-        'gaps' => 'array',
-        'red_flags' => 'array',
-        'raw_json_output' => 'array',
+        'completeness_score' => 'integer',
+        'match_score'        => 'float',
+        'strengths'          => 'array',
+        'gaps'               => 'array',
+        'red_flags'          => 'array',
+        'raw_json_output'    => 'array',
     ];
 
     /**
