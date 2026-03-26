@@ -132,16 +132,13 @@ class CvProcessingService implements CvProcessingServiceInterface
             $response = Http::timeout($this->timeout)
                 ->asMultipart()
                 ->attach(
-                    'file',
+                    'cv',
                     fopen($file->getPathname(), 'r'),
                     (string) $fileName
                 )
-                ->attach(
-                    'job_data',
-                    json_encode($jobPayload, JSON_THROW_ON_ERROR),
-                    'job_data.json'
-                )
-                ->post($url);
+                ->post($url, [
+                    'job_data' => json_encode($jobPayload, JSON_THROW_ON_ERROR),
+                ]);
 
             if ($response->failed()) {
                 Log::error('V3 match-job endpoint returned an error', [
