@@ -29,6 +29,16 @@ class CvUploadRequest extends FormRequest
                 'mimes:pdf,jpeg,jpg,png',  // PDF + image formats (OCR via AI Gateway)
                 'max:5120',                 // 5 MB in kilobytes
             ],
+            'job_title' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+            'job_description' => [
+                'nullable',
+                'string',
+                'max:5000',
+            ],
         ];
     }
 
@@ -40,10 +50,12 @@ class CvUploadRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'cv.required' => 'Please upload a CV file.',
-            'cv.file'     => 'The uploaded file is invalid.',
-            'cv.mimes'    => 'The CV must be a PDF, JPEG, JPG, or PNG file.',
-            'cv.max'      => 'The CV file size must not exceed 5MB.',
+            'cv.required'             => 'Please upload a CV file.',
+            'cv.file'                 => 'The uploaded file is invalid.',
+            'cv.mimes'                => 'The CV must be a PDF, JPEG, JPG, or PNG file.',
+            'cv.max'                  => 'The CV file size must not exceed 5MB.',
+            'job_title.max'           => 'The job title must not exceed 255 characters.',
+            'job_description.max'     => 'The job description must not exceed 5000 characters.',
         ];
     }
 }

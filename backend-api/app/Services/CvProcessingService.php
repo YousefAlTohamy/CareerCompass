@@ -37,16 +37,26 @@ class CvProcessingService implements CvProcessingServiceInterface
      *
      * @param UploadedFile $file
      * @param User $user
+     * @param array<string, mixed> $jobData Optional JD data ('job_title', 'job_description')
      * @return array{aiData: array<string, mixed>, syncedSkills: Collection<int, Skill>|array, isNewRole: bool, domain: string|null}
      *
      * @throws \Illuminate\Http\Client\ConnectionException
      * @throws \RuntimeException
      * @throws \Exception
      */
-    public function processCv(UploadedFile $file, User $user): array
+    public function processCv(UploadedFile $file, User $user, array $jobData = []): array
     {
+        // Map Laravel request terminology to Python Gateway terminology
+        $gatewayJobPayload = [];
+        if (!empty($jobData['job_title'])) {
+            $gatewayJobPayload['title'] = $jobData['job_title'];
+        }
+        if (!empty($jobData['job_description'])) {
+            $gatewayJobPayload['description'] = $jobData['job_description'];
+        }
+
         // ── Step 1: Call V3 AI Gateway ─────────────────────────────────────
-        $v3Response = $this->callV3Gateway($file);
+        $v3Response = $this->callV3Gateway($file, $gatewayJobPayload);
 
         // Validate parsing status — reject empty/unparseable CVs
         $parsingStatus = $v3Response['parsing_status'] ?? 'success';

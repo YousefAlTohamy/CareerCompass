@@ -42,7 +42,15 @@ class CvController extends Controller
             /** @var UploadedFile $cvFile */
             $cvFile = $request->file('cv');
 
-            $result = $this->cvService->processCv($cvFile, $user);
+            $jobData = [];
+            if ($request->filled('job_title')) {
+                $jobData['job_title'] = $request->input('job_title');
+            }
+            if ($request->filled('job_description')) {
+                $jobData['job_description'] = $request->input('job_description');
+            }
+
+            $result = $this->cvService->processCv($cvFile, $user, $jobData);
 
             // Return unified response with full user data via UserResource
             $user->refresh()->load(['profile', 'experiences', 'skills', 'cvAnalysis']);
