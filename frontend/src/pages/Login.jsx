@@ -2,12 +2,16 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, ArrowRight, AlertCircle, Compass } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useTheme } from '../context/ThemeContext';
 
 export default function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
+  const { t } = useTranslation();
+  const { theme } = useTheme();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -36,7 +40,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 py-12 px-4 relative overflow-hidden font-sans">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 py-12 px-4 relative overflow-hidden font-sans transition-colors duration-300">
       
       {/* Decorative Background Elements */}
       <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -46,18 +50,18 @@ export default function Login() {
         
         {/* Logo Section */}
         <div className="text-center mb-8 flex flex-col items-center">
-          <div className="w-16 h-16 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center mb-4 text-indigo-600">
+          <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center mb-4 text-indigo-600 dark:text-indigo-400">
             <Compass size={36} strokeWidth={2.5} />
           </div>
-          <h1 className="text-3xl font-black text-slate-800 tracking-tight mb-2">Welcome Back</h1>
-          <p className="text-slate-500 font-medium text-sm">Sign in to continue your career journey.</p>
+          <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight mb-2">{t('login.title')}</h1>
+          <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">{t('login.subtitle')}</p>
         </div>
 
         {/* Login Card */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 p-8 sm:p-10">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl shadow-slate-200/40 dark:shadow-black/20 border border-slate-100 dark:border-slate-700 p-8 sm:p-10">
           
           {error && (
-            <div className="mb-6 bg-rose-50 border border-rose-100 text-rose-600 px-4 py-3.5 rounded-xl text-sm font-bold flex items-start gap-2.5 animate-in slide-in-from-top-2">
+            <div className="mb-6 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900 text-rose-600 dark:text-rose-400 px-4 py-3.5 rounded-xl text-sm font-bold flex items-start gap-2.5 animate-in slide-in-from-top-2">
               <AlertCircle size={18} className="shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
@@ -67,8 +71,8 @@ export default function Login() {
             
             {/* Email Input */}
             <div className="space-y-1.5">
-              <label className="block text-sm font-bold text-slate-700 pl-1">
-                Email Address
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 pl-1">
+                {t('login.emailLabel')}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
@@ -80,7 +84,7 @@ export default function Login() {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800 placeholder-slate-400"
+                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-600"
                   placeholder="you@example.com"
                 />
               </div>
@@ -88,8 +92,8 @@ export default function Login() {
 
             {/* Password Input */}
             <div className="space-y-1.5">
-              <label className="block text-sm font-bold text-slate-700 pl-1">
-                Password
+              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 pl-1">
+                {t('login.passwordLabel')}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
@@ -101,7 +105,7 @@ export default function Login() {
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800 placeholder-slate-400"
+                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-600"
                   placeholder="••••••••"
                 />
               </div>
@@ -111,16 +115,16 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition-all shadow-md shadow-indigo-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
+              className="w-full mt-2 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white font-bold py-3.5 rounded-xl transition-all shadow-md shadow-indigo-200 dark:shadow-none disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
             >
               {loading ? (
                 <>
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>Signing in...</span>
+                  <span>{t('login.signingIn')}</span>
                 </>
               ) : (
                 <>
-                  <span>Sign In</span>
+                  <span>{t('login.signInBtn')}</span>
                   <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </>
               )}
@@ -131,10 +135,10 @@ export default function Login() {
 
         {/* Footer Link */}
         <div className="mt-8 text-center animate-in fade-in delay-150 duration-500">
-          <p className="text-slate-500 font-medium text-sm">
-            Don't have an account?{' '}
+          <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">
+            {t('login.noAccount')}{' '}
             <Link to="/register" className="text-indigo-600 hover:text-indigo-700 font-bold transition-colors">
-              Create an account
+              {t('login.createAccount')}
             </Link>
           </p>
         </div>

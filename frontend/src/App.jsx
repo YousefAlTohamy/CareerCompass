@@ -166,17 +166,21 @@ function AnimatedRoutes() {
   );
 }
 
+import { ThemeProvider } from './context/ThemeContext';
+
 function App() {
   return (
     <ErrorBoundary>
-      <Router>
-        <AuthProvider>
-          <Navbar />
-          <div className="min-h-screen bg-gray-50 pt-16">
-            <AnimatedRoutes />
-          </div>
-        </AuthProvider>
-      </Router>
+      <ThemeProvider>
+        <Router>
+          <AuthProvider>
+            <Navbar />
+            <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300 pt-16">
+              <AnimatedRoutes />
+            </div>
+          </AuthProvider>
+        </Router>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }
