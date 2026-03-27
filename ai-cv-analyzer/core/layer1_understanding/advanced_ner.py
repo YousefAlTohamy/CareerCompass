@@ -169,16 +169,30 @@ class AdvancedNEREngine:
     def extract_candidate_name(
         self,
         profile_lines: Sequence[str] | str,
+        entities: Optional[Dict[str, List[str]]] = None,
     ) -> Optional[NameCandidate]:
         """
         Name heuristic:
-        - Take the first non-empty line that is not a URL/email/phone-heavy,
+        - If `entities` contains 'people' and one is found in the first 500 chars, use it.
+        - Otherwise, fall back to the first non-empty line that is not a URL/email/phone-heavy,
           not numeric, and looks like a human name.
         """
         if isinstance(profile_lines, str):
+            raw_text = profile_lines
             lines = [ln.strip() for ln in profile_lines.splitlines()]
         else:
+            raw_text = "\n".join(str(ln) for ln in profile_lines)
             lines = [str(ln).strip() for ln in profile_lines]
+
+        # 1. Try NER-based extraction first
+        if entities and entities.get("people"):
+            first_500 = raw_text[:500]
+            for person in entities["people"]:
+                person_clean = person.strip()
+                if person_clean and person_clean in first_500:
+                    conf = 0.95
+                    source_line = next((ln for ln in lines if person_clean in ln), person_clean)
+                    return NameCandidate(full_name=person_clean, confidence_score=conf, source_line=source_line)
 
         for line in lines:
             if not line:

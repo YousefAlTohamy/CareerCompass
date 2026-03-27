@@ -68,16 +68,24 @@ class CVOrchestrator:
 
         # Name + title heuristics from profile-ish area first.
         profile_text = segments.sections.get("profile_summary") or segments.sections.get("uncategorized") or ordered_text
-        name_candidate = self._ner.extract_candidate_name(profile_text)
-
-        # NER entities over the whole ordered text (best recall), then canonicalize skills.
+        
+        # Determine global entities first so we can use them for name candidate
         entities = self._ner.extract_entities(
             ordered_text,
             context_window_words=self._config.ner_context_window_words,
         )
+        
+        name_candidate = self._ner.extract_candidate_name(profile_text, entities)
 
         # Canonicalization with provenance: skills can come from multiple sections later.
-        skills_raw = entities.get("skills", [])
+        roles_lower = {r.lower() for r in entities.get("roles", [])}
+        orgs_lower = {o.lower() for o in entities.get("orgs", [])}
+        
+        skills_raw = [
+            s for s in entities.get("skills", [])
+            if s.lower() not in roles_lower and s.lower() not in orgs_lower
+        ]
+        
         canonical_skills = self._canonicalizer.canonicalize_skills(
             skills_raw,
             skill_confidence=0.78,
@@ -105,7 +113,7 @@ class CVOrchestrator:
         exp_text = segments.sections.get("experience", "")
         total_years = self._experience.calculate_total_experience_years(exp_text) if exp_text else 0.0
 
-        current_title = self._rank_current_title(exp_text) or (entities.get("roles") or [None])[0]
+        current_title = self._rank_current_title(exp_text, segments.sections) or (entities.get("roles") or [None])[0]
 
         experience_items = self._build_experience_items(exp_text, predicted_title=current_title)
         experience_section = ExperienceSection(
@@ -259,11 +267,28 @@ class CVOrchestrator:
 
         return items
 
-    def _rank_current_title(self, experience_text: str) -> Optional[str]:
+    def _rank_current_title(self, experience_text: str, segments_dict: Optional[Dict[str, str]] = None) -> Optional[str]:
         """
         Title ranking strategy:
-        Prefer the title near the most recent date range, otherwise best-looking leading line.
+        1. Priority: most frequent ROLE found by NER engine in experience or profile_summary segments.
+        2. Fallback: Prefer the title near the most recent date range, otherwise best-looking leading line.
         """
+        if segments_dict:
+            target_text = ""
+            if "experience" in segments_dict:
+                 target_text += segments_dict["experience"] + "\n"
+            if "profile_summary" in segments_dict:
+                 target_text += segments_dict["profile_summary"] + "\n"
+            
+            if target_text.strip():
+                extracted = self._ner.extract_entities(target_text)
+                roles = extracted.get("roles", [])
+                if roles:
+                    from collections import Counter
+                    counts = Counter(r.strip() for r in roles if r.strip())
+                    if counts:
+                        return counts.most_common(1)[0][0]
+
         if not experience_text.strip():
             return None
 
