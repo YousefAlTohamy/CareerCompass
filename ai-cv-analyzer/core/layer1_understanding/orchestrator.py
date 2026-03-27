@@ -214,6 +214,12 @@ class CVOrchestrator:
             loc = entities.get("locations", [None])[0] if entities.get("locations") else None
             role = entities.get("roles", [predicted_title or "Professional Experience"])[0] if entities.get("roles") else (predicted_title or "Professional Experience")
 
+            desc_text = experience_text
+            if comp and comp != "Unknown Company":
+                desc_text = re.sub(re.escape(comp), "", desc_text, flags=re.IGNORECASE)
+            if role and role != "Professional Experience":
+                desc_text = re.sub(re.escape(role), "", desc_text, flags=re.IGNORECASE)
+
             return [
                 ExperienceItem(
                     title=role,
@@ -222,7 +228,7 @@ class CVOrchestrator:
                     start_date=None,
                     end_date=None,
                     is_current=None,
-                    description=_extract_bullets(experience_text),
+                    description=_extract_bullets(desc_text),
                     technologies=[],
                     confidence_score=0.45,
                 )
@@ -251,6 +257,12 @@ class CVOrchestrator:
             loc = entities.get("locations", [None])[0] if entities.get("locations") else None
             role = entities.get("roles", [predicted_title or "Professional Experience"])[0] if entities.get("roles") else (predicted_title or "Professional Experience")
 
+            desc_text = block_text
+            if comp and comp != "Unknown Company":
+                desc_text = re.sub(re.escape(comp), "", desc_text, flags=re.IGNORECASE)
+            if role and role != "Professional Experience":
+                desc_text = re.sub(re.escape(role), "", desc_text, flags=re.IGNORECASE)
+
             items.append(
                 ExperienceItem(
                     title=role,
@@ -259,7 +271,7 @@ class CVOrchestrator:
                     start_date=r.start,
                     end_date=r.end,
                     is_current=(r.end == date.today()),
-                    description=_extract_bullets(block_text),
+                    description=_extract_bullets(desc_text),
                     technologies=[],
                     confidence_score=0.85,
                 )
