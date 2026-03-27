@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import { authAPI } from '../../api/endpoints';
 import Swal from 'sweetalert2';
 import { 
@@ -41,33 +42,34 @@ const getInitials = (name) => {
 };
 
 // Format date for display (handles Y-m-d strings)
-const formatDate = (dateStr) => {
+const formatDate = (dateStr, language) => {
   if (!dateStr) return null;
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return dateStr;
-  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  return d.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
 // Format experience date range
-const formatExperienceRange = (startDate, endDate, isCurrent) => {
-  const start = formatDate(startDate) || 'N/A';
-  if (isCurrent) return `${start} – Present`;
-  const end = formatDate(endDate) || 'N/A';
+const formatExperienceRange = (startDate, endDate, isCurrent, t, language) => {
+  const start = formatDate(startDate, language) || 'N/A';
+  if (isCurrent) return `${start} – ${t('profile.present')}`;
+  const end = formatDate(endDate, language) || 'N/A';
   return `${start} – ${end}`;
 };
 
 // Get confidence badge color based on score (0.0–1.0)
 const getConfidenceColor = (score) => {
-  if (score == null || score === undefined) return { bg: 'bg-slate-100', text: 'text-slate-600', bar: 'bg-slate-400' };
+  if (score == null || score === undefined) return { bg: 'bg-slate-100 dark:bg-slate-800/50', text: 'text-slate-600 dark:text-slate-400', bar: 'bg-slate-400' };
   const s = parseFloat(score);
-  if (s >= 0.8) return { bg: 'bg-emerald-50', text: 'text-emerald-700', bar: 'bg-emerald-500' };
-  if (s >= 0.6) return { bg: 'bg-amber-50', text: 'text-amber-700', bar: 'bg-amber-500' };
-  if (s >= 0.4) return { bg: 'bg-orange-50', text: 'text-orange-700', bar: 'bg-orange-500' };
-  return { bg: 'bg-slate-100', text: 'text-slate-600', bar: 'bg-slate-400' };
+  if (s >= 0.8) return { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-400', bar: 'bg-emerald-500' };
+  if (s >= 0.6) return { bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-400', bar: 'bg-amber-500' };
+  if (s >= 0.4) return { bg: 'bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-700 dark:text-orange-400', bar: 'bg-orange-500' };
+  return { bg: 'bg-slate-100 dark:bg-slate-800/50', text: 'text-slate-600 dark:text-slate-400', bar: 'bg-slate-400' };
 };
 
 export default function Profile() {
   const { user, logout, refreshUser } = useAuth();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -91,7 +93,7 @@ export default function Profile() {
       setError('');
     } catch (err) {
       console.error('Failed to load profile:', err);
-      setError('Failed to load profile details.');
+      setError(t('profile.failed_load'));
     } finally {
       setLoading(false);
     }
@@ -118,7 +120,7 @@ export default function Profile() {
         toast: true,
         position: 'top-end',
         icon: 'success',
-        title: 'Profile updated successfully',
+        title: t('profile.save_success'),
         showConfirmButton: false,
         timer: 3000,
       });
@@ -138,13 +140,14 @@ export default function Profile() {
 
   const handleLogout = async () => {
     const result = await Swal.fire({
-      title: 'Logout?',
-      text: "Are you sure you want to sign out of your account?",
+      title: t('nav.logout') + '?',
+      text: t('tracker.logout_confirm', 'Are you sure you want to sign out of your account?'),
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#f43f5e',
       cancelButtonColor: '#cbd5e1',
-      confirmButtonText: 'Yes, logout'
+      confirmButtonText: t('tracker.logout_yes', 'Yes, logout'),
+      cancelButtonText: t('profile.cancel')
     });
 
     if (result.isConfirmed) {
@@ -174,25 +177,25 @@ export default function Profile() {
     return (
       <div className="min-h-[80vh] flex flex-col justify-center items-center space-y-4">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
-        <p className="text-slate-400 font-medium text-sm">Loading your profile...</p>
+        <p className="text-slate-400 font-medium text-sm">{t('market.loading')}</p>
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto pb-20 space-y-6">
+    <div className="p-6 max-w-5xl mx-auto pb-20 space-y-6 bg-slate-50 dark:bg-slate-900 min-h-screen transition-colors duration-300">
       
       {/* Top Action Bar */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <h1 className="text-2xl font-black text-slate-800 flex items-center gap-3">
-           My Profile
+        <h1 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+           {t('nav.profile')}
         </h1>
         <button 
           onClick={handleLogout}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl font-bold transition-all border border-rose-100 shadow-sm w-fit"
+          className="flex items-center justify-center gap-2 px-5 py-2.5 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/40 rounded-xl font-bold transition-all border border-rose-100 dark:border-rose-800 shadow-sm w-fit"
         >
            <LogOut size={18} />
-           Sign Out
+           {t('nav.logout')}
         </button>
       </div>
 
@@ -204,27 +207,27 @@ export default function Profile() {
       )}
 
       {/* Main Profile Card */}
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
         
         {/* Header Banner & Avatar Section */}
-        <div className="bg-slate-50 border-b border-slate-200 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-full blur-3xl -mx-20 -my-20 pointer-events-none"></div>
+        <div className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 dark:bg-indigo-900/10 rounded-full blur-3xl -mx-20 -my-20 pointer-events-none"></div>
           
           <div className="p-8 md:p-10 relative z-10 flex flex-col md:flex-row items-center md:items-start gap-8">
             {/* Avatar */}
-            <div className="w-32 h-32 rounded-full bg-white border-4 border-indigo-50 shadow-md text-indigo-600 flex items-center justify-center font-black text-4xl shrink-0">
+            <div className="w-32 h-32 rounded-full bg-white dark:bg-slate-800 border-4 border-indigo-50 dark:border-slate-700 shadow-md text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-black text-4xl shrink-0">
               {getInitials(profile?.name ?? user?.name)}
             </div>
             
             {/* Main Info & Rich Profile Summary */}
             <div className="flex-1 text-center md:text-left flex flex-col items-center md:items-start w-full">
-              <h2 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight mb-2">
+              <h2 className="text-3xl md:text-4xl font-black text-slate-800 dark:text-white tracking-tight mb-2">
                 {profile?.name ?? user?.name ?? 'Your Name'}
               </h2>
               
               {/* Prominent: Headline / Job Title */}
               {(headline || user?.role !== 'admin') && (
-                <p className="text-lg text-slate-600 font-semibold flex items-center justify-center md:justify-start gap-2 mb-3 w-fit">
+                <p className="text-lg text-slate-600 dark:text-slate-400 font-semibold flex items-center justify-center md:justify-start gap-2 mb-3 w-fit">
                   <Briefcase size={18} className="text-indigo-500 shrink-0" /> 
                   {headline || 'No Target Role Provided'}
                 </p>
@@ -234,17 +237,17 @@ export default function Profile() {
               {(totalYears != null || seniority || primaryDomain) && user?.role !== 'admin' && (
                 <div className="flex flex-wrap justify-center md:justify-start gap-2 mb-6">
                   {totalYears != null && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-bold border border-indigo-100">
-                      <Calendar size={14} /> {Number(totalYears) === totalYears ? `${totalYears} yr${totalYears !== 1 ? 's' : ''}` : totalYears} experience
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg text-sm font-bold border border-indigo-100 dark:border-indigo-800">
+                      <Calendar size={14} /> {Number(totalYears) === totalYears ? `${totalYears} ${t('dashboard.years')}` : totalYears} {t('dashboard.total_experience')}
                     </span>
                   )}
                   {seniority && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 text-violet-700 rounded-lg text-sm font-bold border border-violet-100">
-                      <TrendingUp size={14} /> {seniority}
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 rounded-lg text-sm font-bold border border-violet-100 dark:border-violet-800">
+                      <TrendingUp size={14} className="rtl-flip" /> {seniority}
                     </span>
                   )}
                   {primaryDomain && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 text-teal-700 rounded-lg text-sm font-bold border border-teal-100">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 rounded-lg text-sm font-bold border border-teal-100 dark:border-teal-800">
                       <Target size={14} /> {primaryDomain}
                     </span>
                   )}
@@ -264,7 +267,7 @@ export default function Profile() {
                    }}
                    className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-2.5 rounded-xl hover:bg-indigo-700 transition shadow-sm font-bold text-sm w-full md:w-auto justify-center"
                  >
-                   <Edit2 size={16} /> Edit Profile
+                   <Edit2 size={16} /> {t('profile.edit')}
                  </button>
               )}
             </div>
@@ -276,180 +279,178 @@ export default function Profile() {
           
           {editing ? (
              /* EDIT MODE FORM */
-             <form onSubmit={handleSave} className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                   <h3 className="text-lg font-bold text-slate-800">Edit Personal Information</h3>
+              <form onSubmit={handleSave} className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-4">
+                   <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">{t('profile.personal_info')}</h3>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Name */}
                   <div className="space-y-1.5">
-                    <label className="block text-sm font-bold text-slate-700">Full Name</label>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-400">{t('register.nameLabel')}</label>
                     <input
                       type="text"
                       name="name"
                       required
-                      value={formData?.name ?? ''}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800"
-                    />
+                       value={formData?.name ?? ''}
+                       onChange={handleChange}
+                       className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800 dark:text-slate-200"
+                     />
                   </div>
 
                   {/* Email */}
                   <div className="space-y-1.5">
-                    <label className="block text-sm font-bold text-slate-700">Email Address</label>
+                    <label className="block text-sm font-bold text-slate-700 dark:text-slate-400">{t('login.emailLabel')}</label>
                     <input
                       type="email"
                       name="email"
                       required
-                      value={formData?.email ?? ''}
-                      onChange={handleChange}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800"
-                    />
+                       value={formData?.email ?? ''}
+                       onChange={handleChange}
+                       className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800 dark:text-slate-200"
+                     />
                   </div>
 
                   {user?.role !== 'admin' && (
                     <>
                       {/* Phone */}
                       <div className="space-y-1.5">
-                        <label className="block text-sm font-bold text-slate-700">Phone Number</label>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-400">{t('profile.phone')}</label>
                         <input
                           type="text"
                           name="phone"
                           value={formData?.phone ?? ''}
                           onChange={handleChange}
                           placeholder="+20 123 456 7890"
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800"
+                          className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800 dark:text-slate-200"
                         />
                       </div>
 
                       {/* Location */}
                       <div className="space-y-1.5">
-                        <label className="block text-sm font-bold text-slate-700">Location</label>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-400">{t('profile.location')}</label>
                         <input
                           type="text"
                           name="location"
                           value={formData?.location ?? ''}
                           onChange={handleChange}
                           placeholder="e.g. Cairo, Egypt"
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800"
+                          className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800 dark:text-slate-200"
                         />
                       </div>
 
                       {/* Job Title */}
                       <div className="space-y-1.5 md:col-span-2">
-                        <label className="block text-sm font-bold text-slate-700">Target Role / Profession</label>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-400">{t('profile.headline')}</label>
                         <input
                           type="text"
                           name="job_title"
                           value={formData?.job_title ?? formData?.headline ?? ''}
                           onChange={handleChange}
                           placeholder="e.g. Backend Developer"
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800"
+                          className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800 dark:text-slate-200"
                         />
                       </div>
 
                       {/* LinkedIn */}
                       <div className="space-y-1.5">
-                        <label className="block text-sm font-bold text-slate-700">LinkedIn Profile URL</label>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-400">{t('profile.linkedin_url')}</label>
                         <input
                           type="url"
                           name="linkedin_url"
                           value={formData?.linkedin_url ?? ''}
                           onChange={handleChange}
                           placeholder="https://linkedin.com/in/..."
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800"
+                          className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800 dark:text-slate-200"
                         />
                       </div>
 
                       {/* GitHub */}
                       <div className="space-y-1.5">
-                        <label className="block text-sm font-bold text-slate-700">GitHub Profile URL</label>
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-400">{t('profile.github_url')}</label>
                         <input
                           type="url"
                           name="github_url"
                           value={formData?.github_url ?? ''}
                           onChange={handleChange}
                           placeholder="https://github.com/..."
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800"
+                          className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800 dark:text-slate-200"
                         />
                       </div>
                     </>
                   )}
-
                   {/* Skills (Edit Mode) */}
                   {user?.role !== 'admin' && (
                     <div className="space-y-3 md:col-span-2">
-                      <label className="block text-sm font-bold text-slate-700">Technical & Soft Skills</label>
-                      
-                      <div className="flex flex-wrap gap-2 mb-3">
+                        <label className="block text-sm font-bold text-slate-700 dark:text-slate-400">{t('profile.skills')}</label>
+                        
+                        <div className="flex flex-wrap gap-2 mb-3">
                         {(Array.isArray(formData?.skills) ? formData.skills : []).map((skill, index) => (
-                          <span 
+                            <span 
                             key={index} 
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold uppercase tracking-wider border border-indigo-100 group"
-                          >
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg text-xs font-bold uppercase tracking-wider border border-indigo-100 dark:border-indigo-800 group"
+                            >
                             {typeof skill === 'string' ? skill : skill?.name ?? skill}
                             <button
-                              type="button"
-                              onClick={() => {
+                                type="button"
+                                onClick={() => {
                                 const updatedSkills = (formData?.skills ?? []).filter((_, i) => i !== index);
                                 setFormData({ ...formData, skills: updatedSkills });
-                              }}
-                              className="text-indigo-400 hover:text-rose-500 hover:bg-rose-50 rounded-full p-0.5 transition-colors"
+                                }}
+                                className="text-indigo-400 hover:text-rose-500 hover:bg-rose-50 rounded-full p-0.5 transition-colors"
                             >
-                              <X size={12} />
+                                <X size={12} />
                             </button>
-                          </span>
+                            </span>
                         ))}
                         {(!formData?.skills || formData.skills.length === 0) && (
-                          <span className="text-sm font-medium text-slate-400 italic py-1">No skills added yet.</span>
+                            <span className="text-sm font-medium text-slate-400 italic py-1">{t('tracker.no_apps')}</span>
                         )}
-                      </div>
-
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={newSkill}
-                          onChange={(e) => setNewSkill(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              if (newSkill.trim()) {
-                                const existing = formData?.skills ?? [];
-                                const trimmed = newSkill.trim();
-                                if (!existing.some(s => (typeof s === 'string' ? s : s?.name) === trimmed)) {
-                                  setFormData({
-                                    ...formData,
-                                    skills: [...existing, trimmed]
-                                  });
+                        </div>
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={newSkill}
+                                onChange={(e) => setNewSkill(e.target.value)}
+                                onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (newSkill.trim()) {
+                                    const existing = formData?.skills ?? [];
+                                    const trimmed = newSkill.trim();
+                                    if (!existing.some(s => (typeof s === 'string' ? s : s?.name) === trimmed)) {
+                                        setFormData({
+                                        ...formData,
+                                        skills: [...existing, trimmed]
+                                        });
+                                    }
+                                    setNewSkill('');
+                                    }
                                 }
-                                setNewSkill('');
-                              }
-                            }
-                          }}
-                          placeholder="Type a skill and press Enter or Add"
-                          className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (newSkill.trim()) {
-                              const existing = formData?.skills ?? [];
-                              const trimmed = newSkill.trim();
-                              if (!existing.some(s => (typeof s === 'string' ? s : s?.name) === trimmed)) {
-                                setFormData({
-                                  ...formData,
-                                  skills: [...existing, trimmed]
-                                });
-                              }
-                              setNewSkill('');
-                            }
-                          }}
-                          className="flex items-center justify-center gap-1 px-4 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl font-bold transition-all border border-slate-200"
-                        >
-                          <Plus size={16} /> Add
-                        </button>
-                      </div>
+                                }}
+                                placeholder={t('dashboard.upload_prompt')}
+                                className="flex-1 px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800 dark:text-slate-200"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => {
+                                if (newSkill.trim()) {
+                                    const existing = formData?.skills ?? [];
+                                    const trimmed = newSkill.trim();
+                                    if (!existing.some(s => (typeof s === 'string' ? s : s?.name) === trimmed)) {
+                                    setFormData({
+                                        ...formData,
+                                        skills: [...existing, trimmed]
+                                    });
+                                    }
+                                    setNewSkill('');
+                                }
+                                }}
+                                className="flex items-center justify-center gap-1 px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl font-bold transition-all border border-slate-200 dark:border-slate-700"
+                            >
+                                <Plus size={16} /> {t('profile.add_skill')}
+                            </button>
+                        </div>
                     </div>
                   )}
                 </div>
@@ -461,9 +462,9 @@ export default function Profile() {
                     className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-indigo-600 text-white px-8 py-3 rounded-xl hover:bg-indigo-700 transition shadow-sm font-bold disabled:opacity-50"
                   >
                     {saving ? (
-                      <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> Saving...</>
+                      <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> {t('cv_analyzer.processing')}</>
                     ) : (
-                      <><Save size={18} /> Save Changes</>
+                      <><Save size={18} /> {t('profile.save')}</>
                     )}
                   </button>
                   <button
@@ -474,9 +475,9 @@ export default function Profile() {
                       setError('');
                     }}
                     disabled={saving}
-                    className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-slate-100 text-slate-700 px-8 py-3 rounded-xl hover:bg-slate-200 transition font-bold disabled:opacity-50"
+                    className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-8 py-3 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition font-bold disabled:opacity-50 border border-slate-200 dark:border-slate-700"
                   >
-                    <X size={18} /> Cancel
+                    <X size={18} /> {t('profile.cancel')}
                   </button>
                 </div>
              </form>
@@ -488,43 +489,43 @@ export default function Profile() {
                 {/* Contact & Personal Details Grid */}
                 <div>
                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-5 flex items-center gap-2">
-                      <UserIcon size={16} /> Contact & Personal Details
+                      <UserIcon size={16} /> {t('profile.personal_info')}
                    </h3>
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                        <div className="bg-white p-2 rounded-lg shadow-sm text-slate-400"><Mail size={18} /></div>
+                       <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                        <div className="bg-white dark:bg-slate-800 p-2 rounded-lg shadow-sm text-slate-400"><Mail size={18} /></div>
                         <div className="overflow-hidden">
-                          <p className="text-xs font-bold text-slate-500 mb-0.5">Email Address</p>
-                          <p className="font-medium text-slate-800 truncate" title={profile?.email ?? user?.email}>{profile?.email ?? user?.email}</p>
+                          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-0.5">{t('profile.email')}</p>
+                          <p className="font-medium text-slate-800 dark:text-slate-200 truncate" title={profile?.email ?? user?.email}>{profile?.email ?? user?.email}</p>
                         </div>
                       </div>
 
                       {user?.role !== 'admin' && (
                         <>
-                          <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                            <div className="bg-white p-2 rounded-lg shadow-sm text-slate-400"><Phone size={18} /></div>
+                          <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                            <div className="bg-white dark:bg-slate-800 p-2 rounded-lg shadow-sm text-slate-400"><Phone size={18} /></div>
                             <div>
-                              <p className="text-xs font-bold text-slate-500 mb-0.5">Phone Number</p>
-                              <p className="font-medium text-slate-800">{userPhone ?? <span className="text-slate-400 italic">Not provided</span>}</p>
+                              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-0.5">{t('profile.phone')}</p>
+                              <p className="font-medium text-slate-800 dark:text-slate-200">{userPhone ?? <span className="text-slate-400 italic">{t('profile.not_provided')}</span>}</p>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                            <div className="bg-white p-2 rounded-lg shadow-sm text-slate-400"><MapPin size={18} /></div>
+                          <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                            <div className="bg-white dark:bg-slate-800 p-2 rounded-lg shadow-sm text-slate-400"><MapPin size={18} /></div>
                             <div className="overflow-hidden">
-                              <p className="text-xs font-bold text-slate-500 mb-0.5">Location</p>
-                              <p className="font-medium text-slate-800 truncate" title={profile?.location ?? user?.location ?? data?.profile?.location}>{profile?.location ?? user?.location ?? data?.profile?.location ?? <span className="text-slate-400 italic">Not provided</span>}</p>
+                              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-0.5">{t('profile.location')}</p>
+                              <p className="font-medium text-slate-800 dark:text-slate-200 truncate" title={profile?.location ?? user?.location ?? data?.profile?.location}>{profile?.location ?? user?.location ?? data?.profile?.location ?? <span className="text-slate-400 italic">{t('profile.not_provided', 'Not provided')}</span>}</p>
                             </div>
                           </div>
                         </>
                       )}
 
-                      <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                        <div className="bg-white p-2 rounded-lg shadow-sm text-slate-400"><Calendar size={18} /></div>
+                      <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                        <div className="bg-white dark:bg-slate-800 p-2 rounded-lg shadow-sm text-slate-400"><Calendar size={18} /></div>
                         <div>
-                          <p className="text-xs font-bold text-slate-500 mb-0.5">Member Since</p>
-                          <p className="font-medium text-slate-800">
-                            {(profile?.created_at ?? user?.created_at) ? new Date(profile?.created_at ?? user?.created_at).toLocaleDateString() : 'N/A'}
+                          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-0.5">{t('tracker.member_since', 'Member Since')}</p>
+                          <p className="font-medium text-slate-800 dark:text-slate-200">
+                            {(profile?.created_at ?? user?.created_at) ? new Date(profile?.created_at ?? user?.created_at).toLocaleDateString(t('tracker.lang_code', 'en-US')) : 'N/A'}
                           </p>
                         </div>
                       </div>
@@ -535,48 +536,48 @@ export default function Profile() {
                 {user?.role !== 'admin' && (
                    <div>
                      <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-5 flex items-center gap-2">
-                       <LinkIcon size={16} /> Professional Links
+                       <LinkIcon size={16} /> {t('profile.professional_links', 'Professional Links')}
                      </h3>
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                        
                        {/* LinkedIn Card */}
                        {userLinkedin ? (
-                         <a href={userLinkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 bg-white hover:bg-blue-50 p-4 rounded-xl border border-slate-200 hover:border-blue-200 transition-colors group">
-                            <div className="bg-blue-100 p-2.5 rounded-lg text-blue-600 group-hover:scale-110 transition-transform">
+                         <a href={userLinkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-200 dark:hover:border-blue-500 transition-colors group">
+                            <div className="bg-blue-100 dark:bg-blue-900/30 p-2.5 rounded-lg text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
                               <Linkedin size={20} />
                             </div>
                             <div className="overflow-hidden">
-                              <div className="text-slate-800 font-bold">LinkedIn Profile</div>
-                              <div className="text-xs font-medium text-slate-500 truncate mt-0.5">{userLinkedin}</div>
+                              <div className="text-slate-800 dark:text-white font-bold">LinkedIn Profile</div>
+                              <div className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate mt-0.5">{userLinkedin}</div>
                             </div>
                          </a>
                        ) : (
-                         <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100 opacity-70">
-                            <div className="bg-slate-200 p-2.5 rounded-lg text-slate-400"><Linkedin size={20} /></div>
+                         <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800 opacity-70">
+                            <div className="bg-slate-200 dark:bg-slate-800 p-2.5 rounded-lg text-slate-400 dark:text-slate-500"><Linkedin size={20} /></div>
                             <div>
-                              <div className="text-slate-600 font-bold text-sm">LinkedIn Profile</div>
-                              <div className="text-xs font-medium text-slate-400 mt-0.5">Not added yet</div>
+                              <div className="text-slate-600 dark:text-slate-400 font-bold text-sm">LinkedIn Profile</div>
+                              <div className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">Not added yet</div>
                             </div>
                          </div>
                        )}
 
                        {/* GitHub Card */}
                        {userGithub ? (
-                         <a href={userGithub} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 bg-white hover:bg-slate-100 p-4 rounded-xl border border-slate-200 hover:border-slate-300 transition-colors group">
-                            <div className="bg-slate-200 p-2.5 rounded-lg text-slate-700 group-hover:scale-110 transition-transform">
+                         <a href={userGithub} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-colors group">
+                            <div className="bg-slate-200 dark:bg-slate-700 p-2.5 rounded-lg text-slate-700 dark:text-slate-200 group-hover:scale-110 transition-transform">
                               <Github size={20} />
                             </div>
                             <div className="overflow-hidden">
-                              <div className="text-slate-800 font-bold">GitHub Profile</div>
-                              <div className="text-xs font-medium text-slate-500 truncate mt-0.5">{userGithub}</div>
+                              <div className="text-slate-800 dark:text-white font-bold">GitHub Profile</div>
+                              <div className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate mt-0.5">{userGithub}</div>
                             </div>
                          </a>
                        ) : (
-                         <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100 opacity-70">
-                            <div className="bg-slate-200 p-2.5 rounded-lg text-slate-400"><Github size={20} /></div>
+                         <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800 opacity-70">
+                            <div className="bg-slate-200 dark:bg-slate-800 p-2.5 rounded-lg text-slate-400 dark:text-slate-500"><Github size={20} /></div>
                             <div>
-                              <div className="text-slate-600 font-bold text-sm">GitHub Profile</div>
-                              <div className="text-xs font-medium text-slate-400 mt-0.5">Not added yet</div>
+                              <div className="text-slate-600 dark:text-slate-400 font-bold text-sm">GitHub Profile</div>
+                              <div className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">Not added yet</div>
                             </div>
                          </div>
                        )}
@@ -589,12 +590,12 @@ export default function Profile() {
                 {user?.role !== 'admin' && (
                   <div>
                     <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-5 flex items-center gap-2">
-                      <GraduationCap size={16} /> Work Experience
+                      <GraduationCap size={16} /> {t('profile.experience')}
                     </h3>
                     
-                    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
                       {hasExperiences ? (
-                        <div className="divide-y divide-slate-100">
+                        <div className="divide-y divide-slate-100 dark:divide-slate-700">
                           {(experiences || [])
                             .sort((a, b) => {
                               const dateA = a?.end_date ? new Date(a.end_date) : new Date();
@@ -602,21 +603,21 @@ export default function Profile() {
                               return dateB - dateA;
                             })
                             .map((exp, index) => (
-                              <div key={exp?.id ?? index} className="p-6 hover:bg-slate-50/50 transition-colors">
+                              <div key={exp?.id ?? index} className="p-6 hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors">
                                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                                  <div className="flex-1">
-                                    <h4 className="text-lg font-bold text-slate-800">{exp?.title ?? 'Untitled Role'}</h4>
-                                    <p className="text-indigo-600 font-semibold text-sm mt-0.5">{exp?.company ?? '—'}</p>
+                                  <div className="flex flex-col">
+                                    <h4 className="text-lg font-bold text-slate-800 dark:text-white">{exp?.title ?? t('profile.untitled_role')}</h4>
+                                    <p className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm mt-0.5">{exp?.company ?? '—'}</p>
                                     {exp?.location && (
-                                      <p className="text-slate-500 text-sm flex items-center gap-1 mt-1">
+                                      <p className="text-slate-500 dark:text-slate-400 text-sm flex items-center gap-1 mt-1">
                                         <MapPin size={14} /> {exp.location}
                                       </p>
                                     )}
-                                    <p className="text-slate-500 text-xs font-medium mt-2">
-                                      {formatExperienceRange(exp?.start_date, exp?.end_date, exp?.is_current)}
+                                    <p className="text-slate-400 dark:text-slate-500 text-xs font-bold mt-2 uppercase tracking-wide">
+                                      {formatExperienceRange(exp?.start_date, exp?.end_date, exp?.is_current, t, i18n.language)}
                                     </p>
                                     {exp?.description && (
-                                      <p className="text-slate-600 text-sm mt-3 leading-relaxed whitespace-pre-wrap">{exp.description}</p>
+                                      <p className="text-slate-600 dark:text-slate-400 text-sm mt-3 leading-relaxed whitespace-pre-wrap border-s-2 border-slate-100 dark:border-slate-700 ps-4">{exp.description}</p>
                                     )}
                                   </div>
                                 </div>
@@ -625,10 +626,10 @@ export default function Profile() {
                         </div>
                       ) : (
                         <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-                          <GraduationCap className="w-14 h-14 text-slate-200 mb-4 stroke-1" />
-                          <p className="text-slate-600 font-semibold">No work experience listed yet</p>
-                          <p className="text-sm text-slate-400 mt-2 max-w-sm">
-                            Upload your CV to populate your experiences automatically, or add them when editing your profile.
+                          <GraduationCap className="w-14 h-14 text-slate-200 dark:text-slate-700 mb-4 stroke-1" />
+                          <p className="text-slate-600 dark:text-slate-400 font-semibold">{t('profile.no_experience', 'No work experience listed yet')}</p>
+                          <p className="text-sm text-slate-400 dark:text-slate-500 mt-2 max-w-sm">
+                            {t('profile.experience_instruction', 'Upload your CV to populate your experiences automatically, or add them when editing your profile.')}
                           </p>
                         </div>
                       )}
@@ -640,10 +641,10 @@ export default function Profile() {
                 {user?.role !== 'admin' && (
                   <div>
                     <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-5 flex items-center gap-2">
-                      <Award size={16} /> Skills
+                      <Award size={16} /> {t('profile.skills')}
                     </h3>
                     
-                    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-sm">
                       {hasSkills ? (
                         <div className="flex flex-wrap gap-3">
                           {(skills || []).map((skill, index) => {
@@ -656,21 +657,21 @@ export default function Profile() {
                             return (
                               <div
                                 key={skill?.id ?? index}
-                                className={`relative group flex flex-col rounded-xl border ${colors.bg} ${colors.text} border-slate-200/60 overflow-hidden min-w-[160px] max-w-[220px]`}
+                                className={`relative group flex flex-col rounded-xl border ${colors.bg} dark:bg-slate-900/50 ${colors.text} border-slate-200/60 dark:border-slate-700 overflow-hidden min-w-[160px] max-w-[220px]`}
                               >
                                 <div className="p-3">
                                   <div className="flex items-center justify-between gap-2">
                                     <span className="font-bold text-sm uppercase tracking-wider truncate">
                                       {name}
                                     </span>
-                                    {evidence && (
-                                      <span
-                                        className="shrink-0 p-0.5 rounded-full hover:bg-white/50 cursor-help"
-                                        title={evidence}
-                                      >
-                                        <Info size={14} className="opacity-70" />
-                                      </span>
-                                    )}
+                                     {evidence && (
+                                       <span
+                                         className="shrink-0 p-0.5 rounded-full hover:bg-white/50 dark:hover:bg-slate-800/50 cursor-help"
+                                         title={evidence}
+                                       >
+                                         <Info size={14} className="opacity-70" />
+                                       </span>
+                                     )}
                                   </div>
                                   {percent != null && (
                                     <div className="mt-2">
@@ -680,7 +681,7 @@ export default function Profile() {
                                           style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
                                         />
                                       </div>
-                                      <p className="text-xs font-medium mt-1 opacity-80">AI confidence: {percent}%</p>
+                                       <p className="text-xs font-medium mt-1 opacity-80">{t('profile.ai_confidence', 'AI confidence')}: {percent}%</p>
                                     </div>
                                   )}
                                   {evidence && (
@@ -700,10 +701,10 @@ export default function Profile() {
                           })}
                         </div>
                       ) : (
-                        <div className="flex flex-col items-center justify-center py-6 text-center">
-                          <Award className="w-12 h-12 text-slate-200 mb-3 stroke-1" />
-                          <p className="text-slate-500 font-medium">No skills extracted for your profile yet.</p>
-                          <p className="text-xs text-slate-400 mt-1">Upload your CV to populate your skills automatically, or add them manually by editing your profile.</p>
+                         <div className="flex flex-col items-center justify-center py-6 text-center">
+                          <Award className="w-12 h-12 text-slate-200 dark:text-slate-700 mb-3 stroke-1" />
+                          <p className="text-slate-500 dark:text-slate-400 font-medium">{t('profile.no_skills_message', 'No skills extracted for your profile yet.')}</p>
+                          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{t('profile.skills_instruction', 'Upload your CV to populate your skills automatically, or add them manually by editing your profile.')}</p>
                         </div>
                       )}
                     </div>

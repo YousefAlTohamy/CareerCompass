@@ -8,6 +8,7 @@ import {
   CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 import { marketIntelligenceAPI } from '../../api/endpoints';
+import { useTranslation } from 'react-i18next';
 
 // --- BULLETPROOF HELPERS ---
 export const safeArray = (arr) => Array.isArray(arr) ? arr : [];
@@ -25,6 +26,7 @@ function buildTrendData(overview, topSkillsFromOverview) {
 }
 
 export default function MarketIntelligence() {
+  const { t } = useTranslation();
   const [overview, setOverview] = useState(null);
   const [topSkillsOverview, setTopSkillsOverview] = useState([]);
   const [trendingSkills, setTrendingSkills] = useState([]);
@@ -50,8 +52,7 @@ export default function MarketIntelligence() {
     } catch (err) {
       console.error('Market data load failed:', err);
       setError(
-        err.response?.data?.message ??
-          'Failed to load market data. Please ensure the backend is running.',
+        err.response?.data?.message ?? t('market.error_load')
       );
     } finally {
       setLoading(false);
@@ -81,13 +82,19 @@ export default function MarketIntelligence() {
 
   // AI summary text (dynamic from overview)
   const aiSummary = overview
-    ? `Based on ${formatNumber(totalJobs)} analyzed job listings across ${formatNumber(totalRoles)} unique roles, the market shows strong demand for skills like ${safeArray(topSkillsOverview).slice(0, 3).map((s) => s?.name).filter(Boolean).join(', ') || 'various technical skills'}. On average, each job requires ${avgSkillsPerJob} skills. ${lastUpdate !== 'N/A' ? `Data last updated ${lastUpdate}.` : ''}`
-    : 'Loading market insights...';
+    ? t('market.ai_summary_template', {
+        jobs: formatNumber(totalJobs),
+        roles: formatNumber(totalRoles),
+        skills: safeArray(topSkillsOverview).slice(0, 3).map((s) => s?.name).filter(Boolean).join(', ') || t('market.all_skills'),
+        avg: avgSkillsPerJob,
+        updated: lastUpdate !== 'N/A' ? `${t('market.last_updated')} ${lastUpdate}.` : ''
+      })
+    : t('market.loading');
 
   // --- SKELETON LOADING STATE ---
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#f8fafc] py-8 px-4 sm:px-6 lg:px-8 font-sans pb-24">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-8 px-4 sm:px-6 lg:px-8 font-sans pb-24 transition-colors">
         <div className="max-w-7xl mx-auto space-y-6 animate-pulse">
           <div className="flex justify-between items-end gap-4">
             <div className="h-20 w-64 bg-slate-200 rounded-2xl" />
@@ -109,34 +116,34 @@ export default function MarketIntelligence() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] py-8 px-4 sm:px-6 lg:px-8 font-sans pb-24">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8 font-sans pb-24 transition-colors duration-500">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-lg text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-3">
-              <Activity size={14} className="animate-pulse" /> Live Market Data
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-3">
+              <Activity size={14} className="animate-pulse" /> {t('market.live_data')}
             </div>
-            <h1 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight">
-              Market Intelligence
+            <h1 className="text-3xl md:text-4xl font-black text-slate-800 dark:text-white tracking-tight">
+              {t('market.title')}
             </h1>
-            <p className="text-slate-500 font-medium mt-1">Real-time insights on skill demand, salaries, and hiring trends.</p>
+            <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">{t('market.subtitle')}</p>
           </div>
           <button
             onClick={() => fetchMarketData(typeFilter)}
-            className="px-4 py-2 bg-white border border-slate-200 text-slate-600 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 rounded-xl font-bold flex items-center justify-center gap-2 text-sm shadow-sm transition-all"
+            className="px-4 py-2 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-500 rounded-xl font-bold flex items-center justify-center gap-2 text-sm shadow-sm transition-all backdrop-blur-md"
           >
-            <RefreshCw size={16} /> Refresh Data
+            <RefreshCw size={16} /> {t('market.refresh')}
           </button>
         </div>
 
         {/* ERROR STATE */}
         {error && (
-          <div className="bg-rose-50 text-rose-600 p-4 rounded-2xl flex items-center gap-3 border border-rose-100 font-bold text-sm">
+          <div className="bg-rose-500/10 text-rose-600 dark:text-rose-400 p-4 rounded-2xl flex items-center gap-3 border border-rose-500/20 font-bold text-sm backdrop-blur-md">
             <AlertCircle size={18} />
             <span className="flex-1">{error}</span>
             <button onClick={() => fetchMarketData(typeFilter)} className="flex items-center gap-1 text-xs underline hover:no-underline">
-              <RefreshCw size={14} /> Retry
+              <RefreshCw size={14} /> {t('market.retry')}
             </button>
           </div>
         )}
@@ -144,68 +151,70 @@ export default function MarketIntelligence() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
           {/* TYPE FILTER (all | technical | soft) */}
           <div className="flex items-center gap-2 flex-wrap">
-            {['all', 'technical', 'soft'].map((t) => (
+            {['all', 'technical', 'soft'].map((tKey) => (
               <button
-                key={t}
-                onClick={() => setTypeFilter(t)}
-                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-                  typeFilter === t ? 'bg-slate-900 text-white' : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'
+                key={tKey}
+                onClick={() => setTypeFilter(tKey)}
+                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all border ${
+                  typeFilter === tKey 
+                    ? 'bg-slate-900 dark:bg-indigo-600 text-white border-transparent shadow-lg shadow-indigo-500/20' 
+                    : 'bg-white dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
-                {t === 'all' ? 'All Skills' : t === 'technical' ? 'Technical' : 'Soft'}
+                {tKey === 'all' ? t('market.all_skills') : tKey === 'technical' ? t('market.technical') : t('market.soft')}
               </button>
             ))}
           </div>
 
           {/* QUICK STATS ROW */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 relative overflow-hidden group">
-              <div className="absolute -right-4 -top-4 w-24 h-24 bg-indigo-50 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500" />
+            <div className="bg-white dark:bg-slate-900/50 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 relative overflow-hidden group backdrop-blur-md">
+              <div className="absolute -right-4 -top-4 w-24 h-24 bg-indigo-500/10 rounded-full group-hover:scale-150 transition-transform duration-500" />
               <div className="flex items-start justify-between relative z-10 mb-4">
-                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl"><Briefcase size={20} /></div>
+                <div className="p-3 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-2xl"><Briefcase size={20} /></div>
               </div>
-              <h3 className="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-1">Active Listings</h3>
-              <p className="text-3xl font-black text-slate-800">{formatNumber(totalJobs)}</p>
+              <h3 className="text-slate-400 dark:text-slate-500 text-[11px] font-black uppercase tracking-widest mb-1">{t('market.active_listings')}</h3>
+              <p className="text-3xl font-black text-slate-800 dark:text-white">{formatNumber(totalJobs)}</p>
             </div>
 
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 relative overflow-hidden group">
-              <div className="absolute -right-4 -top-4 w-24 h-24 bg-emerald-50 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500" />
+            <div className="bg-white dark:bg-slate-900/50 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 relative overflow-hidden group backdrop-blur-md">
+              <div className="absolute -right-4 -top-4 w-24 h-24 bg-emerald-500/10 rounded-full group-hover:scale-150 transition-transform duration-500" />
               <div className="flex items-start justify-between relative z-10 mb-4">
-                <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl"><TrendingUp size={20} /></div>
+                <div className="p-3 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-2xl"><TrendingUp size={20} className="rtl-flip" /></div>
               </div>
-              <h3 className="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-1">Unique Roles</h3>
-              <p className="text-3xl font-black text-slate-800">{formatNumber(totalRoles)}</p>
+              <h3 className="text-slate-400 dark:text-slate-500 text-[11px] font-black uppercase tracking-widest mb-1">{t('market.unique_roles')}</h3>
+              <p className="text-3xl font-black text-slate-800 dark:text-white">{formatNumber(totalRoles)}</p>
             </div>
 
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 relative overflow-hidden group">
-              <div className="absolute -right-4 -top-4 w-24 h-24 bg-fuchsia-50 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500" />
+            <div className="bg-white dark:bg-slate-900/50 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 relative overflow-hidden group backdrop-blur-md">
+              <div className="absolute -right-4 -top-4 w-24 h-24 bg-fuchsia-500/10 rounded-full group-hover:scale-150 transition-transform duration-500" />
               <div className="flex items-start justify-between relative z-10 mb-4">
-                <div className="p-3 bg-fuchsia-50 text-fuchsia-600 rounded-2xl"><DollarSign size={20} /></div>
+                <div className="p-3 bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 rounded-2xl"><DollarSign size={20} /></div>
               </div>
-              <h3 className="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-1">Avg Skills / Job</h3>
-              <p className="text-3xl font-black text-slate-800">{avgSkillsPerJob}</p>
+              <h3 className="text-slate-400 dark:text-slate-500 text-[11px] font-black uppercase tracking-widest mb-1">{t('market.avg_skills')}</h3>
+              <p className="text-3xl font-black text-slate-800 dark:text-white">{avgSkillsPerJob}</p>
             </div>
 
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 relative overflow-hidden group">
-              <div className="absolute -right-4 -top-4 w-24 h-24 bg-amber-50 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-500" />
+            <div className="bg-white dark:bg-slate-900/50 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 relative overflow-hidden group backdrop-blur-md">
+              <div className="absolute -right-4 -top-4 w-24 h-24 bg-amber-500/10 rounded-full group-hover:scale-150 transition-transform duration-500" />
               <div className="flex items-start justify-between relative z-10 mb-4">
-                <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl"><Target size={20} /></div>
+                <div className="p-3 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-2xl"><Target size={20} /></div>
               </div>
-              <h3 className="text-slate-400 text-[11px] font-black uppercase tracking-widest mb-1">Top Skill Demand</h3>
-              <p className="text-3xl font-black text-slate-800 truncate" title={topSkillName}>{topSkillName}</p>
+              <h3 className="text-slate-400 dark:text-slate-500 text-[11px] font-black uppercase tracking-widest mb-1">{t('market.top_skill_demand')}</h3>
+              <p className="text-3xl font-black text-slate-800 dark:text-white truncate" title={topSkillName}>{topSkillName}</p>
             </div>
           </div>
 
           {/* CHARTS ROW */}
           <div className="grid lg:grid-cols-12 gap-8">
             {/* LEFT CHART: DEMAND TREND (AREA CHART) */}
-            <div className="lg:col-span-8 bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
+            <div className="lg:col-span-8 bg-white dark:bg-slate-900/50 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 backdrop-blur-md">
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl"><Activity size={20} /></div>
+                  <div className="p-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl"><Activity size={20} /></div>
                   <div>
-                    <h2 className="text-lg font-black text-slate-800">Market Demand Trend</h2>
-                    <p className="text-xs font-bold text-slate-400">Top skills by demand (proxy)</p>
+                    <h2 className="text-lg font-black text-slate-800 dark:text-white">{t('market.demand_trend')}</h2>
+                    <p className="text-xs font-bold text-slate-400 dark:text-slate-500">{t('market.top_skills_by_demand')}</p>
                   </div>
                 </div>
               </div>
@@ -231,20 +240,20 @@ export default function MarketIntelligence() {
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-slate-400 font-medium text-sm">
-                    No trend data available yet. Run the scraper to collect job data.
+                  <div className="h-full flex items-center justify-center text-slate-400 dark:text-slate-500 font-medium text-sm">
+                    {t('market.no_trend')}
                   </div>
                 )}
               </div>
             </div>
 
             {/* RIGHT CHART: TOP SKILLS (BAR CHART) */}
-            <div className="lg:col-span-4 bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
+            <div className="lg:col-span-4 bg-white dark:bg-slate-900/50 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 backdrop-blur-md">
               <div className="flex items-center gap-3 mb-8">
-                <div className="p-2 bg-fuchsia-50 text-fuchsia-600 rounded-xl"><BarChart3 size={20} /></div>
+                <div className="p-2 bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 rounded-xl"><BarChart3 size={20} /></div>
                 <div>
-                  <h2 className="text-lg font-black text-slate-800">Top Skills</h2>
-                  <p className="text-xs font-bold text-slate-400">Most requested by employers</p>
+                  <h2 className="text-lg font-black text-slate-800 dark:text-white">{t('market.top_skills')}</h2>
+                  <p className="text-xs font-bold text-slate-400 dark:text-slate-500">{t('market.most_requested')}</p>
                 </div>
               </div>
 
@@ -267,8 +276,8 @@ export default function MarketIntelligence() {
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-slate-400 font-medium text-sm">
-                    No skill data available yet.
+                  <div className="h-full flex items-center justify-center text-slate-400 dark:text-slate-500 font-medium text-sm">
+                    {t('market.no_skills')}
                   </div>
                 )}
               </div>
@@ -276,12 +285,12 @@ export default function MarketIntelligence() {
           </div>
 
           {/* INSIGHTS / AI SUMMARY SECTION */}
-          <div className="bg-slate-900 rounded-3xl p-8 shadow-lg border border-slate-800 relative overflow-hidden">
+          <div className="bg-slate-900 dark:bg-black rounded-3xl p-8 shadow-lg border border-slate-800 dark:border-slate-900 relative overflow-hidden">
             <div className="absolute right-0 top-0 opacity-10 pointer-events-none">
               <Sparkles size={150} className="text-indigo-400" />
             </div>
             <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3 relative z-10">
-              <Sparkles className="text-indigo-400" size={24} /> AI Market Summary
+              <Sparkles className="text-indigo-400" size={24} /> {t('market.ai_summary')}
             </h3>
             <div className="text-slate-300 font-medium leading-relaxed max-w-3xl relative z-10 space-y-4">
               <p>{aiSummary}</p>
