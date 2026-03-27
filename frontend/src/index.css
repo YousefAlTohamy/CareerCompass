@@ -10,10 +10,14 @@
   }
 
   body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    @apply bg-light text-slate-900;
+    @apply bg-light text-slate-900 transition-colors duration-300;
+  }
+
+  [dir="rtl"] body {
+    font-family: 'Inter', system-ui, sans-serif;
   }
 
   #root {
@@ -35,24 +39,44 @@
   }
 
   .btn-primary {
-    @apply px-6 py-3 bg-primary text-white rounded-capsule font-semibold hover:bg-primary-hover shadow-premium hover:shadow-premium-hover transition-smooth active:scale-95 text-center flex items-center justify-center gap-2;
+    @apply px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 dark:shadow-none transition-smooth active:scale-95 text-center flex items-center justify-center gap-2;
   }
 
   .btn-secondary {
-    @apply px-6 py-3 bg-white text-primary border border-slate-100 rounded-capsule font-semibold hover:bg-slate-50 shadow-premium hover:shadow-premium-hover transition-smooth active:scale-95 text-center flex items-center justify-center gap-2;
+    @apply px-6 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition-smooth active:scale-95 text-center flex items-center justify-center gap-2;
   }
 
   .card-premium {
-    @apply bg-white rounded-2xl border border-slate-100 shadow-premium hover:shadow-premium-hover transition-smooth;
+    @apply bg-white dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl transition-smooth backdrop-blur-sm;
   }
 
   .glass-card {
-    @apply bg-white/70 backdrop-blur-md border border-white/20 rounded-2xl shadow-premium;
+    @apply bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl shadow-glass;
+  }
+
+  .bento-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
   }
 
   .nav-link {
-    @apply text-slate-600 hover:text-primary font-medium transition-smooth relative after:absolute after:bottom-0 after:left-0 after:w-0 after:h-0.5 after:bg-primary after:transition-all hover:after:w-full;
+    @apply text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 font-bold transition-smooth relative py-2;
   }
+
+  /* ── RTL Utilities ──────────────────────────────────────────────────────── */
+  .rtl-flip {
+    @apply rtl:rotate-180;
+  }
+
+  .ms-auto { @apply ltr:ml-auto rtl:mr-auto; }
+  .me-auto { @apply ltr:mr-auto rtl:ml-auto; }
+  
+  .ps-2 { @apply ltr:pl-2 rtl:pr-2; }
+  .pe-2 { @apply ltr:pr-2 rtl:pl-2; }
+  
+  .border-s { @apply ltr:border-l rtl:border-r; }
+  .border-e { @apply ltr:border-r rtl:border-l; }
 }
 
 /* ── Print Styles for PDF Export ────────────────────────────────────────── */
@@ -86,4 +110,55 @@
   h1, h2, h3 {
     color: black !important;
   }
+}
+
+/* ── SweetAlert2 Premium Dark Overrides ────────────────────────────────────── */
+.swal2-popup.swal2-toast {
+  background: rgba(15, 23, 42, 0.9) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 1.25rem !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+}
+
+.swal2-popup:not(.swal2-toast) {
+  background: rgba(15, 23, 42, 0.8) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 2.5rem !important;
+  padding: 2rem !important;
+}
+
+.swal2-title {
+  color: white !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.025em !important;
+}
+
+.swal2-html-container {
+  color: #94a3b8 !important; /* slate-400 */
+  font-weight: 500 !important;
+}
+
+.swal2-actions {
+  gap: 1rem !important;
+}
+
+.swal2-confirm {
+  background: #4f46e5 !important; /* indigo-600 */
+  border-radius: 1rem !important;
+  font-weight: 700 !important;
+  padding: 0.8rem 2rem !important;
+}
+
+.swal2-cancel {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-radius: 1rem !important;
+  font-weight: 700 !important;
+  padding: 0.8rem 2rem !important;
+  color: #94a3b8 !important;
+}
+
+.swal2-success-circular-line-left, .swal2-success-circular-line-right, .swal2-success-fix {
+  background-color: transparent !important;
 }

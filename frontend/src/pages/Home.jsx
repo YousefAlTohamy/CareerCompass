@@ -3,12 +3,14 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Compass, ShieldCheck, Zap, BarChart3, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 
 export default function Home() {
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   return (
-    <div className="min-h-screen bg-slate-50 overflow-x-hidden font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 overflow-x-hidden font-sans transition-colors duration-300">
       
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 md:pt-40 md:pb-32 px-4 overflow-hidden">
@@ -22,30 +24,28 @@ export default function Home() {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-full shadow-sm text-indigo-600 font-bold text-xs uppercase tracking-widest"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full shadow-sm text-indigo-600 dark:text-indigo-400 font-bold text-xs uppercase tracking-widest"
           >
             <Zap size={14} className="text-fuchsia-500" />
-            AI-Powered Career Intelligence
+            {t('home.hero.badge')}
           </motion.div>
 
           {/* Headline */}
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-5xl md:text-7xl lg:text-8xl font-black text-slate-800 tracking-tighter leading-[1.05]"
-          >
-            Master Your <br className="hidden md:block" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-fuchsia-500 to-indigo-600"> Professional</span> Destiny.
-          </motion.h1>
+            className="text-5xl md:text-7xl lg:text-8xl font-black text-slate-800 dark:text-white tracking-tighter leading-[1.05]"
+            dangerouslySetInnerHTML={{ __html: t('home.hero.headline') }}
+          />
 
           {/* Subtitle */}
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="max-w-2xl mx-auto text-lg md:text-xl text-slate-500 font-medium leading-relaxed"
+            className="max-w-2xl mx-auto text-lg md:text-xl text-slate-500 dark:text-slate-400 font-medium leading-relaxed"
           >
-            Career Compass uses advanced AI to analyze your resume against real-time market data. Identify gaps, bridge the match, and land your expert role.
+            {t('home.hero.subtitle')}
           </motion.p>
 
           {/* CTA Buttons */}
@@ -60,7 +60,7 @@ export default function Home() {
                  to={user.role === 'admin' ? '/admin/dashboard' : '/dashboard'} 
                  className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-xl transition-all shadow-md shadow-indigo-200 flex items-center justify-center gap-3 group"
                >
-                 {user.role === 'admin' ? 'Enter Admin Dashboard' : 'Enter Talent Cockpit'} 
+                 {user.role === 'admin' ? t('home.hero.enterAdmin') : t('home.hero.enterTalent')} 
                  <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                </Link>
             ) : (
@@ -69,14 +69,14 @@ export default function Home() {
                   to="/register" 
                   className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-xl transition-all shadow-md shadow-indigo-200 flex items-center justify-center gap-2 group"
                 >
-                  Analyze Resume Free
-                  <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                  {t('home.hero.analyzeResumeBtn')}
+                  <ArrowRight size={18} className="group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-transform rtl-flip" />
                 </Link>
                 <Link 
                   to="/login" 
-                  className="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold py-4 px-8 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-bold py-4 px-8 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
                 >
-                  Sign In <Compass size={18} className="text-slate-400" />
+                  {t('home.hero.signInBtn')} <Compass size={18} className="text-slate-400" />
                 </Link>
               </>
             )}
@@ -90,13 +90,13 @@ export default function Home() {
             className="mt-24 relative max-w-4xl mx-auto"
           >
              <div className="absolute inset-0 bg-indigo-600/10 blur-3xl rounded-full -z-10" />
-             <div className="bg-white/60 backdrop-blur-md p-4 md:p-6 border border-white rounded-3xl shadow-2xl shadow-indigo-900/5">
+             <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-4 md:p-6 border border-white dark:border-slate-700 rounded-3xl shadow-2xl shadow-indigo-900/5">
                 <div className="aspect-[16/9] bg-slate-900 rounded-2xl overflow-hidden shadow-inner flex flex-col items-center justify-center text-white relative">
                    {/* Abstract Tech Background inside the visual */}
                    <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500 via-slate-900 to-slate-900"></div>
                    
                    <Compass size={80} className="animate-spin-slow text-indigo-400 mb-6 opacity-80" strokeWidth={1.5} />
-                   <h3 className="text-2xl font-bold tracking-tight text-white/90 z-10">AI Analysis Engine</h3>
+                   <h3 className="text-2xl font-bold tracking-tight text-white/90 z-10">{t('home.hero.visualTitle')}</h3>
                    <div className="flex gap-2 mt-4 z-10">
                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
                      <span className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse delay-75"></span>
@@ -109,19 +109,19 @@ export default function Home() {
       </section>
 
       {/* Features Grid Section */}
-      <section className="py-24 px-4 bg-white relative">
+      <section className="py-24 px-4 bg-white dark:bg-slate-800 relative">
         <div className="max-w-7xl mx-auto relative z-10">
           
           {/* Section Header */}
           <div className="flex flex-col md:flex-row items-end justify-between gap-6 mb-16 text-center md:text-left">
              <div className="space-y-3 mx-auto md:mx-0">
-                <h4 className="text-indigo-600 font-black uppercase text-xs tracking-widest bg-indigo-50 px-3 py-1 rounded-lg w-fit mx-auto md:mx-0">
-                  Core Intelligence
+                <h4 className="text-indigo-600 dark:text-indigo-400 font-black uppercase text-xs tracking-widest bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1 rounded-lg w-fit mx-auto md:mx-0">
+                  {t('home.features.badge')}
                 </h4>
-                <h2 className="text-4xl md:text-5xl font-black text-slate-800 tracking-tight">The Expert Toolkit</h2>
+                <h2 className="text-4xl md:text-5xl font-black text-slate-800 dark:text-white tracking-tight">{t('home.features.title')}</h2>
              </div>
-             <p className="max-w-md text-slate-500 font-medium text-center md:text-right">
-               Built by career experts for the modern professional. Data-driven, AI-validated, and market-ready.
+             <p className="max-w-md text-slate-500 dark:text-slate-400 font-medium text-center md:text-right">
+               {t('home.features.subtitle')}
              </p>
           </div>
 
@@ -130,24 +130,24 @@ export default function Home() {
             {[
               {
                 icon: ShieldCheck,
-                title: 'ATS Validation',
-                desc: 'Real-time gap analysis against target job roles using advanced Natural Language Processing (NLP).',
+                title: t('home.features.atsValidation.title'),
+                desc: t('home.features.atsValidation.desc'),
                 color: 'text-emerald-600',
                 bg: 'bg-emerald-50',
                 border: 'group-hover:border-emerald-200'
               },
               {
                 icon: BarChart3,
-                title: 'Market Intelligence',
-                desc: 'Live tracking of skill demand, salary trends, and hiring shifts across multiple scraping sources.',
+                title: t('home.features.marketIntelligence.title'),
+                desc: t('home.features.marketIntelligence.desc'),
                 color: 'text-indigo-600',
                 bg: 'bg-indigo-50',
                 border: 'group-hover:border-indigo-200'
               },
               {
                 icon: Zap,
-                title: 'Bridge the Gap',
-                desc: 'Instant, actionable course recommendations to help you rank 90%+ for your dream job.',
+                title: t('home.features.bridgeTheGap.title'),
+                desc: t('home.features.bridgeTheGap.desc'),
                 color: 'text-fuchsia-600',
                 bg: 'bg-fuchsia-50',
                 border: 'group-hover:border-fuchsia-200'
@@ -156,21 +156,18 @@ export default function Home() {
               <motion.div
                 key={i}
                 whileHover={{ y: -8 }}
-                className={`bg-white border border-slate-100 rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 group ${f.border}`}
+                className={`bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 group ${f.border}`}
               >
-                <div className={`w-14 h-14 ${f.bg} rounded-2xl flex items-center justify-center mb-6 transition-transform group-hover:scale-110`}>
+                <div className={`w-14 h-14 ${f.bg} dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-6 transition-transform group-hover:scale-110`}>
                    <f.icon size={28} className={f.color} strokeWidth={2.5} />
                 </div>
-                <h3 className="text-xl font-black text-slate-800 mb-3">{f.title}</h3>
-                <p className="text-slate-500 font-medium leading-relaxed text-sm">
+                <h3 className="text-xl font-black text-slate-800 dark:text-white mb-3">{f.title}</h3>
+                <p className="text-slate-500 dark:text-slate-400 font-medium leading-relaxed text-sm">
                   {f.desc}
                 </p>
                 <ul className="mt-6 space-y-2">
                    <li className="flex items-center gap-2 text-xs font-bold text-slate-400">
-                     <CheckCircle2 size={14} className={f.color} /> Automated Insights
-                   </li>
-                   <li className="flex items-center gap-2 text-xs font-bold text-slate-400">
-                     <CheckCircle2 size={14} className={f.color} /> Data-Driven
+                     <CheckCircle2 size={14} className={f.color} /> {t('home.features.dataDriven')}
                    </li>
                 </ul>
               </motion.div>
@@ -188,13 +185,13 @@ export default function Home() {
            </div>
            
            <nav className="flex gap-8 text-xs font-bold uppercase tracking-widest text-slate-500">
-              <a href="#" className="hover:text-white transition-colors">Privacy</a>
-              <a href="#" className="hover:text-white transition-colors">Terms</a>
-              <a href="#" className="hover:text-white transition-colors">System Status</a>
+              <a href="#" className="hover:text-white transition-colors">{t('home.footer.privacy')}</a>
+              <a href="#" className="hover:text-white transition-colors">{t('home.footer.terms')}</a>
+              <a href="#" className="hover:text-white transition-colors">{t('home.footer.status')}</a>
            </nav>
 
            <div className="text-slate-600 text-sm font-medium">
-              &copy; {new Date().getFullYear()} All rights reserved.
+              &copy; {new Date().getFullYear()} {t('home.footer.rights')}
            </div>
         </div>
       </footer>
