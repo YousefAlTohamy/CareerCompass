@@ -41,14 +41,14 @@ class ExperienceEngine:
     _RANGE_RE = re.compile(
         r"(?P<start>"
         r"(?:\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\b[\s,.-]*)?\b\d{4}\b"
-        r"|(?:\b\d{1,2}[/-]\d{4}\b)"
-        r"|(?:\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b)"
+        r"|(?:\b\d{1,2}\s*[./-]\s*\d{4}\b)"
+        r"|(?:\b\d{1,2}\s*[./-]\s*\d{1,2}\s*[./-]\s*\d{2,4}\b)"
         r")"
         r"\s*(?:-+|–|—|to|until|~)\s*"
         r"(?P<end>"
         r"(?:\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\b[\s,.-]*)?\b\d{4}\b"
-        r"|(?:\b\d{1,2}[/-]\d{4}\b)"
-        r"|(?:\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b)"
+        r"|(?:\b\d{1,2}\s*[./-]\s*\d{4}\b)"
+        r"|(?:\b\d{1,2}\s*[./-]\s*\d{1,2}\s*[./-]\s*\d{2,4}\b)"
         r"|(?:\b(?:present|current|now|today|till date)\b)"
         r")",
         re.IGNORECASE,

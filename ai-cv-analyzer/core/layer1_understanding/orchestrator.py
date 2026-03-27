@@ -4,6 +4,7 @@ import logging
 import re
 from dataclasses import dataclass
 from datetime import date
+import time
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from core.layer1_understanding.advanced_ner import AdvancedNEREngine
@@ -53,7 +54,15 @@ class CVOrchestrator:
         """
         if filename:
             logger.info("V2 orchestrator processing file: %s", filename)
-        spatial: SpatialTextExtraction = extract_spatial_text_from_pdf(pdf_bytes)
+            
+        t0 = time.time()
+        try:
+            spatial: SpatialTextExtraction = extract_spatial_text_from_pdf(pdf_bytes)
+            spatial_time = time.time() - t0
+            logger.info("Latency: Spatial Parsing took %.2fs", spatial_time)
+        except Exception as e:
+            logger.exception("Spatial parsing failed: %s", e)
+            return self._empty_result(parsing_status="error", page_count=0)
 
         if spatial.status in ("no_text", "error") or not spatial.text:
             status = "empty_file" if spatial.status == "no_text" else "error"
@@ -68,21 +77,43 @@ class CVOrchestrator:
 
         # Name + title heuristics from profile-ish area first.
         profile_text = segments.sections.get("profile_summary") or segments.sections.get("uncategorized") or ordered_text
-        name_candidate = self._ner.extract_candidate_name(profile_text)
-
-        # NER entities over the whole ordered text (best recall), then canonicalize skills.
-        entities = self._ner.extract_entities(
-            ordered_text,
-            context_window_words=self._config.ner_context_window_words,
-        )
+        
+        # Determine global entities first so we can use them for name candidate
+        t1 = time.time()
+        try:
+            entities = self._ner.extract_entities(
+                ordered_text,
+                context_window_words=self._config.ner_context_window_words,
+            )
+            ner_time = time.time() - t1
+            logger.info("Latency: NER Inference took %.2fs", ner_time)
+        except Exception as e:
+            logger.exception("NER Inference failed: %s", e)
+            entities = {}
+        
+        name_candidate = self._ner.extract_candidate_name(profile_text, entities)
 
         # Canonicalization with provenance: skills can come from multiple sections later.
-        skills_raw = entities.get("skills", [])
-        canonical_skills = self._canonicalizer.canonicalize_skills(
-            skills_raw,
-            skill_confidence=0.78,
-            source="ner",
-        )
+        roles_lower = {r.lower() for r in entities.get("roles", [])}
+        orgs_lower = {o.lower() for o in entities.get("orgs", [])}
+        
+        skills_raw = [
+            s for s in entities.get("skills", [])
+            if s.lower() not in roles_lower and s.lower() not in orgs_lower
+        ]
+        
+        t2 = time.time()
+        try:
+            canonical_skills = self._canonicalizer.canonicalize_skills(
+                skills_raw,
+                skill_confidence=0.78,
+                source="ner",
+            )
+            canon_time = time.time() - t2
+            logger.info("Latency: Canonicalization took %.2fs", canon_time)
+        except Exception as e:
+            logger.exception("Canonicalization failed: %s", e)
+            canonical_skills = []
 
         skill_items: List[SkillItem] = []
         for sk in canonical_skills:
@@ -105,7 +136,7 @@ class CVOrchestrator:
         exp_text = segments.sections.get("experience", "")
         total_years = self._experience.calculate_total_experience_years(exp_text) if exp_text else 0.0
 
-        current_title = self._rank_current_title(exp_text) or (entities.get("roles") or [None])[0]
+        current_title = self._rank_current_title(exp_text, segments.sections) or (entities.get("roles") or [None])[0]
 
         experience_items = self._build_experience_items(exp_text, predicted_title=current_title)
         experience_section = ExperienceSection(
@@ -206,6 +237,12 @@ class CVOrchestrator:
             loc = entities.get("locations", [None])[0] if entities.get("locations") else None
             role = entities.get("roles", [predicted_title or "Professional Experience"])[0] if entities.get("roles") else (predicted_title or "Professional Experience")
 
+            desc_text = experience_text
+            if comp and comp != "Unknown Company":
+                desc_text = re.sub(re.escape(comp), "", desc_text, flags=re.IGNORECASE)
+            if role and role != "Professional Experience":
+                desc_text = re.sub(re.escape(role), "", desc_text, flags=re.IGNORECASE)
+
             return [
                 ExperienceItem(
                     title=role,
@@ -214,7 +251,7 @@ class CVOrchestrator:
                     start_date=None,
                     end_date=None,
                     is_current=None,
-                    description=_extract_bullets(experience_text),
+                    description=_extract_bullets(desc_text),
                     technologies=[],
                     confidence_score=0.45,
                 )
@@ -243,6 +280,12 @@ class CVOrchestrator:
             loc = entities.get("locations", [None])[0] if entities.get("locations") else None
             role = entities.get("roles", [predicted_title or "Professional Experience"])[0] if entities.get("roles") else (predicted_title or "Professional Experience")
 
+            desc_text = block_text
+            if comp and comp != "Unknown Company":
+                desc_text = re.sub(re.escape(comp), "", desc_text, flags=re.IGNORECASE)
+            if role and role != "Professional Experience":
+                desc_text = re.sub(re.escape(role), "", desc_text, flags=re.IGNORECASE)
+
             items.append(
                 ExperienceItem(
                     title=role,
@@ -251,7 +294,7 @@ class CVOrchestrator:
                     start_date=r.start,
                     end_date=r.end,
                     is_current=(r.end == date.today()),
-                    description=_extract_bullets(block_text),
+                    description=_extract_bullets(desc_text),
                     technologies=[],
                     confidence_score=0.85,
                 )
@@ -259,11 +302,28 @@ class CVOrchestrator:
 
         return items
 
-    def _rank_current_title(self, experience_text: str) -> Optional[str]:
+    def _rank_current_title(self, experience_text: str, segments_dict: Optional[Dict[str, str]] = None) -> Optional[str]:
         """
         Title ranking strategy:
-        Prefer the title near the most recent date range, otherwise best-looking leading line.
+        1. Priority: most frequent ROLE found by NER engine in experience or profile_summary segments.
+        2. Fallback: Prefer the title near the most recent date range, otherwise best-looking leading line.
         """
+        if segments_dict:
+            target_text = ""
+            if "experience" in segments_dict:
+                 target_text += segments_dict["experience"] + "\n"
+            if "profile_summary" in segments_dict:
+                 target_text += segments_dict["profile_summary"] + "\n"
+            
+            if target_text.strip():
+                extracted = self._ner.extract_entities(target_text)
+                roles = extracted.get("roles", [])
+                if roles:
+                    from collections import Counter
+                    counts = Counter(r.strip() for r in roles if r.strip())
+                    if counts:
+                        return counts.most_common(1)[0][0]
+
         if not experience_text.strip():
             return None
 

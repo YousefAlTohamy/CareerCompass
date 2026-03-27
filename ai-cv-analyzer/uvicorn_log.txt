@@ -1,127 +1,0 @@
-INFO:     Will watch for changes in these directories: ['A:\\projects\\CareerCompass\\ai-cv-analyzer']
-INFO:     Uvicorn running on http://0.0.0.0:8002 (Press CTRL+C to quit)
-INFO:     Started reloader process [6816] using StatReload
-INFO:     Started server process [14548]
-INFO:     Waiting for application startup.
-2026-03-27 03:45:26,436 - [INFO] - Initializing AI Engine v2 Models (This may take a moment)...
-2026-03-27 03:45:26,436 - [INFO] - Loading Layer 2 Classifier Model...
-2026-03-27 03:45:27,265 - [INFO] - HTTP Request: HEAD https://huggingface.co/facebook/bart-large-mnli/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
-2026-03-27 03:45:27,277 - [INFO] - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/facebook/bart-large-mnli/d7645e127eaf1aefc7862fd59a17a5aa8558b8ce/config.json "HTTP/1.1 200 OK"
-Loading weights:   0%|          | 0/515 [00:00<?, ?it/s]Loading weights:  95%|#########5| 490/515 [00:00<00:00, 4897.54it/s]Loading weights: 100%|##########| 515/515 [00:00<00:00, 4962.70it/s]
-2026-03-27 03:45:27,772 - [INFO] - HTTP Request: GET https://huggingface.co/api/models/facebook/bart-large-mnli/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
-2026-03-27 03:45:27,940 - [INFO] - HTTP Request: GET https://huggingface.co/api/models/facebook/bart-large-mnli/tree/main?recursive=true&expand=false "HTTP/1.1 200 OK"
-2026-03-27 03:45:28,292 - [INFO] - Classifier Model loaded successfully.
-2026-03-27 03:45:28,292 - [INFO] - Loading Layer 3 Embedder Model...
-2026-03-27 03:45:28,295 - [INFO] - Use pytorch device_name: cpu
-2026-03-27 03:45:28,295 - [INFO] - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
-2026-03-27 03:45:28,463 - [INFO] - HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json "HTTP/1.1 307 Temporary Redirect"
-2026-03-27 03:45:28,475 - [INFO] - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/modules.json "HTTP/1.1 200 OK"
-2026-03-27 03:45:28,638 - [INFO] - HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json "HTTP/1.1 307 Temporary Redirect"
-2026-03-27 03:45:28,651 - [INFO] - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/config_sentence_transformers.json "HTTP/1.1 200 OK"
-2026-03-27 03:45:28,817 - [INFO] - HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/config_sentence_transformers.json "HTTP/1.1 307 Temporary Redirect"
-2026-03-27 03:45:28,829 - [INFO] - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/config_sentence_transformers.json "HTTP/1.1 200 OK"
-2026-03-27 03:45:28,992 - [INFO] - HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/README.md "HTTP/1.1 307 Temporary Redirect"
-2026-03-27 03:45:29,004 - [INFO] - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/README.md "HTTP/1.1 200 OK"
-2026-03-27 03:45:29,177 - [INFO] - HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/modules.json "HTTP/1.1 307 Temporary Redirect"
-2026-03-27 03:45:29,189 - [INFO] - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/modules.json "HTTP/1.1 200 OK"
-2026-03-27 03:45:29,353 - [INFO] - HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/sentence_bert_config.json "HTTP/1.1 307 Temporary Redirect"
-2026-03-27 03:45:29,365 - [INFO] - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/sentence_bert_config.json "HTTP/1.1 200 OK"
-2026-03-27 03:45:29,532 - [INFO] - HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/adapter_config.json "HTTP/1.1 404 Not Found"
-2026-03-27 03:45:29,696 - [INFO] - HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
-2026-03-27 03:45:29,708 - [INFO] - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/config.json "HTTP/1.1 200 OK"
-Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 3995.68it/s]
-[1mBertModel LOAD REPORT[0m from: sentence-transformers/all-MiniLM-L6-v2
-Key                     | Status     |  | 
-------------------------+------------+--+-
-embeddings.position_ids | UNEXPECTED |  | 
-
-[3mNotes:
-- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
-2026-03-27 03:45:29,961 - [INFO] - HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
-2026-03-27 03:45:29,973 - [INFO] - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/config.json "HTTP/1.1 200 OK"
-2026-03-27 03:45:30,141 - [INFO] - HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer_config.json "HTTP/1.1 307 Temporary Redirect"
-2026-03-27 03:45:30,153 - [INFO] - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/tokenizer_config.json "HTTP/1.1 200 OK"
-2026-03-27 03:45:30,322 - [INFO] - HTTP Request: GET https://huggingface.co/api/models/sentence-transformers/all-MiniLM-L6-v2/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
-2026-03-27 03:45:30,489 - [INFO] - HTTP Request: GET https://huggingface.co/api/models/sentence-transformers/all-MiniLM-L6-v2/tree/main?recursive=true&expand=false "HTTP/1.1 200 OK"
-2026-03-27 03:45:30,735 - [INFO] - HTTP Request: HEAD https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/1_Pooling/config.json "HTTP/1.1 307 Temporary Redirect"
-2026-03-27 03:45:30,748 - [INFO] - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/sentence-transformers/all-MiniLM-L6-v2/c9745ed1d9f207416be6d2e6f8de32d1f16199bf/1_Pooling%2Fconfig.json "HTTP/1.1 200 OK"
-2026-03-27 03:45:30,916 - [INFO] - HTTP Request: GET https://huggingface.co/api/models/sentence-transformers/all-MiniLM-L6-v2 "HTTP/1.1 200 OK"
-2026-03-27 03:45:30,923 - [INFO] - Embedder Model 'all-MiniLM-L6-v2' loaded successfully.
-2026-03-27 03:45:31,086 - [INFO] - HTTP Request: HEAD https://huggingface.co/dslim/bert-base-NER/resolve/main/config.json "HTTP/1.1 307 Temporary Redirect"
-2026-03-27 03:45:31,098 - [INFO] - HTTP Request: HEAD https://huggingface.co/api/resolve-cache/models/dslim/bert-base-NER/d1a3e8f13f8c3566299d95fcfc9a8d2382a9affc/config.json "HTTP/1.1 200 OK"
-Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights: 100%|##########| 199/199 [00:00<00:00, 4134.96it/s]
-[1mBertForTokenClassification LOAD REPORT[0m from: dslim/bert-base-NER
-Key                      | Status     |  | 
--------------------------+------------+--+-
-bert.pooler.dense.weight | UNEXPECTED |  | 
-bert.pooler.dense.bias   | UNEXPECTED |  | 
-
-[3mNotes:
-- UNEXPECTED[3m	:can be ignored when loading from different task/architecture; not ok if you expect identical arch.[0m
-2026-03-27 03:45:31,385 - [INFO] - HTTP Request: GET https://huggingface.co/api/models/dslim/bert-base-NER/tree/main/additional_chat_templates?recursive=false&expand=false "HTTP/1.1 404 Not Found"
-2026-03-27 03:45:31,551 - [INFO] - HTTP Request: GET https://huggingface.co/api/models/dslim/bert-base-NER/tree/main?recursive=true&expand=false "HTTP/1.1 200 OK"
-2026-03-27 03:45:31,578 - [INFO] - AdvancedNEREngine loaded NER model: dslim/bert-base-NER
-2026-03-27 03:45:31,578 - [INFO] - All AI Models loaded successfully into memory.
-INFO:     Application startup complete.
-2026-03-27 04:16:23,403 - [INFO] - --> Executing Layer 3: Intelligent Matching
-2026-03-27 04:16:23,403 - [INFO] - Calculating match for job: Unknown
-Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|##########| 1/1 [00:00<00:00,  3.40it/s]Batches: 100%|##########| 1/1 [00:00<00:00,  3.39it/s]
-Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|##########| 1/1 [00:00<00:00, 50.96it/s]
-INFO:     127.0.0.1:51124 - "POST /api/v2/match-job HTTP/1.1" 200 OK
-2026-03-27 04:16:24,151 - [INFO] - --> Executing Layer 3: Intelligent Matching
-2026-03-27 04:16:24,151 - [INFO] - Calculating match for job: Unknown
-Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|##########| 1/1 [00:00<00:00,  5.45it/s]Batches: 100%|##########| 1/1 [00:00<00:00,  5.45it/s]
-Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|##########| 1/1 [00:00<00:00, 58.86it/s]
-INFO:     127.0.0.1:51128 - "POST /api/v2/match-job HTTP/1.1" 200 OK
-2026-03-27 04:16:27,365 - [INFO] - --> Executing Layer 3: Intelligent Matching
-2026-03-27 04:16:27,366 - [INFO] - Calculating match for job: Unknown
-Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|##########| 1/1 [00:00<00:00,  5.38it/s]Batches: 100%|##########| 1/1 [00:00<00:00,  5.37it/s]
-Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|##########| 1/1 [00:00<00:00,  6.72it/s]Batches: 100%|##########| 1/1 [00:00<00:00,  6.71it/s]
-INFO:     127.0.0.1:51144 - "POST /api/v2/match-job HTTP/1.1" 200 OK
-2026-03-27 04:16:27,856 - [INFO] - --> Executing Layer 3: Intelligent Matching
-2026-03-27 04:16:27,856 - [INFO] - Calculating match for job: Unknown
-Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|##########| 1/1 [00:00<00:00,  4.16it/s]Batches: 100%|##########| 1/1 [00:00<00:00,  4.14it/s]
-Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|##########| 1/1 [00:00<00:00, 45.34it/s]
-INFO:     127.0.0.1:51146 - "POST /api/v2/match-job HTTP/1.1" 200 OK
-2026-03-27 04:20:05,332 - [INFO] - Received V3 CV Analysis request for: my_resume (3).pdf
-2026-03-27 04:20:05,333 - [INFO] - V2 orchestrator processing file: my_resume (3).pdf
-2026-03-27 04:20:05,566 - [INFO] - Name heuristic: no suitable name line found.
-2026-03-27 04:20:09,332 - [INFO] - No date ranges detected in experience text.
-2026-03-27 04:20:09,332 - [INFO] - No date ranges detected in experience text.
-2026-03-27 04:20:09,337 - [INFO] - No date ranges detected in experience text.
-2026-03-27 04:20:10,708 - [INFO] - V3 analyze-cv completed status=success role=MobileAppDevelopmentTrainee time_ms=5375.4
-INFO:     127.0.0.1:51193 - "POST /api/v3/analyze-cv HTTP/1.1" 200 OK
-2026-03-27 04:36:31,378 - [INFO] - Received V3 CV Analysis request for: my_resume (2).pdf
-2026-03-27 04:36:31,378 - [INFO] - V2 orchestrator processing file: my_resume (2).pdf
-2026-03-27 04:36:31,513 - [INFO] - Name heuristic: no suitable name line found.
-2026-03-27 04:36:32,391 - [INFO] - No date ranges detected in experience text.
-2026-03-27 04:36:32,391 - [INFO] - No date ranges detected in experience text.
-2026-03-27 04:36:32,392 - [INFO] - No date ranges detected in experience text.
-2026-03-27 04:36:33,094 - [INFO] - V3 analyze-cv completed status=success role=MobileAppDevelopmentTrainee time_ms=1716.1
-INFO:     127.0.0.1:51310 - "POST /api/v3/analyze-cv HTTP/1.1" 200 OK
-2026-03-27 04:36:47,065 - [INFO] - Received V3 CV Analysis request for: my_resume (3).pdf
-2026-03-27 04:36:47,065 - [INFO] - V2 orchestrator processing file: my_resume (3).pdf
-2026-03-27 04:36:47,194 - [INFO] - Name heuristic: no suitable name line found.
-2026-03-27 04:36:48,031 - [INFO] - No date ranges detected in experience text.
-2026-03-27 04:36:48,032 - [INFO] - No date ranges detected in experience text.
-2026-03-27 04:36:48,032 - [INFO] - No date ranges detected in experience text.
-2026-03-27 04:36:48,866 - [INFO] - V3 analyze-cv completed status=success role=MobileAppDevelopmentTrainee time_ms=1801.6
-INFO:     127.0.0.1:51359 - "POST /api/v3/analyze-cv HTTP/1.1" 200 OK
-2026-03-27 04:39:57,170 - [INFO] - Received V3 CV Analysis request for: my_resume (3).pdf
-2026-03-27 04:39:57,170 - [INFO] - V2 orchestrator processing file: my_resume (3).pdf
-2026-03-27 04:39:57,629 - [INFO] - Name heuristic: no suitable name line found.
-2026-03-27 04:40:00,495 - [INFO] - No date ranges detected in experience text.
-2026-03-27 04:40:00,496 - [INFO] - No date ranges detected in experience text.
-2026-03-27 04:40:00,496 - [INFO] - No date ranges detected in experience text.
-2026-03-27 04:40:02,770 - [INFO] - V3 analyze-cv completed status=success role=MobileAppDevelopmentTrainee time_ms=5600.1
-INFO:     127.0.0.1:51467 - "POST /api/v3/analyze-cv HTTP/1.1" 200 OK
-2026-03-27 04:49:54,205 - [INFO] - --> Executing Layer 3: Intelligent Matching
-2026-03-27 04:49:54,205 - [INFO] - Calculating match for job: Unknown
-Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|##########| 1/1 [00:00<00:00,  8.44it/s]Batches: 100%|##########| 1/1 [00:00<00:00,  8.41it/s]
-Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|##########| 1/1 [00:00<00:00, 53.27it/s]
-INFO:     127.0.0.1:51520 - "POST /api/v2/match-job HTTP/1.1" 200 OK
-2026-03-27 04:49:54,805 - [INFO] - --> Executing Layer 3: Intelligent Matching
-2026-03-27 04:49:54,805 - [INFO] - Calculating match for job: Unknown
-Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|##########| 1/1 [00:00<00:00, 10.79it/s]
-Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|##########| 1/1 [00:00<00:00, 55.64it/s]
-INFO:     127.0.0.1:51525 - "POST /api/v2/match-job HTTP/1.1" 200 OK

@@ -93,7 +93,10 @@ class AdvancedNEREngine:
             }
 
         try:
-            tokens = self._ner(text)
+            # Enforce manual chunking/truncation if text is absurdly large
+            # This minimizes memory spikes on 10MB+ PDF files.
+            safe_text = text[:10000] if len(text) > 10000 else text
+            tokens = self._ner(safe_text)
         except Exception as e:
             logger.exception("NER inference failed: %s", e)
             return {
@@ -169,16 +172,30 @@ class AdvancedNEREngine:
     def extract_candidate_name(
         self,
         profile_lines: Sequence[str] | str,
+        entities: Optional[Dict[str, List[str]]] = None,
     ) -> Optional[NameCandidate]:
         """
         Name heuristic:
-        - Take the first non-empty line that is not a URL/email/phone-heavy,
+        - If `entities` contains 'people' and one is found in the first 500 chars, use it.
+        - Otherwise, fall back to the first non-empty line that is not a URL/email/phone-heavy,
           not numeric, and looks like a human name.
         """
         if isinstance(profile_lines, str):
+            raw_text = profile_lines
             lines = [ln.strip() for ln in profile_lines.splitlines()]
         else:
+            raw_text = "\n".join(str(ln) for ln in profile_lines)
             lines = [str(ln).strip() for ln in profile_lines]
+
+        # 1. Try NER-based extraction first
+        if entities and entities.get("people"):
+            first_500 = raw_text[:500]
+            for person in entities["people"]:
+                person_clean = person.strip()
+                if person_clean and person_clean in first_500:
+                    conf = 0.95
+                    source_line = next((ln for ln in lines if person_clean in ln), person_clean)
+                    return NameCandidate(full_name=person_clean, confidence_score=conf, source_line=source_line)
 
         for line in lines:
             if not line:
@@ -286,86 +303,6 @@ def _clean_entity_text(s: str) -> str:
     return s.strip(" ,;:|/-")
 
 
-_GENERIC_NOUNS = {
-    "system",
-    "platform",
-    "development",
-    "application",
-    "applications",
-    "service",
-    "services",
-    "solution",
-    "solutions",
-    "software",
-    "website",
-    "web",
-    "data",
-    "database",
-    "architecture",
-    "design",
-    "testing",
-    "automation",
-    "tool",
-    "tools",
-    "framework",
-    "frameworks",
-    "library",
-    "libraries",
-    "api",
-    "apis",
-}
-
-_TECH_MODIFIERS = {
-    # languages
-    "python",
-    "java",
-    "javascript",
-    "typescript",
-    "c",
-    "c++",
-    "c#",
-    "go",
-    "golang",
-    "kotlin",
-    "swift",
-    "php",
-    "ruby",
-    "scala",
-    "rust",
-    "sql",
-    # clouds / infra
-    "aws",
-    "azure",
-    "gcp",
-    "docker",
-    "kubernetes",
-    "terraform",
-    "jenkins",
-    "linux",
-    "ci",
-    "cd",
-    "cicd",
-    # frameworks / tools
-    "react",
-    "angular",
-    "vue",
-    "node",
-    "nodejs",
-    "spring",
-    "django",
-    "flask",
-    "fastapi",
-    "pytorch",
-    "tensorflow",
-    "scikit",
-    "sklearn",
-    "pandas",
-    "numpy",
-    "spark",
-    "hadoop",
-}
-
-
 def _should_keep_skill(
     skill: str,
     start: int,
@@ -375,37 +312,22 @@ def _should_keep_skill(
     window: int,
 ) -> bool:
     """
-    Context Window Filter (±window words):
-    Drop generic nouns unless a technical modifier appears nearby.
+    Sanity Check Filter:
+    Trust the NER model for SKILL tokens, but apply basic sanity checks
+    (e.g., length > 1, not purely numeric).
     """
     clean = skill.strip()
     if not clean:
         return False
 
-    # Micro-token filter
-    if len(clean) <= 2 and clean.upper() not in {"C", "R"}:
-        if not (clean.isupper() or any(ch in clean for ch in {"#", "+", "."})):
-            return False
-
-    normalized = clean.lower()
-    normalized = normalized.strip(" ,;:()[]{}")
-
-    if normalized not in _GENERIC_NOUNS:
-        return True
-
-    # Locate entity word index span in the original word list.
-    idxs = [i for i, (_w, s, e) in enumerate(word_spans) if not (e <= start or s >= end)]
-    if not idxs:
-        # If we can't align span, keep conservatively (avoid false negatives).
-        return True
-
-    left = max(0, min(idxs) - window)
-    right = min(len(word_spans) - 1, max(idxs) + window)
-    ctx_words = [word_spans[i][0].lower().strip(" ,;:()[]{}") for i in range(left, right + 1)]
-
-    has_modifier = any(w in _TECH_MODIFIERS for w in ctx_words)
-    if not has_modifier:
+    # Check minimum length (allow C, R, etc as length 1 exceptions)
+    if len(clean) <= 1 and clean.upper() not in {"C", "R"}:
         return False
+
+    # Check if purely numeric
+    if clean.isdigit():
+        return False
+
     return True
 
 

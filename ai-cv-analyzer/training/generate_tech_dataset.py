@@ -33,8 +33,10 @@ CRITICAL REQUIREMENTS:
 1. Domains: Ensure an EQUAL and RANDOM distribution across ALL tech fields (e.g., Backend, Frontend, DevOps, Mobile, AI/Data Science, Cyber Security, Cloud Computing, QA, Networking). DO NOT favor any specific technology or framework.
 2. Realism: Mimic human CVs exactly. Include dates, URLs, percentages, bullet points (•, -, *), weird spacings, typos, and imperfect grammar.
 3. Soft Skills: DO NOT ignore soft skills. Include them naturally (e.g., "Leadership", "Excellent Communication", "Problem Solving").
+4. Realistic Noise: Introduce occasional typos, varied bullet point styles, missing punctuation, and non-standard section headers (e.g., "Work Hist.", "Tech Stack") to make the model robust against imperfect resumes.
 
-Perform strict NER annotation on the tokens.
+Generate high-quality, full sentences (CV snippets). Do NOT pre-tokenize the text.
+For each snippet, provide the full text and a list of exact entity strings with their types.
 Categories:
 - SKILL: Technical skills, tools, languages, frameworks (e.g., "React", "Python", "Docker", "Figma", "AWS").
 - SOFT: Soft skills and interpersonal traits (e.g., "Teamwork", "Agile leadership").
@@ -42,13 +44,15 @@ Categories:
 - EDU: Degrees and majors (e.g., "B.Sc. Computer Science").
 - CERT: Certifications (e.g., "AWS Certified Solutions Architect").
 
-Mapping: O=0, B-SKILL=1, I-SKILL=2, B-ROLE=3, I-ROLE=4, B-EDU=5, I-EDU=6, B-CERT=7, I-CERT=8, B-SOFT=9, I-SOFT=10.
-
 Output MUST be a valid JSON array of objects. Example:
 [
   {
-    "tokens": ["•", "Led", "a", "team", "of", "Flutter", "Devs", "with", "strong", "communication", "."],
-    "ner_tags": [0, 0, 0, 0, 0, 1, 3, 0, 9, 10, 0]
+    "text": "• Led a team of Flutter Devs with strong communication.",
+    "entities": [
+      {"text": "Flutter", "label": "SKILL"},
+      {"text": "Devs", "label": "ROLE"},
+      {"text": "communication", "label": "SOFT"}
+    ]
   }
 ]
 """
