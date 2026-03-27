@@ -171,10 +171,11 @@ async def parse_cv(cv_file: UploadFile = File(...)):
 
         result = _orchestrator.process_cv(file_bytes, filename)
         if result.parsing_status in ("no_text", "empty_file", "error"):
-            raise HTTPException(
-                status_code=422,
-                detail=f"Could not extract text from the CV (status={result.parsing_status}).",
-            )
+            logger.warning("File is unprocessable. Returning standardized error.")
+            return {
+                "status": "error",
+                "message": "File unprocessable"
+            }
 
         cv_skills = [it.name for it in (result.skills.items or []) if getattr(it, "name", None)]
         cv_roles = [it.title for it in (result.experience.items or []) if getattr(it, "title", None)]
@@ -186,6 +187,13 @@ async def parse_cv(cv_file: UploadFile = File(...)):
         # Contact extraction
         contact_info = extract_contacts(_build_cv_raw_text(result))
 
+        # Confidence Thresholds
+        warning_flag = False
+        name_conf = getattr(result.profile, "confidence_score", 1.0)
+        overall_conf = getattr(result.analysis, "confidence_score", 1.0)
+        if name_conf < 0.75 or overall_conf < 0.75:
+            warning_flag = True
+
         # تحديث الـ Return عشان يبعت كل الداتا الجديدة للارافيل
         return {
             "skills":             cv_skills,
@@ -196,13 +204,14 @@ async def parse_cv(cv_file: UploadFile = File(...)):
             "domain_confidence":  domain_confidence,
             "contact_info":       contact_info,
             "extraction_method":  extraction_method,
+            "warning":            warning_flag,
         }
 
     except HTTPException:
         raise
     except Exception as exc:
         logger.exception("parse-cv failed")
-        raise HTTPException(status_code=500, detail=f"Internal error: {exc}") from exc
+        return {"status": "error", "message": "File unprocessable"}
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import logging
 import re
 from dataclasses import dataclass
 from datetime import date
+import time
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from core.layer1_understanding.advanced_ner import AdvancedNEREngine
@@ -53,7 +54,15 @@ class CVOrchestrator:
         """
         if filename:
             logger.info("V2 orchestrator processing file: %s", filename)
-        spatial: SpatialTextExtraction = extract_spatial_text_from_pdf(pdf_bytes)
+            
+        t0 = time.time()
+        try:
+            spatial: SpatialTextExtraction = extract_spatial_text_from_pdf(pdf_bytes)
+            spatial_time = time.time() - t0
+            logger.info("Latency: Spatial Parsing took %.2fs", spatial_time)
+        except Exception as e:
+            logger.exception("Spatial parsing failed: %s", e)
+            return self._empty_result(parsing_status="error", page_count=0)
 
         if spatial.status in ("no_text", "error") or not spatial.text:
             status = "empty_file" if spatial.status == "no_text" else "error"
@@ -70,10 +79,17 @@ class CVOrchestrator:
         profile_text = segments.sections.get("profile_summary") or segments.sections.get("uncategorized") or ordered_text
         
         # Determine global entities first so we can use them for name candidate
-        entities = self._ner.extract_entities(
-            ordered_text,
-            context_window_words=self._config.ner_context_window_words,
-        )
+        t1 = time.time()
+        try:
+            entities = self._ner.extract_entities(
+                ordered_text,
+                context_window_words=self._config.ner_context_window_words,
+            )
+            ner_time = time.time() - t1
+            logger.info("Latency: NER Inference took %.2fs", ner_time)
+        except Exception as e:
+            logger.exception("NER Inference failed: %s", e)
+            entities = {}
         
         name_candidate = self._ner.extract_candidate_name(profile_text, entities)
 
@@ -86,11 +102,18 @@ class CVOrchestrator:
             if s.lower() not in roles_lower and s.lower() not in orgs_lower
         ]
         
-        canonical_skills = self._canonicalizer.canonicalize_skills(
-            skills_raw,
-            skill_confidence=0.78,
-            source="ner",
-        )
+        t2 = time.time()
+        try:
+            canonical_skills = self._canonicalizer.canonicalize_skills(
+                skills_raw,
+                skill_confidence=0.78,
+                source="ner",
+            )
+            canon_time = time.time() - t2
+            logger.info("Latency: Canonicalization took %.2fs", canon_time)
+        except Exception as e:
+            logger.exception("Canonicalization failed: %s", e)
+            canonical_skills = []
 
         skill_items: List[SkillItem] = []
         for sk in canonical_skills:

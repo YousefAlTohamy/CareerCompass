@@ -93,7 +93,10 @@ class AdvancedNEREngine:
             }
 
         try:
-            tokens = self._ner(text)
+            # Enforce manual chunking/truncation if text is absurdly large
+            # This minimizes memory spikes on 10MB+ PDF files.
+            safe_text = text[:10000] if len(text) > 10000 else text
+            tokens = self._ner(safe_text)
         except Exception as e:
             logger.exception("NER inference failed: %s", e)
             return {
