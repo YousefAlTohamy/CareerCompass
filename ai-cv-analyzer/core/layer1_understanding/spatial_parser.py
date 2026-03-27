@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import logging
+import re
 from dataclasses import dataclass
 from statistics import median
 from typing import Iterable, List, Literal, Optional, Sequence, Tuple
@@ -132,6 +133,9 @@ def _extract_words(page) -> List[_Word]:
     words: List[_Word] = []
     for w in raw_words or []:
         text = (w.get("text") or "").strip()
+        if not text:
+            continue
+        text = re.sub(r'\(cid:\d+\)', ' ', text).strip()
         if not text:
             continue
         try:

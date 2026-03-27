@@ -286,86 +286,6 @@ def _clean_entity_text(s: str) -> str:
     return s.strip(" ,;:|/-")
 
 
-_GENERIC_NOUNS = {
-    "system",
-    "platform",
-    "development",
-    "application",
-    "applications",
-    "service",
-    "services",
-    "solution",
-    "solutions",
-    "software",
-    "website",
-    "web",
-    "data",
-    "database",
-    "architecture",
-    "design",
-    "testing",
-    "automation",
-    "tool",
-    "tools",
-    "framework",
-    "frameworks",
-    "library",
-    "libraries",
-    "api",
-    "apis",
-}
-
-_TECH_MODIFIERS = {
-    # languages
-    "python",
-    "java",
-    "javascript",
-    "typescript",
-    "c",
-    "c++",
-    "c#",
-    "go",
-    "golang",
-    "kotlin",
-    "swift",
-    "php",
-    "ruby",
-    "scala",
-    "rust",
-    "sql",
-    # clouds / infra
-    "aws",
-    "azure",
-    "gcp",
-    "docker",
-    "kubernetes",
-    "terraform",
-    "jenkins",
-    "linux",
-    "ci",
-    "cd",
-    "cicd",
-    # frameworks / tools
-    "react",
-    "angular",
-    "vue",
-    "node",
-    "nodejs",
-    "spring",
-    "django",
-    "flask",
-    "fastapi",
-    "pytorch",
-    "tensorflow",
-    "scikit",
-    "sklearn",
-    "pandas",
-    "numpy",
-    "spark",
-    "hadoop",
-}
-
-
 def _should_keep_skill(
     skill: str,
     start: int,
@@ -375,37 +295,22 @@ def _should_keep_skill(
     window: int,
 ) -> bool:
     """
-    Context Window Filter (±window words):
-    Drop generic nouns unless a technical modifier appears nearby.
+    Sanity Check Filter:
+    Trust the NER model for SKILL tokens, but apply basic sanity checks
+    (e.g., length > 1, not purely numeric).
     """
     clean = skill.strip()
     if not clean:
         return False
 
-    # Micro-token filter
-    if len(clean) <= 2 and clean.upper() not in {"C", "R"}:
-        if not (clean.isupper() or any(ch in clean for ch in {"#", "+", "."})):
-            return False
-
-    normalized = clean.lower()
-    normalized = normalized.strip(" ,;:()[]{}")
-
-    if normalized not in _GENERIC_NOUNS:
-        return True
-
-    # Locate entity word index span in the original word list.
-    idxs = [i for i, (_w, s, e) in enumerate(word_spans) if not (e <= start or s >= end)]
-    if not idxs:
-        # If we can't align span, keep conservatively (avoid false negatives).
-        return True
-
-    left = max(0, min(idxs) - window)
-    right = min(len(word_spans) - 1, max(idxs) + window)
-    ctx_words = [word_spans[i][0].lower().strip(" ,;:()[]{}") for i in range(left, right + 1)]
-
-    has_modifier = any(w in _TECH_MODIFIERS for w in ctx_words)
-    if not has_modifier:
+    # Check minimum length (allow C, R, etc as length 1 exceptions)
+    if len(clean) <= 1 and clean.upper() not in {"C", "R"}:
         return False
+
+    # Check if purely numeric
+    if clean.isdigit():
+        return False
+
     return True
 
 
