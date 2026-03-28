@@ -1,101 +1,65 @@
 import json
 
-notebook_path = "d:/Graduation/Graduation-project/ai-cv-analyzer/training/train_ner.ipynb"
-
-with open(notebook_path, "r", encoding="utf-8") as f:
+with open("training/train_ner.ipynb", "r", encoding="utf-8") as f:
     nb = json.load(f)
 
-# Update Tokenization cell (index 6, assuming structure matches)
-tok_cell = next(c for c in nb["cells"] if "from transformers import AutoTokenizer" in "".join(c["source"]))
-tok_cell["source"] = [
-    "from transformers import AutoTokenizer\n",
-    "\n",
-    "model_checkpoint = \"bert-base-cased\"\n",
-    "tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)\n",
-    "\n",
-    "def tokenize_and_align_labels(examples):\n",
-    "    tokenized_inputs = tokenizer(\n",
-    "        examples[\"text\"], \n",
-    "        truncation=True, \n",
-    "        max_length=512,\n",
-    "        return_offsets_mapping=True\n",
-    "    )\n",
-    "\n",
-    "    labels = []\n",
-    "    for i, entity_list in enumerate(examples[\"entities\"]):\n",
-    "        word_ids = tokenized_inputs.word_ids(batch_index=i)\n",
-    "        offsets = tokenized_inputs[\"offset_mapping\"][i]\n",
-    "        label_ids = [0] * len(word_ids)\n",  # default to O
-    "\n",
-    "        seen_chars = set()\n",
-    "        for ent in entity_list:\n",
-    "            ent_text = ent[\"text\"]\n",
-    "            ent_label = ent[\"label\"]\n",
-    "            start_char = examples[\"text\"][i].find(ent_text)\n",
-    "            if start_char == -1: continue\n",
-    "            end_char = start_char + len(ent_text)\n",
-    "            \n",
-    "            b_label = label2id.get(f\"B-{ent_label}\", 0)\n",
-    "            i_label = label2id.get(f\"I-{ent_label}\", 0)\n",
-    "            \n",
-    "            first = True\n",
-    "            for idx, (tok_start, tok_end) in enumerate(offsets):\n",
-    "                if tok_start == tok_end: continue # special token\n",
-    "                if tok_start >= start_char and tok_end <= end_char:\n",
-    "                    if first:\n",
-    "                        label_ids[idx] = b_label\n",
-    "                        first = False\n",
-    "                    else:\n",
-    "                        label_ids[idx] = i_label\n",
-    "                    seen_chars.add(idx)\n",
-    "\n",
-    "        for idx, wid in enumerate(word_ids):\n",
-    "            if wid is None:\n",
-    "                label_ids[idx] = -100\n",
-    "\n",
-    "        labels.append(label_ids)\n",
-    "    tokenized_inputs.pop(\"offset_mapping\")\n",
-    "    tokenized_inputs[\"labels\"] = labels\n",
-    "    return tokenized_inputs\n",
-    "\n",
-    "tokenized_datasets = dataset.map(tokenize_and_align_labels, batched=True)\n",
-    "print(\"✅ Tokenization and Offset Mapping Complete!\")\n"
+# Update Step 5: TrainingArgs
+# Find the cell that starts with from transformers import TrainingArguments
+for cell in nb["cells"]:
+    if cell["cell_type"] == "code" and "TrainingArguments" in "".join(cell["source"]):
+        source = cell["source"]
+        new_source = []
+        for line in source:
+            if "eval_strategy=" in line or "evaluation_strategy=" in line:
+                new_source.append('    evaluation_strategy="epoch",\n')
+            elif "eval_steps=" in line:
+                continue # remove eval_steps
+            elif "save_strategy=" in line:
+                new_source.append('    save_strategy="epoch",\n')
+            elif "save_steps=" in line:
+                continue # remove save_steps
+            else:
+                new_source.append(line)
+        cell["source"] = new_source
+
+# Inject the Verification cell just before Step 4 (after Step 3 tokenization mapping)
+verification_source = [
+    "print(\"\\n--- Verification: Checking Token-Label Alignment ---\")\n",
+    "sample = tokenized_datasets[\"train\"][0]\n",
+    "tokens = tokenizer.convert_ids_to_tokens(sample[\"input_ids\"])\n",
+    "print(f\"\\nSample Text:\\n{dataset['train'][0]['text']}\\n\")\n",
+    "print(f\"{'-'*30}\")\n",
+    "print(f\"{'Token':<20} | {'Label':<15}\")\n",
+    "print(f\"{'-'*30}\")\n",
+    "for tok, lbl_id in zip(tokens, sample[\"labels\"]):\n",
+    "    if lbl_id == -100:\n",
+    "        label_str = 'IGNORED (-100)'\n",
+    "    else:\n",
+    "        label_str = id2label[lbl_id]\n",
+    "    if tok not in ['[PAD]', '[CLS]', '[SEP]'] or lbl_id != -100:\n",
+    "        print(f\"{tok:<20} | {label_str:<15}\")\n"
 ]
 
-# Update Training Arguments cell
-train_cell = next(c for c in nb["cells"] if "TrainingArguments" in "".join(c["source"]))
-train_cell["source"] = [
-    "from transformers import TrainingArguments, Trainer, EarlyStoppingCallback\n",
-    "\n",
-    "training_args = TrainingArguments(\n",
-    "    output_dir=\"./results\",\n",
-    "    eval_strategy=\"steps\",\n",
-    "    eval_steps=1000,\n",
-    "    learning_rate=2e-5,\n",
-    "    per_device_train_batch_size=16,\n",
-    "    per_device_eval_batch_size=16,\n",
-    "    num_train_epochs=3,\n",
-    "    weight_decay=0.01,\n",
-    "    save_strategy=\"steps\",\n",
-    "    save_steps=1000,\n",
-    "    load_best_model_at_end=True,\n",
-    "    fp16=True,\n",
-    "    metric_for_best_model=\"f1\"\n",
-    ")\n",
-    "\n",
-    "trainer = Trainer(\n",
-    "    model=model,\n",
-    "    args=training_args,\n",
-    "    train_dataset=tokenized_datasets[\"train\"],\n",
-    "    eval_dataset=tokenized_datasets[\"test\"],\n",
-    "    processing_class=tokenizer,  \n",
-    "    data_collator=data_collator,\n",
-    "    compute_metrics=compute_metrics,\n",
-    "    callbacks=[EarlyStoppingCallback(early_stopping_patience=3)]\n",
-    ")\n"
-]
+verify_cell = {
+    "cell_type": "code",
+    "execution_count": None,
+    "metadata": {},
+    "outputs": [],
+    "source": verification_source
+}
 
-with open(notebook_path, "w", encoding="utf-8") as f:
+# Find index to insert
+insert_idx = 0
+for i, cell in enumerate(nb["cells"]):
+    if cell["cell_type"] == "markdown" and "Step 4: Model Initialization" in "".join(cell["source"]):
+        insert_idx = i
+        break
+
+if insert_idx > 0:
+    nb["cells"].insert(insert_idx, verify_cell)
+
+with open("training/train_ner.ipynb", "w", encoding="utf-8") as f:
     json.dump(nb, f, indent=1)
-
+    # Append a newline manually to keep git happy if needed
+    f.write("\n")
 print("Notebook patched successfully!")
