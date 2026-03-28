@@ -97,10 +97,36 @@ class CVOrchestrator:
         roles_lower = {r.lower() for r in entities.get("roles", [])}
         orgs_lower = {o.lower() for o in entities.get("orgs", [])}
         
-        skills_raw = [
-            s for s in entities.get("skills", [])
-            if s.lower() not in roles_lower and s.lower() not in orgs_lower
-        ]
+        # Action Verbs used to filter greedy merged skills
+        ACTION_VERBS = {
+            "developed", "managed", "led", "engineered", "collaborated",
+            "designed", "created", "built", "implemented", "delivered",
+            "facilitated", "spearheaded", "orchestrated", "architected",
+            "integrated", "tested", "deployed", "maintained", "improved",
+            "optimized", "resolved", "coordinated", "analyzed"
+        }
+        
+        skills_raw = []
+        for s in entities.get("skills", []):
+            s_lower = s.lower()
+            
+            # 1. Role / Org Precedence
+            if s_lower in roles_lower or s_lower in orgs_lower:
+                continue
+                
+            # 2. Length restrictions: > 40 characters or > 4 words
+            if len(s) > 40:
+                continue
+            words = s.split()
+            if len(words) > 4:
+                continue
+                
+            # 3. Action Verb Filtering
+            word_set = {w.lower().strip(".,;:()") for w in words}
+            if any(verb in word_set for verb in ACTION_VERBS):
+                continue
+                
+            skills_raw.append(s)
         
         t2 = time.time()
         try:
