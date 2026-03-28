@@ -28,31 +28,48 @@ client = genai.Client(api_key=api_keys[current_key_idx])
 # إعداد الـ Prompt
 system_prompt = """
 You are an expert Tech Recruiter and Data Annotator.
-Generate 10 completely unique, highly realistic, and visually messy snippets from Technical Resumes.
-CRITICAL REQUIREMENTS:
-1. Domains: Ensure an EQUAL and RANDOM distribution across ALL tech fields (e.g., Backend, Frontend, DevOps, Mobile, AI/Data Science, Cyber Security, Cloud Computing, QA, Networking). DO NOT favor any specific technology or framework.
-2. Realism: Mimic human CVs exactly. Include dates, URLs, percentages, bullet points (•, -, *), weird spacings, typos, and imperfect grammar.
-3. Soft Skills: DO NOT ignore soft skills. Include them naturally (e.g., "Leadership", "Excellent Communication", "Problem Solving").
-4. Realistic Noise: Introduce occasional typos, varied bullet point styles, missing punctuation, and non-standard section headers (e.g., "Work Hist.", "Tech Stack") to make the model robust against imperfect resumes.
+Generate 10 completely unique, highly realistic CV snippets following these STRICT rules:
 
-Generate high-quality, full sentences (CV snippets). Do NOT pre-tokenize the text.
-For each snippet, provide the full text and a list of exact entity strings with their types.
-Categories:
-- SKILL: Technical skills, tools, languages, frameworks (e.g., "React", "Python", "Docker", "Figma", "AWS").
+=== DISTRIBUTION RULES ===
+- 8 out of 10 samples MUST be "POSITIVE" samples: realistic CV bullet points, work history entries, or skill sections where technical terms are used as ACTUAL skills/achievements.
+- 2 out of 10 samples MUST be "NEGATIVE" (Decoy) samples: sentences where technical keywords (e.g., "Python", "Laravel", "React", "Docker") appear ONLY in a conversational, managerial, or general context — NOT as a demonstrated skill or achievement. For example:
+    - "I had a discussion with my manager about the Laravel project timeline."
+    - "Our team decided to move away from React due to budget constraints."
+    - "The client mentioned they use various cloud tools in their office."
+  For ALL negative samples, the "entities" list MUST be an EMPTY array []. Do NOT annotate any word in a negative sample.
+
+=== POSITIVE SAMPLE RULES ===
+1. Domains: Ensure EQUAL and RANDOM distribution across ALL tech fields (Backend, Frontend, DevOps, Mobile, AI/Data Science, Cyber Security, Cloud, QA, Networking).
+2. Sentence Variety: Mix the following formats equally:
+   - Bullet point style (e.g., "• Built REST APIs using Node.js and Express.")
+   - Work History style (e.g., "Jan 2021 – Mar 2023 | Senior Backend Engineer at TechCorp: Developed microservices using Go and Kubernetes.")
+   - Education/Certification style (e.g., "B.Sc. Computer Science, Cairo University — Thesis on Machine Learning with TensorFlow.")
+   - Casual professional summary (e.g., "Experienced full-stack developer with 5+ yrs in React, Django, and PostgreSQL.")
+3. Realism: Mimic human CVs. Include dates, percentages, bullet points (•, -, *), occasional typos, weird spacings, and imperfect grammar.
+4. Soft Skills: Include naturally (e.g., "Leadership", "Problem Solving", "Excellent Communication").
+5. Realistic Noise: Vary bullet styles, use non-standard headers (e.g., "Work Hist.", "Tech Stack:", "Core Competencies").
+
+=== ANNOTATION RULES ===
+Categories for POSITIVE samples ONLY:
+- SKILL: Technical skills, tools, languages, frameworks (e.g., "React", "Python", "Docker", "Figma", "AWS"). Keep entity text SHORT — single words or at most a 2-3 word tech name. Do NOT annotate entire phrases.
 - SOFT: Soft skills and interpersonal traits (e.g., "Teamwork", "Agile leadership").
 - ROLE: Job titles (e.g., "Senior Cloud Architect").
 - EDU: Degrees and majors (e.g., "B.Sc. Computer Science").
 - CERT: Certifications (e.g., "AWS Certified Solutions Architect").
 
-Output MUST be a valid JSON array of objects. Example:
+Output MUST be a valid JSON array of exactly 10 objects. Examples:
 [
   {
-    "text": "• Led a team of Flutter Devs with strong communication.",
+    "text": "• Built scalable REST APIs using Node.js and deployed via Docker on AWS EC2.",
     "entities": [
-      {"text": "Flutter", "label": "SKILL"},
-      {"text": "Devs", "label": "ROLE"},
-      {"text": "communication", "label": "SOFT"}
+      {"text": "Node.js", "label": "SKILL"},
+      {"text": "Docker", "label": "SKILL"},
+      {"text": "AWS EC2", "label": "SKILL"}
     ]
+  },
+  {
+    "text": "During our sprint retrospective, the team agreed that Python scripts were causing delays in the pipeline discussion.",
+    "entities": []
   }
 ]
 """
