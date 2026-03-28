@@ -236,7 +236,7 @@ def _merge_ner_tokens(tokens: Iterable[dict], original_text: str) -> List[Tuple[
     Merges subword tokens and groups B/I tags using offset_mapping to slice original text.
     Returns: [(entity_text, entity_label, (start, end), confidence_score), ...]
     """
-    merged: List[Tuple[str, str, Tuple[int, int], float]] = []
+    raw_entities: List[Tuple[str, int, int, List[float]]] = []
 
     cur_label: Optional[str] = None
     cur_start: Optional[int] = None
@@ -246,12 +246,7 @@ def _merge_ner_tokens(tokens: Iterable[dict], original_text: str) -> List[Tuple[
     def flush() -> None:
         nonlocal cur_label, cur_start, cur_end, cur_scores
         if cur_label and cur_start is not None and cur_end is not None:
-            # Slice exactly from original text to prevent character dropping
-            ent_text = original_text[cur_start:cur_end]
-            ent_text = _clean_entity_text(ent_text)
-            if ent_text:
-                avg_score = sum(cur_scores) / len(cur_scores) if cur_scores else 0.0
-                merged.append((ent_text, cur_label, (cur_start, cur_end), avg_score))
+            raw_entities.append((cur_label, cur_start, cur_end, cur_scores))
         cur_label = None
         cur_start = None
         cur_end = None
@@ -312,6 +307,52 @@ def _merge_ner_tokens(tokens: Iterable[dict], original_text: str) -> List[Tuple[
         last_end = end
 
     flush()
+
+    # Apply Intelligent Boundary Expansion
+    merged: List[Tuple[str, str, Tuple[int, int], float]] = []
+    text_len = len(original_text)
+
+    for i, (label, start, end, scores) in enumerate(raw_entities):
+        new_start = start
+        new_end = end
+
+        # Left-Expansion logic
+        while new_start > 0:
+            char_before = original_text[new_start - 1]
+            if char_before.isspace() or not (char_before.isalnum() or char_before in "_-+.#"):
+                break
+            
+            # Safety Guard: Ensure this expansion doesn't cross into another already identified entity.
+            if i > 0:
+                _, _, last_end_tuple, _ = merged[-1]
+                if new_start - 1 < last_end_tuple[1]:
+                    break
+            
+            new_start -= 1
+
+        # Right-Expansion logic
+        while new_end < text_len:
+            char_after = original_text[new_end]
+            if char_after.isspace() or not (char_after.isalnum() or char_after in "_-+.#"):
+                break
+                
+            # Safety Guard: Check against NEXT entity's start
+            if i + 1 < len(raw_entities):
+                next_start = raw_entities[i+1][1]
+                if new_end >= next_start:
+                    break
+                    
+            new_end += 1
+
+        if new_start != start or new_end != end:
+            logger.debug(f"Expanded entity boundary from ({start}, {end}) to ({new_start}, {new_end})")
+
+        ent_text = original_text[new_start:new_end]
+        ent_text = _clean_entity_text(ent_text)
+        if ent_text:
+            avg_score = sum(scores) / len(scores) if scores else 0.0
+            merged.append((ent_text, label, (new_start, new_end), avg_score))
+
     return merged
 
 
