@@ -128,8 +128,8 @@ class AdvancedNEREngine:
         has_custom_labels = any(str(t.get("entity", "")).endswith(("SKILL", "ROLE", "EDU", "CERT")) for t in tokens)
 
         if has_custom_labels:
-            merged = _merge_ner_tokens(tokens)
-            for ent_text, ent_label, (start, end) in merged:
+            merged = _merge_ner_tokens(tokens, safe_text)
+            for ent_text, ent_label, (start, end), _score in merged:
                 if not ent_text:
                     continue
 
@@ -151,8 +151,8 @@ class AdvancedNEREngine:
                     grouped["certifications"].append(ent_text)
 
         else:
-            merged = _merge_ner_tokens(tokens)
-            for ent_text, ent_label, _span in merged:
+            merged = _merge_ner_tokens(tokens, safe_text)
+            for ent_text, ent_label, _span, _score in merged:
                 base = ent_label.split("-")[-1] if "-" in ent_label else ent_label
                 if base in ("PER", "PERSON"):
                     grouped["people"].append(ent_text)
@@ -231,26 +231,31 @@ def _build_word_spans(text: str) -> List[Tuple[str, int, int]]:
     return spans
 
 
-def _merge_ner_tokens(tokens: Iterable[dict]) -> List[Tuple[str, str, Tuple[int, int]]]:
+def _merge_ner_tokens(tokens: Iterable[dict], original_text: str) -> List[Tuple[str, str, Tuple[int, int], float]]:
     """
-    Merges subword tokens while preserving original character spans.
-    Returns: [(entity_text, entity_label, (start, end)), ...]
+    Merges subword tokens and groups B/I tags using offset_mapping to slice original text.
+    Returns: [(entity_text, entity_label, (start, end), confidence_score), ...]
     """
-    merged: List[Tuple[str, str, Tuple[int, int]]] = []
+    merged: List[Tuple[str, str, Tuple[int, int], float]] = []
 
-    cur_text = ""
     cur_label: Optional[str] = None
     cur_start: Optional[int] = None
     cur_end: Optional[int] = None
+    cur_scores: List[float] = []
 
     def flush() -> None:
-        nonlocal cur_text, cur_label, cur_start, cur_end
-        if cur_text and cur_label and cur_start is not None and cur_end is not None:
-            merged.append((_clean_entity_text(cur_text), cur_label, (cur_start, cur_end)))
-        cur_text = ""
+        nonlocal cur_label, cur_start, cur_end, cur_scores
+        if cur_label and cur_start is not None and cur_end is not None:
+            # Slice exactly from original text to prevent character dropping
+            ent_text = original_text[cur_start:cur_end]
+            ent_text = _clean_entity_text(ent_text)
+            if ent_text:
+                avg_score = sum(cur_scores) / len(cur_scores) if cur_scores else 0.0
+                merged.append((ent_text, cur_label, (cur_start, cur_end), avg_score))
         cur_label = None
         cur_start = None
         cur_end = None
+        cur_scores = []
 
     last_end = -1
     for t in tokens:
@@ -258,43 +263,56 @@ def _merge_ner_tokens(tokens: Iterable[dict]) -> List[Tuple[str, str, Tuple[int,
         label = str(t.get("entity", "") or "")
         start = int(t.get("start", -1) or -1)
         end = int(t.get("end", -1) or -1)
+        score = float(t.get("score", 0.0) or 0.0)
+        
         if not word or start < 0 or end < 0:
             continue
 
         base = label.split("-")[-1] if "-" in label else label
         is_inside = label.startswith("I-")
-
-        clean_token = word.replace("##", "")
+        is_begin = label.startswith("B-")
+        is_subword = word.startswith("##")
 
         if cur_label is None:
             cur_label = base
-            cur_text = clean_token
             cur_start = start
             cur_end = end
+            cur_scores.append(score)
             last_end = end
             continue
 
-        # Merge rule:
-        # - WordPiece continuation (##) or adjacent offsets => concatenate
-        # - I- tag with same base => space-join
-        if word.startswith("##") or start == last_end:
-            cur_text += clean_token
-            cur_end = end
-        elif is_inside and cur_label == base:
-            cur_text += " " + clean_token
-            cur_end = end
+        # Merge condition:
+        # 1. Same base label AND it's an I- tag
+        # 2. It's a subword (starts with ##)
+        # 3. EXACT adjacent tokens without space (start == last_end) and not a B- tag
+        merge = False
+        is_same_base = (base == cur_label)
+
+        if is_same_base:
+            if is_inside:
+                merge = True
+            elif is_subword:
+                merge = True
+            elif start == last_end and not is_begin:
+                merge = True
+        elif is_subword:
+            # Allow merging subword even if model incorrectly predicted different base
+            merge = True
+
+        if merge:
+            cur_end = max(cur_end, end)
+            cur_scores.append(score)
         else:
             flush()
             cur_label = base
-            cur_text = clean_token
             cur_start = start
             cur_end = end
+            cur_scores.append(score)
 
         last_end = end
 
     flush()
-    # Drop empties after cleaning.
-    return [(t, l, s) for (t, l, s) in merged if t]
+    return merged
 
 
 def _clean_entity_text(s: str) -> str:
