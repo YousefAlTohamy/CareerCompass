@@ -54,6 +54,14 @@ class ExperienceEngine:
         re.IGNORECASE,
     )
 
+    # Secondary scan to cleanly capture basic formats missed by the primary scan
+    _FALLBACK_RANGE_RE = re.compile(
+        r"(?P<start>(?:\b[A-Za-z]{3,9}\s+)?\b(?:19|20)\d{2}\b)"
+        r"\s*(?:-|to|until|–|—|~)\s*"
+        r"(?P<end>(?:\b[A-Za-z]{3,9}\s+)?\b(?:19|20)\d{2}\b|\b(?:present|current|now|today|till date)\b)",
+        re.IGNORECASE,
+    )
+
     def extract_date_ranges(self, experience_text: str | Iterable[str]) -> List[DateRange]:
         if not DATEUTIL_AVAILABLE:
             logger.error("python-dateutil is not installed; ExperienceEngine disabled.")
@@ -88,6 +96,27 @@ class ExperienceEngine:
                     continue
 
             ranges.append(DateRange(start=start_dt, end=end_dt, source_text=src))
+
+        # --- SECONDARY REGEX FALLBACK ---
+        if not ranges:
+            logger.info("Primary date regex missed. Running fallback scan...")
+            for m in self._FALLBACK_RANGE_RE.finditer(text):
+                start_raw = (m.group("start") or "").strip()
+                end_raw = (m.group("end") or "").strip()
+                src = m.group(0).strip()
+
+                start_dt = self._parse_date_safe(start_raw)
+                end_dt = self._parse_date_safe(self._normalize_present(end_raw))
+
+                if start_dt is None or end_dt is None:
+                    continue
+
+                if start_dt > end_dt:
+                    start_dt, end_dt = end_dt, start_dt
+                    if start_dt > end_dt:
+                        continue
+
+                ranges.append(DateRange(start=start_dt, end=end_dt, source_text=src))
 
         if not ranges:
             logger.info("No date ranges detected in experience text.")
