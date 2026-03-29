@@ -19,9 +19,11 @@ from core.layer1_understanding.schema import (
     Profile,
     SkillItem,
     SkillsSection,
+    ContactInfo,
 )
 from core.layer1_understanding.section_segmenter import SemanticSegmenter
 from core.layer1_understanding.spatial_parser import SpatialTextExtraction, extract_spatial_text_from_pdf
+from core.layer1_understanding.contact_extractor import extract_contacts
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +76,8 @@ class CVOrchestrator:
 
         ordered_text = spatial.text
         segments = self._segmenter.segment(ordered_text)
+        
+        contact_dict = extract_contacts(ordered_text)
 
         # Name + title heuristics from profile-ish area first.
         profile_text = segments.sections.get("profile_summary") or segments.sections.get("uncategorized") or ordered_text
@@ -106,19 +110,43 @@ class CVOrchestrator:
             "optimized", "resolved", "coordinated", "analyzed"
         }
         
+        # Phase 6.2: Global Skill Safeguard (Full-Text Fallback)
+        skills_text = segments.sections.get("skills", "")
+        is_fallback_mode = not skills_text or len(skills_text) < 100
+        
+        skills_source = []
+        if is_fallback_mode:
+            logger.info("Fallback Mode ACTIVE: Skills section missing or < 100 chars. Using full CV text.")
+            skills_source.extend(entities.get("skills", []))
+        else:
+            try:
+                t_skills = time.time()
+                skills_entities = self._ner.extract_entities(skills_text, context_window_words=self._config.ner_context_window_words)
+                logger.info("Latency: NER Inference (Skills Section) took %.2fs", time.time() - t_skills)
+                skills_source.extend(skills_entities.get("skills", []))
+            except Exception as e:
+                logger.exception("NER Inference (Skills Section) failed: %s", e)
+            
+            # Combine with global full-text skills to prevent missing overlapping tech
+            skills_source.extend(entities.get("skills", []))
+        
         skills_raw = []
-        for s in entities.get("skills", []):
+        seen_skills = set()
+        for s in skills_source:
             s_lower = s.lower()
+            if s_lower in seen_skills:
+                continue
+            seen_skills.add(s_lower)
             
             # 1. Role / Org Precedence
             if s_lower in roles_lower or s_lower in orgs_lower:
                 continue
                 
-            # 2. Length restrictions: > 40 characters or > 4 words
+            # 2. Length restrictions: > 40 characters or > 5 words (Phase 6.3)
             if len(s) > 40:
                 continue
             words = s.split()
-            if len(words) > 4:
+            if len(words) > 5:
                 continue
                 
             # 3. Action Verb Filtering
@@ -132,7 +160,7 @@ class CVOrchestrator:
         try:
             canonical_skills = self._canonicalizer.canonicalize_skills(
                 skills_raw,
-                skill_confidence=0.78,
+                skill_confidence=0.65,  # Phase 6.3: lowered from 0.78
                 source="ner",
             )
             canon_time = time.time() - t2
@@ -186,6 +214,13 @@ class CVOrchestrator:
             headline=None,
             summary=segments.sections.get("profile_summary"),
             confidence_score=name_candidate.confidence_score if name_candidate else 0.0,
+            contact=ContactInfo(
+                email=contact_dict.get("email"),
+                phone=contact_dict.get("phone"),
+                linkedin_url=contact_dict.get("linkedin_url"),
+                github_url=contact_dict.get("github_url"),
+                location=contact_dict.get("location")
+            ),
         )
 
         analysis = AnalysisSection(
@@ -212,6 +247,7 @@ class CVOrchestrator:
                 "extraction": {
                     "spatial_status": spatial.status,
                     "word_count_spatial": spatial.word_count,
+                    "raw_text": ordered_text,
                 },
             },
         )

@@ -263,6 +263,13 @@ async def process_hybrid_application(
             "domain":            primary_domain,
             "parsing_status":    parsing_status,
             "total_experience_years": total_experience_years,
+            "contact": {
+                "email": result.profile.contact.email,
+                "phone": result.profile.contact.phone,
+                "linkedin_url": str(result.profile.contact.linkedin_url) if result.profile.contact.linkedin_url else None,
+                "github_url": str(result.profile.contact.github_url) if result.profile.contact.github_url else None,
+                "location": result.profile.contact.location,
+            }
         },
         "scores": {
             "semantic_score_pct": semantic_score_pct,
