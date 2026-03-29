@@ -26,7 +26,7 @@ use RuntimeException;
 class GapAnalysisService implements GapAnalysisServiceInterface
 {
     /**
-     * ai-cv-analyzer base URL (port 8002). Set AI_CV_ANALYZER_URL in .env.
+     * AI Master Gateway URL (Port 8001). Set AI_ORCHESTRATOR_URL in .env.
      */
     private string $gatewayUrl;
 
@@ -34,7 +34,7 @@ class GapAnalysisService implements GapAnalysisServiceInterface
 
     public function __construct()
     {
-        $this->gatewayUrl = rtrim(config('services.ai_cv_analyzer.url', 'http://127.0.0.1:8002'), '/');
+        $this->gatewayUrl = rtrim(config('services.ai_orchestrator.url', 'http://127.0.0.1:8001'), '/');
         $this->timeout    = (int) config('services.ai_cv_analyzer.timeout', 60);
     }
 
@@ -179,21 +179,26 @@ class GapAnalysisService implements GapAnalysisServiceInterface
     /**
      * Call the Python AI Layer 3 match-job endpoint.
      *
-     * POST /api/v2/match-job
+     * POST /api/hybrid-match
      * Request: { cv_text, cv_skills, job_description, job_skills }
-     * Response: { status: "success", layer3_matching: { match_score, semantic_score, skill_overlap_score, missing_skills } }
+     * Response: { hybrid_match_score, semantic_score, tfidf_score, missing_skills }
      *
      * @param array{cv_skills: list<string>, cv_text: string, job_skills: list<string>, job_description: string} $payload
-     * @return array{layer3_matching: array{match_score: float, semantic_score: float, skill_overlap_score: float, missing_skills: list<string>}}|null
+     * @return array{hybrid_match_score: float, semantic_score: float, tfidf_score: float, missing_skills: list<string>}|null
      */
     private function callLayer3MatchApi(array $payload): ?array
     {
-        $url = "{$this->gatewayUrl}/api/v2/match-job";
+        $url = "{$this->gatewayUrl}/api/hybrid-match";
 
         try {
             $response = Http::timeout($this->timeout)
                 ->acceptJson()
-                ->post($url, $payload);
+                ->post($url, [
+                    'cv_skills'       => $payload['cv_skills'],
+                    'cv_text'         => $payload['cv_text'],
+                    'job_description' => $payload['job_description'],
+                    'job_skills'      => $payload['job_skills'],
+                ]);
 
             if ($response->failed()) {
                 Log::error('Layer 3 match-job API returned error', [
@@ -204,13 +209,8 @@ class GapAnalysisService implements GapAnalysisServiceInterface
             }
 
             $data = $response->json();
-            if (!is_array($data) || ($data['status'] ?? '') !== 'success') {
+            if (!is_array($data) || !isset($data['hybrid_match_score'])) {
                 Log::warning('Layer 3 match-job API returned unexpected response', ['data' => $data]);
-                return null;
-            }
-
-            $layer3 = $data['layer3_matching'] ?? null;
-            if (!is_array($layer3)) {
                 return null;
             }
 
@@ -227,16 +227,15 @@ class GapAnalysisService implements GapAnalysisServiceInterface
     /**
      * Map the AI layer3_matching response into the format expected by GapAnalysisController / GapAnalysisResource.
      *
-     * AI returns: match_score, semantic_score, skill_overlap_score, missing_skills (list of skill names)
+     * AI returns: hybrid_match_score, semantic_score, tfidf_score, missing_skills (list of skill names)
      * We must produce: full analysis array with job, match_percentage, matched_skills, missing_skills (full objects with pivot), etc.
      */
     private function mapAiResponseToAnalysisFormat(array $aiResponse, Job $job): array
     {
-        $layer3  = $aiResponse['layer3_matching'] ?? [];
         $jobSkills = $job->skills;
 
-        $matchPercentage = (float) ($layer3['match_score'] ?? 0);
-        $aiMissingNames  = array_map('strval', $layer3['missing_skills'] ?? []);
+        $matchPercentage = (float) ($aiResponse['hybrid_match_score'] ?? 0);
+        $aiMissingNames  = array_map('strval', $aiResponse['missing_skills'] ?? []);
 
         // Build missing_skills: job skills whose names are in aiMissingNames
         $aiMissingLower   = array_map('mb_strtolower', $aiMissingNames);
@@ -395,8 +394,8 @@ class GapAnalysisService implements GapAnalysisServiceInterface
             return 1;
         };
 
-        $totalWeight   = $jobSkills->sum(fn($s) => $getWeight($s->pivot->importance_category ?? 'nice_to_have'));
-        $matchedWeight = $matchedSkillsArr->sum(fn($s) => $getWeight($s['importance_category'] ?? 'nice_to_have'));
+        $totalWeight     = $jobSkills->sum(fn($s) => $getWeight($s->pivot->importance_category ?? 'nice_to_have'));
+        $matchedWeight   = $matchedSkillsArr->sum(fn($s) => $getWeight($s['importance_category'] ?? 'nice_to_have'));
         $matchPercentage = $totalWeight > 0
             ? min(100, ($matchedWeight / $totalWeight) * 100)
             : ($totalRequired > 0 ? ($matchedJobSkills->count() / $totalRequired) * 100 : 0);

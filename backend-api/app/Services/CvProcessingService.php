@@ -84,8 +84,7 @@ class CvProcessingService implements CvProcessingServiceInterface
     }
 
     /**
-     * Call the V3 Python AI CV Parser endpoint (/api/v3/analyze-cv).
-     * Expects CVParseResult JSON schema: profile, stats, skills, experience, analysis.
+     * Call the V3 Python AI CV Parser endpoint.
      *
      * Note: V3 is served by ai-cv-analyzer (typically port 8002). Set AI_GATEWAY_URL
      * in .env to point at that service when using this integration.
