@@ -23,6 +23,7 @@ from core.layer1_understanding.schema import (
 )
 from core.layer1_understanding.section_segmenter import SemanticSegmenter
 from core.layer1_understanding.spatial_parser import SpatialTextExtraction, extract_spatial_text_from_pdf
+from core.layer1_understanding.contact_extractor import extract_contacts
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +76,8 @@ class CVOrchestrator:
 
         ordered_text = spatial.text
         segments = self._segmenter.segment(ordered_text)
+        
+        contact_dict = extract_contacts(ordered_text)
 
         # Name + title heuristics from profile-ish area first.
         profile_text = segments.sections.get("profile_summary") or segments.sections.get("uncategorized") or ordered_text
@@ -212,11 +215,11 @@ class CVOrchestrator:
             summary=segments.sections.get("profile_summary"),
             confidence_score=name_candidate.confidence_score if name_candidate else 0.0,
             contact=ContactInfo(
-                email=None,
-                phone=None,
-                linkedin_url=None,
-                github_url=None,
-                location=None
+                email=contact_dict.get("email"),
+                phone=contact_dict.get("phone"),
+                linkedin_url=contact_dict.get("linkedin_url"),
+                github_url=contact_dict.get("github_url"),
+                location=contact_dict.get("location")
             ),
         )
 

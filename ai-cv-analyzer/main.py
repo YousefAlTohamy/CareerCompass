@@ -1,3 +1,9 @@
+"""
+LEGACY SUB-SERVICE NOTICE
+-------------------------
+This file (ai-cv-analyzer/main.py) is now a sub-service.
+The master API entry point is located in the ai-hybrid-orchestrator/main_api.py folder (running on port 8001).
+"""
 import os
 from dotenv import load_dotenv
 
@@ -48,6 +54,7 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     logger.info("Initializing AI Engine v2 Models (This may take a moment)...")
+    logger.info("NOTICE: ai-cv-analyzer is now a sub-service. Master API runs via ai-hybrid-orchestrator/main_api.py")
     CVDomainClassifier()
     # IntelligentMatcher initializes the SemanticEmbedder automatically
     IntelligentMatcher()

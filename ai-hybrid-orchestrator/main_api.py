@@ -69,9 +69,8 @@ for _p in (_CV_ANALYZER_ROOT, _JOB_MINER_ROOT):
 
 # ── Local orchestrator utilities ─────────────────────────────────────────────
 _ORCH_ROOT = Path(__file__).resolve().parent
-if str(_ORCH_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ORCH_ROOT))
-from contact_extractor import extract_contacts   # noqa: E402
+
+from hybrid_runner import process_hybrid_application # noqa: E402
 
 
 # ── Logging ───────────────────────────────────────────────────────────────────
@@ -185,7 +184,13 @@ async def parse_cv(cv_file: UploadFile = File(...)):
         extraction_method = "v3-orchestrator"
 
         # Contact extraction
-        contact_info = extract_contacts(_build_cv_raw_text(result))
+        contact_info = {
+            "email": result.profile.contact.email,
+            "phone": result.profile.contact.phone,
+            "linkedin_url": str(result.profile.contact.linkedin_url) if result.profile.contact.linkedin_url else None,
+            "github_url": str(result.profile.contact.github_url) if result.profile.contact.github_url else None,
+            "location": result.profile.contact.location,
+        }
 
         # Confidence Thresholds
         warning_flag = False
@@ -544,6 +549,25 @@ async def hybrid_match(body: HybridMatchRequest):
     except Exception as exc:
         logger.exception("hybrid-match failed")
         raise HTTPException(status_code=500, detail=f"Matching error: {exc}") from exc
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Endpoint 5 — POST /process-cv/
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.post("/process-cv/", tags=["Hybrid"])
+async def process_cv_endpoint(job_url: str = Form(...), cv_file: UploadFile = File(...)):
+    import tempfile
+    import os
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+        tmp.write(await cv_file.read())
+        tmp_path = tmp.name
+        
+    try:
+        result = await process_hybrid_application(cv_path=tmp_path, job_url=job_url)
+        return result
+    finally:
+        os.remove(tmp_path)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
