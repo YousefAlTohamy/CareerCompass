@@ -6,9 +6,9 @@ Port: 8000  (consumed by Laravel backend)
 
 Endpoints
 ---------
-  POST /api/v1/parse-cv          Upload CV → text + skills + domain + contacts
-  POST /api/v1/scrape-on-demand  URL → list of parsed job dicts (max 5)
-  POST /api/v1/hybrid-match      cv_text + jd_text → weighted match score
+  POST /api/parse-cv             Upload CV → text + skills + domain + contacts
+  POST /api/scrape-on-demand     URL → list of parsed job dicts (max 5)
+  POST /api/hybrid-match         cv_text + jd_text → weighted match score
 
 Run
 ---
@@ -117,7 +117,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # restrict in production to Laravel's domain
+    allow_origins=["http://localhost:8000", "http://localhost:5173"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -136,94 +136,49 @@ def health_check():
 # Endpoint 1 — POST /api/v1/parse-cv
 # ─────────────────────────────────────────────────────────────────────────────
 
-@app.post("/api/v1/parse-cv", tags=["CV Analysis"])
-async def parse_cv(cv_file: UploadFile = File(...)):
+@app.post("/api/parse-cv", tags=["CV Analysis"])
+async def parse_cv(file: UploadFile = File(...)):
     """
     Upload a CV file (PDF / DOCX / PNG / JPG).
-
-    Returns:
-    - **skills** extracted by BERT NER
-    - **domain** classified by BART-MNLI
-    - **domain_confidence** as a percentage string
-    - **contact_info** (email, phone, linkedin, github, location)
-    - **extraction_method** used (pymupdf, python-docx, easyocr, …)
+    
+    Returns the complete structured CVParseResult for consumption by the Laravel backend.
     """
-    # ── Validate file type ────────────────────────────────────────────────────
     allowed_extensions = {"pdf", "docx", "doc", "png", "jpg", "jpeg"}
-    filename  = cv_file.filename or "upload"
+    filename  = file.filename or "upload"
     extension = filename.rsplit(".", 1)[-1].lower()
+    
     if extension not in allowed_extensions:
         raise HTTPException(
             status_code=422,
             detail=f"Unsupported file type '.{extension}'. Accepted: {sorted(allowed_extensions)}",
         )
 
-    # ── Write to temp file ────────────────────────────────────────────────────
-    tmp_path: str | None = None
     try:
-        file_bytes = await cv_file.read()
+        file_bytes = await file.read()
         if not file_bytes:
             raise HTTPException(status_code=422, detail="Uploaded file is empty.")
 
         if _orchestrator is None:
             raise HTTPException(status_code=500, detail="AI orchestrator is not initialized.")
 
+        # The orchestrator natively returns layer1_understanding.schema.CVParseResult
         result = _orchestrator.process_cv(file_bytes, filename)
-        if result.parsing_status in ("no_text", "empty_file", "error"):
-            logger.warning("File is unprocessable. Returning standardized error.")
-            return {
-                "status": "error",
-                "message": "File unprocessable"
-            }
-
-        cv_skills = [it.name for it in (result.skills.items or []) if getattr(it, "name", None)]
-        cv_roles = [it.title for it in (result.experience.items or []) if getattr(it, "title", None)]
-
-        primary_domain = result.analysis.primary_domain or "Unknown"
-        domain_confidence = "N/A"
-        extraction_method = "v3-orchestrator"
-
-        # Contact extraction
-        contact_info = {
-            "email": result.profile.contact.email,
-            "phone": result.profile.contact.phone,
-            "linkedin_url": str(result.profile.contact.linkedin_url) if result.profile.contact.linkedin_url else None,
-            "github_url": str(result.profile.contact.github_url) if result.profile.contact.github_url else None,
-            "location": result.profile.contact.location,
-        }
-
-        # Confidence Thresholds
-        warning_flag = False
-        name_conf = getattr(result.profile, "confidence_score", 1.0)
-        overall_conf = getattr(result.analysis, "confidence_score", 1.0)
-        if name_conf < 0.75 or overall_conf < 0.75:
-            warning_flag = True
-
-        # تحديث الـ Return عشان يبعت كل الداتا الجديدة للارافيل
-        return {
-            "skills":             cv_skills,
-            "roles":              cv_roles,
-            "education":          [],
-            "certifications":     [],
-            "domain":             primary_domain,
-            "domain_confidence":  domain_confidence,
-            "contact_info":       contact_info,
-            "extraction_method":  extraction_method,
-            "warning":            warning_flag,
-        }
+        
+        # FastAPI implicitly serializes the Pydantic model response
+        return result
 
     except HTTPException:
         raise
     except Exception as exc:
         logger.exception("parse-cv failed")
-        return {"status": "error", "message": "File unprocessable"}
+        raise HTTPException(status_code=500, detail="Internal server error during CV analysis.")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Endpoint 2 — POST /api/v1/scrape-on-demand
 # ─────────────────────────────────────────────────────────────────────────────
 
-@app.post("/api/v1/scrape-on-demand", tags=["Job Scraping"])
+@app.post("/api/scrape-on-demand", tags=["Job Scraping"])
 async def scrape_on_demand(source_url: str = Form(...)):
     """
     Scrape a job listing URL using the full 5-phase ai-job-miner pipeline.
@@ -504,7 +459,7 @@ class HybridMatchRequest(BaseModel):
     job_skills:      list[str] = []
 
 
-@app.post("/api/v1/hybrid-match", tags=["Matching"])
+@app.post("/api/hybrid-match", tags=["Matching"])
 async def hybrid_match(body: HybridMatchRequest):
     """
     Compute a weighted hybrid match score between a CV and a job description.
@@ -555,7 +510,7 @@ async def hybrid_match(body: HybridMatchRequest):
 # Endpoint 5 — POST /process-cv/
 # ─────────────────────────────────────────────────────────────────────────────
 
-@app.post("/process-cv/", tags=["Hybrid"])
+@app.post("/api/process-cv", tags=["Hybrid"])
 async def process_cv_endpoint(job_url: str = Form(...), cv_file: UploadFile = File(...)):
     import tempfile
     import os
