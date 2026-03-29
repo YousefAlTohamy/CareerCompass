@@ -19,6 +19,7 @@ from core.layer1_understanding.schema import (
     Profile,
     SkillItem,
     SkillsSection,
+    ContactInfo,
 )
 from core.layer1_understanding.section_segmenter import SemanticSegmenter
 from core.layer1_understanding.spatial_parser import SpatialTextExtraction, extract_spatial_text_from_pdf
@@ -186,6 +187,13 @@ class CVOrchestrator:
             headline=None,
             summary=segments.sections.get("profile_summary"),
             confidence_score=name_candidate.confidence_score if name_candidate else 0.0,
+            contact=ContactInfo(
+                email=None,
+                phone=None,
+                linkedin_url=None,
+                github_url=None,
+                location=None
+            ),
         )
 
         analysis = AnalysisSection(
@@ -212,6 +220,7 @@ class CVOrchestrator:
                 "extraction": {
                     "spatial_status": spatial.status,
                     "word_count_spatial": spatial.word_count,
+                    "raw_text": ordered_text,
                 },
             },
         )

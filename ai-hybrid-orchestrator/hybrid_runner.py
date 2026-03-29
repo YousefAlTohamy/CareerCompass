@@ -50,6 +50,8 @@ import sys
 from contextlib import contextmanager
 from pathlib import Path
 
+from contact_extractor import extract_contacts
+
 # ─── Root paths ────────────────────────────────────────────────────────────────
 _ROOT             = Path(__file__).resolve().parent.parent
 _JOB_MINER_ROOT   = _ROOT / "ai-job-miner"
@@ -191,6 +193,21 @@ async def process_hybrid_application(
     cv_raw_text = _build_cv_raw_text(result)
     extraction_method = "v3-orchestrator"
 
+    # ── EXTRACT CONTACTS ──
+    raw_pdf_text = result.analysis.metadata.get("extraction", {}).get("raw_text", cv_raw_text)
+    contact_info = extract_contacts(raw_pdf_text)
+    if contact_info:
+        if contact_info.get("email") and not result.profile.contact.email:
+            result.profile.contact.email = contact_info["email"]
+        if contact_info.get("phone") and not result.profile.contact.phone:
+            result.profile.contact.phone = contact_info["phone"]
+        if contact_info.get("linkedin_url") and not result.profile.contact.linkedin_url:
+            result.profile.contact.linkedin_url = contact_info["linkedin_url"]
+        if contact_info.get("github_url") and not result.profile.contact.github_url:
+            result.profile.contact.github_url = contact_info["github_url"]
+        if contact_info.get("location") and not result.profile.contact.location:
+            result.profile.contact.location = contact_info["location"]
+
     # ── Action A: Scrape & parse job listing ──────────────────────────────────
     logger.info("[A] Scraping job via ScrapingEngine…")
     engine = ScrapingEngine(rate=rate, reference_text=cv_raw_text)
@@ -263,6 +280,13 @@ async def process_hybrid_application(
             "domain":            primary_domain,
             "parsing_status":    parsing_status,
             "total_experience_years": total_experience_years,
+            "contact": {
+                "email": result.profile.contact.email,
+                "phone": result.profile.contact.phone,
+                "linkedin_url": str(result.profile.contact.linkedin_url) if result.profile.contact.linkedin_url else None,
+                "github_url": str(result.profile.contact.github_url) if result.profile.contact.github_url else None,
+                "location": result.profile.contact.location,
+            }
         },
         "scores": {
             "semantic_score_pct": semantic_score_pct,
