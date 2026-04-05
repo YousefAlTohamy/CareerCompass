@@ -4,7 +4,7 @@
 
 ## 📋 Overview
 
-The CareerCompass frontend is a modern, responsive React application that provides a **SaaS-level** experience for users to upload CVs, browse jobs, analyze skill gaps, and receive personalized career recommendations. The V3 implementation delivers rich, data-driven UI components with robust error handling.
+The CareerCompass frontend is a modern, responsive React application that provides a **SaaS-level** experience for users to upload CVs, browse jobs, analyze skill gaps, and receive personalized career recommendations. The V3 implementation delivers rich, data-driven UI components with robust error handling and a modular component architecture.
 
 ---
 
@@ -29,6 +29,14 @@ The CareerCompass frontend is a modern, responsive React application that provid
 | **Evidence Tooltips** | Hover tooltips showing `evidence` (where the skill was found); safe optional chaining |
 | **Rich Profile Pills** | Total experience years, seniority, primary domain |
 
+### Market Intelligence
+
+| Feature | Implementation |
+| ------- | -------------- |
+| **Interactive Skill Trends** | Rendered via Recharts `AreaChart` and `BarChart` to display dynamic data |
+| **Live Quick Stats** | Live top-level indicators for active listings, unique roles, average skills per job |
+| **Dynamic AI Summary** | Context-aware, AI-generated summary section synthesizing data across roles and skills |
+
 ### Gap Analysis — General CV Health
 
 | Feature | Implementation |
@@ -37,15 +45,24 @@ The CareerCompass frontend is a modern, responsive React application that provid
 | **Gaps** | Amber-themed list from `cv_analysis.gaps` (missing sections/info) |
 | **Red Flags** | Rose-themed list from `cv_analysis.red_flags` (anomalies) |
 | **Completeness Ring** | CV completeness score from `cv_analysis.completeness_score` |
-| **Premium Match Gauge** | Radial bar for job match percentage |
+| **Premium Match Gauge** | Radial bar representing the overall job match percentage utilizing Recharts |
+| **Animated Recommendations** | `TypingEffect` component renders tailored AI advice dynamically |
+| **Suggested Learning Paths** | Component mapping priority gaps to external curriculum links (Coursera/Udemy) |
 
 ### Robust Error Handling
 
 | Feature | Implementation |
 | ------- | -------------- |
 | **Error Boundary** | Catches React render errors and unhandled promise rejections; displays fallback UI with refresh button |
-| **Safe Optional Chaining** | `?.` and null checks throughout; `getSkillName()`, `getSkillScore()`, `getRecText()` helpers prevent "White Screen of Death" |
-| **401 Interceptor** | Axios interceptor purges token and redirects to login on 401 |
+| **Safe Optional Chaining** | `?.` and null checks throughout; safely scoped helpers prevent "White Screen of Death" |
+| **Global Alerts** | Custom `ErrorAlert` and `SuccessAlert` wrappers handling visual push notifications |
+
+### Internationalization (i18n)
+
+| Feature | Implementation |
+| ------- | -------------- |
+| **Dynamic Translation Hooks** | Deployed with `react-i18next` and `i18next-browser-languagedetector` |
+| **Localized UI Text** | Entire interface relies on the `useTranslation` hook pointing to local namespace files |
 
 ---
 
@@ -54,15 +71,15 @@ The CareerCompass frontend is a modern, responsive React application that provid
 ```
 frontend/
 ├── src/
-│   ├── api/           # client.js, endpoints.js, scrapingSources.js
-│   ├── components/    # Navbar, ErrorBoundary, ProcessingAnimation, etc.
-│   ├── context/       # AuthContext
-│   ├── hooks/         # useAsync, useAuthHandler, useOnDemandScraping, useScrapingStatus
+│   ├── api/             # client.js, endpoints.js, scrapingSources.js, applications.js
+│   ├── components/      # Navbar, ErrorBoundary, ProcessingAnimation, TypingEffect, Alerts, etc.
+│   ├── context/         # AuthContext.jsx, ThemeContext.jsx
+│   ├── hooks/           # useAsync, useAuthHandler, useOnDemandScraping, useScrapingStatus
 │   ├── pages/
-│   │   ├── admin/     # AdminSources, AdminDashboard, AdminJobs, AdminUsers
-│   │   └── user/      # Dashboard, Profile, GapAnalysis, Jobs, Applications, MarketIntelligence
-│   ├── services/      # storageService.js
-│   ├── App.jsx, main.jsx, index.css
+│   │   ├── admin/       # AdminSources, AdminDashboard, AdminJobs, AdminUsers, AdminTargets
+│   │   └── user/        # Dashboard, Profile, GapAnalysis, Jobs, Applications, MarketIntelligence
+│   ├── services/        # storageService.js
+│   ├── App.jsx, main.jsx, index.css, i18n.js
 │   └── ...
 ├── package.json
 ├── vite.config.js
@@ -100,17 +117,19 @@ App: http://localhost:5173
 
 ## 🗺️ Routes & Pages
 
-| Route | Page | Description |
-| ----- | ---- | ----------- |
-| `/` | Home | Landing page |
-| `/login`, `/register` | Auth | Login / registration |
-| `/user/dashboard` | Dashboard | Profile completeness, top skills, AI insights |
-| `/user/profile` | Profile | Experience timeline, skill confidence bars, evidence tooltips |
-| `/user/jobs` | Jobs | Job listings, match scores, recommended jobs |
-| `/user/gap-analysis/:jobId` | GapAnalysis | Job-specific gap analysis, strengths, gaps, red flags |
-| `/user/market` | MarketIntelligence | Recharts trends, trending skills |
-| `/user/applications` | Applications | Job application tracker (Kanban) |
-| `/admin/*` | Admin | Scraping sources, jobs, users (RBAC) |
+Routing leverages `react-router-dom` enveloped in Framer Motion's `<AnimatePresence>` to orchestrate seamless page transitions.
+
+| Route | Page | Description | Route Protection Logic |
+| ----- | ---- | ----------- | ----------------------- |
+| `/` | Home | Landing page | Public |
+| `/login`, `/register` | Auth | Login / registration | `GuestRoute` (redirects existing sessions) |
+| `/user/dashboard` | Dashboard | Profile completeness, top skills | `ProtectedRoute` |
+| `/user/profile` | Profile | Experience timeline, skill updates | `ProtectedRoute` |
+| `/user/jobs` | Jobs | Job listings, recommended jobs | `ProtectedRoute` |
+| `/user/gap-analysis/:jobId` | GapAnalysis | Job-specific gap analysis | `ProtectedRoute` |
+| `/user/market` | MarketIntelligence | Recharts trends, trending skills | `ProtectedRoute` |
+| `/user/applications` | Applications | Job application tracker (Kanban) | `ProtectedRoute` |
+| `/admin/*` | Admin | Scraping sources, jobs, users | `ProtectedRoute requireAdmin={true}` (Role RBAC) |
 
 ---
 
@@ -120,15 +139,24 @@ App: http://localhost:5173
 | --------- | ------- |
 | **ErrorBoundary** | Catches errors; prevents full-page crash; shows refresh option |
 | **ProcessingAnimation** | Animated CV-processing overlay; 5s discovery message |
-| **ProtectedRoute** | Auth guard; optional `requireAdmin` for admin routes |
+| **ProtectedRoute** | Modular Auth guard; supports standard and admin RBAC validation |
 | **Navbar** | Scroll-aware glassmorphism; avatar dropdown; admin icon |
+| **PremiumMatchGauge** | SVG-data radial representation visualization mapped from gap analysis score |
+| **CompletenessRing** | Health indication SVG pie-chart mapping for general CV profile coverage |
+| **TypingEffect** | Text rendering tool utilizing intervals for AI-generated advisory interactions |
+| **LearningResource** | Direct resource navigation mapper querying strings against Udemy & Coursera |
 
 ---
 
 ## 📡 API Integration
 
-- **client.js** — Axios base URL, token injection, 401 logout
-- **endpoints.js** — `authAPI`, `jobsAPI`, `cvAPI`, `gapAnalysisAPI`, etc.
+Centralized under `src/api`, utilizing a structured Axios configuration mapping.
+
+- **client.js**: Maintains the core instance and defines the **Axios Interceptor** pipeline.
+  - **Request Interceptor**: Auto-appends the required `Bearer {token}` logic derived from `localStorage`. 
+  - **Response Interceptor**: Uniformly catches `401 Unauthorized` responses and enforces a complete authentication purge prior to redirect.
+- **endpoints.js**: Maps abstract functions for endpoints like `authAPI`, `jobsAPI`, `cvAPI`, and `gapAnalysisAPI`.
+- **scrapingSources.js & applications.js**: Dedicated APIs governing admin configurations and user tracker persistence.
 
 ---
 
@@ -136,16 +164,19 @@ App: http://localhost:5173
 
 | Technology | Purpose |
 | ---------- | ------- |
-| React 19 | UI library |
-| Vite 7 | Build tool |
-| Tailwind CSS | Utility-first styling |
-| Framer Motion | Animations |
-| Recharts | Charts (Pie, Radar, RadialBar) |
-| Axios | HTTP client |
-| Lucide React | Icons |
+| React 19 | Core UI library interface rendering framework |
+| Vite 7 | Modern lightweight build tooling |
+| Tailwind CSS | Utility-first styling methodology |
+| Tailwind Merge & clsx | Dynamic CSS class deduplication and condition application utilities |
+| Framer Motion | Specialized React animation primitives library |
+| Recharts | Comprehensive SVG data visualization package |
+| Axios | Reliable Promise-based HTTP protocol client |
+| Lucide React | Clean minimalist SVG Icon Library Implementation |
+| i18next & react-i18next | Multi-language scaling namespace controller suite  |
+| SweetAlert2 | Pop-up styled modal alert notifications framework |
 
 ---
 
-**Last Updated**: March 2026  
-**Version**: 1.3.0  
-**Status**: ✅ V3 UI — Dashboard, Profile, Gap Analysis, Error Boundary
+**Last Updated**: April 2026  
+**Version**: 1.3.1  
+**Status**: ✅ V3 UI — Dashboard, Profile, Gap Analysis, Market Intelligence, Protected Admin Routes
