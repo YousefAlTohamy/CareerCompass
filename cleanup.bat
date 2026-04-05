@@ -7,6 +7,10 @@ echo.
 :: Ensure we are starting from the script's directory
 cd /d "%~dp0"
 
+echo Terminating Python Processes...
+taskkill /f /im python.exe >nul 2>&1
+echo.
+
 echo Cleaning Backend...
 if exist backend-api (
     cd backend-api
