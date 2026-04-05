@@ -24,6 +24,7 @@
 2. Resolves `core/` namespace collision via `_only()` context manager — wipes `sys.modules`, sets exclusive `sys.path`
 3. Loads ai-job-miner modules (`ScrapingEngine`, `match_score`)
 4. Orchestrates: CV parse (V3) → Job scrape → Hybrid scoring
+   *(Note: CV parsing natively includes structured contact extraction, eliminating redundant local extraction logic.)*
 
 **Usage:**
 ```bash
@@ -45,9 +46,9 @@ When Laravel performs **job matching** (e.g., gap analysis), it does **not** re-
    - **job_skills**: From `job_skills` pivot
    - **job_description**: Raw `jobs.description` text
 
-2. Laravel sends this payload to either:
-   - **ai-cv-analyzer** `POST /api/v2/match-job` (port 8002) — Layer 3 semantic matching
-   - **ai-hybrid-orchestrator** `POST /api/v1/hybrid-match` (port 8001) — Semantic + TF-IDF hybrid
+2. Laravel sends this payload to:
+   - **ai-hybrid-orchestrator** `POST /api/hybrid-match` (port 8001) — Semantic + TF-IDF hybrid
+   *(Note: The legacy `/api/v2/match-job` was deprecated during the AI Gateway architecture consolidation)*
 
 3. **No PDF re-parsing** — all data comes from the normalized Laravel database. This:
    - Eliminates redundant AI inference
@@ -74,13 +75,28 @@ If the semantic/Layer 3 match API (e.g., ai-cv-analyzer port 8002) is **unreacha
 ```
 ai-hybrid-orchestrator/
 ├── __init__.py              # Package marker
-├── contact_extractor.py     # Regex: email, phone, LinkedIn, GitHub, location
 ├── hybrid_runner.py         # CLI Facade — full pipeline runner
-├── main_api.py              # FastAPI gateway — 3 Laravel endpoints
-├── test_api.py              # End-to-end TestClient (5 test groups)
-├── .env.example             # Template for API credentials
+├── main_api.py              # FastAPI gateway — Laravel endpoints
+├── test_api.py              # End-to-end TestClient
+├── .env.example             # Template for API credentials (Adzuna, HF)
 └── README.md                # This file
 ```
+
+---
+
+## Environment Variables
+
+Copy the `.env.example` file to configure external service integrations:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Purpose |
+|----------|---------|
+| `ADZUNA_APP_ID` | API ID for the Adzuna job scraper. Automatically injected when targeting an `adzuna.com` source endpoint. |
+| `ADZUNA_APP_KEY`| API Key for the Adzuna job scraper. Forces the scraper into API mode bypassing the HTML redirect. |
+| `HF_TOKEN`      | HuggingFace token for accessing gated models (optional). |
 
 ---
 
@@ -114,15 +130,23 @@ Heavy AI models are loaded **once** at startup as singletons:
 
 Health check.
 
-### `POST /api/v1/parse-cv`
+### `POST /api/parse-cv`
 
-Upload CV (PDF/DOCX/PNG/JPG) → skills, domain, contact_info, extraction_method.
+Upload CV (PDF/DOCX/PNG/JPG) → profile contacts, skills, domain, parsing status, statistics, structured experience.
 
-### `POST /api/v1/scrape-on-demand`
+### `POST /api/scrape-on-demand`
 
-Scrape job listing URL → up to 5 parsed job dicts.
+Scrape job listing URL using `ScrapingEngine` → up to 5 parsed job dicts.
 
-### `POST /api/v1/hybrid-match`
+### `POST /test-source`
+
+Test a single configured job scraping source and inject search queries. Automatically converts `adzuna.com` queries and overrides parameters based on the `.env` settings.
+
+### `POST /scrape-jobs`
+
+Background market scraping endpoint. Batch streams multiple job sources concurrently and unifies the return structure without internal HTML scraping bottlenecks. Used by Laravel's `ProcessMarketScraping` job.
+
+### `POST /api/hybrid-match`
 
 Compute weighted hybrid match score.
 
@@ -149,6 +173,10 @@ Compute weighted hybrid match score.
 }
 ```
 
+### `POST /api/process-cv`
+
+End-to-End Orchestration. Combines CV parsing and job scraping natively. Consumes a `cv_file` and `job_url` from form data, saves a temporary file, and runs `process_hybrid_application`.
+
 ---
 
 ## Namespace Isolation
@@ -171,10 +199,10 @@ python test_api.py
 | Test Group           | What is verified                                                                 |
 | -------------------- | -------------------------------------------------------------------------------- |
 | Test 0 — `GET /`     | Health check                                                                     |
-| Test 1 — parse-cv    | Skills, domain, contact_info, extraction_method                                  |
-| Test 2 — scrape      | Jobs list from Remotive                                                          |
+| Test 1 — parse-cv    | Skills, domain, contact_info, parsing validation                                 |
+| Test 2 — scrape      | Jobs list from Remotive via `ScrapingEngine`                                     |
 | Test 3 — hybrid-match| hybrid_match_score, semantic_score, tfidf_score, missing_skills                  |
-| Test 4 — Validation  | .txt → 422, ftp:// → 422, blank cv_text → 422                                   |
+| Test 4 — Validation  | .txt → 422, blank cv_text → 422, invalid endpoints handling                      |
 
 ---
 
@@ -191,4 +219,4 @@ python test_api.py
 
 ---
 
-**Last Updated**: March 2026
+**Last Updated**: April 2026

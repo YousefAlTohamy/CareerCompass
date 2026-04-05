@@ -53,6 +53,7 @@ A highly scalable, generic web-scraping engine built with advanced software-engi
 | ------------- | ------------------------------------------------------------------- |
 | **Language**  | Python 3.11+                                                        |
 | **Async I/O** | `aiohttp` — non-blocking HTTP from day one                          |
+| **DOM Engine**| `beautifulsoup4` — heuristic tree parsing & token generation        |
 | **Patterns**  | Strategy, Factory · Bloom Filter, TF-IDF, DP Levenshtein, Regex FSM |
 | **Testing**   | `pytest` + `pytest-asyncio`; all network I/O is mocked              |
 | **Goal**      | A drop-in AI scraping library usable by any Python project          |
@@ -259,6 +260,8 @@ class ScraperFactory:
 | Changing class names breaks callers                         | Change the registry entry, callers are unaffected      |
 | Cannot use dependency injection or mocking easily           | Mock the factory in tests                              |
 
+> **Target Integration Context**: While the inner engine remains purely generic, the external orchestration gateway utilizes this factory to map differing job board sources seamlessly. For instance, the hybrid system natively invokes the `JsonApiScraper` for dynamically structured `adzuna.com` URLs, whilst dropping back to the `HtmlSmartScraper` for unstructured generic sites.
+
 ---
 
 ### Quick-Start Code Snippet
@@ -297,6 +300,12 @@ asyncio.run(main())
 
 Phase 2 eliminates the need for brittle, site-specific CSS selectors or XPath expressions.
 Instead, we use four complementary **CS algorithms** to extract structured data from _any_ HTML page.
+
+---
+
+### DOM Pre-Sanitization (Noise Evasion)
+
+Before any algorithmic scoring executes, the DOM is scrubbed of structural noise. `html_scraper.py` explicitly discovers and executes `.decompose()` on `["script", "style", "noscript", "nav", "footer", "header"]`. This guarantees that high-density navigation links or bloated footer texts do not skew the heuristic calculations.
 
 ---
 
@@ -653,7 +662,7 @@ URL → SmartAsyncClient.get()      [Phase 5: rate-limited, retrying]
     → JobDeduplicator             [Phase 3: SHA-256 + Bloom Filter]
     → CustomSkillExtractor        [Phase 4: NER lexicon]
     → match_score()               [Phase 4: TF-IDF cosine]
-    → yield job_dict (11 fields)  [Phase 5: O(1) stream]
+    → yield job_dict (12 fields)  [Phase 5: O(1) stream]
     → DLQ on failure              [Phase 5: fault tolerance]
 ```
 
@@ -661,12 +670,15 @@ URL → SmartAsyncClient.get()      [Phase 5: rate-limited, retrying]
 engine = ScrapingEngine(rate=3.0, reference_text="Python Django REST API")
 
 async for job in engine.stream_jobs(url_list):
-    # Each yielded dict has 11 fields:
+    # Each yielded dict conforms to a strict 12-key schema:
+    print(job["url"])           # "https://..."
     print(job["title"])         # "Senior Backend Engineer"  — <h1> extraction
     print(job["job_type"])      # "Full-time"                — Regex FSM
     print(job["work_model"])    # "Remote"                   — Regex FSM
     print(job["location"])      # "Cairo, Egypt"             — semantic proximity
     print(job["working_hours"]) # "40 hours/week"            — Regex FSM
+    print(job["description"])   # *Truncated to 500 chars limit*
+    print(job["raw_salary_hint"])# "$90k - $120k"
     print(job["salary"])        # {min: 90000, max: 120000, currency: "USD"}
     print(job["experience"])    # {min_exp: 4, max_exp: 6}
     print(job["skills"])        # ["python", "django", "fastapi", ...]
@@ -677,6 +689,8 @@ async for job in engine.stream_jobs(url_list):
 print(engine.dlq.summary)            # inspect failures
 retryable = await engine.dlq.get_retryable()  # re-queue for retry
 ```
+
+> **Technical Note on Payload Truncation**: The `description` field is intentionally truncated to `[:500]` characters before yielding. This is a critical safety mechanism designed to prevent memory inflation and heavy network payloads when streaming large batches of jobs back to the hybrid orchestrator over REST API.
 
 ---
 
@@ -736,6 +750,19 @@ tests/test_ai.py::...          PASSED
 tests/test_performance.py::... PASSED
 186 passed in ~1.6s
 ```
+
+---
+
+## Local Standalone Runner (`run_engine.py`)
+
+For local debugging without orchestrating the full Laravel or FastAPI gateway stack, the engine provides a standalone CLI runner. This script traces the complete 5-stage pipeline locally, dumping outputs directly to a local text file.
+
+```bash
+# Run the standalone pipeline on test URLs
+python run_engine.py
+```
+
+This is extremely useful when adding new regex classifiers in Phase 3 or tuning the TF-IDF math in Phase 4, as it provides immediate end-to-end confirmation of data output structures and AI match scores.
 
 ---
 
