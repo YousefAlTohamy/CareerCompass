@@ -46,8 +46,8 @@ export default {
         light: '#f8fafc',
       },
       fontFamily: {
-        sans: ['Inter', 'Outfit', 'system-ui', '-apple-system', 'sans-serif'],
-        arabic: ['Inter', 'system-ui', 'sans-serif'], // Fallback for Arabic
+        sans: ['"IBM Plex Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+        arabic: ['"IBM Plex Sans Arabic"', 'inter', 'system-ui', 'sans-serif'], // Added Inter as a fallback for Arabic consistency
       },
       boxShadow: {
         'premium': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',

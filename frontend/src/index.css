@@ -10,14 +10,24 @@
   }
 
   body {
-    font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+    @apply font-sans bg-light text-slate-900 transition-colors duration-300;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    @apply bg-light text-slate-900 transition-colors duration-300;
+    line-height: 1.5;
   }
 
   [dir="rtl"] body {
-    font-family: 'Inter', system-ui, sans-serif;
+    @apply font-arabic text-[1.05rem];
+    line-height: 1.75;
+    letter-spacing: 0;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight;
+  }
+
+  [dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, [dir="rtl"] h4, [dir="rtl"] h5, [dir="rtl"] h6 {
+    @apply tracking-normal font-semibold;
   }
 
   #root {
