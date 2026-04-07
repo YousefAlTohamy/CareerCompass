@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import logging
 import re
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Iterable, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, Sequence, Tuple
+
+if TYPE_CHECKING:
+    from core.layer1_understanding.schema import ExperienceItem
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +140,72 @@ class ExperienceEngine:
         # Convert days to years (365.25 to approximate leap years)
         years = total_days / 365.25
         return round(float(max(0.0, years)), 2)
+
+    # ------------------------------------------------------------------
+    # Phase 2: Per-skill duration (Temporal Data Mapping)
+    # ------------------------------------------------------------------
+
+    def calculate_skill_durations(
+        self,
+        experience_items: List[ExperienceItem],
+    ) -> Dict[str, float]:
+        """
+        Compute the effective duration (in years) for each technology
+        across all experience items.
+
+        Overlap handling:
+        - If two jobs run concurrently and both list "Python", the
+          overlapping interval is counted only once via `_merge_date_ranges`.
+
+        Items with ``start_date is None`` or ``end_date is None`` are
+        skipped for duration purposes — their skills will still appear in
+        the ExperienceItem.technologies list but won't contribute to the
+        accumulated duration.
+
+        Returns:
+            Dict mapping canonical skill name → total effective years (float).
+        """
+        # skill_name -> list of (start, end) intervals
+        skill_intervals: Dict[str, List[Tuple[date, date]]] = defaultdict(list)
+
+        for item in experience_items:
+            if not item.technologies:
+                continue
+            if item.start_date is None or item.end_date is None:
+                logger.debug(
+                    "Skipping duration for %d technologies in job '%s' — missing dates.",
+                    len(item.technologies),
+                    item.title or "unknown",
+                )
+                continue
+
+            start = item.start_date
+            end = item.end_date
+
+            # Safety: swap if inverted (shouldn't happen, but defensive)
+            if start > end:
+                start, end = end, start
+
+            for tech in item.technologies:
+                skill_intervals[tech].append((start, end))
+
+        # Merge overlapping intervals per skill and compute total years
+        durations: Dict[str, float] = {}
+        for skill, intervals in skill_intervals.items():
+            merged = _merge_date_ranges(intervals)
+            total_days = sum((e - s).days for s, e in merged)
+            years = round(total_days / 365.25, 2)
+            if years > 0:
+                durations[skill] = years
+
+        if durations:
+            logger.info(
+                "Skill durations computed for %d technologies (top 5: %s).",
+                len(durations),
+                ", ".join(f"{k}={v}y" for k, v in sorted(durations.items(), key=lambda x: -x[1])[:5]),
+            )
+
+        return durations
 
     def _normalize_present(self, s: str) -> str:
         if not s:

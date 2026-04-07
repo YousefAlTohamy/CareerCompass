@@ -356,6 +356,13 @@ class CVOrchestrator:
             ),
         )
 
+        # Phase 2: Compute per-skill durations from the populated experience items
+        skill_durations: Dict[str, float] = {}
+        try:
+            skill_durations = self._experience.calculate_skill_durations(experience_items)
+        except Exception as e:
+            logger.warning("Skill duration calculation failed: %s", e)
+
         stats = DocumentStats(
             page_count=page_count,
             char_count=len(ordered_text),
@@ -401,6 +408,7 @@ class CVOrchestrator:
                 },
                 "experience": {
                     "total_experience_years": total_years,
+                    "skill_durations": skill_durations,
                 },
                 "extraction": {
                     "source": extraction_source,
@@ -451,7 +459,11 @@ class CVOrchestrator:
     def _build_experience_items(self, experience_text: str, predicted_title: Optional[str] = None) -> List[ExperienceItem]:
         """
         Phase-4: Advanced Segmentation.
-        Splits experience text into blocks by date, then uses NER to extract real Company, Location, and Role per block.
+        Splits experience text into blocks by date, then uses NER to extract
+        real Company, Location, Role, AND technologies per block.
+
+        Phase 2 enhancement: every ExperienceItem.technologies is populated
+        via a targeted NER scan scoped to the block text, then canonicalized.
         """
         if not experience_text.strip():
             return []
@@ -472,6 +484,8 @@ class CVOrchestrator:
             if role and role != "Professional Experience":
                 desc_text = re.sub(re.escape(role), "", desc_text, flags=re.IGNORECASE)
 
+            block_techs = self._extract_block_technologies(experience_text, entities)
+
             return [
                 ExperienceItem(
                     title=role,
@@ -481,7 +495,7 @@ class CVOrchestrator:
                     end_date=None,
                     is_current=None,
                     description=_extract_bullets(desc_text),
-                    technologies=[],
+                    technologies=block_techs,
                     confidence_score=0.45,
                 )
             ]
@@ -515,6 +529,9 @@ class CVOrchestrator:
             if role and role != "Professional Experience":
                 desc_text = re.sub(re.escape(role), "", desc_text, flags=re.IGNORECASE)
 
+            # Phase 2: Populate technologies from this block's NER context
+            block_techs = self._extract_block_technologies(block_text, entities)
+
             items.append(
                 ExperienceItem(
                     title=role,
@@ -524,12 +541,76 @@ class CVOrchestrator:
                     end_date=r.end,
                     is_current=(r.end == date.today()),
                     description=_extract_bullets(desc_text),
-                    technologies=[],
+                    technologies=block_techs,
                     confidence_score=0.85,
                 )
             )
 
         return items
+
+    def _extract_block_technologies(
+        self,
+        block_text: str,
+        block_entities: Optional[Dict[str, List[str]]] = None,
+    ) -> List[str]:
+        """
+        Extract and canonicalize technologies mentioned within a single
+        experience block.
+
+        This is scoped only to the block text so global Skills-section
+        entries don't pollute individual job contexts.
+
+        Returns:
+            Deduplicated list of canonical technology names.
+        """
+        if not block_text.strip():
+            return []
+
+        # Reuse existing entities if the caller already ran NER on this block
+        entities = block_entities
+        if entities is None:
+            try:
+                entities = self._ner.extract_entities(
+                    block_text,
+                    context_window_words=self._config.ner_context_window_words,
+                )
+            except Exception as e:
+                logger.warning("NER for block technologies failed: %s", e)
+                return []
+
+        raw_skills = entities.get("skills", [])
+        if not raw_skills:
+            return []
+
+        # Filter: skip roles/orgs that NER may have tagged as skills
+        roles_lower = {r.lower() for r in entities.get("roles", [])}
+        orgs_lower = {o.lower() for o in entities.get("orgs", [])}
+
+        filtered: List[str] = []
+        seen: set = set()
+        for s in raw_skills:
+            sl = s.lower()
+            if sl in seen or sl in roles_lower or sl in orgs_lower:
+                continue
+            if len(s) > 40 or len(s.split()) > 5:
+                continue
+            seen.add(sl)
+            filtered.append(s)
+
+        if not filtered:
+            return []
+
+        # Canonicalize to prevent "JS" and "JavaScript" appearing separately
+        try:
+            canonical = self._canonicalizer.canonicalize_skills(
+                filtered,
+                skill_confidence=0.60,
+                source="experience_block",
+            )
+            return [sk.name for sk in canonical]
+        except Exception as e:
+            logger.warning("Canonicalization of block technologies failed: %s", e)
+            return filtered
 
     def _rank_current_title(self, experience_text: str, segments_dict: Optional[Dict[str, str]] = None) -> Optional[str]:
         """
