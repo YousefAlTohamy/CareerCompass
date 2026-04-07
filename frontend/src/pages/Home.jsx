@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Compass, ShieldCheck, Zap, BarChart3, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
+import Footer from '../components/Footer';
 
 export default function Home() {
   const { user } = useAuth();
@@ -176,25 +177,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-slate-900 border-t border-slate-800 py-16 px-4">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-           <div className="flex items-center gap-2 text-white">
-             <Compass size={24} className="text-indigo-500" />
-             <span className="font-black text-xl tracking-tight">Career Compass</span>
-           </div>
-           
-           <nav className="flex gap-8 text-xs font-bold uppercase tracking-widest text-slate-500">
-              <a href="#" className="hover:text-white transition-colors">{t('home.footer.privacy')}</a>
-              <a href="#" className="hover:text-white transition-colors">{t('home.footer.terms')}</a>
-              <a href="#" className="hover:text-white transition-colors">{t('home.footer.status')}</a>
-           </nav>
-
-           <div className="text-slate-600 text-sm font-medium">
-              &copy; {new Date().getFullYear()} {t('home.footer.rights')}
-           </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
