@@ -11,6 +11,11 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import NotFound from './pages/NotFound';
+import AboutUs from './pages/AboutUs';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
+import SystemStatus from './pages/SystemStatus';
+import Footer from './components/Footer';
 
 // ── User pages ───────────────────────────────────────────────────────────────
 import Dashboard from './pages/user/Dashboard';
@@ -158,6 +163,12 @@ function AnimatedRoutes() {
             }
           />
 
+          {/* Public Informational Routes */}
+          <Route path="/about" element={<AboutUs />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/status" element={<SystemStatus />} />
+
           {/* 404 Not Found */}
           <Route path="*" element={<NotFound />} />
         </Routes>
@@ -175,8 +186,11 @@ function App() {
         <Router>
           <AuthProvider>
             <Navbar />
-            <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300 pt-16">
-              <AnimatedRoutes />
+            <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300 pt-16 flex flex-col">
+              <div className="flex-grow">
+                <AnimatedRoutes />
+              </div>
+              <Footer />
             </div>
           </AuthProvider>
         </Router>

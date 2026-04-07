@@ -302,7 +302,11 @@
       "privacy": "Privacy",
       "terms": "Terms",
       "status": "System Status",
-      "rights": "All rights reserved."
+      "about": "About Us",
+      "resources": "Resources",
+      "legal": "Legal",
+      "rights": "All rights reserved.",
+      "operational": "All systems operational"
     }
   },
   "login": {
