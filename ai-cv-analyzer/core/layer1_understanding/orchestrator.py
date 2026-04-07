@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import gc
 import logging
+import os
 import re
+import threading
 from dataclasses import dataclass
 from datetime import date
 import time
@@ -79,6 +82,9 @@ class CVOrchestrator:
     def __init__(self, *, config: Optional[OrchestratorConfig] = None) -> None:
         self._config = config or OrchestratorConfig()
 
+        # Phase 5: Thread-safety lock for multi-worker environments (Celery etc.)
+        self._process_lock = threading.Lock()
+
         # Phase 3: Initialize shared SemanticEmbedder (Singleton).
         # Lazily loaded — the model is only downloaded on first construction.
         self._embedder = None
@@ -108,20 +114,43 @@ class CVOrchestrator:
 
     def process_cv(self, pdf_bytes: bytes, filename: Optional[str] = None) -> CVParseResult:
         """
-        Returns the strict `CVParseResult` model (always).
+        Returns the strict ``CVParseResult`` model (always).
+
+        Phase 5: Thread-safe — acquires ``_process_lock`` so concurrent
+        Celery workers sharing the same process don't corrupt state.
+        Logs memory usage and phase-level latency.
         """
+        t_total = time.perf_counter()
         if filename:
             logger.info("V2 orchestrator processing file: %s", filename)
 
+        _log_memory("before_processing")
+
+        with self._process_lock:
+            result = self._process_cv_unlocked(pdf_bytes, filename)
+
+        total_ms = (time.perf_counter() - t_total) * 1000
+        logger.info(
+            "Pipeline total: %.1fms | status=%s | file=%s",
+            total_ms, result.parsing_status, filename or "<bytes>",
+        )
+        _log_memory("after_processing")
+
+        # Phase 5: Trigger GC to reclaim transient allocations (OCR images etc.)
+        gc.collect()
+
+        return result
+
+    def _process_cv_unlocked(self, pdf_bytes: bytes, filename: Optional[str] = None) -> CVParseResult:
+        """Inner implementation without the lock — called by ``process_cv``."""
         # -- Phase 1a: Attempt fast spatial extraction --
-        t0 = time.time()
+        t0 = time.perf_counter()
         try:
             spatial: SpatialTextExtraction = extract_spatial_text_from_pdf(pdf_bytes)
-            spatial_time = time.time() - t0
-            logger.info("Latency: Spatial Parsing took %.2fs", spatial_time)
+            spatial_ms = (time.perf_counter() - t0) * 1000
+            logger.info("⏱ Spatial Parsing: %.1fms", spatial_ms)
         except Exception as e:
             logger.exception("Spatial parsing failed: %s", e)
-            # Even if spatial crashes, attempt OCR before giving up
             return self._attempt_ocr_fallback(pdf_bytes, page_count=0, reason="spatial_exception")
 
         # -- Phase 1b: Evaluate spatial quality --
@@ -132,24 +161,29 @@ class CVOrchestrator:
         needs_ocr = self._should_trigger_ocr(spatial, char_count)
 
         if needs_ocr:
+            t_ocr_start = time.perf_counter()
             ocr_result = self._attempt_ocr_fallback(pdf_bytes, page_count=spatial.page_count, reason=self._ocr_reason(spatial, char_count))
+            ocr_ms = (time.perf_counter() - t_ocr_start) * 1000
+            logger.info("⏱ OCR Fallback: %.1fms", ocr_ms)
             if ocr_result is not None:
                 return ocr_result
-            # OCR itself failed or was unavailable — fall through to use
-            # whatever spatial text we have, even if thin.
             if not ordered_text:
                 status = "empty_file" if spatial.status == "no_text" else "error"
                 logger.info("V2 orchestrator: no usable text after spatial + OCR; status=%s", status)
                 return self._empty_result(parsing_status=status, page_count=spatial.page_count)
 
         # -- Phase 2+: NLP pipeline on the extracted text --
-        return self._run_nlp_pipeline(
+        t_nlp = time.perf_counter()
+        nlp_result = self._run_nlp_pipeline(
             ordered_text=ordered_text,
             page_count=spatial.page_count,
             extraction_source=extraction_source,
             spatial_status=spatial.status,
             spatial_word_count=spatial.word_count,
         )
+        nlp_ms = (time.perf_counter() - t_nlp) * 1000
+        logger.info("⏱ NLP Pipeline: %.1fms", nlp_ms)
+        return nlp_result
 
     # ------------------------------------------------------------------
     # OCR Fallback Helpers  (SRP: keeps process_cv lean)
@@ -743,6 +777,19 @@ class CVOrchestrator:
 # ---------------------------------------------------------------------------
 # Module-level helpers (pure functions)
 # ---------------------------------------------------------------------------
+
+def _log_memory(label: str) -> None:
+    """Log current process RSS memory usage (best-effort, needs psutil)."""
+    try:
+        import psutil
+        process = psutil.Process(os.getpid())
+        rss_mb = process.memory_info().rss / (1024 * 1024)
+        logger.info("Memory [%s]: RSS=%.1f MB", label, rss_mb)
+    except ImportError:
+        pass  # psutil not installed — skip silently
+    except Exception as e:
+        logger.debug("Memory logging failed (%s): %s", label, e)
+
 
 def _count_words(text: str) -> int:
     return len(_WORD_RE.findall(text or ""))
