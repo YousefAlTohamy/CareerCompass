@@ -25,16 +25,38 @@ from core.layer1_understanding.section_segmenter import SemanticSegmenter
 from core.layer1_understanding.spatial_parser import SpatialTextExtraction, extract_spatial_text_from_pdf
 from core.layer1_understanding.contact_extractor import extract_contacts
 
+# Lazy import for OCR — guarded so the pipeline doesn't crash if EasyOCR or
+# PyMuPDF are not installed.
+try:
+    from core.layer1_understanding.ocr_pipeline import (
+        extract_images_from_pdf_bytes,
+        extract_text_from_image,
+        OCR_AVAILABLE,
+    )
+except ImportError:
+    OCR_AVAILABLE = False
+    extract_images_from_pdf_bytes = None  # type: ignore[assignment]
+    extract_text_from_image = None  # type: ignore[assignment]
+
 logger = logging.getLogger(__name__)
 
 
 _WORD_RE = re.compile(r"\S+")
+
+# ---------------------------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------------------------
+
+# Minimum total character count from spatial extraction to consider it "good
+# enough".  Below this threshold we suspect the PDF is scanned / image-based.
+_MIN_CHAR_DENSITY = 150
 
 
 @dataclass(frozen=True, slots=True)
 class OrchestratorConfig:
     canonical_fuzzy_threshold: int = 86
     ner_context_window_words: int = 3
+    ocr_char_density_threshold: int = _MIN_CHAR_DENSITY
 
 
 class CVOrchestrator:
@@ -50,13 +72,18 @@ class CVOrchestrator:
         self._experience = ExperienceEngine()
         self._canonicalizer = DataCanonicalizer(fuzzy_threshold=self._config.canonical_fuzzy_threshold)
 
+    # ------------------------------------------------------------------
+    # Public entry point
+    # ------------------------------------------------------------------
+
     def process_cv(self, pdf_bytes: bytes, filename: Optional[str] = None) -> CVParseResult:
         """
         Returns the strict `CVParseResult` model (always).
         """
         if filename:
             logger.info("V2 orchestrator processing file: %s", filename)
-            
+
+        # -- Phase 1a: Attempt fast spatial extraction --
         t0 = time.time()
         try:
             spatial: SpatialTextExtraction = extract_spatial_text_from_pdf(pdf_bytes)
@@ -64,24 +91,152 @@ class CVOrchestrator:
             logger.info("Latency: Spatial Parsing took %.2fs", spatial_time)
         except Exception as e:
             logger.exception("Spatial parsing failed: %s", e)
-            return self._empty_result(parsing_status="error", page_count=0)
+            # Even if spatial crashes, attempt OCR before giving up
+            return self._attempt_ocr_fallback(pdf_bytes, page_count=0, reason="spatial_exception")
 
-        if spatial.status in ("no_text", "error") or not spatial.text:
-            status = "empty_file" if spatial.status == "no_text" else "error"
-            logger.info("V2 orchestrator: spatial extraction status=%s", spatial.status)
-            return self._empty_result(
-                parsing_status=status,
-                page_count=spatial.page_count,
+        # -- Phase 1b: Evaluate spatial quality --
+        extraction_source = "spatial"
+        ordered_text = spatial.text or ""
+        char_count = len(ordered_text)
+
+        needs_ocr = self._should_trigger_ocr(spatial, char_count)
+
+        if needs_ocr:
+            ocr_result = self._attempt_ocr_fallback(pdf_bytes, page_count=spatial.page_count, reason=self._ocr_reason(spatial, char_count))
+            if ocr_result is not None:
+                return ocr_result
+            # OCR itself failed or was unavailable — fall through to use
+            # whatever spatial text we have, even if thin.
+            if not ordered_text:
+                status = "empty_file" if spatial.status == "no_text" else "error"
+                logger.info("V2 orchestrator: no usable text after spatial + OCR; status=%s", status)
+                return self._empty_result(parsing_status=status, page_count=spatial.page_count)
+
+        # -- Phase 2+: NLP pipeline on the extracted text --
+        return self._run_nlp_pipeline(
+            ordered_text=ordered_text,
+            page_count=spatial.page_count,
+            extraction_source=extraction_source,
+            spatial_status=spatial.status,
+            spatial_word_count=spatial.word_count,
+        )
+
+    # ------------------------------------------------------------------
+    # OCR Fallback Helpers  (SRP: keeps process_cv lean)
+    # ------------------------------------------------------------------
+
+    def _should_trigger_ocr(self, spatial: SpatialTextExtraction, char_count: int) -> bool:
+        """Decide whether OCR should be attempted based on spatial results."""
+        if spatial.status == "no_text":
+            logger.info("OCR trigger: spatial status is 'no_text'.")
+            return True
+        if spatial.status == "error":
+            logger.info("OCR trigger: spatial status is 'error'.")
+            return True
+        if char_count < self._config.ocr_char_density_threshold:
+            logger.info(
+                "OCR trigger: character density too low (%d < %d threshold).",
+                char_count,
+                self._config.ocr_char_density_threshold,
             )
+            return True
+        return False
 
-        ordered_text = spatial.text
+    @staticmethod
+    def _ocr_reason(spatial: SpatialTextExtraction, char_count: int) -> str:
+        """Return a short machine-readable reason for the OCR trigger."""
+        if spatial.status == "no_text":
+            return "spatial_no_text"
+        if spatial.status == "error":
+            return "spatial_error"
+        return f"low_char_density_{char_count}"
+
+    def _attempt_ocr_fallback(
+        self,
+        pdf_bytes: bytes,
+        *,
+        page_count: int,
+        reason: str,
+    ) -> Optional[CVParseResult]:
+        """
+        Try to reconstruct the full text via OCR.
+
+        Returns a fully-formed CVParseResult on success, or *None* if OCR is
+        unavailable / fails (so the caller can fall back further).
+        """
+        if not OCR_AVAILABLE:
+            logger.warning("OCR fallback requested (reason=%s) but EasyOCR is not installed.", reason)
+            return None
+
+        logger.info("Starting OCR fallback pipeline (reason=%s).", reason)
+        t_ocr = time.time()
+        try:
+            page_images = extract_images_from_pdf_bytes(pdf_bytes)  # type: ignore[misc]
+        except Exception as e:
+            logger.exception("OCR: failed to render PDF pages to images: %s", e)
+            return None
+
+        if not page_images:
+            logger.warning("OCR: no page images produced from PDF.")
+            return None
+
+        ocr_parts: List[str] = []
+        for i, img_bytes in enumerate(page_images):
+            try:
+                text = extract_text_from_image(img_bytes)  # type: ignore[misc]
+                if text and text.strip():
+                    ocr_parts.append(text.strip())
+                    logger.debug("OCR page %d: extracted %d chars.", i + 1, len(text))
+                else:
+                    logger.debug("OCR page %d: no text extracted.", i + 1)
+            except Exception as e:
+                logger.warning("OCR page %d failed: %s", i + 1, e)
+
+        if not ocr_parts:
+            logger.warning("OCR produced no text across %d pages.", len(page_images))
+            return None
+
+        ocr_text = "\n\n".join(ocr_parts).strip()
+        if len(ocr_text) < 20:
+            logger.warning("OCR text too short (%d chars), treating as failure.", len(ocr_text))
+            return None
+
+        ocr_latency = time.time() - t_ocr
+        logger.info("Latency: OCR Fallback took %.2fs, produced %d chars.", ocr_latency, len(ocr_text))
+
+        return self._run_nlp_pipeline(
+            ordered_text=ocr_text,
+            page_count=page_count or len(page_images),
+            extraction_source="ocr",
+            spatial_status="no_text",
+            spatial_word_count=0,
+        )
+
+    # ------------------------------------------------------------------
+    # Core NLP Pipeline  (extracted to honour SRP)
+    # ------------------------------------------------------------------
+
+    def _run_nlp_pipeline(
+        self,
+        *,
+        ordered_text: str,
+        page_count: int,
+        extraction_source: str,
+        spatial_status: str,
+        spatial_word_count: int,
+    ) -> CVParseResult:
+        """
+        Run segmentation → NER → canonicalization → experience extraction on
+        the already-extracted text.  This is source-agnostic: the same logic
+        applies regardless of whether text came from spatial or OCR.
+        """
         segments = self._segmenter.segment(ordered_text)
-        
+
         contact_dict = extract_contacts(ordered_text)
 
         # Name + title heuristics from profile-ish area first.
         profile_text = segments.sections.get("profile_summary") or segments.sections.get("uncategorized") or ordered_text
-        
+
         # Determine global entities first so we can use them for name candidate
         t1 = time.time()
         try:
@@ -94,13 +249,13 @@ class CVOrchestrator:
         except Exception as e:
             logger.exception("NER Inference failed: %s", e)
             entities = {}
-        
+
         name_candidate = self._ner.extract_candidate_name(profile_text, entities)
 
         # Canonicalization with provenance: skills can come from multiple sections later.
         roles_lower = {r.lower() for r in entities.get("roles", [])}
         orgs_lower = {o.lower() for o in entities.get("orgs", [])}
-        
+
         # Action Verbs used to filter greedy merged skills
         ACTION_VERBS = {
             "developed", "managed", "led", "engineered", "collaborated",
@@ -109,11 +264,11 @@ class CVOrchestrator:
             "integrated", "tested", "deployed", "maintained", "improved",
             "optimized", "resolved", "coordinated", "analyzed"
         }
-        
+
         # Phase 6.2: Global Skill Safeguard (Full-Text Fallback)
         skills_text = segments.sections.get("skills", "")
         is_fallback_mode = not skills_text or len(skills_text) < 100
-        
+
         skills_source = []
         if is_fallback_mode:
             logger.info("Fallback Mode ACTIVE: Skills section missing or < 100 chars. Using full CV text.")
@@ -126,10 +281,10 @@ class CVOrchestrator:
                 skills_source.extend(skills_entities.get("skills", []))
             except Exception as e:
                 logger.exception("NER Inference (Skills Section) failed: %s", e)
-            
+
             # Combine with global full-text skills to prevent missing overlapping tech
             skills_source.extend(entities.get("skills", []))
-        
+
         skills_raw = []
         seen_skills = set()
         for s in skills_source:
@@ -137,25 +292,25 @@ class CVOrchestrator:
             if s_lower in seen_skills:
                 continue
             seen_skills.add(s_lower)
-            
+
             # 1. Role / Org Precedence
             if s_lower in roles_lower or s_lower in orgs_lower:
                 continue
-                
+
             # 2. Length restrictions: > 40 characters or > 5 words (Phase 6.3)
             if len(s) > 40:
                 continue
             words = s.split()
             if len(words) > 5:
                 continue
-                
+
             # 3. Action Verb Filtering
             word_set = {w.lower().strip(".,;:()") for w in words}
             if any(verb in word_set for verb in ACTION_VERBS):
                 continue
-                
+
             skills_raw.append(s)
-        
+
         t2 = time.time()
         try:
             canonical_skills = self._canonicalizer.canonicalize_skills(
@@ -202,7 +357,7 @@ class CVOrchestrator:
         )
 
         stats = DocumentStats(
-            page_count=spatial.page_count,
+            page_count=page_count,
             char_count=len(ordered_text),
             word_count=_count_words(ordered_text),
             language_hint=None,
@@ -222,6 +377,9 @@ class CVOrchestrator:
                 location=contact_dict.get("location")
             ),
         )
+
+        # Determine parsing_status based on extraction source
+        parsing_status = "ocr_fallback" if extraction_source == "ocr" else "success"
 
         analysis = AnalysisSection(
             summary=None,
@@ -245,21 +403,26 @@ class CVOrchestrator:
                     "total_experience_years": total_years,
                 },
                 "extraction": {
-                    "spatial_status": spatial.status,
-                    "word_count_spatial": spatial.word_count,
+                    "source": extraction_source,
+                    "spatial_status": spatial_status,
+                    "word_count_spatial": spatial_word_count,
                     "raw_text": ordered_text,
                 },
             },
         )
 
         return CVParseResult(
-            parsing_status="success",
+            parsing_status=parsing_status,
             profile=profile,
             stats=stats,
             skills=skills_section,
             experience=experience_section,
             analysis=analysis,
         )
+
+    # ------------------------------------------------------------------
+    # Empty / error result
+    # ------------------------------------------------------------------
 
     def _empty_result(self, *, parsing_status: str, page_count: int) -> CVParseResult:
         return CVParseResult(
@@ -280,6 +443,10 @@ class CVOrchestrator:
                 metadata={"reason": parsing_status},
             ),
         )
+
+    # ------------------------------------------------------------------
+    # Experience helpers
+    # ------------------------------------------------------------------
 
     def _build_experience_items(self, experience_text: str, predicted_title: Optional[str] = None) -> List[ExperienceItem]:
         """
@@ -376,7 +543,7 @@ class CVOrchestrator:
                  target_text += segments_dict["experience"] + "\n"
             if "profile_summary" in segments_dict:
                  target_text += segments_dict["profile_summary"] + "\n"
-            
+
             if target_text.strip():
                 extracted = self._ner.extract_entities(target_text)
                 roles = extracted.get("roles", [])
@@ -416,6 +583,10 @@ class CVOrchestrator:
                 return title
         return None
 
+
+# ---------------------------------------------------------------------------
+# Module-level helpers (pure functions)
+# ---------------------------------------------------------------------------
 
 def _count_words(text: str) -> int:
     return len(_WORD_RE.findall(text or ""))

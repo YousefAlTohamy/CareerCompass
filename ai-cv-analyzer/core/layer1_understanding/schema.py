@@ -96,7 +96,7 @@ class CVParseResult(StrictModel):
     Strict production contract for the CV Parser JSON output.
     """
 
-    parsing_status: Literal["success", "empty_file", "no_text", "error"] = "success"
+    parsing_status: Literal["success", "ocr_fallback", "empty_file", "no_text", "error"] = "success"
     profile: Profile
     stats: DocumentStats
     skills: SkillsSection
