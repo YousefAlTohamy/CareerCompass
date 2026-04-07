@@ -393,6 +393,48 @@ class CVOrchestrator:
         except Exception as e:
             logger.warning("Skill duration calculation failed: %s", e)
 
+        # Phase 4: Career health analysis (gaps, overlaps, job hopping)
+        career_health: Dict[str, List[str]] = {"gaps": [], "overlaps": [], "red_flags": []}
+        try:
+            career_health = self._experience.analyze_career_health(experience_items)
+        except Exception as e:
+            logger.warning("Career health analysis failed: %s", e)
+
+        # Phase 4: Action verb score
+        action_verb_score: float = 0.0
+        try:
+            action_verb_score = self._experience.calculate_action_verb_score(experience_items)
+        except Exception as e:
+            logger.warning("Action verb scoring failed: %s", e)
+
+        # Phase 4: Seniority inference
+        seniority = _infer_seniority(
+            total_years=total_years,
+            current_title=current_title,
+            action_verb_score=action_verb_score,
+        )
+
+        # Phase 4: Top skills by years (from Phase 2 durations)
+        top_skills_by_years: List[Dict[str, Any]] = []
+        if skill_durations:
+            sorted_skills = sorted(skill_durations.items(), key=lambda x: -x[1])[:3]
+            top_skills_by_years = [
+                {"skill": name, "years": yrs} for name, yrs in sorted_skills
+            ]
+
+        # Combine red flags and gaps from career health into AnalysisSection
+        all_red_flags = career_health.get("red_flags", []) + career_health.get("overlaps", [])
+        all_gaps = career_health.get("gaps", [])
+
+        # Build strengths from action verbs and experience
+        strengths: List[str] = []
+        if action_verb_score >= 0.7:
+            strengths.append("Strong use of action verbs in job descriptions — demonstrates clear ownership and impact.")
+        if total_years >= 5:
+            strengths.append(f"Substantial career experience ({total_years} years) indicating deep domain knowledge.")
+        if len(skill_durations) >= 5:
+            strengths.append(f"Diverse technical portfolio with {len(skill_durations)} technologies used across roles.")
+
         stats = DocumentStats(
             page_count=page_count,
             char_count=len(ordered_text),
@@ -421,11 +463,11 @@ class CVOrchestrator:
         analysis = AnalysisSection(
             summary=None,
             predicted_role=current_title,
-            seniority=None,
+            seniority=seniority,
             primary_domain=None,
-            strengths=[],
-            gaps=[],
-            red_flags=[],
+            strengths=strengths,
+            gaps=all_gaps,
+            red_flags=all_red_flags,
             confidence_score=_aggregate_confidence(
                 [skills_section.confidence_score, experience_section.confidence_score],
                 default=0.0,
@@ -439,6 +481,9 @@ class CVOrchestrator:
                 "experience": {
                     "total_experience_years": total_years,
                     "skill_durations": skill_durations,
+                    "top_skills_by_years": top_skills_by_years,
+                    "action_verb_score": action_verb_score,
+                    "gap_details": all_gaps,
                 },
                 "extraction": {
                     "source": extraction_source,
@@ -708,6 +753,103 @@ def _aggregate_confidence(values: Sequence[float], *, default: float) -> float:
     if not vals:
         return float(default)
     return float(min(1.0, sum(vals) / len(vals)))
+
+
+# ---------------------------------------------------------------------------
+# Phase 4: Seniority inference (pure function)
+# ---------------------------------------------------------------------------
+
+# Title keyword → seniority mapping (checked against the most recent title)
+_TITLE_SENIORITY_KEYWORDS: Dict[str, str] = {
+    "intern": "intern",
+    "trainee": "intern",
+    "apprentice": "intern",
+    "junior": "junior",
+    "jr": "junior",
+    "associate": "junior",
+    "mid": "mid",
+    "intermediate": "mid",
+    "senior": "senior",
+    "sr": "senior",
+    "staff": "senior",
+    "lead": "lead",
+    "team lead": "lead",
+    "tech lead": "lead",
+    "manager": "lead",
+    "head of": "lead",
+    "director": "principal",
+    "principal": "principal",
+    "vp": "principal",
+    "chief": "principal",
+    "architect": "senior",
+    "fellow": "principal",
+}
+
+_SENIORITY_ORDER = ["intern", "junior", "mid", "senior", "lead", "principal"]
+
+
+def _infer_seniority(
+    *,
+    total_years: float,
+    current_title: Optional[str],
+    action_verb_score: float,
+) -> Optional[str]:
+    """
+    Weighted seniority inference using:
+    1. Title keywords (strongest signal — especially "intern" override)
+    2. Total experience years (primary quantitative signal)
+    3. Action verb density (tiebreaker / micro-adjustment)
+
+    Returns one of: "intern", "junior", "mid", "senior", "lead", "principal"
+    """
+    # --- Step 1: Title-based override ---
+    title_seniority: Optional[str] = None
+    if current_title:
+        title_lower = current_title.lower()
+        # Check multi-word keywords first (longer matches), then single words
+        for keyword in sorted(_TITLE_SENIORITY_KEYWORDS.keys(), key=len, reverse=True):
+            if keyword in title_lower:
+                title_seniority = _TITLE_SENIORITY_KEYWORDS[keyword]
+                break
+
+    # Hard override: if the most recent title is "Intern", keep it as intern
+    # regardless of total years (might be a career-switching intern)
+    if title_seniority == "intern":
+        return "intern"
+
+    # --- Step 2: Years-based baseline ---
+    if total_years < 1:
+        years_seniority = "intern"
+    elif total_years < 2:
+        years_seniority = "junior"
+    elif total_years < 5:
+        years_seniority = "mid"
+    elif total_years < 8:
+        years_seniority = "senior"
+    elif total_years < 12:
+        years_seniority = "lead"
+    else:
+        years_seniority = "principal"
+
+    # --- Step 3: Combine title + years ---
+    if title_seniority is not None:
+        title_idx = _SENIORITY_ORDER.index(title_seniority)
+        years_idx = _SENIORITY_ORDER.index(years_seniority)
+        # Weighted average: title has 60% weight, years 40%
+        combined_idx = round(title_idx * 0.6 + years_idx * 0.4)
+    else:
+        combined_idx = _SENIORITY_ORDER.index(years_seniority)
+
+    # --- Step 4: Action verb micro-adjustment ---
+    # Strong verb usage can bump up by one level (max)
+    if action_verb_score >= 0.8 and combined_idx < len(_SENIORITY_ORDER) - 1:
+        combined_idx += 1
+    # Very weak verb usage might nudge down (only if not at bottom)
+    elif action_verb_score < 0.2 and combined_idx > 0:
+        combined_idx -= 1
+
+    combined_idx = max(0, min(len(_SENIORITY_ORDER) - 1, combined_idx))
+    return _SENIORITY_ORDER[combined_idx]
 
 
 _DATEY_RE = re.compile(r"\b(?:\d{4}|present|current|now|today|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\b", re.IGNORECASE)
