@@ -3,7 +3,9 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass
-from typing import Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +27,8 @@ class CanonicalSkill:
 
 class DataCanonicalizer:
     """
-    Canonicalizes extracted skills using optional fuzzy matching.
+    Canonicalizes extracted skills using optional fuzzy matching and
+    optional semantic (embedding-based) matching.
 
     SRP: normalize + deduplicate + attach lightweight provenance.
     """
@@ -35,6 +38,8 @@ class DataCanonicalizer:
         *,
         standard_skills: Optional[Mapping[str, str]] = None,
         fuzzy_threshold: int = 86,
+        embedder: Any = None,
+        semantic_skill_threshold: float = 0.85,
     ) -> None:
         # mapping raw_variant -> canonical
         self._standard_map: Dict[str, str] = {k: v for k, v in (standard_skills or _DEFAULT_SKILL_MAP).items()}
@@ -43,6 +48,48 @@ class DataCanonicalizer:
 
         # Build canonical set for fallback matching
         self._canonical_values = sorted(set(self._standard_map.values()))
+
+        # -- Phase 3: Semantic skill matching --
+        self._embedder = embedder
+        self._semantic_threshold = float(semantic_skill_threshold)
+
+        # Pre-computed embeddings for canonical skill names.
+        # Shape: (N, dim) where N = len(_canonical_values)
+        self._canonical_embeddings: Optional[np.ndarray] = None
+        self._canonical_names_ordered: List[str] = []
+
+        if self._embedder is not None:
+            self._precompute_canonical_embeddings()
+
+    # ------------------------------------------------------------------
+    # Pre-computation (runs once, not per CV)
+    # ------------------------------------------------------------------
+
+    def _precompute_canonical_embeddings(self) -> None:
+        """Embed each canonical skill name once and stack into a matrix."""
+        try:
+            vecs: List[np.ndarray] = []
+            names: List[str] = []
+            for name in self._canonical_values:
+                vec = self._embedder.get_embedding(name)
+                if vec is not None and np.any(vec != 0):
+                    vecs.append(vec)
+                    names.append(name)
+            if vecs:
+                self._canonical_embeddings = np.stack(vecs)
+                self._canonical_names_ordered = names
+                logger.info(
+                    "Semantic skill embeddings pre-computed for %d canonical skills.",
+                    len(names),
+                )
+        except Exception as e:
+            logger.warning("Failed to pre-compute semantic skill embeddings: %s", e)
+            self._canonical_embeddings = None
+            self._canonical_names_ordered = []
+
+    # ------------------------------------------------------------------
+    # Public API  (unchanged signatures)
+    # ------------------------------------------------------------------
 
     def canonicalize_skills(
         self,
@@ -124,9 +171,21 @@ class DataCanonicalizer:
         # Stable output: highest confidence first, then name.
         return sorted(merged.values(), key=lambda x: (-x.confidence_score, x.name.lower()))
 
+    # ------------------------------------------------------------------
+    # Skill mapping  (exact → fuzzy → semantic)
+    # ------------------------------------------------------------------
+
     def _map_skill(self, raw: str) -> Tuple[Optional[str], float]:
         """
         Map raw -> canonical with confidence.
+
+        Resolution order:
+        1. Exact variant match       (conf 0.99)
+        2. Exact canonical match     (conf 0.97)
+        3. RapidFuzz fuzzy match     (conf ~0.70-0.95)
+        4. Normalized key fallback   (conf 0.90)
+        5. Semantic embedding match  (conf ~0.80-0.90)  ← Phase 3
+        6. Pass-through              (conf 0.60)
         """
         cleaned = raw.strip()
         if not cleaned:
@@ -166,8 +225,80 @@ class DataCanonicalizer:
             if n == key_norm:
                 return self._standard_map[key], 0.90
 
+        # Phase 3: Semantic embedding fallback
+        semantic_result = self._semantic_skill_match(cleaned)
+        if semantic_result is not None:
+            return semantic_result
+
         return cleaned, 0.60
 
+    def _semantic_skill_match(
+        self, raw_skill: str
+    ) -> Optional[Tuple[str, float]]:
+        """
+        Embed the raw skill and compare against pre-computed canonical skill
+        embeddings via cosine similarity.
+
+        Returns (canonical_name, confidence) if the best match exceeds the
+        configured threshold, else None.
+        """
+        if (
+            self._embedder is None
+            or self._canonical_embeddings is None
+            or len(self._canonical_names_ordered) == 0
+        ):
+            return None
+
+        try:
+            raw_vec = self._embedder.get_embedding(raw_skill)
+        except Exception as e:
+            logger.debug("Semantic embedding failed for skill %r: %s", raw_skill, e)
+            return None
+
+        if raw_vec is None or np.all(raw_vec == 0):
+            return None
+
+        # Cosine similarity against all canonical embeddings
+        similarities = _cosine_similarity_batch(raw_vec, self._canonical_embeddings)
+        best_idx = int(np.argmax(similarities))
+        best_score = float(similarities[best_idx])
+
+        if best_score >= self._semantic_threshold:
+            canonical_name = self._canonical_names_ordered[best_idx]
+            # Confidence caps at 0.90 since semantic is less certain than exact/fuzzy
+            confidence = min(0.90, max(0.80, best_score))
+            logger.debug(
+                "Semantic skill match: '%s' → '%s' (sim=%.3f)",
+                raw_skill,
+                canonical_name,
+                best_score,
+            )
+            return canonical_name, confidence
+
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Cosine similarity helpers
+# ---------------------------------------------------------------------------
+
+def _cosine_similarity_batch(vec: np.ndarray, matrix: np.ndarray) -> np.ndarray:
+    """
+    Compute cosine similarity between a single vector and each row of a matrix.
+    Returns a 1-D array of similarities.
+    """
+    vec_norm = np.linalg.norm(vec)
+    if vec_norm == 0:
+        return np.zeros(matrix.shape[0])
+    row_norms = np.linalg.norm(matrix, axis=1)
+    row_norms = np.where(row_norms == 0, 1.0, row_norms)
+    dots = matrix @ vec
+    return dots / (row_norms * vec_norm)
+
+
+# ---------------------------------------------------------------------------
+# Normalization helpers
+# ---------------------------------------------------------------------------
 
 _NORM_RE = re.compile(r"[^a-z0-9\+\#\.]+")
 
@@ -220,4 +351,3 @@ _DEFAULT_SKILL_MAP: Dict[str, str] = {
     "k8s": "Kubernetes",
     "kubernetes": "Kubernetes",
 }
-

@@ -38,6 +38,15 @@ except ImportError:
     extract_images_from_pdf_bytes = None  # type: ignore[assignment]
     extract_text_from_image = None  # type: ignore[assignment]
 
+# Lazy import for Semantic Embedder — guarded so the pipeline works
+# even without sentence-transformers installed.
+try:
+    from core.layer3_matching.embedder import SemanticEmbedder
+    EMBEDDER_AVAILABLE = True
+except ImportError:
+    SemanticEmbedder = None  # type: ignore[misc,assignment]
+    EMBEDDER_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,6 +66,9 @@ class OrchestratorConfig:
     canonical_fuzzy_threshold: int = 86
     ner_context_window_words: int = 3
     ocr_char_density_threshold: int = _MIN_CHAR_DENSITY
+    # Phase 3: Semantic thresholds (cosine similarity)
+    semantic_header_threshold: float = 0.82
+    semantic_skill_threshold: float = 0.85
 
 
 class CVOrchestrator:
@@ -67,10 +79,28 @@ class CVOrchestrator:
     def __init__(self, *, config: Optional[OrchestratorConfig] = None) -> None:
         self._config = config or OrchestratorConfig()
 
-        self._segmenter = SemanticSegmenter()
+        # Phase 3: Initialize shared SemanticEmbedder (Singleton).
+        # Lazily loaded — the model is only downloaded on first construction.
+        self._embedder = None
+        if EMBEDDER_AVAILABLE:
+            try:
+                self._embedder = SemanticEmbedder()
+                logger.info("Shared SemanticEmbedder initialized for orchestrator.")
+            except Exception as e:
+                logger.warning("SemanticEmbedder failed to initialize: %s. Falling back to non-semantic pipeline.", e)
+                self._embedder = None
+
+        self._segmenter = SemanticSegmenter(
+            embedder=self._embedder,
+            semantic_header_threshold=self._config.semantic_header_threshold,
+        )
         self._ner = AdvancedNEREngine()
         self._experience = ExperienceEngine()
-        self._canonicalizer = DataCanonicalizer(fuzzy_threshold=self._config.canonical_fuzzy_threshold)
+        self._canonicalizer = DataCanonicalizer(
+            fuzzy_threshold=self._config.canonical_fuzzy_threshold,
+            embedder=self._embedder,
+            semantic_skill_threshold=self._config.semantic_skill_threshold,
+        )
 
     # ------------------------------------------------------------------
     # Public entry point
