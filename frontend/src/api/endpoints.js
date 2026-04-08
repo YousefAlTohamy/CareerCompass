@@ -34,8 +34,14 @@ export const cvAPI = {
 
 export const gapAnalysisAPI = {
   analyzeJob: (jobId) => apiClient.get(`/gap-analysis/job/${jobId}`),
+  analyzeRole: (roleId) => apiClient.get(`/gap-analysis/role/${roleId}`),
   analyzeMultipleJobs: (jobIds) => apiClient.post('/gap-analysis/batch', { job_ids: jobIds }),
   getRecommendations: () => apiClient.get('/gap-analysis/recommendations'),
+};
+
+// Target Job Roles
+export const targetRolesAPI = {
+  getTargetRoles: () => apiClient.get('/target-roles'),
 };
 
 // Market Intelligence API

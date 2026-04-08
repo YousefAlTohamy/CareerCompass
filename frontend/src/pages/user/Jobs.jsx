@@ -94,8 +94,8 @@ export default function Jobs() {
       const jobsArray = Array.isArray(jobsData) ? jobsData : (jobsData?.data || []);
       
       const sortedJobs = [...jobsArray].sort((a, b) => {
-        const scoreA = parseFloat(a.match_score) || 0;
-        const scoreB = parseFloat(b.match_score) || 0;
+        const scoreA = parseFloat(a.match_percentage ?? a.match_score) || 0;
+        const scoreB = parseFloat(b.match_percentage ?? b.match_score) || 0;
         return scoreB - scoreA;
       });
         
@@ -124,8 +124,8 @@ export default function Jobs() {
       const recommendedJobs = Array.isArray(data) ? data : [];
       
       const sortedRecommended = [...recommendedJobs].sort((a, b) => {
-        const scoreA = parseFloat(a.match_score) || 0;
-        const scoreB = parseFloat(b.match_score) || 0;
+        const scoreA = parseFloat(a.match_percentage ?? a.match_score) || 0;
+        const scoreB = parseFloat(b.match_percentage ?? b.match_score) || 0;
         return scoreB - scoreA;
       });
 
@@ -330,11 +330,18 @@ export default function Jobs() {
                       selectedJob?.id === job.id ? 'border-indigo-500 ring-2 ring-indigo-500/10' : 'border-slate-200 dark:border-slate-700'
                     }`}
                   >
-                    {job.match_score > 0 && (
-                      <div className="absolute -top-3 -right-1 bg-emerald-500 text-white font-black text-[10px] px-3 py-1 rounded-full border-2 border-white dark:border-slate-800 shadow-md flex items-center gap-1">
-                        <Target size={12}/> {job.match_score}% {t('jobs.match')}
-                      </div>
-                    )}
+                    {(() => {
+                      const matchVal = job.match_percentage ?? job.match_score;
+                      if (!matchVal) return null;
+                      const isHigh = matchVal >= 80;
+                      const isMed = matchVal >= 50;
+                      const colorClass = isHigh ? 'bg-emerald-500' : isMed ? 'bg-indigo-500' : 'bg-orange-500';
+                      return (
+                        <div className={`absolute -top-3 -right-1 text-white font-black text-[10px] px-3 py-1 rounded-full border-2 border-white dark:border-slate-800 shadow-md flex items-center gap-1 ${colorClass}`}>
+                          <Target size={12}/> {matchVal}% {t('jobs.match')}
+                        </div>
+                      );
+                    })()}
                     
                     <div className="flex items-start justify-between gap-2 mb-4">
                       <span className="px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-200/50 dark:border-slate-600/50">
@@ -342,11 +349,18 @@ export default function Jobs() {
                       </span>
                     </div>
                     
-                    <div className="mb-4">
+                    <div className="flex flex-col gap-1 mb-4">
                       <h3 className="font-black text-slate-800 dark:text-white text-base leading-tight mb-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2">
                         {job.title}
                       </h3>
                       <p className="text-xs font-bold text-slate-500 dark:text-slate-400 italic">{job.company}</p>
+                      
+                      {/* Compatibility logic */}
+                      {job.skills?.length > 0 && (
+                        <div className="mt-1 text-[9px] font-black uppercase text-indigo-500 dark:text-indigo-400 tracking-wider flex items-center gap-1 opacity-90">
+                           <Sparkles size={10} className="shrink-0" /> Requires: {job.skills.slice(0,3).map(s => s.name).join(', ')}{job.skills.length > 3 && '...'}
+                        </div>
+                      )}
                     </div>
                     
                     <div className="flex flex-wrap gap-2 mb-5">
@@ -379,6 +393,25 @@ export default function Jobs() {
                     </button>
                   </div>
                 ))
+              ) : recMeta && recMeta.based_on && recMeta.based_on.includes('upload your CV') ? (
+                <div className="w-full bg-gradient-to-r from-indigo-600 to-fuchsia-600 rounded-3xl p-10 text-center text-white shadow-lg overflow-hidden relative transition-colors duration-300">
+                  <div className="absolute top-0 right-0 p-8 opacity-10 blur-xl pointer-events-none">
+                    <Target size={180} className="text-white" />
+                  </div>
+                  <div className="relative z-10">
+                    <Sparkles size={40} className="mx-auto text-indigo-200 mb-4" />
+                    <h3 className="text-2xl font-black mb-2 tracking-tight">Unlock Your AI Job Matches</h3>
+                    <p className="text-indigo-100 font-medium max-w-md mx-auto mb-6 leading-relaxed">
+                      Upload your CV to see exactly how your skillset scores against market requirements using our AI semantic engine.
+                    </p>
+                    <button 
+                      onClick={() => navigate('/profile')} 
+                      className="bg-white text-indigo-600 font-black tracking-widest uppercase px-6 py-3 rounded-xl text-xs shadow-md hover:scale-105 hover:bg-slate-50 hover:shadow-xl transition-all"
+                    >
+                      Upload CV Now
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <div className="w-full bg-white dark:bg-slate-800 rounded-3xl border-2 border-dashed border-slate-200 dark:border-slate-700 p-10 text-center transition-colors duration-300">
                   <Sparkles size={32} className="mx-auto text-slate-300 dark:text-slate-600 mb-3" />

@@ -10,7 +10,8 @@ import {
   Lightbulb, AlertTriangle, FileText, Upload
 } from 'lucide-react';
 import TypingEffect from '../../components/TypingEffect';
-import { gapAnalysisAPI } from '../../api/endpoints';
+import RoadmapTimeline from '../../components/RoadmapTimeline';
+import { gapAnalysisAPI, targetRolesAPI } from '../../api/endpoints';
 import applicationsAPI from '../../api/applications';
 import { useScrapingStatus } from '../../hooks/useScrapingStatus';
 import { useAuth } from '../../context/AuthContext';
@@ -264,11 +265,28 @@ export default function GapAnalysis() {
   const [scrapingJobId, setScrapingJobId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [targetRoles, setTargetRoles] = useState([]);
+  const [selectedRole, setSelectedRole] = useState('');
 
-  const loadAnalysis = async () => {
+  useEffect(() => {
+    targetRolesAPI.getTargetRoles().then(res => setTargetRoles(res.data)).catch(console.error);
+  }, []);
+
+  const loadAnalysis = async (roleIdOverride = null) => {
     try {
       setLoading(true);
-      const response = await gapAnalysisAPI.analyzeJob(jobId);
+      setError('');
+      let response;
+      const roleIdToUse = roleIdOverride || selectedRole;
+      if (roleIdToUse) {
+        response = await gapAnalysisAPI.analyzeRole(roleIdToUse);
+      } else if (jobId) {
+        response = await gapAnalysisAPI.analyzeJob(jobId);
+      } else {
+        setLoading(false);
+        return;
+      }
+      
       const data = response?.data?.data ?? response?.data ?? response;
 
       if (data?.status === 'processing' && data?.scraping_job_id) {
@@ -309,6 +327,16 @@ export default function GapAnalysis() {
   };
 
   useEffect(() => { loadAnalysis(); }, [jobId]);
+
+  const handleRoleChange = (e) => {
+    const rId = e.target.value;
+    setSelectedRole(rId);
+    if (rId) {
+       loadAnalysis(rId);
+    } else if (jobId) {
+       loadAnalysis(); // Fallback to Job mode
+    }
+  };
 
   // --- SKELETON LOADING STATE ---
   if (loading || (status === 'processing' && !analysis)) {
@@ -354,8 +382,12 @@ export default function GapAnalysis() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
-        <Library className="animate-spin text-indigo-600" size={40} />
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 flex-col gap-4">
+        <div className="relative flex items-center justify-center">
+            <div className="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full"></div>
+            <Library className="animate-spin text-indigo-600 dark:text-indigo-400 relative z-10" size={48} />
+        </div>
+        <p className="text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest text-sm animate-pulse">AI is calculating your career path...</p>
       </div>
     );
   }
@@ -370,12 +402,16 @@ export default function GapAnalysis() {
 
   const matchPct = Number(analysis?.match_percentage) ?? 0;
   const safeMatched = Array.isArray(analysis?.matched_skills) ? analysis.matched_skills : [];
-  const safeCritical = Array.isArray(analysis?.critical_skills) ? analysis.critical_skills : [];
+  const safeCritical = Array.isArray(analysis?.critical_skills) ? analysis.critical_skills : (Array.isArray(analysis?.missing_skills) ? analysis.missing_skills : []);
   const safeRecs = Array.isArray(analysis?.recommendations) ? analysis.recommendations : [];
+  const safeRoadmap = Array.isArray(analysis?.roadmap) ? analysis.roadmap : [];
   const safeRecommendedJobs = Array.isArray(analysis?.recommended_jobs) ? analysis.recommended_jobs : [];
-  const jobTitle = analysis?.job?.title || 'Job Title';
-  const companyName = analysis?.job?.company || 'Company Name';
-  const jobUrl = analysis?.job?.url || '#';
+  
+  // Dynamically resolve Title (Target Role vs Specific Job)
+  const isRoleMode = !!analysis?.target_role;
+  const jobTitle = analysis?.target_role || analysis?.job?.title || 'General Career Analysis';
+  const companyName = isRoleMode ? 'Industry Baseline Market Match' : (analysis?.job?.company || 'Market Overview');
+  const jobUrl = analysis?.job?.url || null;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-8 px-4 sm:px-6 lg:px-8 font-sans pb-24 transition-colors duration-300">
@@ -383,12 +419,26 @@ export default function GapAnalysis() {
 
         {/* TOP BAR */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print mb-4">
-          <button
-            onClick={() => navigate('/jobs')}
-            className="flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-bold transition-colors group text-sm bg-white dark:bg-slate-800 px-4 py-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700"
-          >
-            <ChevronLeft size={16} className="rtl-flip" /> {t('gap_analysis.back_to_jobs')}
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate('/jobs')}
+              className="flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 font-bold transition-colors group text-sm bg-white dark:bg-slate-800 px-4 py-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700"
+            >
+              <ChevronLeft size={16} className="rtl-flip" /> {t('gap_analysis.back_to_jobs')}
+            </button>
+            <div className="relative">
+              <select 
+                value={selectedRole} 
+                onChange={handleRoleChange}
+                className="appearance-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-sm font-bold rounded-xl px-4 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
+              >
+                <option value="">{t('gap_analysis.analyze_specific_job', 'Specific Job Analysis')}</option>
+                {targetRoles.map(role => (
+                  <option key={role.id} value={role.id}>🎯 {role.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
           <button
             onClick={() => window.print()}
             className="px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200 dark:hover:border-indigo-500 rounded-xl font-bold flex items-center gap-2 text-sm shadow-sm transition-all"
@@ -495,6 +545,16 @@ export default function GapAnalysis() {
                     )}
                   </div>
                 </div>
+
+                {/* ROADMAP TIMELINE */}
+                {safeRoadmap.length > 0 && (
+                  <div className="pt-6 mt-6 border-t border-slate-100 dark:border-slate-700">
+                    <h4 className="text-xs font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                       <Zap size={16} /> Strategy & Next Steps
+                    </h4>
+                    <RoadmapTimeline roadmap={safeRoadmap} />
+                  </div>
+                )}
               </div>
             </div>
           </div>
