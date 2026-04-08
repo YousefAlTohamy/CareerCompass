@@ -25,6 +25,7 @@ import {
   TrendingUp,
   Info
 } from 'lucide-react';
+import { TechBadges } from '../../components/AiInsights';
 
 // Safe Helper function to get user initials
 const getInitials = (name) => {
@@ -618,6 +619,12 @@ export default function Profile() {
                                     </p>
                                     {exp?.description && (
                                       <p className="text-slate-600 dark:text-slate-400 text-sm mt-3 leading-relaxed whitespace-pre-wrap border-s-2 border-slate-100 dark:border-slate-700 ps-4">{exp.description}</p>
+                                    )}
+                                    {/* Per-job technologies from Phase 2 Temporal Logic */}
+                                    {exp?.technologies && exp.technologies.length > 0 && (
+                                      <div className="mt-3">
+                                        <TechBadges technologies={exp.technologies} />
+                                      </div>
                                     )}
                                   </div>
                                 </div>

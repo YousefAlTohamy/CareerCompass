@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import gc
 import logging
+import os
 import re
+import threading
 from dataclasses import dataclass
 from datetime import date
 import time
@@ -25,16 +28,50 @@ from core.layer1_understanding.section_segmenter import SemanticSegmenter
 from core.layer1_understanding.spatial_parser import SpatialTextExtraction, extract_spatial_text_from_pdf
 from core.layer1_understanding.contact_extractor import extract_contacts
 
+# Lazy import for OCR — guarded so the pipeline doesn't crash if EasyOCR or
+# PyMuPDF are not installed.
+try:
+    from core.layer1_understanding.ocr_pipeline import (
+        extract_images_from_pdf_bytes,
+        extract_text_from_image,
+        OCR_AVAILABLE,
+    )
+except ImportError:
+    OCR_AVAILABLE = False
+    extract_images_from_pdf_bytes = None  # type: ignore[assignment]
+    extract_text_from_image = None  # type: ignore[assignment]
+
+# Lazy import for Semantic Embedder — guarded so the pipeline works
+# even without sentence-transformers installed.
+try:
+    from core.layer3_matching.embedder import SemanticEmbedder
+    EMBEDDER_AVAILABLE = True
+except ImportError:
+    SemanticEmbedder = None  # type: ignore[misc,assignment]
+    EMBEDDER_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 
 _WORD_RE = re.compile(r"\S+")
+
+# ---------------------------------------------------------------------------
+# Configuration
+# ---------------------------------------------------------------------------
+
+# Minimum total character count from spatial extraction to consider it "good
+# enough".  Below this threshold we suspect the PDF is scanned / image-based.
+_MIN_CHAR_DENSITY = 150
 
 
 @dataclass(frozen=True, slots=True)
 class OrchestratorConfig:
     canonical_fuzzy_threshold: int = 86
     ner_context_window_words: int = 3
+    ocr_char_density_threshold: int = _MIN_CHAR_DENSITY
+    # Phase 3: Semantic thresholds (cosine similarity)
+    semantic_header_threshold: float = 0.82
+    semantic_skill_threshold: float = 0.85
 
 
 class CVOrchestrator:
@@ -45,43 +82,225 @@ class CVOrchestrator:
     def __init__(self, *, config: Optional[OrchestratorConfig] = None) -> None:
         self._config = config or OrchestratorConfig()
 
-        self._segmenter = SemanticSegmenter()
+        # Phase 5: Thread-safety lock for multi-worker environments (Celery etc.)
+        self._process_lock = threading.Lock()
+
+        # Phase 3: Initialize shared SemanticEmbedder (Singleton).
+        # Lazily loaded — the model is only downloaded on first construction.
+        self._embedder = None
+        if EMBEDDER_AVAILABLE:
+            try:
+                self._embedder = SemanticEmbedder()
+                logger.info("Shared SemanticEmbedder initialized for orchestrator.")
+            except Exception as e:
+                logger.warning("SemanticEmbedder failed to initialize: %s. Falling back to non-semantic pipeline.", e)
+                self._embedder = None
+
+        self._segmenter = SemanticSegmenter(
+            embedder=self._embedder,
+            semantic_header_threshold=self._config.semantic_header_threshold,
+        )
         self._ner = AdvancedNEREngine()
         self._experience = ExperienceEngine()
-        self._canonicalizer = DataCanonicalizer(fuzzy_threshold=self._config.canonical_fuzzy_threshold)
+        self._canonicalizer = DataCanonicalizer(
+            fuzzy_threshold=self._config.canonical_fuzzy_threshold,
+            embedder=self._embedder,
+            semantic_skill_threshold=self._config.semantic_skill_threshold,
+        )
+
+    # ------------------------------------------------------------------
+    # Public entry point
+    # ------------------------------------------------------------------
 
     def process_cv(self, pdf_bytes: bytes, filename: Optional[str] = None) -> CVParseResult:
         """
-        Returns the strict `CVParseResult` model (always).
+        Returns the strict ``CVParseResult`` model (always).
+
+        Phase 5: Thread-safe — acquires ``_process_lock`` so concurrent
+        Celery workers sharing the same process don't corrupt state.
+        Logs memory usage and phase-level latency.
         """
+        t_total = time.perf_counter()
         if filename:
             logger.info("V2 orchestrator processing file: %s", filename)
-            
-        t0 = time.time()
+
+        _log_memory("before_processing")
+
+        with self._process_lock:
+            result = self._process_cv_unlocked(pdf_bytes, filename)
+
+        total_ms = (time.perf_counter() - t_total) * 1000
+        logger.info(
+            "Pipeline total: %.1fms | status=%s | file=%s",
+            total_ms, result.parsing_status, filename or "<bytes>",
+        )
+        _log_memory("after_processing")
+
+        # Phase 5: Trigger GC to reclaim transient allocations (OCR images etc.)
+        gc.collect()
+
+        return result
+
+    def _process_cv_unlocked(self, pdf_bytes: bytes, filename: Optional[str] = None) -> CVParseResult:
+        """Inner implementation without the lock — called by ``process_cv``."""
+        # -- Phase 1a: Attempt fast spatial extraction --
+        t0 = time.perf_counter()
         try:
             spatial: SpatialTextExtraction = extract_spatial_text_from_pdf(pdf_bytes)
-            spatial_time = time.time() - t0
-            logger.info("Latency: Spatial Parsing took %.2fs", spatial_time)
+            spatial_ms = (time.perf_counter() - t0) * 1000
+            logger.info("⏱ Spatial Parsing: %.1fms", spatial_ms)
         except Exception as e:
             logger.exception("Spatial parsing failed: %s", e)
-            return self._empty_result(parsing_status="error", page_count=0)
+            return self._attempt_ocr_fallback(pdf_bytes, page_count=0, reason="spatial_exception")
 
-        if spatial.status in ("no_text", "error") or not spatial.text:
-            status = "empty_file" if spatial.status == "no_text" else "error"
-            logger.info("V2 orchestrator: spatial extraction status=%s", spatial.status)
-            return self._empty_result(
-                parsing_status=status,
-                page_count=spatial.page_count,
+        # -- Phase 1b: Evaluate spatial quality --
+        extraction_source = "spatial"
+        ordered_text = spatial.text or ""
+        char_count = len(ordered_text)
+
+        needs_ocr = self._should_trigger_ocr(spatial, char_count)
+
+        if needs_ocr:
+            t_ocr_start = time.perf_counter()
+            ocr_result = self._attempt_ocr_fallback(pdf_bytes, page_count=spatial.page_count, reason=self._ocr_reason(spatial, char_count))
+            ocr_ms = (time.perf_counter() - t_ocr_start) * 1000
+            logger.info("⏱ OCR Fallback: %.1fms", ocr_ms)
+            if ocr_result is not None:
+                return ocr_result
+            if not ordered_text:
+                status = "empty_file" if spatial.status == "no_text" else "error"
+                logger.info("V2 orchestrator: no usable text after spatial + OCR; status=%s", status)
+                return self._empty_result(parsing_status=status, page_count=spatial.page_count)
+
+        # -- Phase 2+: NLP pipeline on the extracted text --
+        t_nlp = time.perf_counter()
+        nlp_result = self._run_nlp_pipeline(
+            ordered_text=ordered_text,
+            page_count=spatial.page_count,
+            extraction_source=extraction_source,
+            spatial_status=spatial.status,
+            spatial_word_count=spatial.word_count,
+        )
+        nlp_ms = (time.perf_counter() - t_nlp) * 1000
+        logger.info("⏱ NLP Pipeline: %.1fms", nlp_ms)
+        return nlp_result
+
+    # ------------------------------------------------------------------
+    # OCR Fallback Helpers  (SRP: keeps process_cv lean)
+    # ------------------------------------------------------------------
+
+    def _should_trigger_ocr(self, spatial: SpatialTextExtraction, char_count: int) -> bool:
+        """Decide whether OCR should be attempted based on spatial results."""
+        if spatial.status == "no_text":
+            logger.info("OCR trigger: spatial status is 'no_text'.")
+            return True
+        if spatial.status == "error":
+            logger.info("OCR trigger: spatial status is 'error'.")
+            return True
+        if char_count < self._config.ocr_char_density_threshold:
+            logger.info(
+                "OCR trigger: character density too low (%d < %d threshold).",
+                char_count,
+                self._config.ocr_char_density_threshold,
             )
+            return True
+        return False
 
-        ordered_text = spatial.text
+    @staticmethod
+    def _ocr_reason(spatial: SpatialTextExtraction, char_count: int) -> str:
+        """Return a short machine-readable reason for the OCR trigger."""
+        if spatial.status == "no_text":
+            return "spatial_no_text"
+        if spatial.status == "error":
+            return "spatial_error"
+        return f"low_char_density_{char_count}"
+
+    def _attempt_ocr_fallback(
+        self,
+        pdf_bytes: bytes,
+        *,
+        page_count: int,
+        reason: str,
+    ) -> Optional[CVParseResult]:
+        """
+        Try to reconstruct the full text via OCR.
+
+        Returns a fully-formed CVParseResult on success, or *None* if OCR is
+        unavailable / fails (so the caller can fall back further).
+        """
+        if not OCR_AVAILABLE:
+            logger.warning("OCR fallback requested (reason=%s) but EasyOCR is not installed.", reason)
+            return None
+
+        logger.info("Starting OCR fallback pipeline (reason=%s).", reason)
+        t_ocr = time.time()
+        try:
+            page_images = extract_images_from_pdf_bytes(pdf_bytes)  # type: ignore[misc]
+        except Exception as e:
+            logger.exception("OCR: failed to render PDF pages to images: %s", e)
+            return None
+
+        if not page_images:
+            logger.warning("OCR: no page images produced from PDF.")
+            return None
+
+        ocr_parts: List[str] = []
+        for i, img_bytes in enumerate(page_images):
+            try:
+                text = extract_text_from_image(img_bytes)  # type: ignore[misc]
+                if text and text.strip():
+                    ocr_parts.append(text.strip())
+                    logger.debug("OCR page %d: extracted %d chars.", i + 1, len(text))
+                else:
+                    logger.debug("OCR page %d: no text extracted.", i + 1)
+            except Exception as e:
+                logger.warning("OCR page %d failed: %s", i + 1, e)
+
+        if not ocr_parts:
+            logger.warning("OCR produced no text across %d pages.", len(page_images))
+            return None
+
+        ocr_text = "\n\n".join(ocr_parts).strip()
+        if len(ocr_text) < 20:
+            logger.warning("OCR text too short (%d chars), treating as failure.", len(ocr_text))
+            return None
+
+        ocr_latency = time.time() - t_ocr
+        logger.info("Latency: OCR Fallback took %.2fs, produced %d chars.", ocr_latency, len(ocr_text))
+
+        return self._run_nlp_pipeline(
+            ordered_text=ocr_text,
+            page_count=page_count or len(page_images),
+            extraction_source="ocr",
+            spatial_status="no_text",
+            spatial_word_count=0,
+        )
+
+    # ------------------------------------------------------------------
+    # Core NLP Pipeline  (extracted to honour SRP)
+    # ------------------------------------------------------------------
+
+    def _run_nlp_pipeline(
+        self,
+        *,
+        ordered_text: str,
+        page_count: int,
+        extraction_source: str,
+        spatial_status: str,
+        spatial_word_count: int,
+    ) -> CVParseResult:
+        """
+        Run segmentation → NER → canonicalization → experience extraction on
+        the already-extracted text.  This is source-agnostic: the same logic
+        applies regardless of whether text came from spatial or OCR.
+        """
         segments = self._segmenter.segment(ordered_text)
-        
+
         contact_dict = extract_contacts(ordered_text)
 
         # Name + title heuristics from profile-ish area first.
         profile_text = segments.sections.get("profile_summary") or segments.sections.get("uncategorized") or ordered_text
-        
+
         # Determine global entities first so we can use them for name candidate
         t1 = time.time()
         try:
@@ -94,13 +313,13 @@ class CVOrchestrator:
         except Exception as e:
             logger.exception("NER Inference failed: %s", e)
             entities = {}
-        
+
         name_candidate = self._ner.extract_candidate_name(profile_text, entities)
 
         # Canonicalization with provenance: skills can come from multiple sections later.
         roles_lower = {r.lower() for r in entities.get("roles", [])}
         orgs_lower = {o.lower() for o in entities.get("orgs", [])}
-        
+
         # Action Verbs used to filter greedy merged skills
         ACTION_VERBS = {
             "developed", "managed", "led", "engineered", "collaborated",
@@ -109,11 +328,11 @@ class CVOrchestrator:
             "integrated", "tested", "deployed", "maintained", "improved",
             "optimized", "resolved", "coordinated", "analyzed"
         }
-        
+
         # Phase 6.2: Global Skill Safeguard (Full-Text Fallback)
         skills_text = segments.sections.get("skills", "")
         is_fallback_mode = not skills_text or len(skills_text) < 100
-        
+
         skills_source = []
         if is_fallback_mode:
             logger.info("Fallback Mode ACTIVE: Skills section missing or < 100 chars. Using full CV text.")
@@ -126,10 +345,10 @@ class CVOrchestrator:
                 skills_source.extend(skills_entities.get("skills", []))
             except Exception as e:
                 logger.exception("NER Inference (Skills Section) failed: %s", e)
-            
+
             # Combine with global full-text skills to prevent missing overlapping tech
             skills_source.extend(entities.get("skills", []))
-        
+
         skills_raw = []
         seen_skills = set()
         for s in skills_source:
@@ -137,25 +356,25 @@ class CVOrchestrator:
             if s_lower in seen_skills:
                 continue
             seen_skills.add(s_lower)
-            
+
             # 1. Role / Org Precedence
             if s_lower in roles_lower or s_lower in orgs_lower:
                 continue
-                
+
             # 2. Length restrictions: > 40 characters or > 5 words (Phase 6.3)
             if len(s) > 40:
                 continue
             words = s.split()
             if len(words) > 5:
                 continue
-                
+
             # 3. Action Verb Filtering
             word_set = {w.lower().strip(".,;:()") for w in words}
             if any(verb in word_set for verb in ACTION_VERBS):
                 continue
-                
+
             skills_raw.append(s)
-        
+
         t2 = time.time()
         try:
             canonical_skills = self._canonicalizer.canonicalize_skills(
@@ -201,8 +420,57 @@ class CVOrchestrator:
             ),
         )
 
+        # Phase 2: Compute per-skill durations from the populated experience items
+        skill_durations: Dict[str, float] = {}
+        try:
+            skill_durations = self._experience.calculate_skill_durations(experience_items)
+        except Exception as e:
+            logger.warning("Skill duration calculation failed: %s", e)
+
+        # Phase 4: Career health analysis (gaps, overlaps, job hopping)
+        career_health: Dict[str, List[str]] = {"gaps": [], "overlaps": [], "red_flags": []}
+        try:
+            career_health = self._experience.analyze_career_health(experience_items)
+        except Exception as e:
+            logger.warning("Career health analysis failed: %s", e)
+
+        # Phase 4: Action verb score
+        action_verb_score: float = 0.0
+        try:
+            action_verb_score = self._experience.calculate_action_verb_score(experience_items)
+        except Exception as e:
+            logger.warning("Action verb scoring failed: %s", e)
+
+        # Phase 4: Seniority inference
+        seniority = _infer_seniority(
+            total_years=total_years,
+            current_title=current_title,
+            action_verb_score=action_verb_score,
+        )
+
+        # Phase 4: Top skills by years (from Phase 2 durations)
+        top_skills_by_years: List[Dict[str, Any]] = []
+        if skill_durations:
+            sorted_skills = sorted(skill_durations.items(), key=lambda x: -x[1])[:3]
+            top_skills_by_years = [
+                {"skill": name, "years": yrs} for name, yrs in sorted_skills
+            ]
+
+        # Combine red flags and gaps from career health into AnalysisSection
+        all_red_flags = career_health.get("red_flags", []) + career_health.get("overlaps", [])
+        all_gaps = career_health.get("gaps", [])
+
+        # Build strengths from action verbs and experience
+        strengths: List[str] = []
+        if action_verb_score >= 0.7:
+            strengths.append("Strong use of action verbs in job descriptions — demonstrates clear ownership and impact.")
+        if total_years >= 5:
+            strengths.append(f"Substantial career experience ({total_years} years) indicating deep domain knowledge.")
+        if len(skill_durations) >= 5:
+            strengths.append(f"Diverse technical portfolio with {len(skill_durations)} technologies used across roles.")
+
         stats = DocumentStats(
-            page_count=spatial.page_count,
+            page_count=page_count,
             char_count=len(ordered_text),
             word_count=_count_words(ordered_text),
             language_hint=None,
@@ -223,14 +491,17 @@ class CVOrchestrator:
             ),
         )
 
+        # Determine parsing_status based on extraction source
+        parsing_status = "ocr_fallback" if extraction_source == "ocr" else "success"
+
         analysis = AnalysisSection(
             summary=None,
             predicted_role=current_title,
-            seniority=None,
+            seniority=seniority,
             primary_domain=None,
-            strengths=[],
-            gaps=[],
-            red_flags=[],
+            strengths=strengths,
+            gaps=all_gaps,
+            red_flags=all_red_flags,
             confidence_score=_aggregate_confidence(
                 [skills_section.confidence_score, experience_section.confidence_score],
                 default=0.0,
@@ -243,23 +514,32 @@ class CVOrchestrator:
                 },
                 "experience": {
                     "total_experience_years": total_years,
+                    "skill_durations": skill_durations,
+                    "top_skills_by_years": top_skills_by_years,
+                    "action_verb_score": action_verb_score,
+                    "gap_details": all_gaps,
                 },
                 "extraction": {
-                    "spatial_status": spatial.status,
-                    "word_count_spatial": spatial.word_count,
+                    "source": extraction_source,
+                    "spatial_status": spatial_status,
+                    "word_count_spatial": spatial_word_count,
                     "raw_text": ordered_text,
                 },
             },
         )
 
         return CVParseResult(
-            parsing_status="success",
+            parsing_status=parsing_status,
             profile=profile,
             stats=stats,
             skills=skills_section,
             experience=experience_section,
             analysis=analysis,
         )
+
+    # ------------------------------------------------------------------
+    # Empty / error result
+    # ------------------------------------------------------------------
 
     def _empty_result(self, *, parsing_status: str, page_count: int) -> CVParseResult:
         return CVParseResult(
@@ -281,10 +561,18 @@ class CVOrchestrator:
             ),
         )
 
+    # ------------------------------------------------------------------
+    # Experience helpers
+    # ------------------------------------------------------------------
+
     def _build_experience_items(self, experience_text: str, predicted_title: Optional[str] = None) -> List[ExperienceItem]:
         """
         Phase-4: Advanced Segmentation.
-        Splits experience text into blocks by date, then uses NER to extract real Company, Location, and Role per block.
+        Splits experience text into blocks by date, then uses NER to extract
+        real Company, Location, Role, AND technologies per block.
+
+        Phase 2 enhancement: every ExperienceItem.technologies is populated
+        via a targeted NER scan scoped to the block text, then canonicalized.
         """
         if not experience_text.strip():
             return []
@@ -305,6 +593,8 @@ class CVOrchestrator:
             if role and role != "Professional Experience":
                 desc_text = re.sub(re.escape(role), "", desc_text, flags=re.IGNORECASE)
 
+            block_techs = self._extract_block_technologies(experience_text, entities)
+
             return [
                 ExperienceItem(
                     title=role,
@@ -314,7 +604,7 @@ class CVOrchestrator:
                     end_date=None,
                     is_current=None,
                     description=_extract_bullets(desc_text),
-                    technologies=[],
+                    technologies=block_techs,
                     confidence_score=0.45,
                 )
             ]
@@ -348,6 +638,9 @@ class CVOrchestrator:
             if role and role != "Professional Experience":
                 desc_text = re.sub(re.escape(role), "", desc_text, flags=re.IGNORECASE)
 
+            # Phase 2: Populate technologies from this block's NER context
+            block_techs = self._extract_block_technologies(block_text, entities)
+
             items.append(
                 ExperienceItem(
                     title=role,
@@ -357,12 +650,76 @@ class CVOrchestrator:
                     end_date=r.end,
                     is_current=(r.end == date.today()),
                     description=_extract_bullets(desc_text),
-                    technologies=[],
+                    technologies=block_techs,
                     confidence_score=0.85,
                 )
             )
 
         return items
+
+    def _extract_block_technologies(
+        self,
+        block_text: str,
+        block_entities: Optional[Dict[str, List[str]]] = None,
+    ) -> List[str]:
+        """
+        Extract and canonicalize technologies mentioned within a single
+        experience block.
+
+        This is scoped only to the block text so global Skills-section
+        entries don't pollute individual job contexts.
+
+        Returns:
+            Deduplicated list of canonical technology names.
+        """
+        if not block_text.strip():
+            return []
+
+        # Reuse existing entities if the caller already ran NER on this block
+        entities = block_entities
+        if entities is None:
+            try:
+                entities = self._ner.extract_entities(
+                    block_text,
+                    context_window_words=self._config.ner_context_window_words,
+                )
+            except Exception as e:
+                logger.warning("NER for block technologies failed: %s", e)
+                return []
+
+        raw_skills = entities.get("skills", [])
+        if not raw_skills:
+            return []
+
+        # Filter: skip roles/orgs that NER may have tagged as skills
+        roles_lower = {r.lower() for r in entities.get("roles", [])}
+        orgs_lower = {o.lower() for o in entities.get("orgs", [])}
+
+        filtered: List[str] = []
+        seen: set = set()
+        for s in raw_skills:
+            sl = s.lower()
+            if sl in seen or sl in roles_lower or sl in orgs_lower:
+                continue
+            if len(s) > 40 or len(s.split()) > 5:
+                continue
+            seen.add(sl)
+            filtered.append(s)
+
+        if not filtered:
+            return []
+
+        # Canonicalize to prevent "JS" and "JavaScript" appearing separately
+        try:
+            canonical = self._canonicalizer.canonicalize_skills(
+                filtered,
+                skill_confidence=0.60,
+                source="experience_block",
+            )
+            return [sk.name for sk in canonical]
+        except Exception as e:
+            logger.warning("Canonicalization of block technologies failed: %s", e)
+            return filtered
 
     def _rank_current_title(self, experience_text: str, segments_dict: Optional[Dict[str, str]] = None) -> Optional[str]:
         """
@@ -376,7 +733,7 @@ class CVOrchestrator:
                  target_text += segments_dict["experience"] + "\n"
             if "profile_summary" in segments_dict:
                  target_text += segments_dict["profile_summary"] + "\n"
-            
+
             if target_text.strip():
                 extracted = self._ner.extract_entities(target_text)
                 roles = extracted.get("roles", [])
@@ -417,6 +774,23 @@ class CVOrchestrator:
         return None
 
 
+# ---------------------------------------------------------------------------
+# Module-level helpers (pure functions)
+# ---------------------------------------------------------------------------
+
+def _log_memory(label: str) -> None:
+    """Log current process RSS memory usage (best-effort, needs psutil)."""
+    try:
+        import psutil
+        process = psutil.Process(os.getpid())
+        rss_mb = process.memory_info().rss / (1024 * 1024)
+        logger.info("Memory [%s]: RSS=%.1f MB", label, rss_mb)
+    except ImportError:
+        pass  # psutil not installed — skip silently
+    except Exception as e:
+        logger.debug("Memory logging failed (%s): %s", label, e)
+
+
 def _count_words(text: str) -> int:
     return len(_WORD_RE.findall(text or ""))
 
@@ -426,6 +800,103 @@ def _aggregate_confidence(values: Sequence[float], *, default: float) -> float:
     if not vals:
         return float(default)
     return float(min(1.0, sum(vals) / len(vals)))
+
+
+# ---------------------------------------------------------------------------
+# Phase 4: Seniority inference (pure function)
+# ---------------------------------------------------------------------------
+
+# Title keyword → seniority mapping (checked against the most recent title)
+_TITLE_SENIORITY_KEYWORDS: Dict[str, str] = {
+    "intern": "intern",
+    "trainee": "intern",
+    "apprentice": "intern",
+    "junior": "junior",
+    "jr": "junior",
+    "associate": "junior",
+    "mid": "mid",
+    "intermediate": "mid",
+    "senior": "senior",
+    "sr": "senior",
+    "staff": "senior",
+    "lead": "lead",
+    "team lead": "lead",
+    "tech lead": "lead",
+    "manager": "lead",
+    "head of": "lead",
+    "director": "principal",
+    "principal": "principal",
+    "vp": "principal",
+    "chief": "principal",
+    "architect": "senior",
+    "fellow": "principal",
+}
+
+_SENIORITY_ORDER = ["intern", "junior", "mid", "senior", "lead", "principal"]
+
+
+def _infer_seniority(
+    *,
+    total_years: float,
+    current_title: Optional[str],
+    action_verb_score: float,
+) -> Optional[str]:
+    """
+    Weighted seniority inference using:
+    1. Title keywords (strongest signal — especially "intern" override)
+    2. Total experience years (primary quantitative signal)
+    3. Action verb density (tiebreaker / micro-adjustment)
+
+    Returns one of: "intern", "junior", "mid", "senior", "lead", "principal"
+    """
+    # --- Step 1: Title-based override ---
+    title_seniority: Optional[str] = None
+    if current_title:
+        title_lower = current_title.lower()
+        # Check multi-word keywords first (longer matches), then single words
+        for keyword in sorted(_TITLE_SENIORITY_KEYWORDS.keys(), key=len, reverse=True):
+            if keyword in title_lower:
+                title_seniority = _TITLE_SENIORITY_KEYWORDS[keyword]
+                break
+
+    # Hard override: if the most recent title is "Intern", keep it as intern
+    # regardless of total years (might be a career-switching intern)
+    if title_seniority == "intern":
+        return "intern"
+
+    # --- Step 2: Years-based baseline ---
+    if total_years < 1:
+        years_seniority = "intern"
+    elif total_years < 2:
+        years_seniority = "junior"
+    elif total_years < 5:
+        years_seniority = "mid"
+    elif total_years < 8:
+        years_seniority = "senior"
+    elif total_years < 12:
+        years_seniority = "lead"
+    else:
+        years_seniority = "principal"
+
+    # --- Step 3: Combine title + years ---
+    if title_seniority is not None:
+        title_idx = _SENIORITY_ORDER.index(title_seniority)
+        years_idx = _SENIORITY_ORDER.index(years_seniority)
+        # Weighted average: title has 60% weight, years 40%
+        combined_idx = round(title_idx * 0.6 + years_idx * 0.4)
+    else:
+        combined_idx = _SENIORITY_ORDER.index(years_seniority)
+
+    # --- Step 4: Action verb micro-adjustment ---
+    # Strong verb usage can bump up by one level (max)
+    if action_verb_score >= 0.8 and combined_idx < len(_SENIORITY_ORDER) - 1:
+        combined_idx += 1
+    # Very weak verb usage might nudge down (only if not at bottom)
+    elif action_verb_score < 0.2 and combined_idx > 0:
+        combined_idx -= 1
+
+    combined_idx = max(0, min(len(_SENIORITY_ORDER) - 1, combined_idx))
+    return _SENIORITY_ORDER[combined_idx]
 
 
 _DATEY_RE = re.compile(r"\b(?:\d{4}|present|current|now|today|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\b", re.IGNORECASE)

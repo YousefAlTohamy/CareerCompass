@@ -50,10 +50,17 @@ class CvProcessingService implements CvProcessingServiceInterface
 
         // Validate parsing status — reject empty/unparseable CVs
         $parsingStatus = $v3Response['parsing_status'] ?? 'success';
-        if ($parsingStatus === 'empty_file' || $parsingStatus === 'no_text' || $parsingStatus === 'error') {
+        if ($parsingStatus === 'empty_file' || $parsingStatus === 'no_text') {
             throw new RuntimeException(
                 "Could not extract text from the CV (status={$parsingStatus}). Please ensure the file contains readable content."
             );
+        }
+
+        // Log OCR fallback so we can surface it to the user
+        if ($parsingStatus === 'ocr_fallback') {
+            Log::info('CV was processed using OCR fallback — text extraction may be less accurate.', [
+                'user_id' => $user->id,
+            ]);
         }
 
         // ── Step 2: Persist all data within a single DB transaction ─────────
@@ -86,8 +93,8 @@ class CvProcessingService implements CvProcessingServiceInterface
     /**
      * Call the V3 Python AI CV Parser endpoint.
      *
-     * Note: V3 is served by ai-cv-analyzer (typically port 8002). Set AI_GATEWAY_URL
-     * in .env to point at that service when using this integration.
+     * Handles timeouts and 500 errors gracefully — logs and re-throws
+     * as RuntimeException with descriptive messages.
      *
      * @param UploadedFile $file
      * @return array<string, mixed> Raw V3 API response
@@ -132,15 +139,28 @@ class CvProcessingService implements CvProcessingServiceInterface
             }
 
             Log::info('V3 AI Gateway response received', [
-                'parsing_status' => $data['parsing_status'] ?? null,
-                'primary_domain' => $data['analysis']['primary_domain'] ?? null,
-                'skills_count'   => isset($data['skills']['items']) ? count($data['skills']['items']) : 0,
+                'parsing_status'   => $data['parsing_status'] ?? null,
+                'seniority'        => $data['analysis']['seniority'] ?? null,
+                'predicted_role'   => $data['analysis']['predicted_role'] ?? null,
+                'primary_domain'   => $data['analysis']['primary_domain'] ?? null,
+                'skills_count'     => isset($data['skills']['items']) ? count($data['skills']['items']) : 0,
                 'experience_count' => isset($data['experience']['items']) ? count($data['experience']['items']) : 0,
             ]);
 
             return $data;
         } catch (RuntimeException $e) {
             throw $e;
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            Log::error('V3 AI Gateway connection timed out or refused', [
+                'url'     => $url,
+                'timeout' => $this->timeout,
+                'error'   => $e->getMessage(),
+            ]);
+            throw new RuntimeException(
+                'AI CV parser is currently unavailable. Please try again later.',
+                0,
+                $e
+            );
         } catch (\Throwable $e) {
             Log::error('V3 AI Gateway request failed', [
                 'url'   => $url,
@@ -149,6 +169,10 @@ class CvProcessingService implements CvProcessingServiceInterface
             throw new RuntimeException('Failed to communicate with the AI CV parser.', 0, $e);
         }
     }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Persistence Helpers (SRP: each handles one domain model)
+    // ─────────────────────────────────────────────────────────────────────
 
     /**
      * Persist UserProfile from V3 profile, stats, and analysis sections.
@@ -199,7 +223,7 @@ class CvProcessingService implements CvProcessingServiceInterface
 
     /**
      * Delete existing user experiences and create new ones from experience.items.
-     * Handles date parsing (YYYY-MM-DD) via Carbon and null-safe storage.
+     * Phase 2: Now also persists ExperienceItem.technologies as a JSON array.
      */
     private function persistUserExperiences(User $user, array $v3Response): Collection
     {
@@ -230,15 +254,19 @@ class CvProcessingService implements CvProcessingServiceInterface
                 ? implode("\n", array_map('strval', $descriptions))
                 : (string) $descriptions;
 
+            // Phase 2: Extract and sanitize technologies array
+            $technologies = $this->sanitizeTechnologies($item['technologies'] ?? []);
+
             $exp = UserExperience::create([
-                'user_id'     => $user->id,
-                'title'       => $title ?: 'Unknown',
-                'company'     => $company ?: 'Unknown',
-                'location'    => !empty($item['location']) ? (string) $item['location'] : null,
-                'start_date'  => $startDate,
-                'end_date'    => $endDate,
-                'is_current'  => $isCurrent,
-                'description' => $descriptionText ?: null,
+                'user_id'      => $user->id,
+                'title'        => $title ?: 'Unknown',
+                'company'      => $company ?: 'Unknown',
+                'location'     => !empty($item['location']) ? (string) $item['location'] : null,
+                'start_date'   => $startDate,
+                'end_date'     => $endDate,
+                'is_current'   => $isCurrent,
+                'description'  => $descriptionText ?: null,
+                'technologies' => !empty($technologies) ? $technologies : null,
             ]);
 
             $created->push($exp);
@@ -247,9 +275,31 @@ class CvProcessingService implements CvProcessingServiceInterface
         Log::info('User experiences persisted from V3 CV', [
             'user_id' => $user->id,
             'count'   => $created->count(),
+            'with_technologies' => $created->filter(fn($e) => !empty($e->technologies))->count(),
         ]);
 
         return $created;
+    }
+
+    /**
+     * Sanitize and validate technologies array from AI response.
+     * Filters out non-string values, trims whitespace, removes empties.
+     *
+     * @param mixed $technologies
+     * @return list<string>
+     */
+    private function sanitizeTechnologies(mixed $technologies): array
+    {
+        if (!is_array($technologies)) {
+            return [];
+        }
+
+        return array_values(
+            array_filter(
+                array_map(fn($t) => is_string($t) ? trim($t) : '', $technologies),
+                fn($t) => $t !== '' && strlen($t) <= 100  // Reject absurdly long strings
+            )
+        );
     }
 
     /**
@@ -343,34 +393,96 @@ class CvProcessingService implements CvProcessingServiceInterface
     }
 
     /**
-     * Create or update CvAnalysis record with parsing_status, completeness_score, strengths, gaps, red_flags, raw_json_output.
+     * Create or update CvAnalysis record with full Phase 4 analytics:
+     * seniority, predicted_role, gaps, red_flags, skill_durations, action_verb_score, etc.
+     *
+     * The metadata JSON column stores career health details for frontend consumption.
      */
     private function persistCvAnalysis(User $user, array $v3Response): void
     {
         $analysis = $v3Response['analysis'] ?? [];
+        $expMeta  = $analysis['metadata']['experience'] ?? [];
 
         $completenessScore = null;
         if (isset($analysis['confidence_score'])) {
             $completenessScore = (int) round((float) $analysis['confidence_score'] * 100);
         }
 
+        // Build structured metadata from AI response
+        $metadata = $this->buildAnalysisMetadata($analysis, $v3Response);
+
         CvAnalysis::updateOrCreate(
             ['user_id' => $user->id],
             [
                 'parsing_status'     => (string) ($v3Response['parsing_status'] ?? 'success'),
+                'seniority'          => $this->sanitizeString($analysis['seniority'] ?? null, CvAnalysis::SENIORITY_LEVELS),
+                'predicted_role'     => $this->sanitizeStringValue($analysis['predicted_role'] ?? null, 200),
+                'primary_domain'     => $this->sanitizeStringValue($analysis['primary_domain'] ?? null, 200),
+                'confidence_score'   => isset($analysis['confidence_score']) ? (float) $analysis['confidence_score'] : null,
+                'summary'            => $this->sanitizeStringValue($analysis['summary'] ?? null, 5000),
                 'completeness_score' => $completenessScore,
                 'strengths'          => $analysis['strengths'] ?? [],
                 'gaps'               => $analysis['gaps'] ?? [],
                 'red_flags'          => $analysis['red_flags'] ?? [],
+                'metadata'           => $metadata,
                 'raw_json_output'    => $v3Response,
             ]
         );
 
-        Log::info('CvAnalysis persisted for user', ['user_id' => $user->id]);
+        Log::info('CvAnalysis persisted for user', [
+            'user_id'   => $user->id,
+            'seniority' => $analysis['seniority'] ?? null,
+            'ocr_used'  => ($v3Response['parsing_status'] ?? '') === 'ocr_fallback',
+        ]);
     }
 
     /**
-     * Build backward-compatible aiData for controller response (domain, domain_confidence, extraction_method, etc.).
+     * Build the metadata JSON blob from AI analysis and experience data.
+     *
+     * @return array<string, mixed>
+     */
+    private function buildAnalysisMetadata(array $analysis, array $v3Response): array
+    {
+        $expMeta = $analysis['metadata']['experience'] ?? [];
+
+        return [
+            'skill_durations'     => is_array($expMeta['skill_durations'] ?? null) ? $expMeta['skill_durations'] : [],
+            'top_skills_by_years' => is_array($expMeta['top_skills_by_years'] ?? null) ? $expMeta['top_skills_by_years'] : [],
+            'action_verb_score'   => is_numeric($expMeta['action_verb_score'] ?? null) ? (float) $expMeta['action_verb_score'] : 0.0,
+            'gap_details'         => is_array($expMeta['gap_details'] ?? null) ? $expMeta['gap_details'] : [],
+            'total_experience_years' => is_numeric($expMeta['total_experience_years'] ?? null) ? (float) $expMeta['total_experience_years'] : 0.0,
+            'extraction_source'   => (string) ($analysis['metadata']['extraction']['source'] ?? 'unknown'),
+            'spatial_status'      => (string) ($analysis['metadata']['extraction']['spatial_status'] ?? 'unknown'),
+            'segmentation'        => $analysis['metadata']['segmentation'] ?? [],
+        ];
+    }
+
+    /**
+     * Sanitize a string value against an allowed list (for enum-like columns).
+     * Returns null if the value is not in the allowed list.
+     */
+    private function sanitizeString(?string $value, array $allowed): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        $lower = strtolower(trim($value));
+        return in_array($lower, $allowed, true) ? $lower : null;
+    }
+
+    /**
+     * Sanitize a free-text string value (trim + max length).
+     */
+    private function sanitizeStringValue(?string $value, int $maxLength): ?string
+    {
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+        return Str::limit(trim($value), $maxLength, '');
+    }
+
+    /**
+     * Build backward-compatible aiData for controller response.
      */
     private function buildAiDataForResponse(array $v3Response): array
     {
@@ -389,6 +501,8 @@ class CvProcessingService implements CvProcessingServiceInterface
                 : 'N/A',
             'extraction_method'  => $extractionMethod,
             'parsing_status'     => $v3Response['parsing_status'] ?? 'success',
+            'seniority'          => $analysis['seniority'] ?? null,
+            'predicted_role'     => $analysis['predicted_role'] ?? null,
             'profile'            => $v3Response['profile'] ?? [],
             'stats'              => $v3Response['stats'] ?? [],
             'skills'             => array_map(fn($s) => is_array($s) ? ($s['name'] ?? '') : (string) $s, $v3Response['skills']['items'] ?? []),

@@ -15,14 +15,15 @@ class UserExperienceResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'          => $this->id,
-            'title'       => $this->title,
-            'company'     => $this->company,
-            'location'    => $this->location,
-            'start_date'  => $this->start_date?->format('Y-m-d'),
-            'end_date'    => $this->end_date?->format('Y-m-d'),
-            'is_current'  => (bool) $this->is_current,
-            'description' => $this->description,
+            'id'           => $this->id,
+            'title'        => $this->title,
+            'company'      => $this->company,
+            'location'     => $this->location,
+            'start_date'   => $this->start_date?->format('Y-m-d'),
+            'end_date'     => $this->end_date?->format('Y-m-d'),
+            'is_current'   => (bool) $this->is_current,
+            'description'  => $this->description,
+            'technologies' => $this->technologies ?? [],
         ];
     }
 }

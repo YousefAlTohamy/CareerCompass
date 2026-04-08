@@ -28,6 +28,11 @@ import { useTranslation } from "react-i18next";
 import { cvAPI, gapAnalysisAPI } from "../../api/endpoints";
 import ProcessingAnimation from "../../components/ProcessingAnimation";
 import Swal from "sweetalert2";
+import {
+  CareerIdentityCard,
+  InsightsAlertsCard,
+  SkillProficiencyCard,
+} from "../../components/AiInsights";
 
 // --- Format total experience years nicely ---
 const formatExperienceYears = (years, t) => {
@@ -348,15 +353,8 @@ export default function Dashboard() {
   const completenessScore = Number(user?.cv_analysis?.completeness_score) || 0;
   const totalExperience = user?.profile?.total_experience_years ?? user?.total_experience_years;
   const headline = user?.headline ?? user?.job_title ?? user?.profile?.headline ?? user?.profile?.job_title;
-  const seniority = user?.seniority ?? user?.profile?.seniority;
   const userSkills = Array.isArray(user?.skills) ? user.skills : [];
   const skillsCount = userSkills?.length ?? skills?.length ?? 0;
-
-  // Top 3-5 skills by confidence_score descending
-  const topSkillsByConfidence = [...(userSkills || [])]
-    .filter((s) => s?.name ?? s)
-    .sort((a, b) => (Number(b?.confidence_score ?? 0) || 0) - (Number(a?.confidence_score ?? 0) || 0))
-    .slice(0, 5);
 
   const displaySkills = hasSkills ? (Array.isArray(skills) ? skills : []) : userSkills;
 
@@ -442,45 +440,8 @@ export default function Dashboard() {
               </div>
             </motion.div>
 
-            {/* AI INSIGHTS SNAPSHOT */}
-            {(headline || seniority || topSkillsByConfidence.length > 0) && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white dark:bg-slate-800/50 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 relative overflow-hidden"
-              >
-                <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-                <div className="relative z-10">
-                  <h3 className="text-lg font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                    <Sparkles size={20} className="text-indigo-500" /> {t('dashboard.ai_insights')}
-                  </h3>
-                  <div className="flex flex-col md:flex-row md:items-center gap-6">
-                    <div className="flex-1 space-y-2">
-                      {headline && (
-                        <p className="text-xl font-bold text-slate-800 dark:text-white">{headline}</p>
-                      )}
-                      {seniority && (
-                        <p className="text-sm font-semibold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg w-fit border border-indigo-100">
-                          {seniority}
-                        </p>
-                      )}
-                    </div>
-                    {topSkillsByConfidence.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {topSkillsByConfidence.map((skill, i) => (
-                          <span
-                            key={skill?.id ?? i}
-                            className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold uppercase tracking-wider border border-indigo-100"
-                          >
-                            {typeof skill === 'string' ? skill : (skill?.name ?? skill?.label ?? "Skill")}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            )}
+            {/* AI CAREER IDENTITY CARD (Phase 4 upgrade) */}
+            <CareerIdentityCard cvAnalysis={user?.cv_analysis} />
 
             {/* STAT CARDS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -623,8 +584,14 @@ export default function Dashboard() {
                 </div>
               </motion.div>
 
-              {/* RIGHT: GAPS & QUICK LINKS */}
+              {/* RIGHT: INSIGHTS + GAPS + SKILL PROFICIENCY + QUICK LINKS */}
               <aside className="lg:col-span-4 space-y-6">
+                {/* Career Health Insights & Alerts */}
+                <InsightsAlertsCard cvAnalysis={user?.cv_analysis} />
+
+                {/* Skill Proficiency (duration-based) */}
+                <SkillProficiencyCard cvAnalysis={user?.cv_analysis} />
+
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}

@@ -59,6 +59,44 @@ class _Segment:
         return (self.top + self.bottom) / 2.0
 
 
+# ---------------------------------------------------------------------------
+# Adaptive thresholds for noisy PDFs
+# ---------------------------------------------------------------------------
+
+def _adaptive_column_cluster_ratio(page_width: float, words: Sequence[_Word]) -> float:
+    """
+    Compute an adaptive column_cluster_ratio based on actual word distribution.
+
+    Strategy:
+    - Collect all x0 positions and compute the IQR (Inter-Quartile Range).
+    - Narrow IQR → single-column layout → use a tighter ratio.
+    - Wide IQR  → multi-column layout  → use a wider ratio to avoid
+      splitting a single column into two.
+    """
+    if page_width <= 0 or len(words) < 10:
+        return 0.12  # default fallback
+
+    x_positions = sorted(w.x0 for w in words)
+    q1_idx = len(x_positions) // 4
+    q3_idx = 3 * len(x_positions) // 4
+    iqr = x_positions[q3_idx] - x_positions[q1_idx]
+
+    iqr_ratio = iqr / page_width
+
+    if iqr_ratio < 0.15:
+        # Almost all text starts at a similar X → single column
+        return 0.08
+    elif iqr_ratio < 0.35:
+        # Moderate spread → likely sidebar or two-column
+        return 0.14
+    else:
+        # Wide spread → multi-column or creative layout
+        return 0.20
+
+
+_SPATIAL_WORD_COUNT_FALLBACK_THRESHOLD = 0.60  # fallback if spatial gets <60% of words
+
+
 def extract_spatial_text_from_pdf(
     file_bytes: bytes,
     *,
@@ -83,19 +121,44 @@ def extract_spatial_text_from_pdf(
             for page in pdf.pages:
                 words = _extract_words(page)
                 if not words:
+                    # No coordinate-based words — try plain extraction as last resort
+                    plain = _safe_plain_extract(page)
+                    if plain:
+                        page_text_parts.append(plain)
                     continue
 
-                total_words += len(words)
                 page_width = float(getattr(page, "width", 0.0) or 0.0)
                 y_tol = row_y_tolerance if row_y_tolerance is not None else _auto_row_tolerance(words)
                 gap_threshold = max(20.0, page_width * column_gap_ratio) if page_width > 0 else 40.0
-                cluster_threshold = max(30.0, page_width * column_cluster_ratio) if page_width > 0 else 80.0
+
+                # Adaptive cluster threshold based on word distribution
+                adaptive_ratio = _adaptive_column_cluster_ratio(page_width, words)
+                effective_ratio = max(column_cluster_ratio, adaptive_ratio)
+                cluster_threshold = max(30.0, page_width * effective_ratio) if page_width > 0 else 80.0
 
                 rows = _group_words_into_rows(words, y_tol)
                 segments = _split_rows_into_segments(rows, gap_threshold)
                 ordered_lines = _order_segments_by_columns_then_rows(segments, cluster_threshold)
 
-                page_text_parts.append("\n".join(ordered_lines).strip())
+                spatial_text = "\n".join(ordered_lines).strip()
+                spatial_word_count = len(re.findall(r"\S+", spatial_text))
+
+                # Fallback: compare spatial word count against basic page.extract_text()
+                plain_text = _safe_plain_extract(page)
+                plain_word_count = len(re.findall(r"\S+", plain_text)) if plain_text else 0
+
+                if plain_word_count > 0 and spatial_word_count < plain_word_count * _SPATIAL_WORD_COUNT_FALLBACK_THRESHOLD:
+                    logger.warning(
+                        "Spatial grouping lost words (spatial=%d vs plain=%d). "
+                        "Falling back to page.extract_text() for this page.",
+                        spatial_word_count,
+                        plain_word_count,
+                    )
+                    page_text_parts.append(plain_text)
+                    total_words += plain_word_count
+                else:
+                    page_text_parts.append(spatial_text)
+                    total_words += len(words)
 
             full_text = "\n\n".join([p for p in page_text_parts if p]).strip()
             if not full_text:
@@ -122,6 +185,21 @@ def extract_ordered_text_from_pdf(file_bytes: bytes) -> Optional[str]:
     """
     result = extract_spatial_text_from_pdf(file_bytes)
     return result.text if result.status == "ok" else None
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+def _safe_plain_extract(page) -> Optional[str]:
+    """Resilient wrapper around pdfplumber's built-in extract_text()."""
+    try:
+        raw = page.extract_text()
+        if raw and raw.strip():
+            return raw.strip()
+    except Exception:
+        pass
+    return None
 
 
 def _extract_words(page) -> List[_Word]:
@@ -167,6 +245,8 @@ def _group_words_into_rows(words: Sequence[_Word], y_tolerance: float) -> List[L
     Row Grouper (Y-first, then X):
     - Sort all words by visual Y (top), then X.
     - Cluster into rows by Y proximity (within y_tolerance).
+    - Uses a running-average Y anchor to handle slight vertical overlap
+      in noisy PDFs where elements drift by a few points.
     """
     ordered = sorted(words, key=lambda w: (w.top, w.x0))
     rows: List[List[_Word]] = []
@@ -180,10 +260,13 @@ def _group_words_into_rows(words: Sequence[_Word], y_tolerance: float) -> List[L
             continue
 
         assert current_y is not None
-        if abs(w.top - current_y) <= y_tolerance:
+        # Overlap-tolerant comparison: use the midpoint between w.top and the
+        # row anchor.  This absorbs up to 2× y_tolerance of visual drift.
+        y_delta = abs(w.top - current_y)
+        if y_delta <= y_tolerance:
             current.append(w)
-            # Update row anchor towards current word to reduce drift on noisy PDFs
-            current_y = (current_y * 0.8) + (w.top * 0.2)
+            # Weighted running average: anchor drifts slowly toward the new word
+            current_y = (current_y * 0.75) + (w.top * 0.25)
         else:
             rows.append(sorted(current, key=lambda x: x.x0))
             current = [w]
@@ -245,35 +328,40 @@ def _order_segments_by_columns_then_rows(
     Column-aware ordering:
     - Cluster segments into columns by X proximity (greedy 1D clustering on x0).
     - Read columns left-to-right; within each column read top-to-bottom.
+
+    Overlap handling: segments whose x0 falls within `cluster_threshold` of the
+    running column centroid are folded into that column. The centroid is updated
+    with an exponential moving average so that a few outliers don't warp it.
     """
     if not segments:
         return []
 
     sorted_segs = sorted(segments, key=lambda s: (s.x0, s.center_y))
-    columns: List[Tuple[float, List[_Segment]]] = []  # (x_centroid, segments)
+    columns: List[Tuple[float, int, List[_Segment]]] = []  # (x_centroid, member_count, segments)
 
     for seg in sorted_segs:
         best_idx = -1
         best_dist = float("inf")
-        for i, (cx, _) in enumerate(columns):
+        for i, (cx, _, _) in enumerate(columns):
             dist = abs(seg.x0 - cx)
             if dist < best_dist:
                 best_dist = dist
                 best_idx = i
 
         if best_idx >= 0 and best_dist <= cluster_threshold:
-            cx, col = columns[best_idx]
+            cx, count, col = columns[best_idx]
             col.append(seg)
-            # Incremental centroid update
-            new_cx = (cx * 0.85) + (seg.x0 * 0.15)
-            columns[best_idx] = (new_cx, col)
+            # Incremental centroid update — weighted by member count for stability
+            weight = min(count, 10)  # cap influence of very large columns
+            new_cx = (cx * weight + seg.x0) / (weight + 1)
+            columns[best_idx] = (new_cx, count + 1, col)
         else:
-            columns.append((seg.x0, [seg]))
+            columns.append((seg.x0, 1, [seg]))
 
     columns.sort(key=lambda c: c[0])
 
     lines: List[str] = []
-    for _, col_segments in columns:
+    for _, _, col_segments in columns:
         col_segments_sorted = sorted(col_segments, key=lambda s: (s.center_y, s.x0))
         for seg in col_segments_sorted:
             if seg.text:
@@ -287,4 +375,3 @@ def _order_segments_by_columns_then_rows(
     while lines and lines[-1] == "":
         lines.pop()
     return lines
-

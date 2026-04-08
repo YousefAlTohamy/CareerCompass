@@ -247,4 +247,44 @@ class GapAnalysisController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Analyze skill gap against a specific TargetJobRole (Phase 3 Integration).
+     *
+     * GET /api/gap-analysis/role/{role_id}
+     */
+    public function analyzeRole(int $roleId): JsonResponse
+    {
+        try {
+            /** @var User $user */
+            $user = auth()->user();
+
+            $targetRole = \App\Models\TargetJobRole::find($roleId);
+
+            if (!$targetRole) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Target Job Role not found',
+                ], 404);
+            }
+
+            $analysis = $this->gapAnalysisService->analyzeTargetRole($user, $targetRole);
+
+            return response()->json([
+                'success' => true,
+                'data'    => collect($analysis)->except('job'),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Target role gap analysis failed', [
+                'role_id' => $roleId,
+                'error'   => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to perform role gap analysis',
+                'error'   => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
 }

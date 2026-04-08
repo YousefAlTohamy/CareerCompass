@@ -3,7 +3,20 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass
-from typing import Callable, Dict, Iterable, List, Literal, Optional, Sequence, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Literal,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +62,57 @@ class SegmentationResult:
 
 HeaderResolver = Callable[[str], Optional[Tuple[SectionType, float]]]
 
+# ---------------------------------------------------------------------------
+# Reference phrases for semantic header matching
+# ---------------------------------------------------------------------------
+# Each SectionType maps to several representative phrases that MiniLM will
+# embed once during __init__.  At detection time, the candidate line's
+# embedding is compared against these references via cosine similarity.
+
+_SECTION_REFERENCE_PHRASES: Dict[SectionType, List[str]] = {
+    "profile_summary": [
+        "Professional Summary",
+        "About Me",
+        "Career Summary",
+        "Career Objective",
+        "Profile Overview",
+        "Personal Statement",
+        "Executive Summary",
+    ],
+    "experience": [
+        "Work Experience",
+        "Professional Experience",
+        "Employment History",
+        "Career History",
+        "Work History",
+        "Relevant Experience",
+    ],
+    "education": [
+        "Education",
+        "Academic Background",
+        "Academic Qualifications",
+        "Educational Background",
+        "Degrees and Certifications",
+    ],
+    "skills": [
+        "Technical Skills",
+        "Core Competencies",
+        "Skills and Technologies",
+        "Areas of Expertise",
+        "Key Skills",
+        "Professional Skills",
+        "Tools and Technologies",
+    ],
+    "projects": [
+        "Projects",
+        "Selected Projects",
+        "Project Experience",
+        "Portfolio",
+        "Academic Projects",
+        "Personal Projects",
+    ],
+}
+
 
 class SemanticSegmenter:
     """
@@ -57,8 +121,9 @@ class SemanticSegmenter:
     SRP: classify and group lines into section blocks ONLY.
     No skill extraction, date parsing, or entity recognition here.
 
-    Architecture-ready: pass a custom `header_resolver` later (e.g., embeddings-based),
-    without changing the `segment(...)` interface.
+    Phase 3 enhancement: if an optional ``SemanticEmbedder`` is provided,
+    non-standard headers that fail exact/regex matching are resolved via
+    cosine similarity against pre-computed reference embeddings.
     """
 
     _DEFAULT_REQUIRED: Tuple[SectionType, ...] = (
@@ -75,14 +140,55 @@ class SemanticSegmenter:
         required_sections: Optional[Sequence[SectionType]] = None,
         header_resolver: Optional[HeaderResolver] = None,
         max_header_len: int = 80,
+        embedder: Any = None,
+        semantic_header_threshold: float = 0.82,
     ) -> None:
         self._required_sections: Tuple[SectionType, ...] = tuple(
             required_sections or self._DEFAULT_REQUIRED
         )
         self._header_resolver = header_resolver
         self._max_header_len = max(20, int(max_header_len))
+        self._semantic_threshold = float(semantic_header_threshold)
 
         self._compiled = _HeaderPatterns.compile()
+
+        # -- Phase 3: Semantic header resolution --------------------------
+        self._embedder = embedder
+        # Pre-computed reference embeddings keyed by SectionType.
+        # Each value is a 2-D numpy array of shape (N, dim).
+        self._ref_embeddings: Dict[SectionType, np.ndarray] = {}
+        self._ref_sections: List[SectionType] = []
+        if self._embedder is not None:
+            self._precompute_reference_embeddings()
+
+    # ------------------------------------------------------------------
+    # Pre-computation (runs once at init, not per CV)
+    # ------------------------------------------------------------------
+
+    def _precompute_reference_embeddings(self) -> None:
+        """Embed all reference phrases for each section type."""
+        try:
+            for section, phrases in _SECTION_REFERENCE_PHRASES.items():
+                vecs: List[np.ndarray] = []
+                for phrase in phrases:
+                    vec = self._embedder.get_embedding(phrase)
+                    if vec is not None and np.any(vec != 0):
+                        vecs.append(vec)
+                if vecs:
+                    self._ref_embeddings[section] = np.stack(vecs)
+                    self._ref_sections.append(section)
+            logger.info(
+                "Semantic header references pre-computed for %d section types.",
+                len(self._ref_embeddings),
+            )
+        except Exception as e:
+            logger.warning("Failed to pre-compute semantic header embeddings: %s", e)
+            self._ref_embeddings = {}
+            self._ref_sections = []
+
+    # ------------------------------------------------------------------
+    # Public entry point
+    # ------------------------------------------------------------------
 
     def segment(self, text_or_lines: Union[str, Iterable[str]]) -> SegmentationResult:
         lines = _normalize_to_lines(text_or_lines)
@@ -184,6 +290,10 @@ class SemanticSegmenter:
         )
         return SegmentationResult(blocks=tuple(blocks), sections=sections_text, analysis=analysis)
 
+    # ------------------------------------------------------------------
+    # Header detection  (exact → regex → semantic)
+    # ------------------------------------------------------------------
+
     def _detect_header(self, line: str) -> Optional[Tuple[SectionType, float]]:
         if len(line) > self._max_header_len:
             return None
@@ -215,8 +325,80 @@ class SemanticSegmenter:
             if rx.search(normalized):
                 return section, 0.85
 
+        # Phase 3: Semantic fallback — only if embedder and references exist.
+        if self._embedder is not None and self._ref_embeddings:
+            semantic_result = self._semantic_header_match(line)
+            if semantic_result is not None:
+                return semantic_result
+
         return None
 
+    def _semantic_header_match(
+        self, line: str
+    ) -> Optional[Tuple[SectionType, float]]:
+        """
+        Embed the candidate line and compare against pre-computed reference
+        embeddings for each section type via cosine similarity.
+
+        Returns (SectionType, confidence) if the best match exceeds the
+        configured threshold, else None.
+        """
+        try:
+            candidate_vec = self._embedder.get_embedding(line)
+        except Exception as e:
+            logger.debug("Semantic embedding failed for header candidate: %s", e)
+            return None
+
+        if candidate_vec is None or np.all(candidate_vec == 0):
+            return None
+
+        best_section: Optional[SectionType] = None
+        best_score: float = 0.0
+
+        for section, ref_matrix in self._ref_embeddings.items():
+            # Cosine similarity against each reference phrase, take max.
+            similarities = _cosine_similarity_batch(candidate_vec, ref_matrix)
+            max_sim = float(np.max(similarities))
+            if max_sim > best_score:
+                best_score = max_sim
+                best_section = section
+
+        if best_section is not None and best_score >= self._semantic_threshold:
+            # Cap confidence slightly below regex-level to reflect uncertainty.
+            confidence = min(0.90, best_score)
+            logger.debug(
+                "Semantic header match: '%s' → %s (sim=%.3f)",
+                line,
+                best_section,
+                best_score,
+            )
+            return best_section, confidence
+
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Cosine similarity helpers
+# ---------------------------------------------------------------------------
+
+def _cosine_similarity_batch(vec: np.ndarray, matrix: np.ndarray) -> np.ndarray:
+    """
+    Compute cosine similarity between a single vector and each row of a matrix.
+    Returns a 1-D array of similarities.
+    """
+    vec_norm = np.linalg.norm(vec)
+    if vec_norm == 0:
+        return np.zeros(matrix.shape[0])
+    row_norms = np.linalg.norm(matrix, axis=1)
+    # Avoid division by zero
+    row_norms = np.where(row_norms == 0, 1.0, row_norms)
+    dots = matrix @ vec
+    return dots / (row_norms * vec_norm)
+
+
+# ---------------------------------------------------------------------------
+# Header pattern tables (unchanged from original)
+# ---------------------------------------------------------------------------
 
 class _HeaderPatterns:
     """
@@ -318,6 +500,10 @@ class _HeaderPatterns:
         return _HeaderPatterns(exact=exact_norm, regex_order=regex_order)
 
 
+# ---------------------------------------------------------------------------
+# Text helpers
+# ---------------------------------------------------------------------------
+
 _HEADER_SANITIZE_RE = re.compile(r"[\s\-\–\—\|\:\•\·\*\u2022]+")
 _NON_ALNUM_RE = re.compile(r"[^a-z0-9 ]+")
 
@@ -361,4 +547,3 @@ def _merge_blocks(blocks: Sequence[SectionBlock]) -> Dict[SectionType, str]:
         merged[b.section].append(b.text)
 
     return {k: "\n\n".join(v).strip() for k, v in merged.items()}
-

@@ -768,4 +768,91 @@ class GapAnalysisService implements GapAnalysisServiceInterface
         if ($percentage >= 25) return 'Important';
         return 'Nice-to-Have';
     }
+
+    /**
+     * Analyze skill gap against a specific target role.
+     * Uses JobRoleStatistic or aggregates job skills in real-time.
+     */
+    public function analyzeTargetRole(User $user, \App\Models\TargetJobRole $targetRole): array
+    {
+        $user->loadMissing('skills');
+        $userSkills = $user->skills->pluck('name')->map(fn($s) => mb_strtolower($s))->toArray();
+
+        // 1. Try to fetch from JobRoleStatistic
+        $statistic = \App\Models\JobRoleStatistic::where('role_title', 'like', '%' . $targetRole->name . '%')->first();
+
+        // Identify Top 10 required skills
+        $requiredSkills = collect();
+        if ($statistic && !empty($statistic->top_skills)) {
+            // Keep top 10 from JSON array
+            $requiredSkills = collect($statistic->top_skills)->take(10);
+        } else {
+            // 2. Fallback: Aggregate dynamically from Job Skills
+            $jobs = Job::with('skills')
+                ->where('title', 'like', '%' . $targetRole->name . '%')
+                ->latest()
+                ->take(50)
+                ->get();
+                
+            $skillCounts = [];
+            foreach ($jobs as $job) {
+                foreach ($job->skills as $skill) {
+                    if (!isset($skillCounts[$skill->name])) {
+                        $skillCounts[$skill->name] = 0;
+                    }
+                    $skillCounts[$skill->name]++;
+                }
+            }
+            arsort($skillCounts);
+            
+            $count = 0;
+            foreach ($skillCounts as $name => $freq) {
+                $requiredSkills->push(['name' => $name, 'frequency' => $freq]);
+                $count++;
+                if ($count >= 10) break;
+            }
+        }
+
+        $matchedSkills = [];
+        $missingSkills = [];
+
+        foreach ($requiredSkills as $reqSkill) {
+            $skillName = is_array($reqSkill) ? ($reqSkill['name'] ?? null) : $reqSkill;
+            if (!$skillName) continue;
+            
+            if (in_array(mb_strtolower($skillName), $userSkills)) {
+                $matchedSkills[] = $skillName;
+            } else {
+                $missingSkills[] = $skillName;
+            }
+        }
+
+        $totalRequired = $requiredSkills->count();
+        $marketReadinessScore = $totalRequired > 0 ? round((count($matchedSkills) / $totalRequired) * 100, 1) : 0;
+
+        $roadmap = [];
+        if (count($missingSkills) > 0) {
+            $topMissing = array_slice($missingSkills, 0, 3);
+            $roadmap[] = "Focus your learning heavily on these key missing skills: " . implode(', ', $topMissing) . ".";
+            $roadmap[] = "Build 1-2 small projects demonstrating your capability using the missing technologies.";
+            if (count($missingSkills) > 3) {
+                $roadmap[] = "Once fundamentals are covered, explore secondary skills like " . implode(', ', array_slice($missingSkills, 3, 2)) . " to stand out.";
+            }
+        } else {
+            if ($totalRequired === 0) {
+                $roadmap[] = "There isn't enough market data collected yet for " . $targetRole->name . ". Try triggering a Deep Scraping job in Market Intelligence.";
+            } else {
+                $roadmap[] = "You have a very strong resume profile! Consider tailoring your job applications specifically for " . $targetRole->name . " roles.";
+            }
+        }
+
+        return [
+            'target_role'             => $targetRole->name,
+            'total_required'          => $totalRequired,
+            'market_readiness_score'  => $marketReadinessScore,
+            'matched_skills'          => $matchedSkills,
+            'missing_skills'          => $missingSkills,
+            'roadmap'                 => $roadmap,
+        ];
+    }
 }

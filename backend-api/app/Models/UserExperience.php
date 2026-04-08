@@ -21,6 +21,7 @@ class UserExperience extends Model
         'end_date',
         'is_current',
         'description',
+        'technologies',
     ];
 
     /**
@@ -32,6 +33,7 @@ class UserExperience extends Model
         'start_date' => 'date',
         'end_date' => 'date',
         'is_current' => 'boolean',
+        'technologies' => 'array',
     ];
 
     /**

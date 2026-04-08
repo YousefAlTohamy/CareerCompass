@@ -78,10 +78,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Gap Analysis
     Route::get('/gap-analysis/job/{jobId}', [GapAnalysisController::class, 'analyzeJob']);
+    Route::get('/gap-analysis/role/{roleId}', [GapAnalysisController::class, 'analyzeRole']);
     Route::post('/gap-analysis/batch', [GapAnalysisController::class, 'analyzeMultipleJobs']);
     Route::get('/gap-analysis/recommendations', [GapAnalysisController::class, 'getRecommendations']);
 
-    // Market Intelligence
+    // Market Intelligence & Target Roles
+    Route::get('/target-roles', function() {
+        return \App\Models\TargetJobRole::where('is_active', true)->get();
+    });
     Route::get('/market/overview', [MarketIntelligenceController::class, 'getMarketOverview']);
     Route::get('/market/role-statistics/{roleTitle}', [MarketIntelligenceController::class, 'getRoleStatistics']);
     Route::get('/market/trending-skills', [MarketIntelligenceController::class, 'getTrendingSkills']);

@@ -45,4 +45,13 @@ interface GapAnalysisServiceInterface
      * @return array<string, mixed>
      */
     public function getRecommendations(User $user): array;
+
+    /**
+     * Analyze skill gap against a specific target role.
+     *
+     * @param User $user
+     * @param \App\Models\TargetJobRole $targetRole
+     * @return array<string, mixed>
+     */
+    public function analyzeTargetRole(User $user, \App\Models\TargetJobRole $targetRole): array;
 }

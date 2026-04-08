@@ -16,6 +16,15 @@ try:
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
 
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
+
+# Phase 5: Optional quantization via env var
+_QUANTIZE_NER = os.getenv("NER_QUANTIZE", "false").lower() in ("1", "true", "yes")
+
 
 @dataclass(frozen=True, slots=True)
 class NameCandidate:
@@ -26,9 +35,14 @@ class NameCandidate:
 
 class AdvancedNEREngine:
     """
-    V2 entity extraction engine.
+    V2 entity extraction engine (Singleton).
 
     SRP: run NER and apply context-window filtering for skills.
+
+    Phase 5 enhancements:
+    - **CPU-safe**: auto-detects CUDA availability, never forces GPU.
+    - **Optional quantization**: INT8 dynamic quantization when NER_QUANTIZE=true.
+    - **Loaded once**: Singleton pattern guarantees single model in memory.
     """
 
     _instance: Optional["AdvancedNEREngine"] = None
@@ -46,13 +60,39 @@ class AdvancedNEREngine:
             return
 
         model_name = self._resolve_model_name()
+
+        # CPU-safe device detection: only use GPU if CUDA is available
+        device = -1  # CPU by default
+        if TORCH_AVAILABLE and torch.cuda.is_available():
+            device = 0
+            logger.info("NER pipeline will use GPU (CUDA device 0).")
+        else:
+            logger.info("NER pipeline will use CPU.")
+
         try:
-            # NOTE: no aggregation_strategy -> keep raw token offsets for robust context windows.
-            self._ner = pipeline("ner", model=model_name, tokenizer=model_name)
-            logger.info("AdvancedNEREngine loaded NER model: %s", model_name)
+            self._ner = pipeline("ner", model=model_name, tokenizer=model_name, device=device)
+            logger.info("AdvancedNEREngine loaded NER model: %s (device=%s)", model_name, device)
+
+            # Optional: Apply dynamic INT8 quantization on CPU to reduce memory
+            if _QUANTIZE_NER and TORCH_AVAILABLE and device == -1:
+                try:
+                    self._ner.model = torch.quantization.quantize_dynamic(
+                        self._ner.model,
+                        {torch.nn.Linear},
+                        dtype=torch.qint8,
+                    )
+                    logger.info("NER model quantized (int8 dynamic) successfully.")
+                except Exception as qe:
+                    logger.warning("NER quantization failed (non-fatal): %s", qe)
+
         except Exception as e:
             logger.exception("Failed to initialize NER pipeline (%s): %s", model_name, e)
             self._ner = None
+
+    @property
+    def is_available(self) -> bool:
+        """Check if the NER pipeline is loaded and ready."""
+        return self._ner is not None
 
     def _resolve_model_name(self) -> str:
         """
