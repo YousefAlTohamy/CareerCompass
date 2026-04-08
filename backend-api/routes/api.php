@@ -78,6 +78,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Gap Analysis
     Route::get('/gap-analysis/job/{jobId}', [GapAnalysisController::class, 'analyzeJob']);
+    Route::get('/gap-analysis/role/{roleId}', [GapAnalysisController::class, 'analyzeRole']);
     Route::post('/gap-analysis/batch', [GapAnalysisController::class, 'analyzeMultipleJobs']);
     Route::get('/gap-analysis/recommendations', [GapAnalysisController::class, 'getRecommendations']);
 

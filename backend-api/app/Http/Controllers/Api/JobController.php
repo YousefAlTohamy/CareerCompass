@@ -77,36 +77,86 @@ class JobController extends Controller
     }
 
     /**
-     * Get top 10 jobs recommended for the authenticated user
-     * based on their saved job_title (set during CV upload).
+     * Get top 100 jobs recommended for the authenticated user
+     * using Native PHP matching algorithm (Phase 3 Integration).
      */
     public function getRecommended(Request $request): JsonResponse
     {
         try {
             $user = $request->user();
-            $jobTitle = $user->job_title;
+            $user->loadMissing(['cvAnalysis', 'skills']);
+            
+            $cvAnalysis = $user->cvAnalysis;
+            // Primary: use predicted_role from CV analysis, fallback to user->job_title
+            $baseTitle = $cvAnalysis->predicted_role ?? $user->job_title;
+            // Tertiary: extract seniority from CV analysis
+            $userSeniority = strtolower($cvAnalysis->seniority ?? '');
 
-            if ($jobTitle) {
+            if ($baseTitle) {
                 // Strip seniority prefix to broaden the search
-                // e.g. "Senior Backend Developer" → "Backend Developer"
                 $cleanTitle = preg_replace(
                     '/^(senior|junior|lead|principal|associate|mid[- ]?level)\s+/i',
                     '',
-                    trim($jobTitle)
+                    trim($baseTitle)
                 );
 
                 // Extract the first 2 words as a broad keyword
                 $words   = explode(' ', $cleanTitle);
                 $keyword = implode(' ', array_slice($words, 0, 2));
 
+                // Eager load skills to prevent N+1 during matching
                 $jobs = Job::with('skills')
                     ->where(function ($q) use ($keyword, $cleanTitle) {
                         $q->where('title', 'LIKE', '%' . $keyword . '%')
                             ->orWhere('title', 'LIKE', '%' . $cleanTitle . '%');
                     })
                     ->latest()
-                    ->take(50)
+                    ->take(200) // Fetch up to 200 jobs locally for ranking
                     ->get();
+
+                // ── Ranking Logic ──
+                $userSkillsLower = $user->skills->pluck('name')->map(fn($s) => mb_strtolower($s))->toArray();
+                
+                $jobs->each(function ($job) use ($cleanTitle, $userSkillsLower, $userSeniority) {
+                    $score = 0;
+                    $jobTitleLower = mb_strtolower($job->title);
+
+                    // 1. Primary: Match predicted_role with job title (Max 30)
+                    if (str_contains($jobTitleLower, mb_strtolower($cleanTitle))) {
+                        $score += 30;
+                    } elseif ($cleanTitle && similar_text($jobTitleLower, mb_strtolower($cleanTitle)) > 60) {
+                        $score += 15;
+                    }
+
+                    // 2. Secondary: Skill Match Score (Max 50)
+                    $jobSkills = $job->skills;
+                    if ($jobSkills->isNotEmpty() && !empty($userSkillsLower)) {
+                        $jobSkillNamesLower = $jobSkills->pluck('name')->map(fn($s) => mb_strtolower($s))->toArray();
+                        $matchingSkillsCount = count(array_intersect($userSkillsLower, $jobSkillNamesLower));
+                        $skillPercentage = ($matchingSkillsCount / $jobSkills->count()); // 0.0 to 1.0
+                        $score += ($skillPercentage * 50);
+                    } elseif ($jobSkills->isEmpty()) {
+                        // Inherit average score if job requires no specific skills
+                        $score += 25; 
+                    }
+
+                    // 3. Tertiary: Seniority match (Max 20)
+                    if ($userSeniority) {
+                        if (str_contains($jobTitleLower, $userSeniority)) {
+                            $score += 20;
+                        } elseif ($userSeniority === 'mid' && (!str_contains($jobTitleLower, 'senior') && !str_contains($jobTitleLower, 'junior') && !str_contains($jobTitleLower, 'lead'))) {
+                            $score += 20; // Implicit mid-level match
+                        }
+                    } else {
+                        // Boost slightly if neither is set deeply
+                        $score += 10;
+                    }
+
+                    $job->match_percentage = round(min(100, $score), 1);
+                });
+
+                // Sort by descending match_percentage, then return top 50
+                $jobs = $jobs->sortByDesc('match_percentage')->take(50)->values();
 
                 Log::info('Recommended jobs fetched for user', [
                     'user_id'  => $user->id,
@@ -114,7 +164,7 @@ class JobController extends Controller
                     'count'    => $jobs->count(),
                 ]);
             } else {
-                // No job_title yet — return latest 50 jobs as default
+                // No job_title or CV analysis yet — return latest 50 jobs as default
                 $jobs = Job::with('skills')->latest()->take(50)->get();
 
                 Log::info('No job_title for user, returning latest jobs', [
@@ -124,11 +174,11 @@ class JobController extends Controller
 
             return response()->json([
                 'success'   => true,
-                'job_title' => $jobTitle,
+                'job_title' => $baseTitle,
                 'data'      => JobResource::collection($jobs),
                 'meta'      => [
                     'total'     => $jobs->count(),
-                    'based_on'  => $jobTitle ? "Your CV title: \"{$jobTitle}\"" : 'Latest jobs (upload your CV for personalized results)',
+                    'based_on'  => $baseTitle ? "Your CV title: \"{$baseTitle}\"" : 'Latest jobs (upload your CV for personalized results)',
                 ],
             ]);
         } catch (\Exception $e) {
