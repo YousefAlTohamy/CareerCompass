@@ -17,6 +17,8 @@ CareerCompass is an **advanced AI-powered career development platform** that com
 - **Robust RBAC Layer**: All critical endpoints are shielded by `IsAdmin` middleware, universally bypassed initially by the safe `AdminUserSeeder` protocol
 - **Bilingual UI (i18n)**: Full English ↔ Arabic internationalization via `i18next` with automatic browser-language detection and RTL layout switching
 - **Dark / Light Mode**: Theme toggle persisted to `localStorage` via a `ThemeContext` provider, with smooth CSS transitions across all pages
+- **AI Match Insights**: Detailed "Career Identity" and "Insights & Alerts" cards in the profile, powered by `AiInsights.jsx`
+- **Visual Skill Roadmap**: Next-step career guidance via an interactive `RoadmapTimeline.jsx` component
 - **System Health Monitor**: Admin dashboard includes live service-health checks for Database connectivity, Cache/Queue status, and AI Gateway availability
 - **SweetAlert2 Toasts**: Rich, styled modal and toast notifications for user actions (track job, delete, errors)
 - **Auto-Profile Provisioning**: The `User` model's `booted()` hook automatically creates a `UserProfile` record on registration, ensuring normalized profile data is always available
@@ -62,6 +64,8 @@ graph TB
 ```
 
 > **Security Note:** The `IsAdmin` middleware acts as a rigid backend ingress shield, bridging directly to the `ProtectedRoute` boundaries in the React SPA UI to enforce Role-Based Access Control (RBAC).
+>
+> **Consolidated AI Core:** Personnel extraction logic (`contact_extractor.py`) has been migrated into the `ai-cv-analyzer` core to ensure a unified V3 parsing pipeline. The `ai-hybrid-orchestrator` operates as a performance-optimized facade using **FastAPI Lifespan** to load BERT/BART models as singletons, ensuring sub-100ms inference responses.
 >
 > **Security Boundary Handshake:** All administrative requests undergo a dual-verification process. The backend `IsAdmin` middleware validates the JWT payload against the `role` enum in the database. If unauthorized, a 403 Forbidden is emitted, which the frontend `Axios` interceptors catch to trigger an immediate fallback to the guest landing zone.
 
@@ -109,15 +113,18 @@ CareerCompass/
 │   │   ├── assets/
 │   │   │   └── react.svg                   # Default SVG asset
 │   │   ├── components/
+│   │   │   ├── AiInsights.jsx              # AI Match Reasoning & Detail Cards (Identity, Flags, Verbs)
 │   │   │   ├── Button.jsx                  # Reusable button component
 │   │   │   ├── Card.jsx                    # Reusable card wrapper
 │   │   │   ├── ErrorAlert.jsx              # Dismissible error banner
 │   │   │   ├── ErrorBoundary.jsx           # React error boundary
+│   │   │   ├── Footer.jsx                  # Premium site footer
 │   │   │   ├── GuestRoute.jsx              # Redirects authenticated users away from auth pages (role-aware)
 │   │   │   ├── LoadingSpinner.jsx          # Full-screen / inline spinner
 │   │   │   ├── Navbar.jsx                  # Scroll-aware glassmorphism nav (i18n, theme toggle, language switch)
 │   │   │   ├── ProcessingAnimation.jsx     # Animated CV-processing overlay
 │   │   │   ├── ProtectedRoute.jsx          # Auth route guard (includes `requireAdmin` + `allowAdmin` props)
+│   │   │   ├── RoadmapTimeline.jsx         # Interactive visual career roadmap
 │   │   │   ├── SuccessAlert.jsx            # Dismissible success banner
 │   │   │   └── TypingEffect.jsx            # Reusable typing animation component
 │   │   ├── context/
@@ -200,8 +207,8 @@ CareerCompass/
 │   │   │   ├── Contracts/
 │   │   │   │   ├── CvProcessingServiceInterface.php   # CV processing contract
 │   │   │   │   └── GapAnalysisServiceInterface.php    # Gap analysis contract
-│   │   │   ├── CvProcessingService.php             # CV processing business logic (SRP extraction from controller)
-│   │   │   └── GapAnalysisService.php              # Gap analysis business logic (SRP extraction from controller)
+│   │   │   ├── CvProcessingService.php             # CV processing business logic
+│   │   │   └── GapAnalysisService.php              # Gap analysis business logic
 │   │   ├── Jobs/
 │   │   │   ├── ProcessMarketScraping.php           # Automated market data scraping
 │   │   │   └── ProcessOnDemandJobScraping.php      # On-demand job scraping
@@ -316,6 +323,7 @@ Make sure you have the following installed on your system:
 - **Composer** 2.x - [Download](https://getcomposer.org/)
 - **Node.js** 18+ and npm - [Download](https://nodejs.org/)
 - **Python** 3.11+ - [Download](https://www.python.org/)
+- **Tesseract OCR** - For image-based CV parsing fallback
 - **MySQL** 8.x - [Download](https://dev.mysql.com/downloads/installer/)
 - **Git** - [Download](https://git-scm.com/)
 
@@ -527,6 +535,11 @@ uvicorn main_api:app --reload --port 8001
 cd backend-api && php artisan queue:work --queue=high,default --tries=3 --timeout=300
 ```
 
+**Terminal 6 - Scheduler:**
+```bash
+cd backend-api && php artisan schedule:work
+```
+
 ### 📅 Optional: Activate Scheduler (Automated Market Updates)
 
 The scheduler automatically runs market scraping every 48 hours and skill importance calculations daily.
@@ -601,6 +614,7 @@ Use Task Scheduler to run `php artisan schedule:run` every minute.
 | GET    | `/api/user/skills`      | ✅   | View user's skills                                                                        |
 | DELETE | `/api/user/skills/{id}` | ✅   | Remove a skill                                                                            |
 | GET    | `/api/user/cv-analysis` | ✅   | Get latest CV analysis (parsing_status, completeness_score, strengths, gaps, red_flags)   |
+| GET    | `/api/target-roles`      | ✅   | List all active target job roles for discovery                                            |
 
 > **Frontend Behavior**: The `upload-cv` response explicitly returns `is_new_role`. If the AI detected a domain change, React will silently sync the AuthContext payload, suppress immediate success popups, and dynamically transition the screen to a 5-second `ProcessingAnimation` indicating "Discovering market opportunities..." before cleanly piping the user into the `/jobs` page algorithm.
 
@@ -1050,6 +1064,7 @@ curl -s -X POST http://127.0.0.1:8000/api/register \
   - **Scraping Format Resiliency**: Bulletproofed the FastAPI Gateway endpoint models with Python `Union` to safely catch empty array brackets `[]` from PHP, preventing 422 validations.
   - **Scraping Scope Scopes**: Seeded `LinkedIn Egypt/MENA` as a primary HTML parsing source and narrowed the `Adzuna` API targeting via the central Database Seeder. Added missing `.env.example` templates to the hybrid orchestrator.
 - [x] **Phase 25: Master Admin Control Panel** - Expanded the `ProtectedRoute` boundaries into a comprehensive suite of Admin functionalities.
+- [x] **Phase 26: Explainable AI Match Reasoning & Roadmap UI** - Integrated detailed career identity extraction and match reasoning via `AiInsights.jsx`. Implemented a step-by-step learning roadmap visualization using `RoadmapTimeline.jsx`, linking gap analysis directly to actionable career progression steps.
   - Added new React pages for `AdminDashboard.jsx`, `AdminJobs.jsx`, and `AdminUsers.jsx`.
   - Added backend endpoints for system-wide metric tracking, centralized job manipulation, and user-base analysis.
   - Implemented an `is_banned` boolean mapping to the `USERS` database table allowing master admins to selectively revoke platform access.
@@ -1146,6 +1161,8 @@ curl -s -X POST http://127.0.0.1:8000/api/register \
 **Reusable Components:**
 
 - `Navbar.jsx` - Scroll-aware glassmorphism navigation; user avatar navigates to `/profile` with hover dropdown (Profile + Logout); role-based admin links; i18n language switch; dark/light mode toggle; Framer Motion mobile drawer
+- `AiInsights.jsx` - Detailed "Career Identity" and "Insights & Alerts" cards with action-verb scoring and skill proficiency bars
+- `RoadmapTimeline.jsx` - Interactive vertical timeline for visual skill gap roadmaps
 - `ProcessingAnimation.jsx` - Animated CV-processing overlay component
 - `ProtectedRoute.jsx` - Auth route guard (supports `requireAdmin` + `allowAdmin` props)
 - `GuestRoute.jsx` - Redirects authenticated users away from `/login` and `/register` (role-aware: admins → `/admin/dashboard`)
@@ -1176,8 +1193,9 @@ curl -s -X POST http://127.0.0.1:8000/api/register \
 ### 🔒 Security Features
 
 - **Role-Based Access Control (RBAC)**: Segregated functionalities using robust middleware (`IsAdmin.php`) interceptors that return 403 Forbidden for unprivileged API access. This logic is physically mirrored in the React frontend via the `<ProtectedRoute requireAdmin>` component to entirely block the mounting of unauthorized admin routing boundaries.
-- **Email Domain Whitelist**: Registration enforces a strict regex allowing only Gmail, Yahoo, Outlook, Hotmail, and iCloud email domains — preventing disposable email abuse.
+- **Email Domain Whitelist**: Registration enforces a strict regex `/^[a-zA-Z0-9._%+-]+@(gmail|yahoo|outlook|hotmail|icloud)\.com$/` allowing only major providers — preventing disposable email abuse.
 - **Password Entropy Enforcement**: Registration requires at least one uppercase letter and one digit via `(?=.*[A-Z])(?=.*\d)` regex validation.
+- **Phone Normalization**: Global Regex-based normalization ensures all phone digits are sanitized before database entry.
 - **Single-Session Enforcement**: On every login, all prior tokens are revoked before issuing a new one, preventing concurrent session abuse.
 - **Banned-User Token Revocation**: When an admin bans a user via `toggleBan()`, all their Sanctum tokens are immediately deleted, forcing an instant session termination.
 - **Guest Middleware**: Auth routes (`/register`, `/login`) use `guest:sanctum` middleware to prevent already-authenticated users from re-registering or re-logging in.
@@ -1345,6 +1363,12 @@ venv\Scripts\activate  # Windows
 source venv/bin/activate  # macOS/Linux
 
 pip install -r requirements.txt --upgrade
+```
+
+### FastAPI Memory / OOM Errors
+If the AI Gateway fails to load models, check the process logs for "Killed" status. Large BERT/BART models require at least 4GB of free RAM. Ensure no redundant uvicorn workers are running:
+```bash
+taskkill /F /IM python.exe  # Windows cleanup
 ```
 
 ### Database Connection Error
