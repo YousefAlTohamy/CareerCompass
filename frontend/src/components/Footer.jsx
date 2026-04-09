@@ -23,7 +23,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="text-slate-500 dark:text-slate-400 text-sm font-medium leading-relaxed">
-              Empowering professionals to navigate the modern job market with AI-driven insights and skill-gap analysis.
+              {t('home.footer.brand_desc')}
             </p>
             <div className="flex items-center gap-4">
               <a href="#" className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all border border-slate-200 dark:border-slate-700">
@@ -54,7 +54,7 @@ export default function Footer() {
             <ul className="space-y-3">
               <li><Link to="/about" className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-bold transition-colors">{t('home.footer.about')}</Link></li>
               <li><Link to="/status" className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-bold transition-colors">{t('home.footer.status')}</Link></li>
-              <li><a href="mailto:support@careercompass.ai" className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-bold transition-colors flex items-center gap-2"><Mail size={14} /> Support</a></li>
+              <li><a href="mailto:support@careercompass.ai" className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-bold transition-colors flex items-center gap-2"><Mail size={14} /> {t('home.footer.support')}</a></li>
             </ul>
           </div>
 
@@ -76,7 +76,7 @@ export default function Footer() {
           </p>
           <div className="flex items-center gap-2">
              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">All systems operational</span>
+             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('home.footer.operational')}</span>
           </div>
         </div>
       </div>

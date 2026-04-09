@@ -20,17 +20,15 @@ export default function AboutUs() {
             className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full shadow-sm text-indigo-600 dark:text-indigo-400 font-bold text-xs uppercase tracking-widest"
           >
             <Compass size={14} className="text-fuchsia-500" />
-            Our Mission
+            {t('about_us.mission')}
           </motion.div>
 
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-4xl md:text-6xl font-black text-slate-800 dark:text-white tracking-tighter leading-tight"
-          >
-            Engineering the future of <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-fuchsia-500 to-indigo-600">professional growth.</span>
-          </motion.h1>
+            dangerouslySetInnerHTML={{ __html: t('about_us.headline') }}
+          />
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -38,7 +36,7 @@ export default function AboutUs() {
             transition={{ delay: 0.1 }}
             className="max-w-3xl mx-auto text-lg text-slate-500 dark:text-slate-400 font-medium leading-relaxed"
           >
-            Career Compass was born from a simple observation: the gap between academic preparation and market demand is widening. Our mission is to provide every professional with a high-precision navigation system powered by AI to master their destiny.
+            {t('about_us.desc_p1')}
           </motion.p>
         </div>
       </section>
@@ -50,22 +48,22 @@ export default function AboutUs() {
             {[
               {
                 icon: Target,
-                title: 'Precision Insights',
-                desc: 'We don\'t just show jobs; we map your unique skill DNA against the entire market.',
+                title: t('about_us.v1_title'),
+                desc: t('about_us.v1_desc'),
                 color: 'text-indigo-600',
                 bg: 'bg-indigo-50 dark:bg-indigo-900/20'
               },
               {
                 icon: ShieldCheck,
-                title: 'Unbiased Analysis',
-                desc: 'Our AI provides objective feedback on your resume, mimicking the most advanced ATS systems.',
+                title: t('about_us.v2_title'),
+                desc: t('about_us.v2_desc'),
                 color: 'text-emerald-600',
                 bg: 'bg-emerald-50 dark:bg-emerald-900/20'
               },
               {
                 icon: Globe,
-                title: 'Market Intelligence',
-                desc: 'Real-time data from thousands of sources to keep you ahead of hiring trends.',
+                title: t('about_us.v3_title'),
+                desc: t('about_us.v3_desc'),
                 color: 'text-fuchsia-600',
                 bg: 'bg-fuchsia-50 dark:bg-fuchsia-900/20'
               }
@@ -94,32 +92,28 @@ export default function AboutUs() {
       {/* Story Section */}
       <section className="py-24 px-4 bg-white dark:bg-slate-800/50 relative overflow-hidden">
         <div className="max-w-4xl mx-auto relative z-10 text-center space-y-12">
-            <h2 className="text-3xl font-black text-slate-800 dark:text-white">Why Career Compass?</h2>
+            <h2 className="text-3xl font-black text-slate-800 dark:text-white">{t('about_us.why_title')}</h2>
             <div className="space-y-6 text-slate-500 dark:text-slate-400 font-medium leading-relaxed text-left md:text-center">
-              <p>
-                The modern job market operates at light speed. Skills that were relevant two years ago are now foundational, and new domains emerge every season. Professionals are often left guessing what to learn next.
-              </p>
-              <p>
-                We built Career Compass to remove the guesswork. By leveraging state-of-the-art NLP and market-scraping technologies, we provide a live roadmap for your career. Whether you're a junior dev or a senior architect, we help you identify exactly what's missing and how to get there.
-              </p>
+              <p>{t('about_us.why_p1')}</p>
+              <p>{t('about_us.why_p2')}</p>
             </div>
             
             <div className="pt-12 grid grid-cols-2 md:grid-cols-4 gap-8">
                <div className="space-y-1">
                   <div className="text-3xl font-black text-indigo-600">50k+</div>
-                  <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">Jobs Analyzed</div>
+                  <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('about_us.stats_jobs')}</div>
                </div>
                <div className="space-y-1">
                   <div className="text-3xl font-black text-fuchsia-500">120+</div>
-                  <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">Target Roles</div>
+                  <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('about_us.stats_roles')}</div>
                </div>
                <div className="space-y-1">
                   <div className="text-3xl font-black text-indigo-600">95%</div>
-                  <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">Match Accuracy</div>
+                  <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('about_us.stats_accuracy')}</div>
                </div>
                <div className="space-y-1">
                   <div className="text-3xl font-black text-fuchsia-500">24/7</div>
-                  <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">Live Updates</div>
+                  <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('about_us.stats_updates')}</div>
                </div>
             </div>
         </div>

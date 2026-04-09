@@ -9,23 +9,23 @@ export default function Privacy() {
   const sections = [
     {
       icon: ShieldCheck,
-      title: 'Data Collection',
-      content: 'We collect minimal personal data required for account management and resume analysis. This includes your name, email address, and any professional data provided in your uploaded CV.'
+      title: t('privacy_page.s1_title'),
+      content: t('privacy_page.s1_desc')
     },
     {
       icon: Lock,
-      title: 'AI Processing',
-      content: 'Your resume data is processed by our secure AI engine to extract skills and match them with job market data. This data is stored securely and never sold to third parties.'
+      title: t('privacy_page.s2_title'),
+      content: t('privacy_page.s2_desc')
     },
     {
       icon: EyeOff,
-      title: 'Third-Party Services',
-      content: 'We use trusted third-party providers for infrastructure and AI capabilities. These partners are strictly prohibited from using your data for any other purpose.'
+      title: t('privacy_page.s3_title'),
+      content: t('privacy_page.s3_desc')
     },
     {
       icon: UserCheck,
-      title: 'Your Rights',
-      content: 'You have the right to access, export, or delete your personal data at any time through your Profile settings. We believe in complete transparency and data ownership.'
+      title: t('privacy_page.s4_title'),
+      content: t('privacy_page.s4_desc')
     }
   ];
 
@@ -37,11 +37,11 @@ export default function Privacy() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-16 space-y-4"
         >
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-black uppercase text-[10px] tracking-widest rounded-lg">
-            <FileText size={14} /> Legal Documentation
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-black uppercase text-[10px] tracking-widest rounded-lg border border-slate-200 dark:border-slate-700">
+            <Lock size={14} /> {t('privacy_page.badge')}
           </div>
-          <h1 className="text-4xl md:text-5xl font-black text-slate-800 dark:text-white tracking-tight">Privacy Policy</h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Last updated: April 6, 2026</p>
+          <h1 className="text-4xl md:text-5xl font-black text-slate-800 dark:text-white tracking-tight">{t('privacy_page.title')}</h1>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">{t('privacy_page.last_updated')}</p>
         </motion.div>
 
         <div className="space-y-8">

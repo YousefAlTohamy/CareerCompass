@@ -4,8 +4,6 @@ import { motion } from 'framer-motion';
 import { Compass, ShieldCheck, Zap, BarChart3, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
-import Footer from '../components/Footer';
-
 export default function Home() {
   const { user } = useAuth();
   const { t } = useTranslation();
@@ -176,8 +174,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      <Footer />
     </div>
   );
 }
