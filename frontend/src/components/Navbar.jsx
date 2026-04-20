@@ -52,11 +52,11 @@ export default function Navbar() {
         <div className="flex items-center justify-between">
           
           {/* LOGO */}
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="bg-indigo-600 text-white p-1.5 rounded-xl shadow-md shadow-indigo-200 group-hover:scale-105 transition-transform">
+          <Link to="/" className="flex items-center gap-2.5 group shrink-0">
+            <div className="bg-indigo-600 text-white p-1.5 rounded-xl shadow-md shadow-indigo-200 group-hover:scale-105 transition-transform shrink-0">
               <Compass size={24} strokeWidth={2.5} />
             </div>
-            <span className="font-black text-xl tracking-tight text-slate-800 dark:text-white">
+            <span className="font-black text-xl tracking-tight text-slate-800 dark:text-white truncate">
               Career<span className="text-indigo-600">Compass</span>
             </span>
           </Link>
@@ -103,10 +103,10 @@ export default function Navbar() {
             {user ? (
               <div className="flex items-center gap-3 ps-4 border-s border-slate-200 dark:border-slate-700">
                 <Link to="/profile" className="flex items-center gap-2.5 p-1.5 pe-4 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-indigo-200 dark:hover:border-indigo-500 hover:shadow-sm transition-all group">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center text-white font-black text-xs shadow-inner">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-500 flex items-center justify-center text-white font-black text-xs shadow-inner shrink-0">
                     {userInitial}
                   </div>
-                  <span className="text-sm font-bold text-slate-700 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  <span className="text-sm font-bold text-slate-700 dark:text-slate-200 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate max-w-[120px]">
                     {userFirstName}
                   </span>
                 </Link>

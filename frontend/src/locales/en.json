@@ -306,7 +306,90 @@
       "resources": "Resources",
       "legal": "Legal",
       "rights": "All rights reserved.",
-      "operational": "All systems operational"
+      "operational": "All systems operational",
+      "brand_desc": "Empowering professionals to navigate the modern job market with AI-driven insights and skill-gap analysis.",
+      "support": "Support"
+    }
+  },
+  "about_us": {
+    "mission": "Our Mission",
+    "headline": "Engineering the future of <br /> <span class=\"text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-fuchsia-500 to-indigo-600\">professional growth.</span>",
+    "desc_p1": "Career Compass was born from a simple observation: the gap between academic preparation and market demand is widening. Our mission is to provide every professional with a high-precision navigation system powered by AI to master their destiny.",
+    "v1_title": "Precision Insights",
+    "v1_desc": "We don't just show jobs; we map your unique skill DNA against the entire market.",
+    "v2_title": "Unbiased Analysis",
+    "v2_desc": "Our AI provides objective feedback on your resume, mimicking the most advanced ATS systems.",
+    "v3_title": "Market Intelligence",
+    "v3_desc": "Real-time data from thousands of sources to keep you ahead of hiring trends.",
+    "why_title": "Why Career Compass?",
+    "why_p1": "The modern job market operates at light speed. Skills that were relevant two years ago are now foundational, and new domains emerge every season. Professionals are often left guessing what to learn next.",
+    "why_p2": "We built Career Compass to remove the guesswork. By leveraging state-of-the-art NLP and market-scraping technologies, we provide a live roadmap for your career. Whether you're a junior dev or a senior architect, we help you identify exactly what's missing and how to get there.",
+    "stats_jobs": "Jobs Analyzed",
+    "stats_roles": "Target Roles",
+    "stats_accuracy": "Match Accuracy",
+    "stats_updates": "Live Updates"
+  },
+  "terms_page": {
+    "badge": "Service Agreement",
+    "title": "Terms of Service",
+    "last_updated": "Last updated: April 6, 2026",
+    "s1_title": "1. Use of Service",
+    "s1_desc": "Career Compass provides an AI-powered career navigation platform. By using our service, you agree to provide accurate professional information for analysis. Misuse of the scraping engine or unauthorized access to our API is strictly prohibited.",
+    "s2_title": "2. Intellectual Property",
+    "s2_desc": "The platform architecture, AI algorithms, and branding are the property of Career Intelligence Inc. No part of our service may be reproduced or reverse-engineered.",
+    "s3_title": "3. Responsibility",
+    "s3_desc": "While our AI provides high-precision data, Career Compass is a tool for professional growth. We do not guarantee employment, and users are responsible for verifying job details with employers.",
+    "s4_title": "4. Limitation of Liability",
+    "s4_desc": "In no event shall Career Compass be liable for any indirect, incidental, or special damages arising from your professional career decisions based on our analysis.",
+    "agree": "By creating an account, you agree to these terms.",
+    "notice_title": "Notice:",
+    "notice_desc": "We reserve the right to updates these terms at any time. Major changes will be communicated via the email address registered with your Career Compass account."
+  },
+  "privacy_page": {
+    "badge": "Data Protection",
+    "title": "Privacy Policy",
+    "last_updated": "Last updated: April 6, 2026",
+    "s1_title": "1. Information Collection",
+    "s1_desc": "We collect information you provide directly, including your resume data, employment history, and contact details necessary for our AI to perform gap analysis and job matching.",
+    "s2_title": "2. Use of AI and Data Processing",
+    "s2_desc": "Your data is processed transiently by our AI microservices to generate match scores. We do not sell your personal data to third-party recruiters or advertisers.",
+    "s3_title": "3. Data Security",
+    "s3_desc": "We employ industry-standard encryption protocols (TLS 1.3) to protect your data in transit and at rest. Access to the administrative backend is strictly role-based (RBAC).",
+    "s4_title": "4. Your Rights",
+    "s4_desc": "You have the right to request deletion of your account and associated CV data at any time via the profile settings. Deleted data is permanently purged from our primary clusters.",
+    "agree": "Your privacy is a core architectural requirement.",
+    "notice_title": "Contact DPO:",
+    "notice_desc": "For GDPR compliance or general privacy inquiries, please contact our Data Protection Officer."
+  },
+  "status_page": {
+    "live_status": "Live Status",
+    "title": "All systems are operational",
+    "as_of": "As of April 6, 2026 at 18:00 UTC",
+    "refresh": "Refresh Status",
+    "uptime": "Uptime:",
+    "past_events": "Past Events (90 Days)",
+    "systems": {
+      "api": "API Services",
+      "ai": "AI Engine",
+      "scraping": "Scraping Cluster",
+      "db": "Database Clusters",
+      "analytics": "Real-time Analytics",
+      "websockets": "WebSockets Layer"
+    },
+    "states": {
+      "operational": "Operational",
+      "maintenance": "Maintenance",
+      "incident": "Incident",
+      "resolved": "Resolved",
+      "completed": "Completed"
+    },
+    "incidents": {
+      "i1_title": "Scheduled Maintenance: WebSockets Cluster 3",
+      "i1_date": "Apr 05, 2026",
+      "i2_title": "Increased Latency: AI Resume Parsing",
+      "i2_date": "Mar 28, 2026",
+      "i3_title": "Minor Outage: Scraping Node EU-West",
+      "i3_date": "Mar 15, 2026"
     }
   },
   "login": {

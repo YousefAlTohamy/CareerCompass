@@ -8,20 +8,20 @@ export default function Terms() {
 
   const sections = [
     {
-      title: '1. Use of Service',
-      content: 'Career Compass provides an AI-powered career navigation platform. By using our service, you agree to provide accurate professional information for analysis. Misuse of the scraping engine or unauthorized access to our API is strictly prohibited.'
+      title: t('terms_page.s1_title'),
+      content: t('terms_page.s1_desc')
     },
     {
-      title: '2. Intellectual Property',
-      content: 'The platform architecture, AI algorithms, and branding are the property of Career Intelligence Inc. No part of our service may be reproduced or reverse-engineered.'
+      title: t('terms_page.s2_title'),
+      content: t('terms_page.s2_desc')
     },
     {
-      title: '3. Responsibility',
-      content: 'While our AI provides high-precision data, Career Compass is a tool for professional growth. We do not guarantee employment, and users are responsible for verifying job details with employers.'
+      title: t('terms_page.s3_title'),
+      content: t('terms_page.s3_desc')
     },
     {
-      title: '4. Limitation of Liability',
-      content: 'In no event shall Career Compass be liable for any indirect, incidental, or special damages arising from your professional career decisions based on our analysis.'
+      title: t('terms_page.s4_title'),
+      content: t('terms_page.s4_desc')
     }
   ];
 
@@ -34,10 +34,10 @@ export default function Terms() {
           className="text-center mb-16 space-y-4"
         >
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-black uppercase text-[10px] tracking-widest rounded-lg border border-slate-200 dark:border-slate-700">
-            <Scale size={14} /> Service Agreement
+            <Scale size={14} /> {t('terms_page.badge')}
           </div>
-          <h1 className="text-4xl md:text-5xl font-black text-slate-800 dark:text-white tracking-tight">Terms of Service</h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium">Last updated: April 6, 2026</p>
+          <h1 className="text-4xl md:text-5xl font-black text-slate-800 dark:text-white tracking-tight">{t('terms_page.title')}</h1>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">{t('terms_page.last_updated')}</p>
         </motion.div>
 
         <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden p-8 md:p-12 space-y-12">
@@ -54,7 +54,7 @@ export default function Terms() {
                  <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 flex items-center justify-center shrink-0">
                     <CheckCircle2 size={24} />
                  </div>
-                 <div className="text-sm font-bold text-slate-700 dark:text-slate-300 leading-tight">By creating an account, you agree to these terms.</div>
+                 <div className="text-sm font-bold text-slate-700 dark:text-slate-300 leading-tight">{t('terms_page.agree')}</div>
               </div>
               <a href="mailto:legal@careercompass.ai" className="text-sm font-black text-indigo-600 dark:text-indigo-400 hover:underline">legal@careercompass.ai</a>
            </div>
@@ -68,7 +68,7 @@ export default function Terms() {
         >
            <AlertCircle className="text-amber-600 shrink-0" />
            <div className="text-sm font-bold text-amber-700 dark:text-amber-400 leading-relaxed">
-              <strong>Notice:</strong> We reserve the right to updates these terms at any time. Major changes will be communicated via the email address registered with your Career Compass account.
+              <strong>{t('terms_page.notice_title')}</strong> {t('terms_page.notice_desc')}
            </div>
         </motion.div>
       </div>
