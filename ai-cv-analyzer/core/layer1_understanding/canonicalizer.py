@@ -304,50 +304,13 @@ _NORM_RE = re.compile(r"[^a-z0-9\+\#\.]+")
 
 
 def _norm(s: str) -> str:
+    """Generic normalization: lowercase, strip, remove special chars."""
     s = s.lower().strip()
-    s = s.replace("vue.js", "vuejs").replace("node.js", "nodejs").replace("react.js", "react")
     s = _NORM_RE.sub(" ", s)
     s = re.sub(r"\s+", " ", s).strip()
     return s
 
 
-_DEFAULT_SKILL_MAP: Dict[str, str] = {
-    # JavaScript ecosystem
-    "js": "JavaScript",
-    "javascript": "JavaScript",
-    "react js": "React",
-    "reactjs": "React",
-    "react": "React",
-    "vue": "VueJS",
-    "vuejs": "VueJS",
-    "vue.js": "VueJS",
-    "node": "Node.js",
-    "nodejs": "Node.js",
-    "node.js": "Node.js",
-    "ts": "TypeScript",
-    "typescript": "TypeScript",
-    # Python ecosystem
-    "py": "Python",
-    "python": "Python",
-    "django": "Django",
-    "flask": "Flask",
-    "fastapi": "FastAPI",
-    # Data / ML
-    "ml": "Machine Learning",
-    "machine learning": "Machine Learning",
-    "deep learning": "Deep Learning",
-    "nlp": "NLP",
-    "pytorch": "PyTorch",
-    "torch": "PyTorch",
-    "tensorflow": "TensorFlow",
-    "sklearn": "scikit-learn",
-    "scikit learn": "scikit-learn",
-    "scikit-learn": "scikit-learn",
-    # Infra
-    "aws": "AWS",
-    "azure": "Azure",
-    "gcp": "GCP",
-    "docker": "Docker",
-    "k8s": "Kubernetes",
-    "kubernetes": "Kubernetes",
-}
+# Empty by default to be industry-agnostic. 
+# Can be populated via config files for specific domains.
+_DEFAULT_SKILL_MAP: Dict[str, str] = {}

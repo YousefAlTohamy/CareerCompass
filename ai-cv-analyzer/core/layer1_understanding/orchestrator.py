@@ -41,14 +41,21 @@ except ImportError:
     extract_images_from_pdf_bytes = None  # type: ignore[assignment]
     extract_text_from_image = None  # type: ignore[assignment]
 
-# Lazy import for Semantic Embedder — guarded so the pipeline works
-# even without sentence-transformers installed.
 try:
     from core.layer3_matching.embedder import SemanticEmbedder
     EMBEDDER_AVAILABLE = True
 except ImportError:
     SemanticEmbedder = None  # type: ignore[misc,assignment]
     EMBEDDER_AVAILABLE = False
+
+# Lazy import for Domain Classifier (Layer 2)
+try:
+    from core.layer2_classification.classifier import CVDomainClassifier
+    from core.layer1_understanding.advanced_ner import _looks_like_contact_line
+    CLASSIFIER_AVAILABLE = True
+except ImportError:
+    CVDomainClassifier = None  # type: ignore[misc,assignment]
+    CLASSIFIER_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +114,15 @@ class CVOrchestrator:
             embedder=self._embedder,
             semantic_skill_threshold=self._config.semantic_skill_threshold,
         )
+
+        self._classifier = None
+        if CLASSIFIER_AVAILABLE:
+            try:
+                self._classifier = CVDomainClassifier()
+                logger.info("Layer 2 Domain Classifier (Singleton) initialized for orchestrator.")
+            except Exception as e:
+                logger.warning("CVDomainClassifier failed to initialize: %s", e)
+                self._classifier = None
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -409,7 +425,17 @@ class CVOrchestrator:
         exp_text = segments.sections.get("experience", "")
         total_years = self._experience.calculate_total_experience_years(exp_text) if exp_text else 0.0
 
-        current_title = self._rank_current_title(exp_text, segments.sections) or (entities.get("roles") or [None])[0]
+        # Title Detection Logic: Header -> Experience -> NER Fallback
+        header_title = None
+        first_lines = [ln.strip() for ln in ordered_text.splitlines() if ln.strip()][:5]
+        # Look for a title in the first 5 lines (skipping the name)
+        for ln in first_lines[1:]: 
+            # If the line looks like a role (not contact info, not too long)
+            if not _looks_like_contact_line(ln) and 5 < len(ln) < 50:
+                header_title = _clean_title_line(ln)
+                if header_title: break
+
+        current_title = header_title or self._rank_current_title(exp_text, segments.sections) or (entities.get("roles") or [None])[0]
 
         experience_items = self._build_experience_items(exp_text, predicted_title=current_title)
         experience_section = ExperienceSection(
@@ -476,10 +502,43 @@ class CVOrchestrator:
             language_hint=None,
         )
 
+        # Headline & Location Fallback from Header/NER
+        # Aggressive Header Parsing: Look for locations in lines with separators (| or •)
+        final_location = contact_dict.get("location")
+        if not final_location:
+            # Check first 5 lines for common location patterns or split by pipe
+            for ln in first_lines:
+                if "|" in ln or "•" in ln:
+                    parts = [p.strip() for p in re.split(r"[|•]", ln)]
+                    for p in parts:
+                        # If a part looks like "City, Country"
+                        if "," in p and len(p) < 40:
+                            final_location = p
+                            break
+                if final_location: break
+
+        # NER Fallback if still missing
+        if not final_location and entities.get("locations"):
+            header_area = ordered_text[:1000].lower()
+            for loc in entities["locations"]:
+                if loc.lower() in header_area:
+                    final_location = loc
+                    break
+
+        # Capture Headline: Any informative line in header that isn't name/contact/location
+        headline = None
+        for ln in first_lines[1:5]: 
+            ln_low = ln.lower()
+            if not _looks_like_contact_line(ln) and ln != current_title and ln != final_location:
+                # Basic length and content check
+                if 8 < len(ln) < 100 and not any(x in ln_low for x in ("gmail", "linkedin", "github")):
+                    headline = ln
+                    break
+
         profile = Profile(
             full_name=name_candidate.full_name if name_candidate else None,
             current_title=current_title,
-            headline=None,
+            headline=headline,
             summary=segments.sections.get("profile_summary"),
             confidence_score=name_candidate.confidence_score if name_candidate else 0.0,
             contact=ContactInfo(
@@ -487,18 +546,37 @@ class CVOrchestrator:
                 phone=contact_dict.get("phone"),
                 linkedin_url=contact_dict.get("linkedin_url"),
                 github_url=contact_dict.get("github_url"),
-                location=contact_dict.get("location")
+                portfolio_url=contact_dict.get("portfolio_url"),
+                location=final_location
             ),
         )
 
         # Determine parsing_status based on extraction source
         parsing_status = "ocr_fallback" if extraction_source == "ocr" else "success"
 
+        # -- Phase 2: Domain Classification (Layer 2) --
+        primary_domain = None
+        domain_scores = {}
+        if self._classifier is not None:
+            try:
+                # Build structured input for better classification accuracy
+                temp_cv_data = {
+                    "skills": {"items": [{"name": s.name} for s in skill_items]},
+                    "experience": {"items": [{"title": it.title, "technologies": it.technologies} for it in experience_items]},
+                    "analysis": {"metadata": {"extraction": {"raw_text": ordered_text}}}
+                }
+                domain_scores = self._classifier.predict_domain_from_cv_data(temp_cv_data)
+                if domain_scores:
+                    primary_domain = max(domain_scores, key=domain_scores.get)
+                    logger.info("Layer 2 Classified Domain: %s (confidence=%.2f)", primary_domain, domain_scores[primary_domain])
+            except Exception as e:
+                logger.warning("Layer 2 Domain Classification failed: %s", e)
+
         analysis = AnalysisSection(
             summary=None,
             predicted_role=current_title,
             seniority=seniority,
-            primary_domain=None,
+            primary_domain=primary_domain,
             strengths=strengths,
             gaps=all_gaps,
             red_flags=all_red_flags,
@@ -525,6 +603,10 @@ class CVOrchestrator:
                     "word_count_spatial": spatial_word_count,
                     "raw_text": ordered_text,
                 },
+                "domain_classification": {
+                    "primary": primary_domain,
+                    "all_scores": domain_scores
+                }
             },
         )
 
