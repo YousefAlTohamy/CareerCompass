@@ -1,102 +1,179 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Activity, CheckCircle2, Server, Database, Globe, Zap, Cpu, RefreshCw } from 'lucide-react';
+import { Activity, CheckCircle2, Server, Database, Globe, Zap, Cpu, RefreshCw, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function SystemStatus() {
     const { t } = useTranslation();
 
     const systems = [
-        { name: t('status_page.systems.api'), status: t('status_page.states.operational'), uptime: '99.98%', icon: Server, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/10' },
-        { name: t('status_page.systems.ai'), status: t('status_page.states.operational'), uptime: '99.95%', icon: Cpu, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/10' },
-        { name: t('status_page.systems.scraping'), status: t('status_page.states.operational'), uptime: '98.2%', icon: Globe, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/10' },
-        { name: t('status_page.systems.db'), status: t('status_page.states.operational'), uptime: '100%', icon: Database, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/10' },
-        { name: t('status_page.systems.analytics'), status: t('status_page.states.operational'), uptime: '99.9%', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/10' },
-        { name: t('status_page.systems.websockets'), status: t('status_page.states.maintenance'), uptime: '99.8%', icon: Zap, color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-900/10' }
+        { name: t('status_page.systems.api'), status: t('status_page.states.operational'), uptime: '99.98%', icon: Server, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+        { name: t('status_page.systems.ai'), status: t('status_page.states.operational'), uptime: '99.95%', icon: Cpu, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+        { name: t('status_page.systems.scraping'), status: t('status_page.states.operational'), uptime: '98.2%', icon: Globe, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+        { name: t('status_page.systems.db'), status: t('status_page.states.operational'), uptime: '100%', icon: Database, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+        { name: t('status_page.systems.analytics'), status: t('status_page.states.operational'), uptime: '99.9%', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+        { name: t('status_page.systems.websockets'), status: t('status_page.states.maintenance'), uptime: '99.8%', icon: Zap, color: 'text-amber-500', bg: 'bg-amber-500/10' }
     ];
 
-  const incidents = [
-    { date: t('status_page.incidents.i1_date'), title: t('status_page.incidents.i1_title'), status: t('status_page.states.completed'), type: t('status_page.states.maintenance') },
-    { date: t('status_page.incidents.i2_date'), title: t('status_page.incidents.i2_title'), status: t('status_page.states.resolved'), type: t('status_page.states.incident') },
-    { date: t('status_page.incidents.i3_date'), title: t('status_page.incidents.i3_title'), status: t('status_page.states.resolved'), type: t('status_page.states.incident') }
-  ];
+    const incidents = [
+        { date: t('status_page.incidents.i1_date'), title: t('status_page.incidents.i1_title'), status: t('status_page.states.completed'), type: 'maintenance' },
+        { date: t('status_page.incidents.i2_date'), title: t('status_page.incidents.i2_title'), status: t('status_page.states.resolved'), type: 'incident' },
+        { date: t('status_page.incidents.i3_date'), title: t('status_page.incidents.i3_title'), status: t('status_page.states.resolved'), type: 'incident' }
+    ];
 
-  return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pt-24 pb-20 px-4 transition-colors duration-300">
-      <div className="max-w-4xl mx-auto space-y-12">
-        
-        {/* Header */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-emerald-500 p-8 md:p-12 rounded-3xl text-white shadow-xl shadow-emerald-500/20 relative overflow-hidden"
-        >
-           <Activity className="absolute bottom-[-20%] right-[-5%] w-64 h-64 opacity-10 rotate-12 pointer-events-none" />
-           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="space-y-3 text-center md:text-left">
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 text-white font-black uppercase text-[10px] tracking-widest rounded-lg backdrop-blur-md">
-                   {t('status_page.live_status')}
-                </div>
-                <h1 className="text-3xl md:text-4xl font-black tracking-tight">{t('status_page.title')}</h1>
-                <p className="text-emerald-50 font-medium">{t('status_page.as_of')}</p>
-              </div>
-              <button className="bg-white text-emerald-600 font-black px-8 py-3.5 rounded-xl hover:bg-emerald-50 transition-all active:scale-95 shadow-lg flex items-center gap-2 group">
-                 <RefreshCw size={18} className="group-active:rotate-180 transition-transform" />
-                 {t('status_page.refresh')}
-              </button>
-           </div>
-        </motion.div>
+    return (
+        <div className="min-h-screen relative overflow-hidden font-sans pt-32 pb-20 px-4 hud-scanner">
+            {/* ── 2026 Global Design Layer ────────────────────────────────────────── */}
+            <div className="fluid-bg-container">
+                <div className="fluid-blob w-[500px] h-[500px] bg-indigo-500 top-[-10%] left-[-10%]" />
+                <div className="fluid-blob w-[400px] h-[400px] bg-emerald-500 bottom-[20%] right-[-5%] animation-delay-2000" />
+                <div className="fluid-blob w-[600px] h-[600px] bg-blue-400 top-[40%] left-[30%] opacity-10" />
+            </div>
+            <div className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05] -z-10" 
+                 style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
-        {/* System Grid */}
-        <div className="grid md:grid-cols-2 gap-6">
-           {systems.map((s, i) => (
-             <motion.div
-               key={i}
-               initial={{ opacity: 0, y: 10 }}
-               animate={{ opacity: 1, y: 0 }}
-               transition={{ delay: i * 0.05 }}
-               className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center justify-between group hover:border-indigo-200 dark:hover:border-indigo-500 transition-all"
-             >
-                <div className="flex items-center gap-4">
-                   <div className={`w-12 h-12 ${s.bg} rounded-xl flex items-center justify-center ${s.color} border border-transparent group-hover:scale-105 transition-transform`}>
-                      <s.icon size={22} />
-                   </div>
-                   <div>
-                      <h3 className="font-black text-slate-800 dark:text-white text-sm">{s.name}</h3>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('status_page.uptime')} {s.uptime}</p>
-                   </div>
+            <div className="max-w-5xl mx-auto space-y-16 relative z-10">
+                
+                {/* Header Status Card */}
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="glass-card p-10 md:p-14 border-emerald-500/20 relative overflow-hidden shadow-2xl"
+                >
+                    <div className="noise-overlay"></div>
+                    <div className="absolute top-0 right-0 p-12 text-emerald-500/5 -z-10">
+                        <Activity size={300} strokeWidth={0.5} />
+                    </div>
+                    
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-10">
+                        <div className="space-y-6 text-center md:text-left">
+                            <motion.div 
+                                initial={{ x: -20, opacity: 0 }}
+                                animate={{ x: 0, opacity: 1 }}
+                                className="inline-flex items-center gap-3 px-5 py-2 glass-card !rounded-full border-emerald-500/20 bg-emerald-500/5 shadow-inner"
+                            >
+                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]" />
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">{t('status_page.live_status')}</span>
+                            </motion.div>
+                            
+                            <h1 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white leading-tight tracking-tighter">
+                                {t('status_page.title')}
+                            </h1>
+                            <p className="text-slate-500 dark:text-slate-400 font-medium">
+                                {t('status_page.as_of')}
+                            </p>
+                        </div>
+                        
+                        <motion.button 
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="btn-primary !px-10 !py-5 !rounded-2xl shrink-0 gap-3 border border-emerald-500/30 shadow-emerald-500/10 group"
+                        >
+                            <RefreshCw size={22} className="group-hover:rotate-180 transition-transform duration-500" />
+                            {t('status_page.refresh')}
+                        </motion.button>
+                    </div>
+                </motion.div>
+
+                {/* Services Section */}
+                <div className="space-y-8">
+                    <div className="flex items-center gap-4 px-2">
+                        <div className="h-px flex-grow bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-800 to-transparent" />
+                        <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 whitespace-nowrap">Core Infrastrucutre</h2>
+                        <div className="h-px flex-grow bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-800 to-transparent" />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {systems.map((s, i) => (
+                            <motion.div
+                                key={i}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: i * 0.1 }}
+                                className="glass-card p-8 group hover:border-indigo-500/30 transition-all border-slate-200/50 dark:border-slate-800 relative overflow-hidden"
+                            >
+                                <div className="noise-overlay"></div>
+                                <div className="flex flex-col gap-6 relative z-10">
+                                    <div className="flex justify-between items-start">
+                                        <div className={`w-14 h-14 ${s.bg} rounded-2xl flex items-center justify-center ${s.color} shadow-inner`}>
+                                            <s.icon size={26} />
+                                        </div>
+                                        <div className="flex flex-col items-end">
+                                            <div className="flex items-center gap-2">
+                                                <span className={`w-2 h-2 rounded-full ${s.color.replace('text-', 'bg-')} animate-pulse`} />
+                                                <span className="text-xs font-black text-slate-800 dark:text-slate-100">{s.status}</span>
+                                            </div>
+                                            <span className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">{s.uptime} uptime</span>
+                                        </div>
+                                    </div>
+                                    <h3 className="text-lg font-black text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                        {s.name}
+                                    </h3>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
-                   <span className={`w-2 h-2 rounded-full ${s.color.replace('text-', 'bg-')} animate-pulse`}></span>
-                   <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{s.status}</span>
+
+                {/* History Section */}
+                <div className="space-y-10 pt-10">
+                    <div className="flex justify-between items-center px-4">
+                        <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{t('status_page.past_events')}</h2>
+                        <div className="text-[10px] font-black uppercase text-slate-400 tracking-widest">90 DAY ARCHIVE</div>
+                    </div>
+                    
+                    <div className="space-y-6">
+                        {incidents.map((inc, i) => (
+                            <motion.div 
+                                key={i}
+                                initial={{ opacity: 0, x: -20 }}
+                                whileInView={{ opacity: 1, x: 0 }}
+                                viewport={{ once: true }}
+                                className="glass-card p-6 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-slate-200/50 dark:border-slate-800 group"
+                            >
+                                <div className="flex items-start gap-6">
+                                    <div className={`mt-1.5 w-3 h-3 rounded-full shrink-0 ${inc.type === 'maintenance' ? 'bg-indigo-500' : 'bg-rose-500'} shadow-[0_0_15px_rgba(99,102,241,0.5)]`} />
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-3">
+                                            <span className={`text-[9px] font-black uppercase tracking-[0.2em] px-2 py-1 rounded-md ${inc.type === 'maintenance' ? 'bg-indigo-500/10 text-indigo-600' : 'bg-rose-500/10 text-rose-600'}`}>
+                                                {inc.type}
+                                            </span>
+                                            <span className="text-[11px] font-bold text-slate-400">{inc.date}</span>
+                                        </div>
+                                        <h3 className="text-xl font-black text-slate-800 dark:text-white group-hover:translate-x-1 transition-transform">{inc.title}</h3>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 px-4 py-2 glass-card !rounded-xl text-emerald-500 font-black text-xs uppercase tracking-widest border-emerald-500/10">
+                                    <CheckCircle2 size={16} /> {inc.status}
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
                 </div>
-             </motion.div>
-           ))}
+
+                {/* Footer Note */}
+                <div className="text-center pt-20">
+                     <div className="inline-flex items-center gap-3 px-6 py-3 glass-card !rounded-2xl border-white/10 dark:border-white/5 bg-white/5 text-slate-500 dark:text-slate-400 text-xs font-bold">
+                        <AlertCircle size={14} className="text-indigo-500" />
+                        Automated infrastructure monitoring powered by Career Compass AI
+                     </div>
+                </div>
+
+            </div>
+
+             {/* Style Overrides for animations */}
+             <style dangerouslySetInnerHTML={{ __html: `
+                .animation-delay-2000 {
+                    animation-delay: 2s;
+                }
+                @keyframes pulse-slow {
+                    0%, 100% { opacity: 0.5; transform: scale(1); }
+                    50% { opacity: 0.8; transform: scale(1.1); }
+                }
+                .pulse-slow {
+                    animation: pulse-slow 4s infinite ease-in-out;
+                }
+            `}} />
         </div>
-
-        {/* History Section */}
-        <div className="space-y-6">
-           <h2 className="text-xl font-black text-slate-800 dark:text-white px-2 uppercase tracking-widest text-sm">{t('status_page.past_events')}</h2>
-           <div className="space-y-4">
-              {incidents.map((inc, i) => (
-                <div key={i} className="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                   <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                         <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded ${inc.type === 'maintenance' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600' : 'bg-rose-50 dark:bg-rose-900/30 text-rose-600'}`}>
-                            {inc.type}
-                         </span>
-                         <span className="text-xs font-bold text-slate-400">{inc.date}</span>
-                      </div>
-                      <h3 className="font-black text-slate-800 dark:text-white">{inc.title}</h3>
-                   </div>
-                   <div className="flex items-center gap-2 text-emerald-500 font-bold text-sm">
-                      <CheckCircle2 size={16} /> {inc.status}
-                   </div>
-                </div>
-              ))}
-           </div>
-        </div>
-
-      </div>
-    </div>
-  );
+    );
 }

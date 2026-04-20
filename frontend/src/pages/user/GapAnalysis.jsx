@@ -414,8 +414,16 @@ export default function GapAnalysis() {
   const jobUrl = analysis?.job?.url || null;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-8 px-4 sm:px-6 lg:px-8 font-sans pb-24 transition-colors duration-300">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen relative overflow-hidden bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8 font-sans pb-24 transition-colors duration-300 hud-scanner z-0">
+      {/* ── 2026 Global Design Layer ────────────────────────────────────────── */}
+      <div className="fluid-bg-container">
+        <div className="fluid-blob w-[600px] h-[600px] bg-indigo-500 top-[-10%] left-[-10%] opacity-20" />
+        <div className="fluid-blob w-[700px] h-[700px] bg-teal-500 bottom-[10%] right-[-10%] animation-delay-2000 opacity-20" />
+      </div>
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05] -z-10" 
+           style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-7xl mx-auto space-y-6 relative z-10">
 
         {/* TOP BAR */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print mb-4">
@@ -461,8 +469,9 @@ export default function GapAnalysis() {
           <div className="lg:col-span-8 space-y-6">
 
             {/* OVERVIEW CARD */}
-            <div className="bg-white dark:bg-slate-800/50 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 dark:bg-indigo-900/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+            <div className="glass-card p-6 md:p-8 relative overflow-hidden group">
+              <div className="noise-overlay"></div>
+              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 dark:bg-indigo-900/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
               <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
                 <PremiumMatchGauge percentage={matchPct} t={t} />
                 <div className="flex-1 space-y-6 text-center md:text-left w-full">
@@ -501,9 +510,10 @@ export default function GapAnalysis() {
                       return (
                         <div
                           key={i}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 rounded-lg text-emerald-700 dark:text-emerald-300 font-bold text-sm shadow-sm"
+                          className="flex items-center gap-1.5 px-3 py-1.5 glass-card !rounded-lg text-emerald-700 dark:text-emerald-400 font-bold text-sm border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)] relative overflow-hidden"
                         >
-                          {skillName}
+                          <div className="absolute inset-0 bg-emerald-500/5 noise-overlay"></div>
+                          <span className="relative z-10">{skillName}</span>
                         </div>
                       );
                     })}
@@ -528,14 +538,15 @@ export default function GapAnalysis() {
                       return (
                         <div
                           key={i}
-                          className="flex flex-col p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl hover:bg-white dark:hover:bg-slate-800 hover:border-rose-200 dark:hover:border-rose-900 hover:shadow-sm transition-all group"
+                          className="flex flex-col p-4 glass-card border-rose-500/20 hover:border-rose-500/50 hover:shadow-[0_0_20px_rgba(244,63,94,0.15)] transition-all group relative overflow-hidden"
                         >
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="font-bold text-slate-700 dark:text-slate-200 text-sm truncate">{skillName}</span>
-                            <span className="text-[10px] font-black text-rose-600 dark:text-rose-400 bg-rose-100/50 dark:bg-rose-900/40 px-2 py-0.5 rounded-md">{score}%</span>
+                          <div className="absolute inset-0 bg-rose-500/5 noise-overlay"></div>
+                          <div className="flex items-center justify-between mb-3 relative z-10">
+                            <span className="font-bold text-slate-800 dark:text-slate-100 text-sm truncate">{skillName}</span>
+                            <span className="micro-typography text-rose-600 dark:text-rose-400 glass-card px-2 py-0.5 !rounded-md border-rose-500/20">{score}%</span>
                           </div>
-                          <div className="w-full bg-slate-200/60 h-1.5 rounded-full overflow-hidden mt-auto">
-                            <motion.div initial={{ width: 0 }} animate={{ width: `${score}%` }} className="bg-rose-500 h-full" />
+                          <div className="w-full bg-slate-200/60 dark:bg-slate-800/60 h-1.5 rounded-full overflow-hidden mt-auto relative z-10">
+                            <motion.div initial={{ width: 0 }} animate={{ width: `${score}%` }} className="bg-gradient-to-r from-rose-600 to-rose-400 h-full shadow-[0_0_10px_rgba(244,63,94,0.8)]" />
                           </div>
                         </div>
                       );

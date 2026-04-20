@@ -1,179 +1,199 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Compass, ShieldCheck, Zap, BarChart3, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Search, PenTool, Users, ArrowRight, CheckCircle2, Zap, Compass } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
+
 export default function Home() {
   const { user } = useAuth();
   const { t } = useTranslation();
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 overflow-x-hidden font-sans transition-colors duration-300">
-      
-      {/* Hero Section */}
-      <section className="relative pt-32 pb-20 md:pt-40 md:pb-32 px-4 overflow-hidden">
-        {/* Background Glows (Matching Login/Register style) */}
-        <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-indigo-500/10 blur-[120px] rounded-full -z-10" />
-        <div className="absolute top-48 left-1/4 w-[300px] h-[300px] bg-fuchsia-500/10 blur-[80px] rounded-full -z-10 animate-pulse" />
+    <div className="min-h-screen relative overflow-hidden font-sans hud-scanner">
+      {/* ── 2026 Global Design Layer ────────────────────────────────────────── */}
+      <div className="fluid-bg-container">
+        <div className="fluid-blob w-[500px] h-[500px] bg-indigo-500 top-[-10%] left-[-10%]" />
+        <div className="fluid-blob w-[400px] h-[400px] bg-purple-500 bottom-[20%] right-[-5%] animation-delay-2000" />
+        <div className="fluid-blob w-[600px] h-[600px] bg-teal-400 top-[40%] left-[30%] opacity-10" />
+      </div>
+      {/* Blueprint grid replaced with a CSS-based subtle grid */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05] -z-10" 
+           style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
-        <div className="max-w-6xl mx-auto text-center space-y-8 relative z-10">
+      {/* ── Hero Section ────────────────────────────────────────────────────── */}
+      <section className="relative pt-32 pb-20 md:pt-48 md:pb-40 px-4">
+        <div className="max-w-7xl mx-auto flex flex-col items-center text-center space-y-12 relative z-10">
           
-          {/* Top Badge */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full shadow-sm text-indigo-600 dark:text-indigo-400 font-bold text-xs uppercase tracking-widest"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="px-4 py-1.5 glass-card !rounded-full text-[10px] uppercase tracking-[0.3em] font-black text-indigo-600 dark:text-indigo-400 border border-indigo-500/20"
           >
-            <Zap size={14} className="text-fuchsia-500" />
             {t('home.hero.badge')}
           </motion.div>
 
-          {/* Headline */}
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-5xl md:text-7xl lg:text-8xl font-black text-slate-800 dark:text-white tracking-tighter leading-[1.05]"
-            dangerouslySetInnerHTML={{ __html: t('home.hero.headline') }}
-          />
+          <div className="space-y-6 max-w-5xl">
+            <motion.h1
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white leading-tight tracking-tighter"
+              dangerouslySetInnerHTML={{ __html: t('home.hero.headline') }}
+            />
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="text-lg text-slate-500 dark:text-slate-400 max-w-2xl mx-auto font-medium leading-relaxed"
+            >
+              {t('home.hero.subtitle')}
+            </motion.p>
+          </div>
 
-          {/* Subtitle */}
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="max-w-2xl mx-auto text-lg md:text-xl text-slate-500 dark:text-slate-400 font-medium leading-relaxed"
-          >
-            {t('home.hero.subtitle')}
-          </motion.p>
-
-          {/* CTA Buttons */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6"
+            transition={{ delay: 0.3 }}
+            className="flex flex-col sm:flex-row gap-6"
           >
             {user ? (
-               <Link 
-                 to={user.role === 'admin' ? '/admin/dashboard' : '/dashboard'} 
-                 className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-xl transition-all shadow-md shadow-indigo-200 flex items-center justify-center gap-3 group"
-               >
-                 {user.role === 'admin' ? t('home.hero.enterAdmin') : t('home.hero.enterTalent')} 
-                 <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+               <Link to={user.role === 'admin' ? '/admin/dashboard' : '/dashboard'} className="btn-primary !px-10 !py-5 !rounded-2xl text-lg">
+                 {user.role === 'admin' ? t('home.hero.enterAdmin') : t('home.hero.enterTalent')}
+                 <ArrowRight size={22} />
                </Link>
             ) : (
               <>
-                <Link 
-                  to="/register" 
-                  className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-xl transition-all shadow-md shadow-indigo-200 flex items-center justify-center gap-2 group"
-                >
+                <Link to="/register" className="btn-primary !px-10 !py-5 !rounded-2xl text-lg backdrop-blur-md bg-indigo-600/90 border border-white/20">
                   {t('home.hero.analyzeResumeBtn')}
-                  <ArrowRight size={18} className="group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-transform rtl-flip" />
+                  <ArrowRight size={20} className="rtl-flip" />
                 </Link>
-                <Link 
-                  to="/login" 
-                  className="w-full sm:w-auto bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-bold py-4 px-8 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2"
-                >
-                  {t('home.hero.signInBtn')} <Compass size={18} className="text-slate-400" />
+                <Link to="/login" className="px-10 py-5 rounded-2xl glass-card font-bold text-slate-700 dark:text-white hover:bg-white/20 transition-all border border-white/10">
+                  {t('home.hero.signInBtn')}
                 </Link>
               </>
             )}
           </motion.div>
 
-          {/* Hero Visual (Glassmorphism Card) */}
+          {/* Placeholder for 3D Asset - Using a CSS glass sphere for now */}
           <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="mt-24 relative max-w-4xl mx-auto"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: "spring", stiffness: 50, delay: 0.5 }}
+            className="mt-16 w-64 h-64 md:w-96 md:h-96 relative group flex items-center justify-center"
           >
-             <div className="absolute inset-0 bg-indigo-600/10 blur-3xl rounded-full -z-10" />
-             <div className="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md p-4 md:p-6 border border-white dark:border-slate-700 rounded-3xl shadow-2xl shadow-indigo-900/5">
-                <div className="aspect-[16/9] bg-slate-900 rounded-2xl overflow-hidden shadow-inner flex flex-col items-center justify-center text-white relative">
-                   {/* Abstract Tech Background inside the visual */}
-                   <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500 via-slate-900 to-slate-900"></div>
-                   
-                   <Compass size={80} className="animate-spin-slow text-indigo-400 mb-6 opacity-80" strokeWidth={1.5} />
-                   <h3 className="text-2xl font-bold tracking-tight text-white/90 z-10">{t('home.hero.visualTitle')}</h3>
-                   <div className="flex gap-2 mt-4 z-10">
-                     <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                     <span className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse delay-75"></span>
-                     <span className="h-2 w-2 rounded-full bg-fuchsia-500 animate-pulse delay-150"></span>
-                   </div>
-                </div>
-             </div>
+            <div className="absolute inset-0 bg-indigo-500/20 blur-[100px] rounded-full scale-150 animate-pulse -z-10" />
+            <div className="w-full h-full rounded-full bg-white/10 backdrop-blur-3xl border border-white/20 shadow-2xl flex items-center justify-center animate-float overflow-hidden">
+               <Compass size={120} className="text-indigo-500 opacity-20 animate-spin-slow" strokeWidth={0.5} />
+               <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500/10 via-transparent to-white/20"></div>
+            </div>
           </motion.div>
         </div>
       </section>
 
-      {/* Features Grid Section */}
-      <section className="py-24 px-4 bg-white dark:bg-slate-800 relative">
-        <div className="max-w-7xl mx-auto relative z-10">
-          
-          {/* Section Header */}
-          <div className="flex flex-col md:flex-row items-end justify-between gap-6 mb-16 text-center md:text-left">
-             <div className="space-y-3 mx-auto md:mx-0">
-                <h4 className="text-indigo-600 dark:text-indigo-400 font-black uppercase text-xs tracking-widest bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1 rounded-lg w-fit mx-auto md:mx-0">
-                  {t('home.features.badge')}
-                </h4>
-                <h2 className="text-4xl md:text-5xl font-black text-slate-800 dark:text-white tracking-tight">{t('home.features.title')}</h2>
-             </div>
-             <p className="max-w-md text-slate-500 dark:text-slate-400 font-medium text-center md:text-right">
-               {t('home.features.subtitle')}
-             </p>
+      {/* ── Services Bento Grid ─────────────────────────────────────────────── */}
+      <section className="py-24 px-4 relative z-10">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-8">
+            <div className="space-y-4">
+              <h2 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white -tracking-wider">
+                {t('home.features.title')}
+              </h2>
+              <div className="h-1 w-24 bg-indigo-600 rounded-full" />
+            </div>
+            <p className="max-w-md text-slate-500 dark:text-slate-400 text-lg font-light leading-relaxed">
+              {t('home.features.subtitle')}
+            </p>
           </div>
 
-          {/* Cards */}
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              {
-                icon: ShieldCheck,
-                title: t('home.features.atsValidation.title'),
-                desc: t('home.features.atsValidation.desc'),
-                color: 'text-emerald-600',
-                bg: 'bg-emerald-50',
-                border: 'group-hover:border-emerald-200'
-              },
-              {
-                icon: BarChart3,
-                title: t('home.features.marketIntelligence.title'),
-                desc: t('home.features.marketIntelligence.desc'),
-                color: 'text-indigo-600',
-                bg: 'bg-indigo-50',
-                border: 'group-hover:border-indigo-200'
-              },
-              {
-                icon: Zap,
-                title: t('home.features.bridgeTheGap.title'),
-                desc: t('home.features.bridgeTheGap.desc'),
-                color: 'text-fuchsia-600',
-                bg: 'bg-fuchsia-50',
-                border: 'group-hover:border-fuchsia-200'
-              }
-            ].map((f, i) => (
-              <motion.div
-                key={i}
-                whileHover={{ y: -8 }}
-                className={`bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-8 shadow-sm hover:shadow-xl transition-all duration-300 group ${f.border}`}
-              >
-                <div className={`w-14 h-14 ${f.bg} dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-6 transition-transform group-hover:scale-110`}>
-                   <f.icon size={28} className={f.color} strokeWidth={2.5} />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {/* Job Matching - Main Block 2x2 */}
+            <motion.div 
+              whileHover={{ scale: 1.02, z: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className="md:col-span-2 md:row-span-2 glass-card p-10 flex flex-col justify-between border-indigo-500/10 hover:border-indigo-500/30 transition-all relative overflow-hidden group"
+            >
+              <div className="noise-overlay"></div>
+              <div className="absolute top-0 right-0 p-8 text-indigo-500/10 group-hover:text-indigo-500/20 transition-colors">
+                <Search size={180} strokeWidth={1} />
+              </div>
+              <div className="relative z-10 space-y-8">
+                <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600">
+                  <Search size={32} />
                 </div>
-                <h3 className="text-xl font-black text-slate-800 dark:text-white mb-3">{f.title}</h3>
-                <p className="text-slate-500 dark:text-slate-400 font-medium leading-relaxed text-sm">
-                  {f.desc}
-                </p>
-                <ul className="mt-6 space-y-2">
-                   <li className="flex items-center gap-2 text-xs font-bold text-slate-400">
-                     <CheckCircle2 size={14} className={f.color} /> {t('home.features.dataDriven')}
-                   </li>
-                </ul>
-              </motion.div>
-            ))}
+                <div>
+                  <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-4">{t('home.features.marketIntelligence.title')}</h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed">{t('home.features.marketIntelligence.desc')}</p>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* CV Building - Side Block 2x1 */}
+            <motion.div 
+              whileHover={{ scale: 1.02, z: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className="md:col-span-2 glass-card p-8 flex items-center gap-8 border-emerald-500/10 hover:border-emerald-500/30 relative overflow-hidden"
+            >
+              <div className="noise-overlay"></div>
+              <div className="w-20 h-20 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 shrink-0">
+                <PenTool size={36} />
+              </div>
+              <div>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">{t('home.features.atsValidation.title')}</h3>
+                <p className="text-slate-500 dark:text-slate-400 leading-relaxed truncate-2-lines">{t('home.features.atsValidation.desc')}</p>
+              </div>
+            </motion.div>
+
+            {/* Coaching - Small Block 1x1 */}
+            <motion.div 
+              whileHover={{ scale: 1.02, z: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className="glass-card p-8 flex flex-col justify-between border-fuchsia-500/10 hover:border-fuchsia-500/30 relative overflow-hidden"
+            >
+              <div className="noise-overlay"></div>
+              <Users size={32} className="text-fuchsia-600" />
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-4">{t('home.features.bridgeTheGap.title')}</h3>
+            </motion.div>
+
+            {/* Data Driven - Small Block 1x1 */}
+            <motion.div 
+              whileHover={{ scale: 1.02, z: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className="glass-card p-8 flex flex-col justify-between border-slate-500/10 bg-slate-900/5 dark:bg-white/5 relative overflow-hidden"
+            >
+              <div className="noise-overlay"></div>
+              <Zap size={32} className="text-amber-500" />
+              <div className="space-y-4">
+                <div className="text-xs font-black tracking-widest uppercase opacity-50">{t('home.features.badge')}</div>
+                <div className="flex items-center gap-2 text-sm font-bold text-slate-400">
+                  <CheckCircle2 size={16} className="text-indigo-500" /> {t('home.features.dataDriven')}
+                </div>
+              </div>
+            </motion.div>
           </div>
         </div>
       </section>
+
+      {/* Floating Elements CSS Custom Animations */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes float {
+          0% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-20px) rotate(2deg); }
+          100% { transform: translateY(0px) rotate(0deg); }
+        }
+        .animate-float {
+          animation: float 6s ease-in-out infinite;
+        }
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+          animation: spin-slow 20s linear infinite;
+        }
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+      `}} />
     </div>
   );
 }

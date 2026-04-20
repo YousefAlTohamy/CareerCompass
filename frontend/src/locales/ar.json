@@ -317,7 +317,7 @@
   },
   "about_us": {
     "mission": "مهمتنا الأساسية",
-    "headline": "نهندس مستقبل <br /> <span class=\"text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-fuchsia-500 to-indigo-600\">نموك المهني.</span>",
+    "headline": "أتقن <br class=\"hidden md:block\" /> <span class=\"text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-fuchsia-500 to-indigo-600\">مستقبلك المهني</span>.",
     "desc_p1": "وُلدت منصة Career Compass من ملاحظة بسيطة: الفجوة بين الإعداد الأكاديمي واحتياجات السوق تتسع يوماً بعد يوم. رسالتنا هي تزويد كل محترف بنظام ملاحة دقيق يعمل بالذكاء الاصطناعي للتحكم الكامل في مساره المهني.",
     "v1_title": "رؤى فائقة الدقة",
     "v1_desc": "نحن لا نعرض الوظائف فحسب ؛ نحن نحلل شفرة مهاراتك (DNA) لنقاطعها مع السوق بأكمله.",

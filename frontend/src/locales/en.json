@@ -272,7 +272,7 @@
   "home": {
     "hero": {
       "badge": "AI-Powered Career Intelligence",
-      "headline": "Master your <br class=\"hidden md:block\" /> <span class=\"text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-fuchsia-500 to-indigo-600\"> professional</span> destiny.",
+      "headline": "Master your <br class=\"hidden md:block\" /> <span class=\"text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-fuchsia-500 to-indigo-600\">professional</span> destiny.",
       "subtitle": "Career Compass uses advanced AI to analyze your resume against real-time market data. Identify gaps, bridge the match, and land your expert role.",
       "enterAdmin": "Enter Admin Dashboard",
       "enterTalent": "Enter Talent Cockpit",
@@ -313,7 +313,7 @@
   },
   "about_us": {
     "mission": "Our Mission",
-    "headline": "Engineering the future of <br /> <span class=\"text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-fuchsia-500 to-indigo-600\">professional growth.</span>",
+    "headline": "Master your <br class=\"hidden md:block\" /> <span class=\"text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-fuchsia-500 to-indigo-600\">professional</span> destiny.",
     "desc_p1": "Career Compass was born from a simple observation: the gap between academic preparation and market demand is widening. Our mission is to provide every professional with a high-precision navigation system powered by AI to master their destiny.",
     "v1_title": "Precision Insights",
     "v1_desc": "We don't just show jobs; we map your unique skill DNA against the entire market.",

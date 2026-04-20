@@ -178,12 +178,14 @@ function AnimatedRoutes() {
 }
 
 import { ThemeProvider } from './context/ThemeContext';
+import ScrollToTop from './components/ScrollToTop';
 
 function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
         <Router>
+          <ScrollToTop />
           <AuthProvider>
             <Navbar />
             <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300 pt-16 flex flex-col">

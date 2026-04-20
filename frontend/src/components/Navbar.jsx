@@ -47,7 +47,7 @@ export default function Navbar() {
       ];
 
   return (
-    <nav className={`fixed top-0 w-full z-50 transition-all duration-300 font-sans ${scrolled ? 'bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm py-3' : 'bg-transparent py-5'}`}>
+    <nav className={`fixed top-0 w-full z-50 transition-all duration-500 font-sans ${scrolled ? 'bg-white/40 dark:bg-slate-900/40 backdrop-blur-2xl border-b border-white/10 shadow-2xl py-3' : 'bg-transparent py-5'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between">
           
@@ -56,8 +56,8 @@ export default function Navbar() {
             <div className="bg-indigo-600 text-white p-1.5 rounded-xl shadow-md shadow-indigo-200 group-hover:scale-105 transition-transform shrink-0">
               <Compass size={24} strokeWidth={2.5} />
             </div>
-            <span className="font-black text-xl tracking-tight text-slate-800 dark:text-white truncate">
-              Career<span className="text-indigo-600">Compass</span>
+            <span className="text-xl tracking-tighter text-slate-900 dark:text-white text-ultra-thin">
+              Career<span className="text-indigo-600 font-bold">Compass</span>
             </span>
           </Link>
 
