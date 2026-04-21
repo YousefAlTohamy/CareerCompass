@@ -207,26 +207,48 @@ class ScrapingEngine:
                 # --------------------------------------------------------
                 # Step 3: Normalise & clean (Phase 3 cleaners)
                 # --------------------------------------------------------
-                raw_title   = result.get("title") or result.get("type", "")
-                cleaned_title = remove_noise(clean_text(raw_title))
-                description = clean_text(result.get("description") or "")
-                salary_hint = result.get("salary_hint") or ""
-                location    = result.get("location") or ""
+                try:
+                    def safe_string(val) -> str:
+                        if not val:
+                            return ""
+                        if isinstance(val, str):
+                            return val.strip()
+                        if isinstance(val, dict):
+                            for k in ["name", "display_name", "label", "title", "text", "value"]:
+                                if k in val and isinstance(val[k], str):
+                                    return val[k].strip()
+                        if isinstance(val, list) and len(val) > 0:
+                            return safe_string(val[0])
+                        try:
+                            return str(val).strip()
+                        except Exception:
+                            return ""
 
-                # Combined text used for IE classifiers so they can scan
-                # both the description body and any extracted metadata
-                full_text = f"{cleaned_title} {description} {salary_hint}"
+                    raw_title   = safe_string(result.get("title")) or safe_string(result.get("type"))
+                    cleaned_title = remove_noise(clean_text(raw_title))
+                    description = clean_text(safe_string(result.get("description")))
+                    salary_hint = safe_string(result.get("salary_hint"))
+                    location    = safe_string(result.get("location"))
+                    company     = safe_string(result.get("company"))
 
-                salary        = extract_salary(salary_hint)
-                experience    = extract_experience(description)
-                job_type      = extract_job_type(full_text)
-                work_model    = extract_work_model(full_text)
-                working_hours = extract_working_hours(full_text)
+                    # Combined text used for IE classifiers so they can scan
+                    # both the description body and any extracted metadata
+                    full_text = f"{cleaned_title} {description} {salary_hint}"
+
+                    salary        = extract_salary(salary_hint)
+                    experience    = extract_experience(description)
+                    job_type      = extract_job_type(full_text)
+                    work_model    = extract_work_model(full_text)
+                    working_hours = extract_working_hours(full_text)
+                    
+                except Exception as exc:
+                    logger.error("[Engine] Field extraction failed for %s: %s", url, exc)
+                    await self._dlq.add_failure(url, f"extraction error: {exc}")
+                    continue
 
                 # --------------------------------------------------------
                 # Phase 3 (Lite): Quality score gate → DLQ (no AI fixing)
                 # --------------------------------------------------------
-                company = (result.get("company") or "").strip()
                 quality = 0
                 if cleaned_title and len(cleaned_title.strip()) >= 4:
                     quality += 35

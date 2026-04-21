@@ -101,6 +101,17 @@ class JsonApiScraper(BaseScraper):
                             val = val[k]
                         else:
                             return None
+                            
+                    # Safety check: prevent returning complex types directly
+                    if isinstance(val, (dict, list)):
+                        if isinstance(val, dict):
+                            for label in ["name", "display_name", "label", "title", "text"]:
+                                if label in val and isinstance(val[label], str):
+                                    return val[label].strip()
+                        try:
+                            return json.dumps(val)
+                        except Exception:
+                            return str(val)
                     return val
 
                 # If the API returns a 'results' array (like Adzuna), take the first item
