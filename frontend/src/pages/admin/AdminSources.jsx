@@ -26,6 +26,7 @@ import {
   Terminal,
   Radar,
   BookmarkMinus,
+  HeartPulse,
 } from "lucide-react";
 import Swal from "sweetalert2";
 
@@ -340,6 +341,12 @@ const AdminSources = () => {
       : <BookmarkMinus size={12} className="inline-block mr-1" />;
   };
 
+  const getHealthColor = (score) => {
+    if (score > 80) return { bar: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50' };
+    if (score >= 50) return { bar: 'bg-amber-500', text: 'text-amber-700', bg: 'bg-amber-50' };
+    return { bar: 'bg-rose-500', text: 'text-rose-700', bg: 'bg-rose-50' };
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       
@@ -416,13 +423,14 @@ const AdminSources = () => {
                 <th className="p-5 w-28">{t('sources.col_mode')}</th>
                 <th className="p-5">{t('sources.col_endpoint')}</th>
                 <th className="p-5 text-center w-32">{t('sources.col_status')}</th>
+                <th className="p-5 w-28">{t('sources.col_health')}</th>
                 <th className="p-5 text-right w-32">{t('sources.col_actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading && sources.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="p-12 text-center">
+                  <td colSpan="8" className="p-12 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-400 space-y-3">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
                       <p className="font-medium text-sm">{t('sources.loading')}</p>
@@ -431,7 +439,7 @@ const AdminSources = () => {
                 </tr>
               ) : sources.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="p-12 text-center">
+                  <td colSpan="8" className="p-12 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-400 space-y-3">
                       <LinkIcon className="w-12 h-12 text-slate-300 stroke-1" />
                       <p className="font-medium text-sm text-slate-500">{t('sources.no_sources')}</p>
@@ -506,6 +514,27 @@ const AdminSources = () => {
                             }`}
                           />
                         </button>
+                    </td>
+
+                    <td className="p-5">
+                      {(() => {
+                        const score = source.health_score ?? null;
+                        if (score === null) return <span className="text-xs text-slate-400">{t('sources.health_na')}</span>;
+                        const colors = source.is_active ? getHealthColor(score) : { bar: 'bg-slate-300', text: 'text-slate-400', bg: 'bg-slate-50' };
+                        return (
+                          <div className="flex items-center gap-2">
+                            <div className={`flex-1 h-1.5 rounded-full ${colors.bg} max-w-[60px]`}>
+                              <div
+                                className={`h-full rounded-full ${colors.bar} transition-all duration-500`}
+                                style={{ width: `${Math.min(score, 100)}%` }}
+                              />
+                            </div>
+                            <span className={`text-[11px] font-black ${colors.text}`}>
+                              {score}%
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </td>
 
                     <td className="p-5 text-right">

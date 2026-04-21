@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { adminAPI } from '../../api/endpoints';
 import { 
   Briefcase, 
@@ -10,11 +11,14 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Timer,
+  AlertTriangle
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 const AdminJobs = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -155,15 +159,18 @@ const AdminJobs = () => {
             <thead className="bg-slate-50/80 text-slate-500 uppercase text-xs font-bold tracking-wider border-b border-slate-200">
               <tr>
                 <th className="p-5 w-1/3">Job Details</th>
-                <th className="p-5 w-1/4">Source</th>
-                <th className="p-5 w-1/3">Required Skills</th>
+                <th className="p-5">Source</th>
+                <th className="p-5">{t('admin_jobs.col_discovered')}</th>
+                <th className="p-5">{t('admin_jobs.col_failed')}</th>
+                <th className="p-5">{t('admin_jobs.col_duration')}</th>
+                <th className="p-5">{t('admin_jobs.col_success_rate')}</th>
                 <th className="p-5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading && jobs.length === 0 ? (
                  <tr>
-                 <td colSpan="4" className="p-12 text-center">
+                 <td colSpan="7" className="p-12 text-center">
                    <div className="flex flex-col items-center justify-center text-slate-400 space-y-3">
                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
                      <p className="font-medium text-sm">Loading jobs...</p>
@@ -172,7 +179,7 @@ const AdminJobs = () => {
                </tr>
               ) : jobs.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="p-12 text-center">
+                  <td colSpan="7" className="p-12 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-400 space-y-3">
                       <Briefcase className="w-12 h-12 text-slate-300 stroke-1" />
                       <p className="font-medium text-sm text-slate-500">No jobs found in the database.</p>
@@ -215,29 +222,41 @@ const AdminJobs = () => {
                        </div>
                     </td>
 
-                    {/* Skills Column (Compact Chips) */}
+                    {/* Metrics Columns */}
                     <td className="p-5">
-                      <div className="flex flex-wrap gap-1.5">
-                        {job.skills && job.skills.length > 0 ? (
-                          <>
-                            {job.skills.slice(0, 3).map((skill, index) => (
-                              <span 
-                                key={index} 
-                                className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded text-[10px] font-bold uppercase tracking-wider border border-indigo-100"
-                              >
-                                {skill.name}
-                              </span>
-                            ))}
-                            {job.skills.length > 3 && (
-                              <span className="px-2 py-1 bg-slate-100 text-slate-500 rounded text-[10px] font-bold border border-slate-200">
-                                +{job.skills.length - 3}
-                              </span>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-xs text-slate-400 italic">No skills extracted</span>
-                        )}
-                      </div>
+                      <span className="text-sm font-bold text-slate-700">
+                        {job.discovered_count ?? 0}
+                      </span>
+                    </td>
+
+                    <td className="p-5">
+                      <span className={`text-sm font-bold ${(job.failed_count ?? 0) > 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+                        {(job.failed_count ?? 0) > 0 && <AlertTriangle size={12} className="inline-block mr-1" />}
+                        {job.failed_count ?? 0}
+                      </span>
+                    </td>
+
+                    <td className="p-5">
+                      <span className="text-sm font-medium text-slate-600 flex items-center gap-1">
+                        <Timer size={12} className="text-slate-400" />
+                        {job.processing_time_ms ? `${(job.processing_time_ms / 1000).toFixed(1)}s` : '—'}
+                      </span>
+                    </td>
+
+                    <td className="p-5">
+                      {(() => {
+                        const discovered = job.discovered_count ?? 0;
+                        const failed = job.failed_count ?? 0;
+                        const total = discovered + failed;
+                        if (total === 0) return <span className="text-xs text-slate-400">—</span>;
+                        const rate = Math.round((discovered / total) * 100);
+                        const color = rate > 80 ? 'bg-emerald-100 text-emerald-700' : rate >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700';
+                        return (
+                          <span className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-black ${color}`}>
+                            {rate}%
+                          </span>
+                        );
+                      })()}
                     </td>
 
                     {/* Status Column Removed */}

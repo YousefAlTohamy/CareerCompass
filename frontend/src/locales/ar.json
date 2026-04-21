@@ -488,6 +488,22 @@
     "test_status": "الحالة",
     "test_pass": "نجاح",
     "test_fail": "فشل",
-    "test_close": "إغلاق التشخيصات"
+    "test_close": "إغلاق التشخيصات",
+    "col_health": "الصحة",
+    "health_na": "غير متاح"
+  },
+  "admin_jobs": {
+    "col_discovered": "تم الاكتشاف",
+    "col_failed": "الإخفاقات",
+    "col_duration": "المدة",
+    "col_success_rate": "معدل النجاح"
+  },
+  "admin_dashboard": {
+    "scraper_overview": "نظرة عامة على السحب",
+    "jobs_last_24h": "وظائف (24 ساعة)",
+    "avg_health": "متوسط الصحة",
+    "active_sources": "المصادر النشطة",
+    "recent_failures": "الإخفاقات الأخيرة",
+    "system_health": "صحة النظام"
   }
 }

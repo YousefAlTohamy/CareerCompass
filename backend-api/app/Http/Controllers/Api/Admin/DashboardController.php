@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Job;
 use App\Models\ScrapingSource;
+use App\Models\ScrapingJob;
 use App\Models\TargetJobRole;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -37,6 +38,17 @@ class DashboardController extends Controller
                 ->orderBy('date', 'asc')
                 ->get();
 
+            // Scraper overview metrics
+            $activeSources = ScrapingSource::active()->get();
+            $avgHealth = $activeSources->count() > 0
+                ? round($activeSources->avg(fn ($s) => $s->calculateHealthScore()), 1)
+                : 100.0;
+
+            $jobs24h = Job::where('created_at', '>=', now()->subHours(24))->count();
+
+            $recentFailures = ScrapingJob::where('created_at', '>=', now()->subHours(24))
+                ->sum('failed_count');
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -44,7 +56,14 @@ class DashboardController extends Controller
                     'total_jobs' => $totalJobs,
                     'total_sources' => $totalSources,
                     'total_targets' => $totalTargets,
-                    'jobs_chart_data' => $jobsChartData
+                    'jobs_chart_data' => $jobsChartData,
+                    'scraper_overview' => [
+                        'jobs_last_24h'    => $jobs24h,
+                        'avg_health_score' => $avgHealth,
+                        'active_sources'   => $activeSources->count(),
+                        'total_sources'    => $totalSources,
+                        'recent_failures'  => (int) $recentFailures,
+                    ],
                 ]
             ]);
         } catch (\Exception $e) {

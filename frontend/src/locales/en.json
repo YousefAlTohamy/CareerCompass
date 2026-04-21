@@ -484,6 +484,22 @@
     "test_status": "Status",
     "test_pass": "PASS",
     "test_fail": "FAIL",
-    "test_close": "Close Diagnostics"
+    "test_close": "Close Diagnostics",
+    "col_health": "Health",
+    "health_na": "N/A"
+  },
+  "admin_jobs": {
+    "col_discovered": "Discovered",
+    "col_failed": "Failures",
+    "col_duration": "Duration",
+    "col_success_rate": "Success Rate"
+  },
+  "admin_dashboard": {
+    "scraper_overview": "Scraper Overview",
+    "jobs_last_24h": "Jobs (24h)",
+    "avg_health": "Avg Health",
+    "active_sources": "Active Sources",
+    "recent_failures": "Recent Failures",
+    "system_health": "System Health"
   }
 }
