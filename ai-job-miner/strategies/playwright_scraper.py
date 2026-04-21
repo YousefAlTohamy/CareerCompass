@@ -41,11 +41,20 @@ class PlaywrightScraper(BaseScraper):
 
             html: str
             async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=True)
+                browser = await p.chromium.launch(
+                    headless=True,
+                    args=[
+                        "--no-sandbox",
+                        "--disable-setuid-sandbox",
+                        "--disable-dev-shm-usage",
+                    ],
+                )
                 try:
                     context = await browser.new_context()
                     page = await context.new_page()
 
+                    page.set_default_timeout(timeout_ms)
+                    page.set_default_navigation_timeout(timeout_ms)
                     await page.goto(url, wait_until=wait_until, timeout=timeout_ms)
 
                     if wait_for_selector:
@@ -53,6 +62,10 @@ class PlaywrightScraper(BaseScraper):
 
                     html = await page.content()
                 finally:
+                    try:
+                        await context.close()
+                    except Exception:
+                        pass
                     await browser.close()
 
             # Reuse the existing HTML strategy to extract structured fields

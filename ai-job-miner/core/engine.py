@@ -42,14 +42,11 @@ the next item — *back-pressure* is provided for free.
 from __future__ import annotations
 
 import logging
-import os
 from typing import AsyncIterator, Optional
 
 from core.dlq import DeadLetterQueue
 from core.http_client import SmartAsyncClient
 from factories.scraper_factory import ScraperFactory
-from ai.llm_client import LlmClient, LlmConfig
-from ai.llm_extractor import LlmFallbackExtractor
 from pipeline.cleaners import (
     clean_text,
     extract_experience,
@@ -126,10 +123,6 @@ class ScrapingEngine:
         self._dlq = DeadLetterQueue(max_attempts=dlq_max_attempts)
         self._extractor = CustomSkillExtractor(use_spacy=use_spacy)
         self._reference_text = reference_text
-
-        # Phase 3: LLM fallback extraction (cost-controlled, env-configured)
-        self._llm_client = LlmClient(LlmConfig.from_env())
-        self._llm_fallback = LlmFallbackExtractor(self._llm_client)
 
     # ------------------------------------------------------------------
     # Public properties
@@ -212,24 +205,6 @@ class ScrapingEngine:
                     continue
 
                 # --------------------------------------------------------
-                # Phase 3: LLM fallback if extraction quality is low
-                # --------------------------------------------------------
-                if self._llm_fallback.needs_fallback(
-                    title=result.get("title"),
-                    company=result.get("company"),
-                    description=result.get("description"),
-                ):
-                    llm_data = await self._llm_fallback.extract(url, html)
-                    if llm_data:
-                        # Only fill missing / low-quality fields; don't overwrite good heuristics.
-                        for k in ("title", "company", "location", "description"):
-                            if not result.get(k) or len(str(result.get(k) or "").strip()) < 3:
-                                result[k] = llm_data.get(k) or result.get(k)
-                        # salary_range is new; keep separately
-                        if llm_data.get("salary_range"):
-                            result["salary_range"] = llm_data.get("salary_range")
-
-                # --------------------------------------------------------
                 # Step 3: Normalise & clean (Phase 3 cleaners)
                 # --------------------------------------------------------
                 raw_title   = result.get("title") or result.get("type", "")
@@ -249,9 +224,32 @@ class ScrapingEngine:
                 working_hours = extract_working_hours(full_text)
 
                 # --------------------------------------------------------
+                # Phase 3 (Lite): Quality score gate → DLQ (no AI fixing)
+                # --------------------------------------------------------
+                company = (result.get("company") or "").strip()
+                quality = 0
+                if cleaned_title and len(cleaned_title.strip()) >= 4:
+                    quality += 35
+                if company and len(company) >= 2:
+                    quality += 25
+                if description and len(description) >= 120:
+                    quality += 40
+
+                if quality < 60:
+                    logger.warning(
+                        "[Engine] Low quality (score=%d). Sending to DLQ: %s",
+                        quality,
+                        url,
+                    )
+                    await self._dlq.add_failure(
+                        url,
+                        f"low quality: score={quality} title_len={len(cleaned_title)} company_len={len(company)} desc_len={len(description)}",
+                    )
+                    continue
+
+                # --------------------------------------------------------
                 # Step 4: Deduplicate  (SHA-256 + Bloom Filter)
                 # --------------------------------------------------------
-                company  = result.get("company", "")
                 job_hash = JobDeduplicator.generate_hash(cleaned_title, company, location)
 
                 if self._deduplicator.is_duplicate(job_hash):

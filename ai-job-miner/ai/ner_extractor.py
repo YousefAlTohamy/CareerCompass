@@ -195,8 +195,8 @@ class CustomSkillExtractor:
     def __init__(self, use_spacy: bool = True, spacy_model: str = "en_core_web_sm") -> None:
         self._nlp = _try_load_spacy(spacy_model) if use_spacy else None
         self._use_spacy = self._nlp is not None
-        # Canonicalize common synonyms/variants to reduce DB duplicates
-        self._canonicalizer = SkillCanonicalizer(known_skills=_FLAT_SKILLS)
+        # Canonicalize common synonyms/variants (standard list from JSON if provided)
+        self._canonicalizer = SkillCanonicalizer(known_skills=None)
 
     def extract_skills(self, text: str) -> list[str]:
         """
