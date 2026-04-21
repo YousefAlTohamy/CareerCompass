@@ -133,10 +133,36 @@ class AdvancedNEREngine:
             }
 
         try:
-            # Enforce manual chunking/truncation if text is absurdly large
-            # This minimizes memory spikes on 10MB+ PDF files.
-            safe_text = text[:10000] if len(text) > 10000 else text
-            tokens = self._ner(safe_text)
+            # Phase 5.1: Overlapping Chunking for long CVs
+            # Instead of truncation at 10k, we process in windows to avoid OOM 
+            # and model token limits while capturing EVERYTHING.
+            CHUNK_SIZE = 3500
+            STRIDE = 500
+            
+            all_tokens = []
+            start_ptr = 0
+            
+            while start_ptr < len(text):
+                end_ptr = min(start_ptr + CHUNK_SIZE, len(text))
+                chunk_text = text[start_ptr:end_ptr]
+                
+                # Run NER on chunk
+                chunk_tokens = self._ner(chunk_text)
+                
+                # Offset the token positions to match global text
+                for t in chunk_tokens:
+                    t["start"] = t.get("start", 0) + start_ptr
+                    t["end"] = t.get("end", 0) + start_ptr
+                    all_tokens.append(t)
+                
+                if end_ptr == len(text):
+                    break
+                start_ptr += (CHUNK_SIZE - STRIDE)
+
+            tokens = all_tokens
+            # Use original text for merging to ensure context is preserved
+            safe_text = text 
+            
         except Exception as e:
             logger.exception("NER inference failed: %s", e)
             return {
