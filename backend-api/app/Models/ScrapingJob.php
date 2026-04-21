@@ -20,6 +20,9 @@ class ScrapingJob extends Model
         'jobs_found',
         'jobs_stored',
         'jobs_duplicated',
+        'discovered_count',
+        'failed_count',
+        'processing_time_ms',
         'error_message',
         'started_at',
         'completed_at',
@@ -34,6 +37,9 @@ class ScrapingJob extends Model
         'jobs_found' => 'integer',
         'jobs_stored' => 'integer',
         'jobs_duplicated' => 'integer',
+        'discovered_count' => 'integer',
+        'failed_count' => 'integer',
+        'processing_time_ms' => 'integer',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
     ];
@@ -100,13 +106,30 @@ class ScrapingJob extends Model
     /**
      * Mark job as completed.
      */
-    public function markAsCompleted(int $found, int $stored, int $duplicated): void
+    public function markAsCompleted(
+        int $found,
+        int $stored,
+        int $duplicated,
+        int $discoveredCount = 0,
+        int $failedCount = 0,
+        ?int $processingTimeMs = null
+    ): void
     {
+        if ($processingTimeMs === null && $this->started_at) {
+            $processingTimeMs = (int) max(
+                0,
+                $this->started_at->diffInMilliseconds(now(), false)
+            );
+        }
+
         $this->update([
             'status' => 'completed',
             'jobs_found' => $found,
             'jobs_stored' => $stored,
             'jobs_duplicated' => $duplicated,
+            'discovered_count' => $discoveredCount,
+            'failed_count' => $failedCount,
+            'processing_time_ms' => (int) ($processingTimeMs ?? 0),
             'completed_at' => now(),
         ]);
     }
@@ -114,11 +137,26 @@ class ScrapingJob extends Model
     /**
      * Mark job as failed.
      */
-    public function markAsFailed(string $errorMessage): void
+    public function markAsFailed(
+        string $errorMessage,
+        int $discoveredCount = 0,
+        int $failedCount = 0,
+        ?int $processingTimeMs = null
+    ): void
     {
+        if ($processingTimeMs === null && $this->started_at) {
+            $processingTimeMs = (int) max(
+                0,
+                $this->started_at->diffInMilliseconds(now(), false)
+            );
+        }
+
         $this->update([
             'status' => 'failed',
             'error_message' => $errorMessage,
+            'discovered_count' => $discoveredCount,
+            'failed_count' => $failedCount,
+            'processing_time_ms' => (int) ($processingTimeMs ?? 0),
             'completed_at' => now(),
         ]);
     }
