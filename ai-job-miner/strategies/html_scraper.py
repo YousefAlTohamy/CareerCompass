@@ -117,6 +117,19 @@ class HtmlSmartScraper(BaseScraper):
                             "[HtmlSmartScraper] Title fallback from <title>: '%s'", title
                         )
 
+                # ── Step 3.5: Company (best-effort) ──────────────────────────
+                company: str | None = None
+                og_site = soup.find("meta", attrs={"property": "og:site_name"})
+                if og_site and og_site.get("content"):
+                    company = og_site.get("content")
+                if not company:
+                    og_title = soup.find("meta", attrs={"property": "og:title"})
+                    if og_title and og_title.get("content"):
+                        # Sometimes "Role at Company"
+                        txt = str(og_title.get("content"))
+                        if " at " in txt.lower():
+                            company = txt.split(" at ", 1)[-1].strip()
+
                 # ── Step 4: DFS Text-Density → Description ────────────────────
                 description = find_highest_density_node(soup)
                 if description:
@@ -162,6 +175,7 @@ class HtmlSmartScraper(BaseScraper):
                     "type":        "html",
                     "url":         url,
                     "title":       title,
+                    "company":     company,
                     "location":    location,
                     "description": description,
                     "salary_hint": salary_hint,
@@ -176,6 +190,7 @@ class HtmlSmartScraper(BaseScraper):
                     "type":        "html",
                     "url":         url,
                     "title":       None,
+                    "company":     None,
                     "location":    None,
                     "description": None,
                     "salary_hint": None,
