@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   getAllSources,
   createSource,
@@ -42,6 +43,7 @@ const getErrorMessage = (
 };
 
 const AdminSources = () => {
+  const { t } = useTranslation();
   const [sources, setSources] = useState([]);
   const [loading, setLoading] = useState(true);
   const [testing, setTesting] = useState(false);
@@ -135,7 +137,7 @@ const AdminSources = () => {
         output:
           error.response?.data?.output ||
           error.message ||
-          "Unknown error occurred during testing phase.",
+          t('sources.test_unknown_error'),
       });
     } finally {
       setTesting(false);
@@ -144,13 +146,13 @@ const AdminSources = () => {
 
   const handleRunScraping = async () => {
     const result = await Swal.fire({
-      title: "Run Full Scraping?",
-      text: "Start full background scraping? This may take a while.",
+      title: t('sources.swal_run_title'),
+      text: t('sources.swal_run_text'),
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#6366f1",
       cancelButtonColor: "#cbd5e1",
-      confirmButtonText: "Yes, start now",
+      confirmButtonText: t('sources.swal_run_confirm'),
     });
 
     if (!result.isConfirmed) return;
@@ -159,16 +161,16 @@ const AdminSources = () => {
       await runFullScraping();
       Swal.fire({
         icon: "success",
-        title: "Started",
-        text: "Background scraping has started successfully.",
+        title: t('sources.swal_run_success_title'),
+        text: t('sources.swal_run_success_text'),
         confirmButtonColor: "#6366f1",
       });
     } catch (error) {
       console.error(error);
       Swal.fire({
         icon: "error",
-        title: "Error",
-        text: getErrorMessage(error, "Failed to start scraping."),
+        title: t('sources.swal_error'),
+        text: getErrorMessage(error, t('sources.swal_run_error')),
         confirmButtonColor: "#6366f1",
       });
     }
@@ -187,8 +189,8 @@ const AdminSources = () => {
       setSources((prev) => prev.map((s) => s.id === id ? { ...s, is_active: !s.is_active } : s));
       Swal.fire({
         icon: "error",
-        title: "Error",
-        text: getErrorMessage(error, "Failed to toggle status"),
+        title: t('sources.swal_error'),
+        text: getErrorMessage(error, t('sources.swal_toggle_error')),
         confirmButtonColor: "#6366f1",
       });
     }
@@ -196,13 +198,13 @@ const AdminSources = () => {
 
   const handleDelete = async (id) => {
     const result = await Swal.fire({
-      title: "Delete Source?",
-      text: "Are you sure you want to delete this source permanently?",
+      title: t('sources.swal_delete_title'),
+      text: t('sources.swal_delete_text'),
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#f43f5e",
       cancelButtonColor: "#cbd5e1",
-      confirmButtonText: "Yes, delete it",
+      confirmButtonText: t('sources.swal_delete_confirm'),
     });
 
     if (!result.isConfirmed) return;
@@ -214,7 +216,7 @@ const AdminSources = () => {
         toast: true,
         position: "top-end",
         icon: "success",
-        title: "Source deleted",
+        title: t('sources.swal_deleted'),
         showConfirmButton: false,
         timer: 2000,
       });
@@ -227,8 +229,8 @@ const AdminSources = () => {
       console.error(error);
       Swal.fire({
         icon: "error",
-        title: "Error",
-        text: getErrorMessage(error, "Failed to delete source"),
+        title: t('sources.swal_error'),
+        text: getErrorMessage(error, t('sources.swal_delete_error')),
         confirmButtonColor: "#6366f1",
       });
     }
@@ -275,8 +277,8 @@ const AdminSources = () => {
         } catch (regexError) {
           Swal.fire({
             icon: "error",
-            title: "Invalid Pattern",
-            text: `The regex pattern is invalid: ${regexError.message}`,
+            title: t('sources.swal_invalid_pattern_title'),
+            text: t('sources.swal_invalid_pattern_text', { message: regexError.message }),
             confirmButtonColor: "#6366f1",
           });
           return;
@@ -295,22 +297,22 @@ const AdminSources = () => {
         setSources((prev) =>
           prev.map((s) => (s.id === updated.id ? updated : s)),
         );
-        Swal.fire({ toast: true, position: "top-end", icon: "success", title: "Source updated", showConfirmButton: false, timer: 2000 });
+        Swal.fire({ toast: true, position: "top-end", icon: "success", title: t('sources.swal_updated'), showConfirmButton: false, timer: 2000 });
       } else {
         const response = await createSource(payload);
         const created = response.data || response;
         setSources((prev) => [created, ...prev]);
-        Swal.fire({ toast: true, position: "top-end", icon: "success", title: "Source added", showConfirmButton: false, timer: 2000 });
+        Swal.fire({ toast: true, position: "top-end", icon: "success", title: t('sources.swal_added'), showConfirmButton: false, timer: 2000 });
       }
       setIsModalOpen(false);
     } catch (error) {
       console.error("Save error:", error);
       Swal.fire({
         icon: "error",
-        title: "Save Failed",
+        title: t('sources.swal_save_failed'),
         text: getErrorMessage(
           error,
-          "Failed to save source. Check console for details (likely JSON parse error).",
+          t('sources.swal_save_error'),
         ),
         confirmButtonColor: "#6366f1",
       });
@@ -347,10 +349,10 @@ const AdminSources = () => {
           <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl">
             <LinkIcon className="w-7 h-7" />
           </div>
-          Scraping Sources
+          {t('sources.title')}
         </h1>
         <p className="text-slate-500 mt-2 text-sm font-medium">
-          Manage endpoints and HTML targets used to fetch job data from the market.
+          {t('sources.subtitle')}
         </p>
       </div>
 
@@ -361,7 +363,7 @@ const AdminSources = () => {
           <Search className="text-slate-400 mr-3" size={20} />
           <input
             type="text"
-            placeholder="Search sources by name, URL, or type..."
+            placeholder={t('sources.search_placeholder')}
             className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-slate-700 font-medium placeholder-slate-400"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
@@ -376,7 +378,7 @@ const AdminSources = () => {
             className="flex-shrink-0 flex items-center justify-center gap-2 px-5 py-3 bg-fuchsia-600 text-white rounded-xl hover:bg-fuchsia-700 transition-all shadow-sm shadow-fuchsia-200 font-bold text-sm"
           >
             <Play className="w-4 h-4 fill-white" />
-            <span className="hidden sm:inline">Run Scraping</span>
+            <span className="hidden sm:inline">{t('sources.run_scraping')}</span>
           </button>
           
           <button
@@ -389,7 +391,7 @@ const AdminSources = () => {
             }`}
           >
             <Terminal className="w-4 h-4" />
-            <span className="hidden sm:inline">Test Endpoints</span>
+            <span className="hidden sm:inline">{t('sources.test_endpoints')}</span>
           </button>
 
           <button
@@ -397,7 +399,7 @@ const AdminSources = () => {
             className="flex-shrink-0 flex items-center justify-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all shadow-sm shadow-indigo-200 font-bold text-sm"
           >
             <Plus className="w-5 h-5" />
-            <span className="hidden sm:inline">Add Source</span>
+            <span className="hidden sm:inline">{t('sources.add_source')}</span>
           </button>
         </div>
       </div>
@@ -408,13 +410,13 @@ const AdminSources = () => {
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead className="bg-slate-50/80 text-slate-500 uppercase text-xs font-bold tracking-wider border-b border-slate-200">
               <tr>
-                <th className="p-5 w-16">Method</th>
-                <th className="p-5">Source Name</th>
-                <th className="p-5 w-24">Type</th>
-                <th className="p-5 w-28">Mode</th>
-                <th className="p-5">Endpoint</th>
-                <th className="p-5 text-center w-32">Status</th>
-                <th className="p-5 text-right w-32">Actions</th>
+                <th className="p-5 w-16">{t('sources.col_method')}</th>
+                <th className="p-5">{t('sources.col_source_name')}</th>
+                <th className="p-5 w-24">{t('sources.col_type')}</th>
+                <th className="p-5 w-28">{t('sources.col_mode')}</th>
+                <th className="p-5">{t('sources.col_endpoint')}</th>
+                <th className="p-5 text-center w-32">{t('sources.col_status')}</th>
+                <th className="p-5 text-right w-32">{t('sources.col_actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -423,7 +425,7 @@ const AdminSources = () => {
                   <td colSpan="7" className="p-12 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-400 space-y-3">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                      <p className="font-medium text-sm">Loading sources...</p>
+                      <p className="font-medium text-sm">{t('sources.loading')}</p>
                     </div>
                   </td>
                 </tr>
@@ -432,8 +434,8 @@ const AdminSources = () => {
                   <td colSpan="7" className="p-12 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-400 space-y-3">
                       <LinkIcon className="w-12 h-12 text-slate-300 stroke-1" />
-                      <p className="font-medium text-sm text-slate-500">No scraping sources found.</p>
-                      {activeSearch && <p className="text-xs">Try clearing your search.</p>}
+                      <p className="font-medium text-sm text-slate-500">{t('sources.no_sources')}</p>
+                      {activeSearch && <p className="text-xs">{t('sources.clear_search')}</p>}
                     </div>
                   </td>
                 </tr>
@@ -511,14 +513,14 @@ const AdminSources = () => {
                         <button
                           onClick={() => handleOpenModal(source)}
                           className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
-                          title="Edit Source"
+                          title={t('sources.edit_source')}
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(source.id)}
                           className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
-                          title="Delete Source"
+                          title={t('sources.delete_source')}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -534,7 +536,7 @@ const AdminSources = () => {
         {/* Server-Side Pagination Controls */}
         <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-slate-50">
           <span className="text-sm font-semibold text-slate-500">
-            Page <span className="text-slate-800">{currentPage}</span> of <span className="text-slate-800">{totalPages}</span>
+            {t('sources.page_of', { current: currentPage, total: totalPages })}
           </span>
           <div className="flex items-center gap-2">
             <button
@@ -542,14 +544,14 @@ const AdminSources = () => {
               disabled={currentPage <= 1 || loading}
               className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all disabled:opacity-40 disabled:hover:bg-white flex items-center gap-1 bg-white shadow-sm"
             >
-               <ChevronLeft size={16} /> Prev
+               <ChevronLeft size={16} /> {t('sources.prev')}
             </button>
             <button
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage >= totalPages || loading}
               className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all disabled:opacity-40 disabled:hover:bg-white flex items-center gap-1 bg-white shadow-sm"
             >
-               Next <ChevronRight size={16} />
+               {t('sources.next')} <ChevronRight size={16} />
             </button>
           </div>
         </div>
@@ -562,7 +564,7 @@ const AdminSources = () => {
             <form onSubmit={handleSubmit}>
               <div className="p-6 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white rounded-t-2xl z-10">
                 <h2 className="text-xl font-bold text-slate-800">
-                  {editingSource ? "Edit Scraping Source" : "Add New Source"}
+                  {editingSource ? t('sources.modal_edit_title') : t('sources.modal_add_title')}
                 </h2>
                 <button
                   type="button"
@@ -577,7 +579,7 @@ const AdminSources = () => {
                 <div className="grid grid-cols-2 gap-5">
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">
-                      Name
+                      {t('sources.label_name')}
                     </label>
                     <input
                       type="text"
@@ -592,7 +594,7 @@ const AdminSources = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">
-                      Type
+                      {t('sources.label_type')}
                     </label>
                     <select
                       value={formData.type}
@@ -601,16 +603,16 @@ const AdminSources = () => {
                       }
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium"
                     >
-                      <option value="api">API Endpoints</option>
-                      <option value="html">HTML Structure</option>
-                      <option value="spa">SPA (JavaScript)</option>
+                      <option value="api">{t('sources.type_api')}</option>
+                      <option value="html">{t('sources.type_html')}</option>
+                      <option value="spa">{t('sources.type_spa')}</option>
                     </select>
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-1.5">
-                    Endpoint URL
+                    {t('sources.label_endpoint')}
                   </label>
                   <input
                     type="url"
@@ -627,7 +629,7 @@ const AdminSources = () => {
                 <div className="grid grid-cols-2 gap-5">
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">
-                      HTTP Method
+                      {t('sources.label_method')}
                     </label>
                     <select
                       value={formData.method}
@@ -653,7 +655,7 @@ const AdminSources = () => {
                           <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${formData.is_active ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
                       <span className="text-sm font-bold text-slate-600 group-hover:text-slate-800 transition-colors">
-                        Active Source
+                        {t('sources.active_source')}
                       </span>
                     </label>
                   </div>
@@ -663,7 +665,7 @@ const AdminSources = () => {
                 <div className="grid grid-cols-2 gap-5">
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">
-                      Scraping Mode
+                      {t('sources.label_mode')}
                     </label>
                     <select
                       value={formData.mode}
@@ -672,20 +674,20 @@ const AdminSources = () => {
                       }
                       className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium"
                     >
-                      <option value="static">Static (Manual Links)</option>
-                      <option value="discovery">Discovery (Auto-find Links)</option>
+                      <option value="static">{t('sources.mode_static')}</option>
+                      <option value="discovery">{t('sources.mode_discovery')}</option>
                     </select>
                     <p className="mt-1 text-xs text-slate-400">
                       {formData.mode === 'discovery'
-                        ? 'The scraper will automatically crawl and find job links.'
-                        : 'You provide the exact job page URLs manually.'}
+                        ? t('sources.mode_hint_discovery')
+                        : t('sources.mode_hint_static')}
                     </p>
                   </div>
 
                   {formData.mode === 'discovery' && (
                     <div>
                       <label className="block text-sm font-bold text-slate-700 mb-1.5">
-                        URL Pattern (Regex)
+                        {t('sources.label_pattern')}
                       </label>
                       <input
                         type="text"
@@ -698,7 +700,7 @@ const AdminSources = () => {
                         spellCheck="false"
                       />
                       <p className="mt-1 text-xs text-slate-400">
-                        Regex to match job detail URLs on the page.
+                        {t('sources.pattern_hint')}
                       </p>
                     </div>
                   )}
@@ -706,8 +708,8 @@ const AdminSources = () => {
 
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-1.5 flex justify-between">
-                    <span>Headers</span>
-                    <span className="text-xs font-normal text-slate-400">JSON Format</span>
+                    <span>{t('sources.label_headers')}</span>
+                    <span className="text-xs font-normal text-slate-400">{t('sources.json_format')}</span>
                   </label>
                   <textarea
                     rows="3"
@@ -723,8 +725,8 @@ const AdminSources = () => {
 
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-1.5 flex justify-between">
-                    <span>Params / Payload</span>
-                    <span className="text-xs font-normal text-slate-400">JSON Format</span>
+                    <span>{t('sources.label_params')}</span>
+                    <span className="text-xs font-normal text-slate-400">{t('sources.json_format')}</span>
                   </label>
                   <textarea
                     rows="3"
@@ -745,14 +747,14 @@ const AdminSources = () => {
                   onClick={() => setIsModalOpen(false)}
                   className="px-5 py-2.5 text-slate-600 hover:bg-slate-200 rounded-xl font-bold transition-colors text-sm"
                 >
-                  Cancel
+                  {t('sources.cancel')}
                 </button>
                 <button
                   type="submit"
                   className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 shadow-sm transition-colors flex items-center gap-2 font-bold text-sm"
                 >
                   <Save className="w-4 h-4" />
-                  Save Source
+                  {t('sources.save_source')}
                 </button>
               </div>
             </form>
@@ -792,7 +794,7 @@ const AdminSources = () => {
               {testing ? (
                 <div className="flex flex-col items-center justify-center py-20 space-y-4">
                   <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-500"></div>
-                  <p className="text-emerald-400 animate-pulse">Running diagnostics on all active endpoints...</p>
+                  <p className="text-emerald-400 animate-pulse">{t('sources.test_running')}</p>
                 </div>
               ) : testResult ? (
                 <pre className={`whitespace-pre-wrap ${testResult.success ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -805,18 +807,18 @@ const AdminSources = () => {
             {!testing && testResult && (
                <div className="bg-[#1e293b] px-5 py-3 border-t border-slate-700 flex justify-between items-center shrink-0">
                   <div className="flex items-center gap-2 text-xs font-mono">
-                    <span className="text-slate-500">Status:</span>
+                    <span className="text-slate-500">{t('sources.test_status')}:</span>
                     {testResult.success ? (
-                      <span className="text-emerald-400 font-bold bg-emerald-400/10 px-2 py-0.5 rounded">PASS</span>
+                      <span className="text-emerald-400 font-bold bg-emerald-400/10 px-2 py-0.5 rounded">{t('sources.test_pass')}</span>
                     ) : (
-                      <span className="text-rose-400 font-bold bg-rose-400/10 px-2 py-0.5 rounded">FAIL</span>
+                      <span className="text-rose-400 font-bold bg-rose-400/10 px-2 py-0.5 rounded">{t('sources.test_fail')}</span>
                     )}
                   </div>
                   <button
                     onClick={() => setIsTestModalOpen(false)}
                     className="px-4 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors"
                   >
-                    Close Diagnostics
+                    {t('sources.test_close')}
                   </button>
                </div>
             )}
