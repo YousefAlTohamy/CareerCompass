@@ -105,6 +105,10 @@ class HtmlSmartScraper(BaseScraper):
 
                 # ── Step 3: Title (<h1> → <title> fallback) ──────────────────
                 title: str | None = None
+                company: str | None = None
+                location: str | None = None
+                salary_hint: str | None = None
+
                 h1 = soup.find("h1")
                 if h1 and h1.get_text(strip=True):
                     title = h1.get_text(separator=" ", strip=True)
@@ -119,7 +123,6 @@ class HtmlSmartScraper(BaseScraper):
                         )
 
                 # ── Step 3.5: Company (best-effort) ──────────────────────────
-                company: str | None = None
                 og_site = soup.find("meta", attrs={"property": "og:site_name"})
                 if og_site and og_site.get("content"):
                     company = og_site.get("content")
@@ -155,7 +158,6 @@ class HtmlSmartScraper(BaseScraper):
                     salary_hint = salary_hint or deep.get("salary_hint")
 
                 # ── Step 5: Semantic Proximity → Salary Hint ──────────────────
-                salary_hint: str | None = None
                 for keyword in _SALARY_KEYWORDS:
                     salary_hint = extract_semantic_sibling(soup, keyword)
                     if salary_hint:
@@ -167,7 +169,6 @@ class HtmlSmartScraper(BaseScraper):
                     logger.warning("[HtmlSmartScraper] No salary hint found for: %s", url)
 
                 # ── Step 6: Semantic Proximity → Location ─────────────────────
-                location: str | None = None
                 for keyword in _LOCATION_KEYWORDS:
                     candidate = extract_semantic_sibling(soup, keyword)
                     if candidate:

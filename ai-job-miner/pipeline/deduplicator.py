@@ -227,7 +227,12 @@ class JobDeduplicator:
 
             url = os.getenv("REDIS_URL")
             if url:
-                client = redis.Redis.from_url(url, decode_responses=True)
+                client = redis.Redis.from_url(
+                    url, 
+                    decode_responses=True,
+                    socket_connect_timeout=2,
+                    socket_timeout=2
+                )
             else:
                 host = os.getenv("REDIS_HOST", "127.0.0.1")
                 port = int(os.getenv("REDIS_PORT", "6379"))
