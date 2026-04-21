@@ -208,10 +208,11 @@ class JobDeduplicator:
     ) -> None:
         self._bloom: BloomFilter = BloomFilter(bloom_capacity, bloom_fpr)
         self._redis = self._init_redis()
-        self._redis_key: str = os.getenv(
-            "JOB_DEDUP_REDIS_KEY",
-            "career_compass:ai_job_miner:dedup:seen_hashes",
+        self._redis_prefix: str = os.getenv(
+            "JOB_DEDUP_REDIS_PREFIX",
+            "career_compass:ai_job_miner:dedup:hash:",
         )
+        self._ttl_seconds: int = int(os.getenv("JOB_DEDUP_TTL_SECONDS", "2592000"))  # 30 days
         self._fallback_seen: set[str] = set()
 
     def _init_redis(self):
@@ -250,6 +251,9 @@ class JobDeduplicator:
                 str(e),
             )
             return None
+
+    def _redis_hash_key(self, job_hash: str) -> str:
+        return f"{self._redis_prefix}{job_hash}"
 
     @staticmethod
     def generate_hash(title: str, company: str, location: str) -> str:
@@ -311,7 +315,7 @@ class JobDeduplicator:
         result: bool
         if self._redis is not None:
             try:
-                result = bool(self._redis.sismember(self._redis_key, job_hash))
+                result = bool(self._redis.exists(self._redis_hash_key(job_hash)))
             except Exception as e:
                 logger.warning(
                     "[Deduplicator] Redis check failed; using in-memory fallback. error=%s",
@@ -339,7 +343,14 @@ class JobDeduplicator:
         self._bloom.add(job_hash)
         if self._redis is not None:
             try:
-                self._redis.sadd(self._redis_key, job_hash)
+                # Store as an expiring key so dedupe doesn't grow forever.
+                # NX avoids resetting TTL if it already exists.
+                self._redis.set(
+                    name=self._redis_hash_key(job_hash),
+                    value="1",
+                    ex=self._ttl_seconds,
+                    nx=True,
+                )
             except Exception as e:
                 logger.warning(
                     "[Deduplicator] Redis write failed; storing in fallback set. error=%s",
