@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ScrapingJob extends Model
 {
@@ -159,5 +160,13 @@ class ScrapingJob extends Model
             'processing_time_ms' => (int) ($processingTimeMs ?? 0),
             'completed_at' => now(),
         ]);
+    }
+
+    /**
+     * Failed URLs (Dead Letter Queue) for this scraping run.
+     */
+    public function failedUrls(): HasMany
+    {
+        return $this->hasMany(ScrapingFailedUrl::class, 'scraping_job_id');
     }
 }

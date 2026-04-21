@@ -496,7 +496,18 @@
     "col_discovered": "تم الاكتشاف",
     "col_failed": "الإخفاقات",
     "col_duration": "المدة",
-    "col_success_rate": "معدل النجاح"
+    "col_success_rate": "معدل النجاح",
+    "view_failures": "عرض الإخفاقات",
+    "dlq_title": "الروابط الفاشلة (قائمة الانتظار)",
+    "dlq_url": "الرابط",
+    "dlq_reason": "السبب",
+    "dlq_source": "المصدر",
+    "dlq_retried": "أُعيد المحاولة",
+    "dlq_no_failures": "لا توجد روابط فاشلة مسجلة لهذا التشغيل.",
+    "dlq_retry_all": "إعادة محاولة جميع الإخفاقات",
+    "dlq_retry_success": "تم تحديد الإخفاقات لإعادة المحاولة",
+    "dlq_retry_error": "فشل إعادة المحاولة",
+    "dlq_close": "إغلاق"
   },
   "admin_dashboard": {
     "scraper_overview": "نظرة عامة على السحب",
@@ -504,6 +515,10 @@
     "avg_health": "متوسط الصحة",
     "active_sources": "المصادر النشطة",
     "recent_failures": "الإخفاقات الأخيرة",
-    "system_health": "صحة النظام"
+    "system_health": "صحة النظام",
+    "batch_in_progress": "جارٍ السحب...",
+    "batch_complete": "{{processed}}/{{total}} فئات",
+    "batch_finished": "اكتملت آخر دفعة",
+    "batch_failed_jobs": "الفئات الفاشلة"
   }
 }

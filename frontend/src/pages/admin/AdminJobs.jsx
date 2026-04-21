@@ -13,7 +13,10 @@ import {
   ChevronRight,
   Link as LinkIcon,
   Timer,
-  AlertTriangle
+  AlertTriangle,
+  Info,
+  X,
+  RefreshCw
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 
@@ -22,6 +25,12 @@ const AdminJobs = () => {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // DLQ Modal State
+  const [dlqOpen, setDlqOpen] = useState(false);
+  const [dlqData, setDlqData] = useState(null);
+  const [dlqLoading, setDlqLoading] = useState(false);
+  const [dlqRetrying, setDlqRetrying] = useState(false);
 
   // Pagination & Search State (URL Synced)
   const [searchParams, setSearchParams] = useSearchParams();
@@ -122,6 +131,7 @@ const AdminJobs = () => {
   // handleToggleStatus removed as per user request
 
   return (
+    <>
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       
       {/* Header Section */}
@@ -230,10 +240,35 @@ const AdminJobs = () => {
                     </td>
 
                     <td className="p-5">
-                      <span className={`text-sm font-bold ${(job.failed_count ?? 0) > 0 ? 'text-rose-600' : 'text-slate-400'}`}>
-                        {(job.failed_count ?? 0) > 0 && <AlertTriangle size={12} className="inline-block mr-1" />}
-                        {job.failed_count ?? 0}
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className={`text-sm font-bold ${(job.failed_count ?? 0) > 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+                          {(job.failed_count ?? 0) > 0 && <AlertTriangle size={12} className="inline-block mr-1" />}
+                          {job.failed_count ?? 0}
+                        </span>
+                        {(job.failed_count ?? 0) > 0 && (
+                          <button
+                            onClick={async () => {
+                              setDlqOpen(true);
+                              setDlqLoading(true);
+                              setDlqData(null);
+                              try {
+                                const res = await adminAPI.getFailedUrls(job.id);
+                                if (res.data && res.data.success) {
+                                  setDlqData(res.data.data);
+                                }
+                              } catch (err) {
+                                console.error('Failed to fetch DLQ:', err);
+                              } finally {
+                                setDlqLoading(false);
+                              }
+                            }}
+                            className="p-1 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                            title={t('admin_jobs.view_failures')}
+                          >
+                            <Info size={14} />
+                          </button>
+                        )}
+                      </div>
                     </td>
 
                     <td className="p-5">
@@ -312,6 +347,111 @@ const AdminJobs = () => {
         </div>
       </div>
     </div>
+
+    {/* DLQ Modal */}
+    {dlqOpen && (
+      <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden border border-slate-200 flex flex-col">
+          {/* Header */}
+          <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
+            <h2 className="text-lg font-bold text-slate-800">
+              {t('admin_jobs.dlq_title')}
+            </h2>
+            <button
+              onClick={() => setDlqOpen(false)}
+              className="text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 p-2 rounded-xl transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {dlqLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 space-y-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+              </div>
+            ) : dlqData && dlqData.failed_urls && dlqData.failed_urls.length > 0 ? (
+              <div className="space-y-3">
+                {dlqData.failed_urls.map((item) => (
+                  <div key={item.id} className={`p-4 rounded-xl border ${item.retried ? 'bg-slate-50 border-slate-200 opacity-60' : 'bg-rose-50/50 border-rose-100'}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-mono text-slate-700 truncate" title={item.url}>
+                          {item.url}
+                        </p>
+                        <div className="flex items-center gap-3 mt-2">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 bg-rose-100 px-2 py-0.5 rounded-md">
+                            <AlertTriangle size={10} />
+                            {item.reason}
+                          </span>
+                          {item.source_name && (
+                            <span className="text-[11px] font-medium text-slate-500">
+                              {t('admin_jobs.dlq_source')}: {item.source_name}
+                            </span>
+                          )}
+                          {item.retried && (
+                            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
+                              {t('admin_jobs.dlq_retried')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-slate-400 space-y-2">
+                <AlertTriangle size={32} className="text-slate-300" />
+                <p className="text-sm font-medium">{t('admin_jobs.dlq_no_failures')}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="p-5 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
+            <button
+              onClick={() => setDlqOpen(false)}
+              className="px-5 py-2.5 text-slate-600 hover:bg-slate-200 rounded-xl font-bold transition-colors text-sm"
+            >
+              {t('admin_jobs.dlq_close')}
+            </button>
+            {dlqData && dlqData.failed_urls && dlqData.failed_urls.filter(u => !u.retried).length > 0 && (
+              <button
+                disabled={dlqRetrying}
+                onClick={async () => {
+                  setDlqRetrying(true);
+                  try {
+                    const ids = dlqData.failed_urls.filter(u => !u.retried).map(u => u.id);
+                    await adminAPI.retryFailedUrls(ids);
+                    // Update local state
+                    setDlqData(prev => ({
+                      ...prev,
+                      failed_urls: prev.failed_urls.map(u => ({ ...u, retried: true }))
+                    }));
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: t('admin_jobs.dlq_retry_success'), showConfirmButton: false, timer: 2000 });
+                  } catch (err) {
+                    Swal.fire({ icon: 'error', title: t('admin_jobs.dlq_retry_error'), confirmButtonColor: '#6366f1' });
+                  } finally {
+                    setDlqRetrying(false);
+                  }
+                }}
+                className={`px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all ${
+                  dlqRetrying
+                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'
+                }`}
+              >
+                <RefreshCw size={14} className={dlqRetrying ? 'animate-spin' : ''} />
+                {t('admin_jobs.dlq_retry_all')}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+  </>
   );
 };
 

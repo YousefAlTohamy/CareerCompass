@@ -13,7 +13,8 @@ import {
   RefreshCw,
   LayoutDashboard,
   HeartPulse,
-  Zap
+  Zap,
+  Loader2
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { adminAPI } from '../../api/endpoints';
@@ -40,6 +41,9 @@ export default function AdminDashboard() {
     return links.sort(() => 0.5 - Math.random()).slice(0, 3); // Show 3 links instead of 2 for better layout
   });
 
+  // Batch Progress State
+  const [batchProgress, setBatchProgress] = useState(null);
+
   useEffect(() => {
     fetchDashboardStats();
     
@@ -48,7 +52,15 @@ export default function AdminDashboard() {
     // Set up polling every 30 seconds for health check (background)
     const healthInterval = setInterval(checkSystemHealth, 30000);
     
-    return () => clearInterval(healthInterval);
+    // Initial batch progress check
+    checkBatchProgress();
+    // Poll batch progress every 5 seconds
+    const batchInterval = setInterval(checkBatchProgress, 5000);
+    
+    return () => {
+      clearInterval(healthInterval);
+      clearInterval(batchInterval);
+    };
   }, []);
 
   const fetchDashboardStats = async () => {
@@ -82,6 +94,17 @@ export default function AdminDashboard() {
         status: 'critical',
         services: { 'Database': 'offline', 'Cache & Queue': 'offline', 'AI Services': 'offline' }
       });
+    }
+  };
+
+  const checkBatchProgress = async () => {
+    try {
+      const response = await adminAPI.getBatchProgress();
+      if (response.data && response.data.success) {
+        setBatchProgress(response.data.data);
+      }
+    } catch (err) {
+      // Silently fail — batch progress is non-critical
     }
   };
 
@@ -215,6 +238,43 @@ export default function AdminDashboard() {
           </motion.div>
         ))}
       </div>
+
+      {/* Live Batch Progress Bar */}
+      {batchProgress && batchProgress.active && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-indigo-600 to-fuchsia-600 rounded-2xl p-5 shadow-lg border border-indigo-500/30"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Loader2 size={18} className="text-white animate-spin" />
+              <span className="text-white font-bold text-sm">
+                {t('admin_dashboard.batch_in_progress')}
+              </span>
+            </div>
+            <span className="text-white/80 text-sm font-bold">
+              {batchProgress.progress}% — {t('admin_dashboard.batch_complete', {
+                processed: batchProgress.processed_jobs,
+                total: batchProgress.total_jobs
+              })}
+            </span>
+          </div>
+          <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-white rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: `${batchProgress.progress}%` }}
+              transition={{ duration: 0.8, ease: 'easeOut' }}
+            />
+          </div>
+          {batchProgress.failed_jobs > 0 && (
+            <p className="text-white/70 text-xs mt-2 font-medium">
+              ⚠ {t('admin_dashboard.batch_failed_jobs')}: {batchProgress.failed_jobs}
+            </p>
+          )}
+        </motion.div>
+      )}
 
       {/* Scraper Overview Card */}
       {stats?.scraper_overview && (

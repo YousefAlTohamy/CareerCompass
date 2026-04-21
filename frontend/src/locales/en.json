@@ -492,7 +492,18 @@
     "col_discovered": "Discovered",
     "col_failed": "Failures",
     "col_duration": "Duration",
-    "col_success_rate": "Success Rate"
+    "col_success_rate": "Success Rate",
+    "view_failures": "View Failures",
+    "dlq_title": "Failed URLs (Dead Letter Queue)",
+    "dlq_url": "URL",
+    "dlq_reason": "Reason",
+    "dlq_source": "Source",
+    "dlq_retried": "Retried",
+    "dlq_no_failures": "No failed URLs recorded for this run.",
+    "dlq_retry_all": "Retry All Failures",
+    "dlq_retry_success": "Failures marked for retry",
+    "dlq_retry_error": "Failed to retry",
+    "dlq_close": "Close"
   },
   "admin_dashboard": {
     "scraper_overview": "Scraper Overview",
@@ -500,6 +511,10 @@
     "avg_health": "Avg Health",
     "active_sources": "Active Sources",
     "recent_failures": "Recent Failures",
-    "system_health": "System Health"
+    "system_health": "System Health",
+    "batch_in_progress": "Scraping in progress...",
+    "batch_complete": "{{processed}}/{{total}} categories",
+    "batch_finished": "Last batch completed",
+    "batch_failed_jobs": "Failed categories"
   }
 }
