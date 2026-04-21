@@ -22,7 +22,9 @@ import {
   Search,
   Link as LinkIcon,
   ArchiveX,
-  Terminal
+  Terminal,
+  Radar,
+  BookmarkMinus,
 } from "lucide-react";
 import Swal from "sweetalert2";
 
@@ -71,6 +73,8 @@ const AdminSources = () => {
     headers: "{}",
     params: "{}",
     is_active: true,
+    mode: "static",
+    pattern: "",
   });
 
   const fetchAllData = useCallback(async () => {
@@ -241,6 +245,8 @@ const AdminSources = () => {
         headers: JSON.stringify(source.headers || {}, null, 2),
         params: JSON.stringify(source.params || {}, null, 2),
         is_active: source.is_active,
+        mode: source.mode || "static",
+        pattern: source.pattern || "",
       });
     } else {
       setEditingSource(null);
@@ -252,6 +258,8 @@ const AdminSources = () => {
         headers: "{}",
         params: "{}",
         is_active: true,
+        mode: "static",
+        pattern: "",
       });
     }
     setIsModalOpen(true);
@@ -260,6 +268,21 @@ const AdminSources = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Validate regex pattern if in discovery mode
+      if (formData.mode === "discovery" && formData.pattern) {
+        try {
+          new RegExp(formData.pattern);
+        } catch (regexError) {
+          Swal.fire({
+            icon: "error",
+            title: "Invalid Pattern",
+            text: `The regex pattern is invalid: ${regexError.message}`,
+            confirmButtonColor: "#6366f1",
+          });
+          return;
+        }
+      }
+
       const payload = {
         ...formData,
         headers: JSON.parse(formData.headers),
@@ -295,9 +318,24 @@ const AdminSources = () => {
   };
 
   const getTypeColor = (type) => {
-    return type === "api"
-      ? "bg-blue-100 text-blue-700"
-      : "bg-fuchsia-100 text-fuchsia-700";
+    switch (type) {
+      case "api": return "bg-blue-100 text-blue-700";
+      case "html": return "bg-fuchsia-100 text-fuchsia-700";
+      case "spa": return "bg-orange-100 text-orange-700";
+      default: return "bg-slate-100 text-slate-700";
+    }
+  };
+
+  const getModeColor = (mode) => {
+    return mode === "discovery"
+      ? "bg-violet-100 text-violet-700"
+      : "bg-cyan-100 text-cyan-700";
+  };
+
+  const getModeIcon = (mode) => {
+    return mode === "discovery"
+      ? <Radar size={12} className="inline-block mr-1" />
+      : <BookmarkMinus size={12} className="inline-block mr-1" />;
   };
 
   return (
@@ -373,6 +411,7 @@ const AdminSources = () => {
                 <th className="p-5 w-16">Method</th>
                 <th className="p-5">Source Name</th>
                 <th className="p-5 w-24">Type</th>
+                <th className="p-5 w-28">Mode</th>
                 <th className="p-5">Endpoint</th>
                 <th className="p-5 text-center w-32">Status</th>
                 <th className="p-5 text-right w-32">Actions</th>
@@ -381,7 +420,7 @@ const AdminSources = () => {
             <tbody className="divide-y divide-slate-100">
               {loading && sources.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="p-12 text-center">
+                  <td colSpan="7" className="p-12 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-400 space-y-3">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
                       <p className="font-medium text-sm">Loading sources...</p>
@@ -390,7 +429,7 @@ const AdminSources = () => {
                 </tr>
               ) : sources.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="p-12 text-center">
+                  <td colSpan="7" className="p-12 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-400 space-y-3">
                       <LinkIcon className="w-12 h-12 text-slate-300 stroke-1" />
                       <p className="font-medium text-sm text-slate-500">No scraping sources found.</p>
@@ -430,6 +469,15 @@ const AdminSources = () => {
                         className={`inline-block px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${getTypeColor(source.type)}`}
                       >
                         {source.type}
+                      </span>
+                    </td>
+
+                    <td className="p-5">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider ${getModeColor(source.mode)}`}
+                      >
+                        {getModeIcon(source.mode)}
+                        {source.mode || 'static'}
                       </span>
                     </td>
 
@@ -555,6 +603,7 @@ const AdminSources = () => {
                     >
                       <option value="api">API Endpoints</option>
                       <option value="html">HTML Structure</option>
+                      <option value="spa">SPA (JavaScript)</option>
                     </select>
                   </div>
                 </div>
@@ -608,6 +657,51 @@ const AdminSources = () => {
                       </span>
                     </label>
                   </div>
+                </div>
+
+                {/* Discovery Mode Section */}
+                <div className="grid grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">
+                      Scraping Mode
+                    </label>
+                    <select
+                      value={formData.mode}
+                      onChange={(e) =>
+                        setFormData({ ...formData, mode: e.target.value, pattern: e.target.value === 'static' ? '' : formData.pattern })
+                      }
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium"
+                    >
+                      <option value="static">Static (Manual Links)</option>
+                      <option value="discovery">Discovery (Auto-find Links)</option>
+                    </select>
+                    <p className="mt-1 text-xs text-slate-400">
+                      {formData.mode === 'discovery'
+                        ? 'The scraper will automatically crawl and find job links.'
+                        : 'You provide the exact job page URLs manually.'}
+                    </p>
+                  </div>
+
+                  {formData.mode === 'discovery' && (
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1.5">
+                        URL Pattern (Regex)
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.pattern}
+                        onChange={(e) =>
+                          setFormData({ ...formData, pattern: e.target.value })
+                        }
+                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-mono"
+                        placeholder="e.g. /jobs/\\d+"
+                        spellCheck="false"
+                      />
+                      <p className="mt-1 text-xs text-slate-400">
+                        Regex to match job detail URLs on the page.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div>
