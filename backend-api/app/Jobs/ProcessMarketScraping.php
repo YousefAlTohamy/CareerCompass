@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Artisan;
 use Throwable;
 
 class ProcessMarketScraping implements ShouldQueue
@@ -94,6 +95,13 @@ class ProcessMarketScraping implements ShouldQueue
                     'processed_jobs' => $batch->processedJobs(),
                     'failed_jobs' => $batch->failedJobs,
                 ]);
+
+                try {
+                    Artisan::call('app:export-skills');
+                    Log::info('Successfully exported skills to JSON after market scraping batch');
+                } catch (\Exception $e) {
+                    Log::error('Failed to export skills to JSON', ['error' => $e->getMessage()]);
+                }
             })
             ->dispatch();
     }

@@ -99,6 +99,22 @@ class ProcessMarketScrapingCategory implements ShouldQueue
                 'duplicates' => $duplicates,
                 'failed' => $failed,
             ]);
+
+            // Check health for each source used in this job
+            if (!empty($this->sources)) {
+                foreach ($this->sources as $sourceData) {
+                    if (!empty($sourceData['id'])) {
+                        try {
+                            $sourceModel = ScrapingSource::find($sourceData['id']);
+                            if ($sourceModel) {
+                                $sourceModel->deactivateIfUnhealthy();
+                            }
+                        } catch (\Exception $e) {
+                            Log::error("Failed to check health for source ID {$sourceData['id']}", ['error' => $e->getMessage()]);
+                        }
+                    }
+                }
+            }
         } catch (\Throwable $e) {
             Log::error("Error scraping category {$this->category} (batched)", [
                 'error' => $e->getMessage(),
