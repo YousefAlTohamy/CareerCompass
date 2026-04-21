@@ -18,6 +18,8 @@ class ScrapingSource extends Model
         'name',
         'endpoint',
         'type',
+        'mode',
+        'pattern',
         'status',
         'headers',
         'params',

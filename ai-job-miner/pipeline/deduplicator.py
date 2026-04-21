@@ -212,7 +212,7 @@ class JobDeduplicator:
             "JOB_DEDUP_REDIS_PREFIX",
             "career_compass:ai_job_miner:dedup:hash:",
         )
-        self._ttl_seconds: int = int(os.getenv("JOB_DEDUP_TTL_SECONDS", "2592000"))  # 30 days
+        self._ttl_seconds: int = int(os.getenv("JOB_DEDUP_TTL_SECONDS", "5184000"))  # 60 days
         self._fallback_seen: set[str] = set()
 
     def _init_redis(self):
