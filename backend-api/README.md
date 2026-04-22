@@ -33,6 +33,24 @@ The Backend API is a Laravel 12-based RESTful service that handles user authenti
 
 The backend follows a strict **Service-Interface (Contract) Pattern** where all business logic resides in dedicated service classes, each implementing a PHP interface:
 
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Controller as API Controller
+    participant Service as App\Services
+    participant Gateway as AI Orchestrator
+    participant DB as MySQL Database
+
+    Client->>Controller: HTTP Request (Validated via FormRequest)
+    Controller->>Service: Execute Business Logic
+    Service->>Gateway: Orchestrate AI Execution (HTTP/Guzzle)
+    Gateway-->>Service: Return Structured AI Output
+    Service->>DB: DB::transaction (Persist Normalized Data)
+    DB-->>Service: Commit Success
+    Service-->>Controller: Return Domain Models
+    Controller-->>Client: API Resource (JSON)
+```
+
 | Interface | Implementation | Purpose |
 |-----------|---------------|---------|
 | `CvProcessingServiceInterface` | `CvProcessingService` | CV upload → AI Gateway call → persist profile/experiences/skills/analysis |
@@ -173,6 +191,20 @@ FRONTEND_URL=http://localhost:5173
 
 ## 🗄️ Database Refactoring (Normalization)
 
+```mermaid
+erDiagram
+    USERS ||--o| USER_PROFILES : "has one"
+    USERS ||--o{ USER_EXPERIENCES : "has many"
+    USERS ||--o| CV_ANALYSES : "has one"
+    USERS }|--|{ SKILLS : "user_skills (confidence_score, evidence)"
+    
+    JOB_POSTINGS }|--|{ SKILLS : "job_skills (importance_score, category)"
+    JOB_POSTINGS }o--|| SCRAPING_SOURCES : "scraped from"
+    
+    USERS ||--o{ APPLICATIONS : "applies to"
+    APPLICATIONS }o--|| JOB_POSTINGS : "for"
+```
+
 ### Schema Separation: Users vs Profile
 
 | Table | Purpose |
@@ -267,17 +299,12 @@ Skills are returned by **UserResource** with pivot data; **SkillResource** expos
 
 ## ⚙️ Background Jobs & Queue System
 
-### `ProcessMarketScraping` — Scheduled Market Intelligence
+### `ProcessMarketScraping` & `ProcessMarketScrapingCategory` (Batched Scraping)
 
-| Property | Value |
-|----------|-------|
-| **Queue** | Default |
-| **Timeout** | 600 seconds (10 min) |
-| **Retries** | 2 |
-| **Backoff** | 5 seconds |
-| **Trigger** | Scheduled cron (every 48h) OR manual via `POST /admin/scraping/run-full` |
-
-**Pipeline**: Loops through active `TargetJobRole` entries → calls AI Engine `POST /scrape-jobs` with dynamic scraping sources → stores jobs with duplicate detection → calculates skill importance (Essential >70%, Important ≥40%, Nice-to-have <40%) → updates `JobRoleStatistic`.
+Market scraping is divided into two layers to ensure reliability:
+1. **`ProcessMarketScraping`**: The orchestrator job. It loads active `TargetJobRole` entries, chunks the scraping sources, and dispatches category-specific jobs to the queue.
+2. **`ProcessMarketScrapingCategory`**: The worker job. It handles the actual API calls to the Python Engine for a specific chunk.
+   - **DLQ & Health Tracking**: Uses a `deactivateIfUnhealthy()` mechanism. If a scraping source fails repeatedly (e.g., HTTP 500s or timeouts), it automatically deactivates the source in the database to prevent queue clogging.
 
 ### `ProcessOnDemandJobScraping` — User-Triggered Scraping
 
@@ -309,6 +336,7 @@ Defined in `routes/console.php`:
 |------|----------|-------------|-------|
 | **Market Scraping** | Every 48h at 02:00 AM | `ProcessMarketScraping` job | `withoutOverlapping` to prevent concurrent runs |
 | **Skill Importance** | Daily at 04:00 AM | `skills:calculate-importance --all` | Recalculates importance scores for all job titles |
+| **Skill Synchronization** | Dispatched post-scraping | `app:export-skills` | Automates the export of canonical DB skills to a JSON file for the Python AI services to consume. |
 
 ### Running the Scheduler
 
@@ -405,6 +433,7 @@ php artisan serve --port=8000
 | POST | `/api/jobs/scrape-if-missing` | Scrape only if job title has no existing results |
 | GET | `/api/scraping-status/{jobId}` | Check background scraping job status |
 | GET | `/api/gap-analysis/job/{jobId}` | Single-job gap analysis (Layer 3 semantic matching) |
+| GET | `/api/gap-analysis/role/{roleId}` | Role-wide gap analysis comparing CV to aggregate market statistics |
 | POST | `/api/gap-analysis/batch` | Batch gap analysis for multiple jobs |
 | GET | `/api/gap-analysis/recommendations` | Global market recommendations (aggregate analysis) |
 | GET | `/api/market/overview` | Market intelligence overview |
@@ -421,6 +450,9 @@ All admin routes are prefixed with `/api/admin/`.
 | ------ | -------- | ----------- |
 | GET | `/api/admin/dashboard/stats` | Platform statistics |
 | GET | `/api/admin/dashboard/health` | System health check |
+| GET | `/api/admin/dashboard/batch-progress` | Check scraping batch progress |
+| GET | `/api/admin/dashboard/failed-urls/{scrapingJobId}` | View URLs stuck in the Dead Letter Queue (DLQ) |
+| POST | `/api/admin/dashboard/retry-failures` | Force retry of DLQ URLs |
 | GET | `/api/admin/jobs` | List all jobs (admin view) |
 | GET | `/api/admin/jobs/{id}` | View job details |
 | DELETE | `/api/admin/jobs/{id}` | Delete a job posting |

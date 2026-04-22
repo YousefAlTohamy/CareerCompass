@@ -8,6 +8,42 @@ The CareerCompass frontend is a modern, responsive React application that provid
 
 ---
 
+## 📐 System Architecture Diagrams
+
+### Authentication & Routing Flow
+```mermaid
+graph TD
+    A[User Visits App] --> B{AuthContext}
+    B -->|Checking Token| C[Loading Spinner]
+    B -->|No Token| D[GuestRoute]
+    D --> E[Login / Register]
+    B -->|Valid Token| F[ProtectedRoute]
+    
+    F --> G{RBAC Check}
+    G -->|User Role| H[User Dashboard]
+    G -->|Admin Role| I[Admin Dashboard]
+```
+
+### Data Lifecycle (Axios -> Hooks -> UI)
+```mermaid
+sequenceDiagram
+    participant UI as React Component
+    participant Hook as Custom Hook (useAsync)
+    participant API as Axios Client (src/api)
+    participant Backend as Laravel Backend
+
+    UI->>Hook: trigger fetch/post
+    Hook->>Hook: set loading = true
+    Hook->>API: call endpoint function
+    API->>Backend: HTTP Request (Bearer Token)
+    Backend-->>API: JSON Response
+    API-->>Hook: Return Data
+    Hook->>Hook: set loading = false, update state
+    Hook-->>UI: data, loading, error states
+```
+
+---
+
 ## ✨ V3 UI Features
 
 ### SaaS-Level Dashboard
@@ -101,8 +137,20 @@ frontend/
 ### Installation
 
 ```bash
+# 1. Clone & Enter Directory
 cd frontend
+
+# 2. Install Dependencies (Vite + React 19)
 npm install
+
+# 3. Environment Configuration
+# MUST be configured for the frontend to communicate with Laravel
+cp .env.example .env
+```
+
+**Required `.env` Variables:**
+```env
+VITE_API_URL=http://127.0.0.1:8000/api
 ```
 
 ### Run Development Server
@@ -145,6 +193,30 @@ Routing leverages `react-router-dom` enveloped in Framer Motion's `<AnimatePrese
 | **CompletenessRing** | Health indication SVG pie-chart mapping for general CV profile coverage |
 | **TypingEffect** | Text rendering tool utilizing intervals for AI-generated advisory interactions |
 | **LearningResource** | Direct resource navigation mapper querying strings against Udemy & Coursera |
+
+### 🪝 The Hook Layer (Async State Management)
+
+Instead of scattering `try/catch` and `loading` states across UI components, the application centralizes async operations via custom hooks:
+
+| Hook | Purpose |
+| ---- | ------- |
+| **`useAsync`** | A generic wrapper for Axios calls. It manages `execute`, `status`, `value`, and `error` states, guaranteeing UI components automatically react to pending/resolved/rejected states. |
+| **`useAuthHandler`** | Wraps `authAPI` methods to centralize Login, Register, and Logout logic, updating the `AuthContext` seamlessly. |
+| **`useOnDemandScraping`** | Orchestrates the complex UI flow for scraping: triggering the job, initiating the `ProcessingAnimation`, and transitioning to polling. |
+| **`useScrapingStatus`** | Polls the Laravel backend for background queue status (pending → processing → completed) and resolves the UI animation when finished. |
+
+---
+
+## 🛠️ Admin Tools & Management
+
+The frontend provides dedicated, secure interfaces for users holding the `admin` role. These routes are protected by `<ProtectedRoute requireAdmin={true} />`.
+
+| View | Purpose |
+| ---- | ------- |
+| **Admin Dashboard** | High-level system statistics, scraping batch progress, and Dead Letter Queue (DLQ) health tracking. |
+| **Scraping Sources** | Full CRUD interface to toggle active job boards, configure API keys, and test endpoints directly. |
+| **Target Roles** | Management of the self-expanding role registry (e.g., adding "AI Engineer" to the scheduled market scrape). |
+| **User Management** | Interface to monitor platform users, view their details, and execute ban/unban commands. |
 
 ---
 

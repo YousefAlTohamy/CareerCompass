@@ -50,6 +50,7 @@ graph TB
     JobMiner --> Wuzzuf[🌐 Wuzzuf.net]
     JobMiner --> Remotive[🌐 Remotive API]
     JobMiner --> Adzuna[🌐 Adzuna US API]
+    JobMiner --> Linkedin[🌐 Linkedin]
     Queue --> Laravel
     Scheduler[Laravel Scheduler<br/>Automated Tasks] --> Queue
 
@@ -78,10 +79,10 @@ graph TB
 | **Queue Worker**   | Laravel Queue              | -    | Background processing for scraping & calculations            |
 | **AI Gateway**     | Python/FastAPI             | 8001 | ai-hybrid-orchestrator: parse-cv, scrape-on-demand, hybrid-match, test-source, scrape-jobs, process-cv |
 | **ai-cv-analyzer** | Python Transformers        | 8002 | V3 Pipeline: Layer 1–3 (Understanding, Classification, Matching) |
-| **ai-job-miner**   | Python (async)             | -    | 5-phase heuristic scraper + TF-IDF engine (used by Gateway)  |
+| **ai-job-miner**   | Python (async)             | -    | DLQ-enabled scraper + TF-IDF engine + Playwright SPA support (used by Gateway) |
 | **Database**       | MySQL                      | 3306 | Normalized schema: users, user_profiles, user_experiences, cv_analyses |
 | **Cache/Queue**    | Redis (opt)                | 6379 | Fast caching and queue management (production)               |
-| **Scheduler**      | Laravel Cron               | -    | Automated market data updates (every 48 hours)               |
+| **Scheduler**      | Laravel Cron               | -    | Automated: 48h scraping, daily skill calc, daily source health check |
 
 ### Key Technical Achievements (V3 Refactor)
 
@@ -98,7 +99,6 @@ graph TB
 
 ```
 CareerCompass/
-├── debug_pipeline.py         # End-to-end CV upload timing and execution tracer
 ├── start_all.bat             # Portable environment launcher (6 terminal windows)
 ├── cleanup.bat               # Global cache cleaner (Laravel, Python, Vite, Jupyter)
 ├── GRADUATION_REPORT_PRD.md  # Product Requirements Document for graduation review
@@ -157,8 +157,12 @@ CareerCompass/
 │   │   │   │   └── Profile.jsx             # User profile management (editable fields + skill sync)
 │   │   │   ├── Home.jsx                    # Landing / welcome page
 │   │   │   ├── Login.jsx                   # Login page
-│   │   │   ├── NotFound.jsx                # 404 page
-│   │   │   └── Register.jsx                # Registration page
+│   │   │   ├── Register.jsx                # Registration page
+│   │   │   ├── AboutUs.jsx                 # About Us informational page
+│   │   │   ├── Privacy.jsx                 # Privacy Policy page
+│   │   │   ├── Terms.jsx                   # Terms of Service page
+│   │   │   ├── SystemStatus.jsx            # Public system health status page
+│   │   │   └── NotFound.jsx                # 404 page
 │   │   ├── services/
 │   │   │   └── storageService.js           # LocalStorage wrapper (tokens, user sync)
 │   │   ├── App.jsx                         # Root component + AnimatedRoutes + ThemeProvider
@@ -167,11 +171,13 @@ CareerCompass/
 │   │   └── index.css                       # Global Tailwind imports
 │   ├── public/
 │   │   └── favicon.svg                     # CareerCompass favicon
+│   ├── index.html                          # Vite HTML entry point
 │   ├── package.json                        # NPM dependencies
 │   ├── vite.config.js                      # Vite configuration
 │   ├── tailwind.config.js                  # Tailwind CSS config (dark mode class strategy)
-│   ├── FRONTEND_DOCUMENTATION.md           # Frontend docs
-│   └── DEVELOPER_GUIDE.md                  # Development guide
+│   ├── postcss.config.js                   # PostCSS configuration
+│   ├── eslint.config.js                    # ESLint configuration
+│   └── README.md                           # Frontend documentation
 │
 ├── backend-api/              # Laravel 12 Application
 │   ├── app/
@@ -210,12 +216,15 @@ CareerCompass/
 │   │   │   ├── CvProcessingService.php             # CV processing business logic
 │   │   │   └── GapAnalysisService.php              # Gap analysis business logic
 │   │   ├── Jobs/
-│   │   │   ├── ProcessMarketScraping.php           # Automated market data scraping
+│   │   │   ├── ProcessMarketScraping.php           # Automated market data scraping (batch dispatcher)
+│   │   │   ├── ProcessMarketScrapingCategory.php   # Per-category batch scraping worker
 │   │   │   └── ProcessOnDemandJobScraping.php      # On-demand job scraping
 │   │   ├── Console/Commands/
 │   │   │   ├── ScrapeJobs.php                      # Manual scraping command
 │   │   │   ├── TestScrapingSources.php             # Diagnose all scraping sources
-│   │   │   └── CalculateSkillImportance.php        # Skill importance calculation
+│   │   │   ├── CalculateSkillImportance.php        # Skill importance calculation
+│   │   │   ├── ExportSkillsToJson.php              # Export DB skills to JSON for AI canonicalization
+│   │   │   └── ScrapingSourceHealthCheck.php       # Automated source health auditing
 │   │   ├── Models/
 │   │   │   ├── User.php                            # User model + booted() auto-profile + backward-compat accessors
 │   │   │   ├── UserProfile.php                     # User profile (headline, summary, location, seniority, contact_info JSON)
@@ -225,7 +234,8 @@ CareerCompass/
 │   │   │   ├── Job.php                             # Job model with importance
 │   │   │   ├── JobRoleStatistic.php                # Market statistics per role
 │   │   │   ├── ScrapingJob.php                     # Scraping job tracking
-│   │   │   ├── ScrapingSource.php                  # Scraping source config model
+│   │   │   ├── ScrapingSource.php                  # Scraping source config model (health tracking)
+│   │   │   ├── ScrapingFailedUrl.php               # DLQ — failed scraping URL records
 │   │   │   ├── TargetJobRole.php                   # Target job role config model
 │   │   │   └── Application.php                     # Job Application model
 │   │   └── Providers/
@@ -248,7 +258,12 @@ CareerCompass/
 │   │   │   ├── *_create_user_profiles_table.php    # Normalized profiles (migrates legacy user columns)
 │   │   │   ├── *_add_confidence_score_evidence_to_user_skills_table.php  # Enriched skill pivot
 │   │   │   ├── *_create_user_experiences_table.php # Work experience entries
-│   │   │   └── *_create_cv_analyses_table.php      # CV analysis results storage
+│   │   │   ├── *_create_cv_analyses_table.php      # CV analysis results storage
+│   │   │   ├── *_add_analytics_columns.php         # Analytics columns on cv_analyses & experiences
+│   │   │   ├── *_add_metrics_to_scraping_jobs.php  # DLQ metrics (failed_count, processed_count)
+│   │   │   ├── *_add_discovery_fields_to_scraping_sources.php  # Health & discovery tracking
+│   │   │   ├── *_add_spa_to_scraping_sources_type.php          # SPA scraper type enum
+│   │   │   └── *_create_scraping_failed_urls.php   # Dead Letter Queue for failed URLs
 │   │   └── seeders/
 │   │       ├── DatabaseSeeder.php                  # Master seeder (calls all 5 seeders + test user)
 │   │       ├── AdminUserSeeder.php                 # Seeds default admin account required to cross the RBAC threshold
@@ -258,18 +273,37 @@ CareerCompass/
 │   │       └── TargetJobRoleSeeder.php             # Default target job roles
 │   ├── routes/
 │   │   ├── api.php                                 # API endpoints (guest + auth + admin groups)
-│   │   ├── console.php                             # Scheduler configuration (48h scraping, daily skill calc)
+│   │   ├── console.php                             # Scheduler (48h scraping, daily skill calc, daily health check)
 │   │   └── web.php                                 # Web routes (default)
 │   └── TESTING.md                          # API testing guide
 │
-├── ai-job-miner/             # Phase 6: Heuristic Scraping Engine (5 phases)
-│   ├── core/                               # Engine core (http_client, dlq, engine, heuristics)
-│   ├── strategies/                         # HtmlSmartScraper + JsonApiScraper
+├── ai-job-miner/             # Heuristic Scraping Engine with DLQ & Playwright SPA support
+│   ├── core/                               # Engine core
+│   │   ├── engine.py                       # ScrapingEngine — async stream_jobs orchestrator
+│   │   ├── base_scraper.py                 # Abstract scraper interface
+│   │   ├── discovery.py                    # URL discovery & pagination logic
+│   │   ├── dlq.py                          # Dead Letter Queue for failed scraping attempts
+│   │   ├── heuristics.py                   # Field extraction heuristics
+│   │   └── http_client.py                  # Rate-limited async HTTP client
+│   ├── strategies/                         # Concrete scraper implementations
+│   │   ├── html_scraper.py                 # HtmlSmartScraper (BeautifulSoup)
+│   │   ├── api_scraper.py                  # JsonApiScraper (Remotive, Adzuna)
+│   │   └── playwright_scraper.py           # SPA-capable Playwright scraper
 │   ├── factories/                          # ScraperFactory
-│   ├── pipeline/                           # Bloom filter dedup + Regex cleaners + Levenshtein
-│   ├── ai/                                 # TF-IDF matcher + NER extractor + segmenter
-│   ├── tests/                              # 186 pytest tests (fully mocked)
+│   ├── pipeline/                           # Post-processing pipeline
+│   │   ├── deduplicator.py                 # Bloom filter + Levenshtein dedup
+│   │   ├── cleaners.py                     # Regex-based field cleaners
+│   │   └── fuzzy_matcher.py                # Fuzzy title/company matching
+│   ├── ai/                                 # NLP & matching
+│   │   ├── matcher.py                      # TF-IDF cosine similarity scorer
+│   │   ├── ner_extractor.py                # Named entity skill extractor
+│   │   ├── segmentation.py                 # Job description section segmenter
+│   │   └── canonicalizer.py                # Skill name canonicalization
+│   ├── config/                             # Runtime configuration
+│   │   └── standard_skills.json            # Canonical skill list for matching
+│   ├── tests/                              # pytest test suite
 │   ├── run_engine.py                       # Local microservice test runner
+│   ├── requirements.txt                    # Python dependencies
 │   └── README.md
 │
 ├── ai-cv-analyzer/           # V3 AI Pipeline — Layer 1–3 (port 8002)
@@ -289,11 +323,15 @@ CareerCompass/
 │   │   └── layer3_matching/
 │   │       ├── embedder.py                 # MiniLM sentence embedding utility
 │   │       └── similarity.py               # IntelligentMatcher (cosine similarity scoring)
+│   ├── docs/                                # Additional documentation
+│   │   ├── HOW_TO_TRAIN_MODEL.md            # NER model fine-tuning guide
+│   │   └── TESTING_GUIDE.md                 # AI pipeline testing guide
 │   ├── models/                              # Fine-tuned NER weights (git-ignored)
 │   ├── scripts/                             # Verification scripts for pipeline phases
 │   ├── training/                            # Training data and configs (git-ignored)
 │   ├── tests/                               # AI pipeline test suite
 │   ├── main.py                              # FastAPI sub-service (port 8002)
+│   ├── requirements.txt                     # Python dependencies
 │   └── README.md
 │
 ├── ai-hybrid-orchestrator/   # Facade + FastAPI Gateway (port 8001)
@@ -542,7 +580,7 @@ cd backend-api && php artisan schedule:work
 
 ### 📅 Optional: Activate Scheduler (Automated Market Updates)
 
-The scheduler automatically runs market scraping every 48 hours and skill importance calculations daily.
+The scheduler automatically runs market scraping every 48 hours, skill importance calculations daily, and scraping source health checks daily.
 
 **For Development Testing:**
 
@@ -568,7 +606,8 @@ Use Task Scheduler to run `php artisan schedule:run` every minute.
 >
 > - Market scraping: Every 48 hours at 02:00 AM
 > - Skill importance calculation: Daily at 04:00 AM
-> - Both tasks use `withoutOverlapping()` to prevent concurrent executions
+> - Scraping source health check: Daily at 05:00 AM (auto-deactivates unhealthy sources)
+> - All tasks use `withoutOverlapping()` to prevent concurrent executions
 
 ### ✅ Verify Everything is Running
 
@@ -644,6 +683,7 @@ Use Task Scheduler to run `php artisan schedule:run` every minute.
 | Method | Endpoint | Auth | Description |
 | ------ | ----------------------------------- | ---- | ------------------------------------------------- |
 | GET | `/api/gap-analysis/job/{id}` | ✅ | Analyze match with job (essential/important/nice) |
+| GET | `/api/gap-analysis/role/{roleId}` | ✅ | Analyze match with a target job role |
 | POST | `/api/gap-analysis/batch` | ✅ | Batch analyze multiple jobs |
 | GET | `/api/gap-analysis/recommendations` | ✅ | Get priority-based skill roadmap |
 
@@ -662,6 +702,9 @@ Use Task Scheduler to run `php artisan schedule:run` every minute.
 | ------ | ----------------------------------------- | ---- | -------------------------------- |
 | GET | `/api/admin/dashboard/stats` | ✅ | Get system-wide metrics Overview |
 | GET | `/api/admin/dashboard/health` | ✅ | Get system health (DB, Cache, AI services liveness) |
+| GET | `/api/admin/dashboard/batch-progress` | ✅ | Get active batch scraping progress |
+| GET | `/api/admin/dashboard/failed-urls/{scrapingJobId}` | ✅ | Get DLQ failed URLs for a scraping job |
+| POST | `/api/admin/dashboard/retry-failures` | ✅ | Mark failed URLs as retried |
 | GET | `/api/admin/jobs` | ✅ | View all centralized jobs (paginated, searchable) |
 | GET | `/api/admin/jobs/{id}` | ✅ | View single job details with skills |
 | DELETE | `/api/admin/jobs/{id}` | ✅ | Delete a centralized job entry |
@@ -709,6 +752,7 @@ erDiagram
     JOBS ||--o{ SCRAPING_JOBS : tracked_by
     JOBS ||--o{ APPLICATIONS : applied_to
     JOBS }o--|| SCRAPING_SOURCES : scraped_from
+    SCRAPING_JOBS ||--o{ SCRAPING_FAILED_URLS : logs
     JOB_ROLE_STATISTICS }o--|| JOBS : aggregates
 
     USERS {
@@ -800,6 +844,9 @@ erDiagram
         int id PK
         string status "pending/processing/completed/failed"
         int progress
+        int failed_count "DLQ failure counter"
+        int processed_count "successfully scraped"
+        int total_urls "total URLs attempted"
         string error_message
         datetime timestamps
     }
@@ -824,10 +871,23 @@ erDiagram
         int id PK
         string name
         string endpoint
-        enum type "api/html"
+        enum type "api/html/spa"
         enum status "active/inactive"
         json headers "nullable"
         json params "nullable"
+        json field_map "nullable — discovery config"
+        int consecutive_failures "health tracking"
+        datetime last_healthy_at "nullable"
+        datetime timestamps
+    }
+
+    SCRAPING_FAILED_URLS {
+        int id PK
+        int scraping_job_id FK
+        string url
+        string reason
+        string source_name
+        boolean retried "default false"
         datetime timestamps
     }
 
@@ -1068,11 +1128,14 @@ curl -s -X POST http://127.0.0.1:8000/api/register \
   - Added new React pages for `AdminDashboard.jsx`, `AdminJobs.jsx`, and `AdminUsers.jsx`.
   - Added backend endpoints for system-wide metric tracking, centralized job manipulation, and user-base analysis.
   - Implemented an `is_banned` boolean mapping to the `USERS` database table allowing master admins to selectively revoke platform access.
+- [x] **Phase 27: Scraping Engine Resilience & DLQ** - Hardened the scraping pipeline with Dead Letter Queue (`scraping_failed_urls` table), batch processing via `ProcessMarketScrapingCategory`, SPA scraping support (`playwright_scraper.py`), source health tracking with auto-deactivation (`ScrapingSourceHealthCheck` command), and admin DLQ viewer with retry capabilities.
+- [x] **Phase 28: Public Informational Pages & Skill Sync** - Added `AboutUs.jsx`, `Privacy.jsx`, `Terms.jsx`, and `SystemStatus.jsx` public pages. Implemented `ExportSkillsToJson` Artisan command to sync database skills to `ai-job-miner/config/standard_skills.json` for AI canonicalization. Added `config/` directory to `ai-job-miner` with canonical skill list.
 
 ### 📈 Market Intelligence System
 
 - **Automated Job Scraping**: Scheduled every **48 hours at 02:00 AM** with `withoutOverlapping()` protection
 - **Daily Skill Calculation**: Runs at **04:00 AM** to update skill importance after scraping
+- **Daily Source Health Check**: Runs at **05:00 AM** to auto-deactivate unhealthy scraping sources
 - **On-Demand Scraping**: Real-time job data on user request with **live status polling**
 - **Skill Importance Ranking**: Categorizes skills as Essential (>70%), Important (40-70%), or Nice-to-have (<40%)
 - **Market Statistics**: Trending skills, role-specific demand, salary ranges
@@ -1149,8 +1212,12 @@ curl -s -X POST http://127.0.0.1:8000/api/register \
 - `Applications.jsx` - Job Application Tracker with Kanban-style status pipeline
 - `MarketIntelligence.jsx` - Interactive recharts dashboard: stat cards, Top-15 Trending Skills BarChart, skill card grid, Role Skill Demand search with results chart and category breakdown
 - `Profile.jsx` - User profile management (editable fields + skill sync)
+- `AboutUs.jsx` - About Us informational page
+- `Privacy.jsx` - Privacy Policy page
+- `Terms.jsx` - Terms of Service page
+- `SystemStatus.jsx` - Public system health status page
 - `NotFound.jsx` - 404 error page
-- `AdminDashboard.jsx` - Admin system-wide statistics + system health monitor
+- `AdminDashboard.jsx` - Admin system-wide statistics + system health monitor + batch progress + DLQ viewer
 - `AdminJobs.jsx` - Admin centralized job listings management
 - `AdminJobDetails.jsx` - Admin single job detail view with attached skills
 - `AdminUsers.jsx` - Admin user base control and ban management
@@ -1425,8 +1492,13 @@ lsof -ti:8001 | xargs kill -9
 
 ## 📚 Documentation
 
-- **Frontend Documentation**: [frontend/FRONTEND_DOCUMENTATION.md](frontend/FRONTEND_DOCUMENTATION.md) - React components guide
-- **Developer Guide**: [frontend/DEVELOPER_GUIDE.md](frontend/DEVELOPER_GUIDE.md) - Frontend development guide
+- **Frontend Documentation**: [frontend/README.md](frontend/README.md) - Frontend architecture and setup guide
+- **Backend API Documentation**: [backend-api/README.md](backend-api/README.md) - Backend architecture and API reference
+- **AI CV Analyzer Documentation**: [ai-cv-analyzer/README.md](ai-cv-analyzer/README.md) - V3 pipeline architecture
+- **AI CV Analyzer Training Guide**: [ai-cv-analyzer/docs/HOW_TO_TRAIN_MODEL.md](ai-cv-analyzer/docs/HOW_TO_TRAIN_MODEL.md) - NER model fine-tuning
+- **AI CV Analyzer Testing Guide**: [ai-cv-analyzer/docs/TESTING_GUIDE.md](ai-cv-analyzer/docs/TESTING_GUIDE.md) - Pipeline testing
+- **AI Job Miner Documentation**: [ai-job-miner/README.md](ai-job-miner/README.md) - Scraping engine architecture
+- **AI Hybrid Orchestrator**: [ai-hybrid-orchestrator/README.md](ai-hybrid-orchestrator/README.md) - Gateway facade docs
 - **Product Requirements Document**: [GRADUATION_REPORT_PRD.md](GRADUATION_REPORT_PRD.md) - Full PRD for graduation review
 - **API Testing Guide**: [backend-api/TESTING.md](backend-api/TESTING.md)
 - **AI Gateway API Docs**: http://127.0.0.1:8001/docs (Interactive Swagger UI — when running)
@@ -1558,10 +1630,10 @@ Import `CareerCompass.postman_collection.json` into Postman for comprehensive AP
 ---
 
 **Last Updated**: April 2026
-**Project Status**: ✅ **V3 AI Pipeline + Database Normalization + React V3 UI + i18n + Admin Panel**
+**Project Status**: ✅ **V3 AI Pipeline + Database Normalization + React V3 UI + i18n + Admin Panel + DLQ & SPA Scraping**
 **Components**: Frontend (React 19 + Vite + Framer Motion + Recharts + i18next) + Backend API (Laravel 12) + Queue Worker + Scheduler + **AI Gateway (8001)** + **ai-cv-analyzer (8002)** + ai-job-miner
-**API Endpoints**: 55+ total (Laravel APIs + AI Gateway APIs + Market Intelligence + Admin Control Panel + Application Tracker)
-**Scraping Sources**: Wuzzuf (HTML) • Remotive API (free) • Adzuna US API — all 3 verified with `scrape:test-sources`
-**Key Features**: Role-Based Access Control (RBAC) • **Admin Control Panel (Dashboard/Users/Jobs/Sources/Targets)** • CV Analysis • Hybrid AI Matching (Semantic + TF-IDF) • Contact Info Extraction • Multi-Source Job Scraping • Gap Analysis • Market Intelligence Dashboard • Skill Importance Ranking • Real-time Polling • Scraping Source Management • Dynamic NLP Extraction • Application Tracker • Recommended Jobs • Premium Animated UI • Interactive Recharts Charts • i18n (EN/AR) • Dark Mode • System Health Monitor
+**API Endpoints**: 60+ total (Laravel APIs + AI Gateway APIs + Market Intelligence + Admin Control Panel + Application Tracker + DLQ Management)
+**Scraping Sources**: Wuzzuf (HTML) • Remotive API (free) • Adzuna US API — all 3 verified with `scrape:test-sources` + SPA-capable via Playwright
+**Key Features**: Role-Based Access Control (RBAC) • **Admin Control Panel (Dashboard/Users/Jobs/Sources/Targets/DLQ)** • CV Analysis • Hybrid AI Matching (Semantic + TF-IDF) • Contact Info Extraction • Multi-Source Job Scraping • Gap Analysis • Market Intelligence Dashboard • Skill Importance Ranking • Real-time Polling • Scraping Source Management • Dynamic NLP Extraction • Application Tracker • Recommended Jobs • Premium Animated UI • Interactive Recharts Charts • i18n (EN/AR) • Dark Mode • System Health Monitor • Dead Letter Queue • Batch Scraping • Automated Source Health Checks • Public Info Pages (About/Privacy/Terms/Status)
 **AI Models**: `dslim/bert-base-NER` • `facebook/bart-large-mnli` • `all-MiniLM-L6-v2` — all loaded as Singletons on gateway startup
-**Optimizations**: 3x Retry Logic • Memory Chunking • Auto-Polling • Rate Limiting • Scheduler Automation • GapAnalysis Bug Fix • Adzuna UA Spoofing • Env-based Credential Management • On-the-fly Data Creation • PUT→PATCH Fix • Namespace Isolation via sys.path swap
+**Optimizations**: 3x Retry Logic • Memory Chunking • Auto-Polling • Rate Limiting • Scheduler Automation (3 tasks) • DLQ with Admin Retry • Batch Processing via Bus::batch() • Playwright SPA Fallback • Skill Export Sync Pipeline • Namespace Isolation via sys.path swap
