@@ -2,10 +2,26 @@
 
 > **V3 AI Pipeline — Layer 1 Understanding**  
 > Universal document extraction with spatial normalization, semantic segmentation, advanced NER, contact extraction, canonicalization, and temporal parsing.  
-> **Layer 2 — Professional Domain Classification (Zero-Shot BART-MNLI)**  
-> **Layer 3 — Semantic Matching Engine (Sentence-BERT + Cosine Similarity)**
+> **Layer 2 — Professional Domain Classification (Centroid Matching + Zero-Shot DistilBART Fallback)**  
+> **Layer 3 — Semantic Matching Engine (Adaptive Seniority-Weighted Scoring)**
 
 A **6-stage V3 AI pipeline** that converts any CV file into a structured, canonicalized profile with contact information and intelligently matches it against job descriptions using semantic embeddings and hard-skill overlap scoring.
+
+```mermaid
+graph TD
+    A[Raw PDF/Image] --> B(Spatial Parser / pdfplumber)
+    B -->|Char Density < 150 or failure| C(OCR Fallback / EasyOCR)
+    B --> D
+    C --> D(Section Segmenter<br>Exact → Regex → Semantic)
+    D --> E(NER Engine<br>BERT, chunked, INT8)
+    E --> F(Canonicalizer<br>5-Level Resolution Chain)
+    F --> G(Experience Engine<br>Dates, Durations, Red Flags)
+    G --> H(Contact Extractor)
+    H --> I[CVParseResult JSON]
+    I --> J(Layer 2: Centroid Classifier<br>12 Industry + 9 Tech Domains)
+    J --> K(Layer 3: Adaptive Matcher<br>3-Component Seniority-Weighted)
+    K --> L((Final JSON Response))
+```
 
 ---
 
@@ -31,8 +47,8 @@ A **6-stage V3 AI pipeline** that converts any CV file into a structured, canoni
 | ------------- | ------------------------------------------------------------------------------ |
 | **Language**  | Python 3.11+                                                                   |
 | **Framework** | FastAPI — async REST API gateway on port **8002**                              |
-| **ML Models** | `dslim/bert-base-NER`, `facebook/bart-large-mnli`, `all-MiniLM-L6-v2`          |
-| **OCR Stack** | PyMuPDF (text PDFs), python-docx (DOCX), EasyOCR + OpenCV (scanned images)    |
+| **ML Models** | `dslim/bert-base-NER` (or custom), `valhalla/distilbart-mnli-12-1` (fallback), `all-MiniLM-L6-v2` |
+| **OCR Stack** | PyMuPDF (text PDFs), EasyOCR + OpenCV (scanned images)    |
 | **Lifecycle** | **Singleton Pattern** — all models pre-loaded at startup                       |
 | **Port**      | **8002** — explicitly isolated from ai-hybrid-orchestrator (8001)              |
 | **Memory**    | ~4GB RAM on startup due to singleton model loading                             |
@@ -109,58 +125,68 @@ ai-cv-analyzer/
 
 The V3 pipeline processes PDFs through six tightly coupled stages, producing a strict **CVParseResult** JSON schema.
 
-### Stage 1: Spatial Normalization (`pdfplumber` Row Grouper)
+### Stage 1: Spatial Normalization & OCR Fallback
 
 | Module             | File                | Purpose                                                                 |
 | ------------------ | ------------------- | ----------------------------------------------------------------------- |
 | **Spatial Parser** | `spatial_parser.py` | Layout-aware PDF text extraction using **pdfplumber** word coordinates  |
+| **OCR Pipeline**   | `ocr_pipeline.py`   | Fallback extraction using **EasyOCR + OpenCV**                          |
 
 - **Row Grouper**: Clusters words by Y proximity (`y_tolerance` = median word height × 0.65)
 - **Column-Aware Ordering**: Splits rows on horizontal gaps (column separation), clusters segments by X position
-- **Reading Order**: Left-to-right columns, top-to-bottom within each column
+- **OCR Decision Logic**: Orchestrator triggers `EasyOCR` if the spatial parser fails, returns `< 150` characters, or detects `no_text`.
 - **Output**: Ordered text string preserving logical reading flow (avoids multi-column chaos)
 
-### Stage 2: Semantic Section Segmentation (Sentence-Transformers Ready)
+### Stage 2: Semantic Section Segmentation
 
 | Module               | File                  | Purpose                                                         |
 | -------------------- | --------------------- | --------------------------------------------------------------- |
-| **Section Segmenter**| `section_segmenter.py`| Splits ordered text into CV sections via header heuristics      |
+| **Section Segmenter**| `section_segmenter.py`| Splits ordered text into 7 CV sections via multi-level heuristics |
 
-- **Sections**: `profile_summary`, `experience`, `education`, `skills`, `projects`, `uncategorized`
-- **Architecture-Ready**: Accepts custom `header_resolver` (e.g., embeddings-based) without changing the interface
+- **Sections**: `profile_summary`, `experience`, `education`, `skills`, `projects`, `certificates`, `languages`, `uncategorized`
+- **3-Level Detection**: 
+  1. Exact Match (confidence 0.99)
+  2. Regex Match (confidence 0.85-0.95)
+  3. **Semantic Header Resolution** (Phase 3): Uses `all-MiniLM-L6-v2` embeddings to resolve unknown headers via cosine similarity against reference embeddings (confidence ≤ 0.90)
 - **Output**: `SegmentationResult` with blocks, sections dict, and analysis (found/missing sections, anomalies)
 
-### Stage 3: Advanced NER & Validation (Context Window ±3 words)
+### Stage 3: Advanced NER & Validation
 
 | Module          | File             | Purpose                                                               |
 | --------------- | ---------------- | --------------------------------------------------------------------- |
-| **Advanced NER**| `advanced_ner.py`| BERT-based Named Entity Recognition with **context window validation**|
+| **Advanced NER**| `advanced_ner.py`| BERT-based Named Entity Recognition with **overlapping chunking**     |
 
 - **Model**: `dslim/bert-base-NER` or custom `career_compass_ner_final` if present
 - **Context Window**: Configurable `context_window_words=3` — validates entities within ±3 words of surrounding tokens
-- **Entity Types**: Skills, Roles, Organizations, Education, Certifications
-- **Output**: Normalized entities grouped by category with provenance
+- **Overlapping Chunking** (Phase 5.1): Processes long CVs in 3500-char chunks with a 500-char stride to avoid token truncation.
+- **Intelligent Boundary Expansion**: Expands WordPiece token boundaries to capture full entity names (with cross-entity safety guards).
+- **Quantization**: Optional INT8 dynamic quantization for CPU optimization (`NER_QUANTIZE=true`).
 
-### Stage 4: Canonicalization (RapidFuzz Deduplication)
+### Stage 4: Canonicalization
 
 | Module           | File             | Purpose                                              |
 | ---------------- | ---------------- | ---------------------------------------------------- |
-| **Canonicalizer**| `canonicalizer.py`| Skill normalization and fuzzy deduplication via **RapidFuzz** |
+| **Canonicalizer**| `canonicalizer.py`| Skill normalization via a **5-Level Resolution Chain** |
 
-- **Fuzzy Threshold**: Default 86 (configurable via `OrchestratorConfig`)
-- **Deduplication**: Merges variants (e.g., `Vue.js` ≡ `VueJS`) and attaches provenance
+- **5-Level Resolution Chain**:
+  1. **Exact Variant** (0.99)
+  2. **Exact Canonical** (0.97)
+  3. **RapidFuzz** (0.70-0.95, default threshold 86)
+  4. **Normalized Key** (0.90)
+  5. **Semantic Embedding Match** (Phase 3): Uses `all-MiniLM-L6-v2` to match unknown skills against pre-computed canonical skill embeddings (0.80-0.90)
 - **Output**: `CanonicalSkill` list with `name`, `confidence_score`, `sources`, `raw_variants`
 
-### Stage 5: Temporal Engine (`python-dateutil`)
+### Stage 5: Temporal Engine & Career Health
 
 | Module             | File                 | Purpose                                           |
 | ------------------ | -------------------- | ------------------------------------------------- |
-| **Experience Engine** | `experience_engine.py` | Date range extraction and total experience years |
+| **Experience Engine** | `experience_engine.py` | Date range extraction, skill durations, and career health analysis |
 
-- **Date Parsing**: `python-dateutil` for robust handling of formats (Jan 2020 – Mar 2022, 05/2019 to 11/2021, etc.)
-- **Regex Fallback**: When `python-dateutil` fails, a regex-based date range fallback ensures coverage
-- **Present Handling**: Normalizes "Present", "Current", "Now", "Today" to today's date
-- **Output**: `DateRange` list, `total_experience_years`, ranked current title
+- **Date Parsing**: `python-dateutil` with regex fallback for robust handling of formats.
+- **Skill Duration Tracking**: Calculates accumulated years per technology by merging overlapping job intervals.
+- **Career Health Analysis**: Detects **employment gaps** (>6 months), **suspicious overlaps** (>90 days), and **job hopping** (3+ roles under 1 year in the last 5 years).
+- **Action Verb Scoring**: Calculates a normalized score (0.0-1.0) based on the density of 42 strong action verbs in job descriptions.
+- **Seniority Inference**: Determines seniority level (`intern` to `principal`) using a weighted mix of title keywords (60%), total years (40%), and action verb micro-adjustments.
 
 ### Stage 6: Contact Information Extraction (Regex)
 
@@ -188,7 +214,7 @@ class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
 class CVParseResult(StrictModel):
-    parsing_status: Literal["success", "empty_file", "no_text", "error"]
+    parsing_status: Literal["success", "ocr_fallback", "empty_file", "no_text", "error"]
     profile: Profile           # full_name, current_title, headline, summary, contact
     stats: DocumentStats       # page_count, char_count, word_count
     skills: SkillsSection      # items: List[SkillItem], confidence_score
@@ -210,38 +236,50 @@ class CVParseResult(StrictModel):
 
 ### Layer 2: Domain Classification
 
-- **Model**: `facebook/bart-large-mnli` (Zero-Shot Classification, Singleton)
-- **Input**: First 1500 characters of extracted CV text
-- **Mode**: `multi_label=False` — single primary domain
-- **Output**: Top 3 probability scores across 10 professional domains:
-
-| # | Domain |
-|---|---|
-| 1 | Backend Development |
-| 2 | Frontend Development |
-| 3 | Full Stack Development |
-| 4 | Mobile App Development |
-| 5 | Data Science & AI |
-| 6 | DevOps & Cloud |
-| 7 | UI/UX Design |
-| 8 | Quality Assurance & Testing |
-| 9 | Product Management |
-| 10 | Cybersecurity |
+- **Primary Model**: `all-MiniLM-L6-v2` (Semantic Embeddings, Singleton)
+- **Fallback Model**: `valhalla/distilbart-mnli-12-1` (Zero-Shot Classification)
+- **Method**: The system pre-computes **Centroid Vectors** for a rich Domain Knowledge Bank. It extracts structured CV data (skills, job titles, technologies) and calculates cosine similarity against the centroids.
+- **2-Stage Classification**:
+  1. Matches against **12 Industry Domains** (e.g., Healthcare, Finance, Technology & Software).
+  2. If the primary domain is `Technology & Software`, it runs a second pass against **9 Tech Sub-Domains** (e.g., Backend, Frontend, DevOps, Data Science).
 
 ### Layer 3: Semantic Matching Engine
 
 - **Model**: `all-MiniLM-L6-v2` — 384-dim embeddings (Singleton)
-- **Semantic Score**: `cosine_similarity(cv_embedding, job_embedding)`
-- **Skill Overlap Score**: `len(cv_skills ∩ job_skills) / len(job_skills)`
-- **Formula**: `final_score = (semantic_score × 60%) + (skill_overlap × 40%)`
+- **Method**: Calculates an **Adaptive Seniority-Weighted Score** based on 3 components:
+  1. **Contextual Similarity**: CV profile summary / experience vs. Job description embedding.
+  2. **Structured Skills Similarity**: CV canonical skills vs. Job required skills (embedded).
+  3. **Domain Alignment**: Layer 2 domain matching (Exact match = 1.0, semantic similarity if partial, threshold < 0.65 = 0.0).
+- **Adaptive Weights**: Matching criteria changes based on the candidate's inferred seniority:
+
+| Seniority | Semantic Context Weight | Structured Skills Weight | Domain Alignment Weight |
+|---|---|---|---|
+| `intern` | 30% | 60% | 10% |
+| `junior` | 40% | 40% | 20% |
+| `senior` | 30% | 20% | 50% |
+| `lead` | 20% | 20% | 60% |
+| `default` | 40% | 40% | 20% |
+
 - **Return schema**:
 
 ```json
 {
   "match_score": 85.20,
-  "semantic_score": 78.50,
-  "skill_overlap_score": 95.00,
-  "missing_skills": ["Kubernetes", "Terraform"]
+  "breakdown": {
+    "contextual_similarity": 78.50,
+    "structured_skills_similarity": 95.00,
+    "domain_alignment": 100.00
+  },
+  "weights_used": {
+    "semantic": 0.40,
+    "skills_structured": 0.40,
+    "domain": 0.20
+  },
+  "missing_skills": ["Kubernetes", "Terraform"],
+  "detected_domains": {
+    "cv": "Backend Development",
+    "job": "Technology & Software"
+  }
 }
 ```
 
@@ -253,6 +291,7 @@ class CVParseResult(StrictModel):
 | ------ | ---------------- | ------------------------------------------------------------------------------- |
 | `GET`  | `/`              | Health check — `{"status": "operational", "version": "v2.0 (3-Layer Architecture)"}` |
 | `POST` | `/api/parse-cv`  | Upload CV (multipart) → Layer 1 (V3 pipeline) → returns strict `CVParseResult`  |
+| `POST` | `/api/process_file`| Internal programmatic CLI/service interface for processing files locally      |
 
 > **Legacy Notice**: The `/api/v2/analyze-cv` and `/api/v2/match-job` endpoints were removed during the API unification phase. Layer 3 matching is now consumed exclusively through the **ai-hybrid-orchestrator** gateway on port 8001 (see `POST /api/hybrid-match`).
 
@@ -309,6 +348,10 @@ cp .env.example .env
 | `GEMINI_API_KEY` | Google Gemini API key — used by `training/generate_tech_dataset.py` for synthetic data generation | Only for training |
 | `HF_TOKEN` | HuggingFace token — used for accessing gated models (if any) | Optional |
 | `NER_MODEL_PATH` | Path to fine-tuned NER weights (default: `./models/ner_weights/career_compass_ner_final`) | Optional (auto-detected) |
+| `NER_QUANTIZE` | Enable INT8 dynamic quantization for the NER model to save memory | Optional (default: false) |
+| `EMBEDDER_QUANTIZE` | Enable INT8 dynamic quantization for the Embedder to save memory | Optional (default: false) |
+| `EMBEDDER_MODEL_NAME` | Name of the SentenceTransformer to use (default: `all-MiniLM-L6-v2`) | Optional |
+| `CV_TIMEOUT_SECONDS` | Maximum processing time allowed per CV | Optional (default: 30) |
 
 ---
 
@@ -318,8 +361,9 @@ cp .env.example .env
 | ------------------------------- | ------------------------------------------------------------------------- |
 | **Port 8002 in use**            | Ensure no legacy services run on 8002; ai-cv-analyzer is isolated         |
 | **`core/` namespace collision** | Resolved in ai-hybrid-orchestrator via sequential sys.path swap           |
-| **Memory overhead**             | ~4GB RAM; singleton models loaded once at startup                         |
+| **Memory overhead**             | ~4GB RAM; set `NER_QUANTIZE=true` and `EMBEDDER_QUANTIZE=true` on CPU hosts |
 | **OCR resource intensity**      | PyMuPDF (fast, text-only) → EasyOCR fallback (image-based)                |
+| **Timeouts on large PDFs**      | Increase `CV_TIMEOUT_SECONDS` (default is 30s)                            |
 
 ---
 

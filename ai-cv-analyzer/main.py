@@ -31,7 +31,7 @@ from core.layer1_understanding.orchestrator import CVOrchestrator, OrchestratorC
 from core.layer1_understanding.schema import CVParseResult
 
 # Layer 2 & 3 (warm singletons during startup)
-from core.layer2_classification.classifier import CVDomainClassifier
+from ..layer2_classification.classifier import CVDomainClassifier
 from core.layer3_matching.similarity import IntelligentMatcher
 
 # ---------------------------------------------------------------------------

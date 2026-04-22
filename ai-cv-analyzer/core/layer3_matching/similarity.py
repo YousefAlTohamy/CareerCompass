@@ -7,8 +7,8 @@ try:
 except ImportError:
     RAPIDFUZZ_AVAILABLE = False
 
-from core.layer3_matching.embedder import SemanticEmbedder
-from core.layer2_classification.classifier import CVDomainClassifier
+from ..layer3_matching.embedder import SemanticEmbedder
+from ..layer2_classification.classifier import CVDomainClassifier
 
 logger = logging.getLogger(__name__)
 
