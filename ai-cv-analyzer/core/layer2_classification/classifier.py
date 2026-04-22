@@ -62,7 +62,7 @@ class CVDomainClassifier:
         Initializes Semantic Centroids and Zero-Shot Fallback.
         """
         # Layer 3 Embedder for Centroid Calculation
-        from core.layer3_matching.embedder import SemanticEmbedder
+        from ..layer3_matching.embedder import SemanticEmbedder
         self._embedder = SemanticEmbedder()
         
         # Pre-compute centroids (Enriched Industry Knowledge)

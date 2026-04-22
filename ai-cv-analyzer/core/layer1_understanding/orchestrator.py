@@ -42,7 +42,7 @@ except ImportError:
     extract_text_from_image = None  # type: ignore[assignment]
 
 try:
-    from core.layer3_matching.embedder import SemanticEmbedder
+    from ..layer3_matching.embedder import SemanticEmbedder
     EMBEDDER_AVAILABLE = True
 except ImportError:
     SemanticEmbedder = None  # type: ignore[misc,assignment]
@@ -50,7 +50,7 @@ except ImportError:
 
 # Lazy import for Domain Classifier (Layer 2)
 try:
-    from core.layer2_classification.classifier import CVDomainClassifier
+    from ..layer2_classification.classifier import CVDomainClassifier
     from core.layer1_understanding.advanced_ner import _looks_like_contact_line
     CLASSIFIER_AVAILABLE = True
 except ImportError:

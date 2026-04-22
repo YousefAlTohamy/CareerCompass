@@ -478,27 +478,28 @@ async def hybrid_match(body: HybridMatchRequest):
         raise HTTPException(status_code=422, detail="job_description must not be empty.")
 
     try:
-        # Semantic score — deep learning embeddings (60% weight)
+        # Semantic/Adaptive Match score — deep learning embeddings & rules (60% weight)
         semantic_result    = _matcher.calculate_match(
             cv_data  = {"raw_text": body.cv_text,         "skills": body.cv_skills},
             job_data = {"description": body.job_description, "skills": body.job_skills},
         )
-        semantic_score_pct = semantic_result.get("semantic_score", 0.0)
+        # Layer 3 now returns a 3-component adaptive score under 'match_score'
+        semantic_match_pct = semantic_result.get("match_score", 0.0)
         missing_skills     = semantic_result.get("missing_skills", [])
 
-        # TF-IDF score — pure math cosine (40% weight)
+        # TF-IDF score — pure math keyword verification (40% weight)
         tfidf_raw       = match_score(body.cv_text, body.job_description)
         tfidf_score_pct = round(tfidf_raw * 100, 2)
 
         # Weighted final score
-        final_score = round((semantic_score_pct * 0.60) + (tfidf_score_pct * 0.40), 2)
+        final_score = round((semantic_match_pct * 0.60) + (tfidf_score_pct * 0.40), 2)
 
         return {
             "hybrid_match_score": final_score,
-            "semantic_score":     semantic_score_pct,
-            "tfidf_score":        tfidf_score_pct,
+            "semantic_match_pct": semantic_match_pct,
+            "tfidf_score_pct":    tfidf_score_pct,
             "missing_skills":     missing_skills,
-            "formula":            "Final = (Semantic × 60%) + (TF-IDF × 40%)",
+            "formula":            "Final = (Adaptive Layer 3 × 60%) + (TF-IDF × 40%)",
         }
 
     except Exception as exc:
