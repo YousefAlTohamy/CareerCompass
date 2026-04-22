@@ -42,7 +42,7 @@ except ImportError:
     extract_text_from_image = None  # type: ignore[assignment]
 
 try:
-    from core.layer3_matching.embedder import SemanticEmbedder
+    from ..layer3_matching.embedder import SemanticEmbedder
     EMBEDDER_AVAILABLE = True
 except ImportError:
     SemanticEmbedder = None  # type: ignore[misc,assignment]
@@ -50,10 +50,12 @@ except ImportError:
 
 # Lazy import for Domain Classifier (Layer 2)
 try:
-    from core.layer2_classification.classifier import CVDomainClassifier
-    from core.layer1_understanding.advanced_ner import _looks_like_contact_line
+    from ..layer2_classification.classifier import CVDomainClassifier
+    from .advanced_ner import _looks_like_contact_line
     CLASSIFIER_AVAILABLE = True
-except ImportError:
+except ImportError as e:
+    logger = logging.getLogger(__name__)
+    logger.warning("Failed to import Layer 2 classifier: %s", str(e))
     CVDomainClassifier = None  # type: ignore[misc,assignment]
     CLASSIFIER_AVAILABLE = False
 
@@ -121,7 +123,7 @@ class CVOrchestrator:
                 self._classifier = CVDomainClassifier()
                 logger.info("Layer 2 Domain Classifier (Singleton) initialized for orchestrator.")
             except Exception as e:
-                logger.warning("CVDomainClassifier failed to initialize: %s", e)
+                logger.warning("CVDomainClassifier failed to initialize: %s | Details: %s", type(e).__name__, str(e))
                 self._classifier = None
 
     # ------------------------------------------------------------------

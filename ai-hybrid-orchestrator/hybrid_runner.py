@@ -223,12 +223,12 @@ async def process_hybrid_application(
     job_description = job_dict.get("description", "")
     job_skills      = job_dict.get("skills",      [])
 
-    # C1 — Semantic score via deep-learning embedder (60% weight)
+    # C1 — Semantic/Adaptive score via deep-learning embedder (60% weight)
     semantic_result    = _matcher.calculate_match(
         cv_data  = {"raw_text": cv_raw_text,  "skills": cv_skills},
         job_data = {"description": job_description, "skills": job_skills},
     )
-    semantic_score_pct = semantic_result["semantic_score"]
+    semantic_match_pct = semantic_result["match_score"]
     missing_skills     = semantic_result["missing_skills"]
 
     # C2 — Strict math TF-IDF score (40% weight)
@@ -236,11 +236,11 @@ async def process_hybrid_application(
     tfidf_score_pct = round(tfidf_raw * 100, 2)
 
     # C3 — Weighted final score
-    final_score_pct = round((semantic_score_pct * 0.60) + (tfidf_score_pct * 0.40), 2)
+    final_score_pct = round((semantic_match_pct * 0.60) + (tfidf_score_pct * 0.40), 2)
 
     logger.info(
-        "[C] ✓ Semantic=%.1f%%  TF-IDF=%.1f%%  Final=%.1f%%",
-        semantic_score_pct, tfidf_score_pct, final_score_pct,
+        "[C] ✓ Layer 3 Adaptive=%.1f%%  TF-IDF=%.1f%%  Final=%.1f%%",
+        semantic_match_pct, tfidf_score_pct, final_score_pct,
     )
 
     return {
@@ -272,10 +272,10 @@ async def process_hybrid_application(
             }
         },
         "scores": {
-            "semantic_score_pct": semantic_score_pct,
+            "semantic_match_pct": semantic_match_pct,
             "tfidf_score_pct":    tfidf_score_pct,
             "final_score_pct":    final_score_pct,
-            "formula":            "Final = (Semantic × 60%) + (TF-IDF × 40%)",
+            "formula":            "Final = (Adaptive Layer 3 × 60%) + (TF-IDF × 40%)",
             "missing_skills":     missing_skills,
         },
     }
@@ -350,7 +350,7 @@ async def _main() -> None:
     if "scores" in result:
         s = result["scores"]
         print(f"\n{'─' * 64}")
-        print(f"  Semantic  : {s['semantic_score_pct']}%")
+        print(f"  Adaptive Layer 3 : {s['semantic_match_pct']}%")
         print(f"  TF-IDF    : {s['tfidf_score_pct']}%")
         print(f"  ⭐ Final   : {s['final_score_pct']}%  ({s['formula']})")
         if s["missing_skills"]:
