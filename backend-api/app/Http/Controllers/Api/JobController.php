@@ -549,6 +549,9 @@ class JobController extends Controller
                     'jobs_found' => $scrapingJob->jobs_found,
                     'jobs_stored' => $scrapingJob->jobs_stored,
                     'jobs_duplicated' => $scrapingJob->jobs_duplicated,
+                    'discovered_count' => $scrapingJob->discovered_count,
+                    'failed_count' => $scrapingJob->failed_count,
+                    'processing_time_ms' => $scrapingJob->processing_time_ms,
                     'completed_at' => $scrapingJob->completed_at,
                 ];
 

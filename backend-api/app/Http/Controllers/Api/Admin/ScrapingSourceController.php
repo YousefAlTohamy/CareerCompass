@@ -32,7 +32,9 @@ class ScrapingSourceController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'type' => 'required|in:api,html',
+            'type' => 'required|in:api,html,spa',
+            'mode' => 'sometimes|in:static,discovery',
+            'pattern' => 'nullable|string|max:512',
             'endpoint' => 'required|url',
             'method' => 'required|in:GET,POST',
             'headers' => 'nullable|array',
@@ -46,6 +48,8 @@ class ScrapingSourceController extends Controller
         $source = ScrapingSource::create([
             'name' => $validated['name'],
             'type' => $validated['type'],
+            'mode' => $validated['mode'] ?? 'static',
+            'pattern' => $validated['pattern'] ?? null,
             'endpoint' => $validated['endpoint'],
             'method' => $validated['method'],
             'headers' => $validated['headers'] ?? [],
@@ -60,7 +64,9 @@ class ScrapingSourceController extends Controller
     {
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'type' => 'sometimes|in:api,html',
+            'type' => 'sometimes|in:api,html,spa',
+            'mode' => 'sometimes|in:static,discovery',
+            'pattern' => 'nullable|string|max:512',
             'endpoint' => 'sometimes|url',
             'method' => 'sometimes|in:GET,POST',
             'headers' => 'nullable|array',

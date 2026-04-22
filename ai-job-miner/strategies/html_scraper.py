@@ -19,6 +19,7 @@ Extraction pipeline
 
 import logging
 import re
+import json
 
 import aiohttp
 from bs4 import BeautifulSoup
@@ -104,6 +105,10 @@ class HtmlSmartScraper(BaseScraper):
 
                 # ── Step 3: Title (<h1> → <title> fallback) ──────────────────
                 title: str | None = None
+                company: str | None = None
+                location: str | None = None
+                salary_hint: str | None = None
+
                 h1 = soup.find("h1")
                 if h1 and h1.get_text(strip=True):
                     title = h1.get_text(separator=" ", strip=True)
@@ -117,6 +122,18 @@ class HtmlSmartScraper(BaseScraper):
                             "[HtmlSmartScraper] Title fallback from <title>: '%s'", title
                         )
 
+                # ── Step 3.5: Company (best-effort) ──────────────────────────
+                og_site = soup.find("meta", attrs={"property": "og:site_name"})
+                if og_site and og_site.get("content"):
+                    company = og_site.get("content")
+                if not company:
+                    og_title = soup.find("meta", attrs={"property": "og:title"})
+                    if og_title and og_title.get("content"):
+                        # Sometimes "Role at Company"
+                        txt = str(og_title.get("content"))
+                        if " at " in txt.lower():
+                            company = txt.split(" at ", 1)[-1].strip()
+
                 # ── Step 4: DFS Text-Density → Description ────────────────────
                 description = find_highest_density_node(soup)
                 if description:
@@ -129,8 +146,18 @@ class HtmlSmartScraper(BaseScraper):
                         "[HtmlSmartScraper] No high-density node found for: %s", url
                     )
 
+                # ── Step 4.5: Deep heuristic fallback (JSON-LD / meta tags) ───
+                # If primary heuristics are weak, try schema.org JobPosting and OG/meta tags.
+                if (not title) or (not description or len(description) < 120) or (not company):
+                    deep = self._extract_from_jsonld_and_meta(soup)
+                    title = title or deep.get("title")
+                    company = company or deep.get("company")
+                    location = location or deep.get("location")
+                    if (not description) or (len(description) < 120):
+                        description = deep.get("description") or description
+                    salary_hint = salary_hint or deep.get("salary_hint")
+
                 # ── Step 5: Semantic Proximity → Salary Hint ──────────────────
-                salary_hint: str | None = None
                 for keyword in _SALARY_KEYWORDS:
                     salary_hint = extract_semantic_sibling(soup, keyword)
                     if salary_hint:
@@ -142,7 +169,6 @@ class HtmlSmartScraper(BaseScraper):
                     logger.warning("[HtmlSmartScraper] No salary hint found for: %s", url)
 
                 # ── Step 6: Semantic Proximity → Location ─────────────────────
-                location: str | None = None
                 for keyword in _LOCATION_KEYWORDS:
                     candidate = extract_semantic_sibling(soup, keyword)
                     if candidate:
@@ -162,6 +188,7 @@ class HtmlSmartScraper(BaseScraper):
                     "type":        "html",
                     "url":         url,
                     "title":       title,
+                    "company":     company,
                     "location":    location,
                     "description": description,
                     "salary_hint": salary_hint,
@@ -176,9 +203,100 @@ class HtmlSmartScraper(BaseScraper):
                     "type":        "html",
                     "url":         url,
                     "title":       None,
+                    "company":     None,
                     "location":    None,
                     "description": None,
                     "salary_hint": None,
                     "status":      "error",
                     "error":       str(exc),
                 }
+
+    @staticmethod
+    def _extract_from_jsonld_and_meta(soup: BeautifulSoup) -> dict:
+        def meta(prop: str) -> str | None:
+            t = soup.find("meta", attrs={"property": prop})
+            if t and t.get("content"):
+                return str(t.get("content")).strip()
+            return None
+
+        def meta_name(name: str) -> str | None:
+            t = soup.find("meta", attrs={"name": name})
+            if t and t.get("content"):
+                return str(t.get("content")).strip()
+            return None
+
+        out: dict[str, str | None] = {
+            "title": None,
+            "company": None,
+            "location": None,
+            "description": None,
+            "salary_hint": None,
+        }
+
+        # --- JSON-LD JobPosting ---
+        for tag in soup.find_all("script", attrs={"type": "application/ld+json"}):
+            raw = tag.get_text(strip=True)
+            if not raw:
+                continue
+            try:
+                data = json.loads(raw)
+            except Exception:
+                continue
+
+            candidates = data if isinstance(data, list) else [data]
+            for c in candidates:
+                if not isinstance(c, dict):
+                    continue
+                # Handle @graph wrapper
+                if "@graph" in c and isinstance(c["@graph"], list):
+                    candidates.extend([x for x in c["@graph"] if isinstance(x, dict)])
+                    continue
+
+                t = str(c.get("@type") or "")
+                if "JobPosting" not in t:
+                    continue
+
+                out["title"] = out["title"] or (c.get("title") or c.get("name"))
+
+                org = c.get("hiringOrganization")
+                if isinstance(org, dict):
+                    out["company"] = out["company"] or org.get("name")
+
+                loc = c.get("jobLocation")
+                # Can be dict or list of dicts
+                loc0 = None
+                if isinstance(loc, list) and loc:
+                    loc0 = loc[0]
+                elif isinstance(loc, dict):
+                    loc0 = loc
+                if isinstance(loc0, dict):
+                    addr = loc0.get("address")
+                    if isinstance(addr, dict):
+                        city = addr.get("addressLocality")
+                        region = addr.get("addressRegion")
+                        country = addr.get("addressCountry")
+                        parts = [p for p in [city, region, country] if p]
+                        if parts:
+                            out["location"] = out["location"] or ", ".join(map(str, parts))
+
+                desc = c.get("description")
+                if isinstance(desc, str) and desc.strip():
+                    # JSON-LD description is often HTML; strip tags quickly
+                    out["description"] = out["description"] or BeautifulSoup(desc, "html.parser").get_text(" ", strip=True)
+
+                base_salary = c.get("baseSalary")
+                if isinstance(base_salary, dict):
+                    val = base_salary.get("value")
+                    if isinstance(val, dict):
+                        mn = val.get("minValue")
+                        mx = val.get("maxValue")
+                        cur = val.get("currency")
+                        if mn or mx:
+                            out["salary_hint"] = out["salary_hint"] or f"{cur or ''} {mn or ''}-{mx or ''}".strip()
+
+        # --- OpenGraph / meta fallback ---
+        out["title"] = out["title"] or meta("og:title")
+        out["description"] = out["description"] or meta("og:description") or meta_name("description")
+        out["company"] = out["company"] or meta("og:site_name")
+
+        return out

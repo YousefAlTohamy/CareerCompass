@@ -27,7 +27,9 @@ from __future__ import annotations
 import hashlib
 import logging
 import math
+import os
 import zlib
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -205,7 +207,58 @@ class JobDeduplicator:
         bloom_fpr: float = 0.01,
     ) -> None:
         self._bloom: BloomFilter = BloomFilter(bloom_capacity, bloom_fpr)
-        self._seen: set[str] = set()  # exact hash store
+        self._redis = self._init_redis()
+        self._redis_prefix: str = os.getenv(
+            "JOB_DEDUP_REDIS_PREFIX",
+            "career_compass:ai_job_miner:dedup:hash:",
+        )
+        self._ttl_seconds: int = int(os.getenv("JOB_DEDUP_TTL_SECONDS", "5184000"))  # 60 days
+        self._fallback_seen: set[str] = set()
+
+    def _init_redis(self):
+        """
+        Best-effort Redis initialisation.
+
+        If Redis is unavailable, we fall back to in-memory storage to keep the
+        pipeline functional, but deduplication will no longer be persistent.
+        """
+        try:
+            import redis  # type: ignore
+
+            url = os.getenv("REDIS_URL")
+            if url:
+                client = redis.Redis.from_url(
+                    url, 
+                    decode_responses=True,
+                    socket_connect_timeout=2,
+                    socket_timeout=2
+                )
+            else:
+                host = os.getenv("REDIS_HOST", "127.0.0.1")
+                port = int(os.getenv("REDIS_PORT", "6379"))
+                db = int(os.getenv("REDIS_DB", "0"))
+                password = os.getenv("REDIS_PASSWORD") or None
+                client = redis.Redis(
+                    host=host,
+                    port=port,
+                    db=db,
+                    password=password,
+                    decode_responses=True,
+                    socket_connect_timeout=2,
+                    socket_timeout=2,
+                )
+
+            client.ping()
+            return client
+        except Exception as e:
+            logger.warning(
+                "[Deduplicator] Redis unavailable; falling back to in-memory dedupe. error=%s",
+                str(e),
+            )
+            return None
+
+    def _redis_hash_key(self, job_hash: str) -> str:
+        return f"{self._redis_prefix}{job_hash}"
 
     @staticmethod
     def generate_hash(title: str, company: str, location: str) -> str:
@@ -263,8 +316,19 @@ class JobDeduplicator:
             logger.debug("[Deduplicator] Bloom says 'no' for hash %s…", job_hash[:12])
             return False
 
-        # Bloom Filter said "maybe" → check exact set
-        result = job_hash in self._seen
+        # Bloom Filter said "maybe" → check exact store (Redis preferred)
+        result: bool
+        if self._redis is not None:
+            try:
+                result = bool(self._redis.exists(self._redis_hash_key(job_hash)))
+            except Exception as e:
+                logger.warning(
+                    "[Deduplicator] Redis check failed; using in-memory fallback. error=%s",
+                    str(e),
+                )
+                result = job_hash in self._fallback_seen
+        else:
+            result = job_hash in self._fallback_seen
         logger.debug(
             "[Deduplicator] Exact set check for hash %s… → %s",
             job_hash[:12],
@@ -282,10 +346,29 @@ class JobDeduplicator:
             Hash to add to both the Bloom Filter and the exact store.
         """
         self._bloom.add(job_hash)
-        self._seen.add(job_hash)
+        if self._redis is not None:
+            try:
+                # Store as an expiring key so dedupe doesn't grow forever.
+                # NX avoids resetting TTL if it already exists.
+                self._redis.set(
+                    name=self._redis_hash_key(job_hash),
+                    value="1",
+                    ex=self._ttl_seconds,
+                    nx=True,
+                )
+            except Exception as e:
+                logger.warning(
+                    "[Deduplicator] Redis write failed; storing in fallback set. error=%s",
+                    str(e),
+                )
+                self._fallback_seen.add(job_hash)
+        else:
+            self._fallback_seen.add(job_hash)
         logger.debug("[Deduplicator] Marked hash %s… as seen.", job_hash[:12])
 
     @property
     def seen_count(self) -> int:
         """Number of unique jobs processed."""
-        return len(self._seen)
+        # For Redis-backed mode, this is not an accurate global count, but it is
+        # sufficient for local debugging. Prefer querying Redis `SCARD` externally.
+        return len(self._fallback_seen)

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { 
   Users, 
@@ -10,12 +11,16 @@ import {
   AlertCircle,
   Server,
   RefreshCw,
-  LayoutDashboard
+  LayoutDashboard,
+  HeartPulse,
+  Zap,
+  Loader2
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { adminAPI } from '../../api/endpoints';
 
 export default function AdminDashboard() {
+  const { t } = useTranslation();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -36,6 +41,9 @@ export default function AdminDashboard() {
     return links.sort(() => 0.5 - Math.random()).slice(0, 3); // Show 3 links instead of 2 for better layout
   });
 
+  // Batch Progress State
+  const [batchProgress, setBatchProgress] = useState(null);
+
   useEffect(() => {
     fetchDashboardStats();
     
@@ -44,7 +52,15 @@ export default function AdminDashboard() {
     // Set up polling every 30 seconds for health check (background)
     const healthInterval = setInterval(checkSystemHealth, 30000);
     
-    return () => clearInterval(healthInterval);
+    // Initial batch progress check
+    checkBatchProgress();
+    // Poll batch progress every 5 seconds
+    const batchInterval = setInterval(checkBatchProgress, 5000);
+    
+    return () => {
+      clearInterval(healthInterval);
+      clearInterval(batchInterval);
+    };
   }, []);
 
   const fetchDashboardStats = async () => {
@@ -78,6 +94,17 @@ export default function AdminDashboard() {
         status: 'critical',
         services: { 'Database': 'offline', 'Cache & Queue': 'offline', 'AI Services': 'offline' }
       });
+    }
+  };
+
+  const checkBatchProgress = async () => {
+    try {
+      const response = await adminAPI.getBatchProgress();
+      if (response.data && response.data.success) {
+        setBatchProgress(response.data.data);
+      }
+    } catch (err) {
+      // Silently fail — batch progress is non-critical
     }
   };
 
@@ -211,6 +238,119 @@ export default function AdminDashboard() {
           </motion.div>
         ))}
       </div>
+
+      {/* Live Batch Progress Bar */}
+      {batchProgress && batchProgress.active && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-indigo-600 to-fuchsia-600 rounded-2xl p-5 shadow-lg border border-indigo-500/30"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Loader2 size={18} className="text-white animate-spin" />
+              <span className="text-white font-bold text-sm">
+                {t('admin_dashboard.batch_in_progress')}
+              </span>
+            </div>
+            <span className="text-white/80 text-sm font-bold">
+              {batchProgress.progress}% — {t('admin_dashboard.batch_complete', {
+                processed: batchProgress.processed_jobs,
+                total: batchProgress.total_jobs
+              })}
+            </span>
+          </div>
+          <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-white rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: `${batchProgress.progress}%` }}
+              transition={{ duration: 0.8, ease: 'easeOut' }}
+            />
+          </div>
+          {batchProgress.failed_jobs > 0 && (
+            <p className="text-white/70 text-xs mt-2 font-medium">
+              ⚠ {t('admin_dashboard.batch_failed_jobs')}: {batchProgress.failed_jobs}
+            </p>
+          )}
+        </motion.div>
+      )}
+
+      {/* Scraper Overview Card */}
+      {stats?.scraper_overview && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
+              <HeartPulse size={20} className="text-fuchsia-600" />
+              {t('admin_dashboard.scraper_overview')}
+            </h3>
+            <span className="text-[10px] font-black uppercase tracking-wider bg-fuchsia-50 text-fuchsia-700 px-3 py-1.5 rounded-md border border-fuchsia-100">
+              {t('admin_dashboard.system_health')}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+            {/* Jobs 24h */}
+            <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
+              <div className="flex items-center gap-2 mb-2">
+                <Zap size={16} className="text-indigo-600" />
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin_dashboard.jobs_last_24h')}</span>
+              </div>
+              <p className="text-2xl font-black text-slate-900">{stats.scraper_overview.jobs_last_24h?.toLocaleString() || '0'}</p>
+            </div>
+
+            {/* Avg Health */}
+            <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
+              <div className="flex items-center gap-2 mb-2">
+                <HeartPulse size={16} className="text-emerald-600" />
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin_dashboard.avg_health')}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <p className={`text-2xl font-black ${
+                  stats.scraper_overview.avg_health_score > 80 ? 'text-emerald-600' :
+                  stats.scraper_overview.avg_health_score >= 50 ? 'text-amber-600' : 'text-rose-600'
+                }`}>{stats.scraper_overview.avg_health_score}%</p>
+                <div className="flex-1 h-2 rounded-full bg-slate-200 max-w-[80px]">
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ${
+                      stats.scraper_overview.avg_health_score > 80 ? 'bg-emerald-500' :
+                      stats.scraper_overview.avg_health_score >= 50 ? 'bg-amber-500' : 'bg-rose-500'
+                    }`}
+                    style={{ width: `${Math.min(stats.scraper_overview.avg_health_score, 100)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Active Sources */}
+            <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
+              <div className="flex items-center gap-2 mb-2">
+                <Database size={16} className="text-fuchsia-600" />
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin_dashboard.active_sources')}</span>
+              </div>
+              <p className="text-2xl font-black text-slate-900">
+                {stats.scraper_overview.active_sources} <span className="text-sm font-bold text-slate-400">/ {stats.scraper_overview.total_sources}</span>
+              </p>
+            </div>
+
+            {/* Recent Failures */}
+            <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle size={16} className={stats.scraper_overview.recent_failures > 0 ? 'text-rose-600' : 'text-slate-400'} />
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t('admin_dashboard.recent_failures')}</span>
+              </div>
+              <p className={`text-2xl font-black ${stats.scraper_overview.recent_failures > 0 ? 'text-rose-600' : 'text-slate-900'}`}>
+                {stats.scraper_overview.recent_failures}
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Charts & System Status Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

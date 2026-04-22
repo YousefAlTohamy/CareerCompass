@@ -100,6 +100,9 @@ Route::middleware('auth:sanctum')->group(function () {
         // Admin Dashboard Stats & Health
         Route::get('/dashboard/stats', [DashboardController::class, 'getStats']);
         Route::get('/dashboard/health', [DashboardController::class, 'getSystemHealth']);
+        Route::get('/dashboard/batch-progress', [DashboardController::class, 'getBatchProgress']);
+        Route::get('/dashboard/failed-urls/{scrapingJobId}', [DashboardController::class, 'getFailedUrls']);
+        Route::post('/dashboard/retry-failures', [DashboardController::class, 'retryFailedUrls']);
 
         // Admin Jobs Management
         Route::get('/jobs', [AdminJobController::class, 'index']);

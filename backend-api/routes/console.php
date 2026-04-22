@@ -43,6 +43,20 @@ Schedule::command('skills:calculate-importance --all')
         Log::error('Skill importance calculation failed');
     });
 
+// Scraping Source Health Check: Daily at 05:00 AM
+// Deactivates sources that remain unhealthy across a rolling window
+Schedule::command('scraping-sources:health-check --only-active')
+    ->daily()
+    ->at('05:00')
+    ->name('scraping-source-health-check')
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        Log::info('Scraping source health check completed successfully');
+    })
+    ->onFailure(function () {
+        Log::error('Scraping source health check failed');
+    });
+
 // ============================================
 // PRODUCTION DEPLOYMENT NOTES
 // ============================================
