@@ -1,18 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Mail, Lock, ArrowRight, AlertCircle, Compass } from 'lucide-react';
+import { Mail, Lock, ArrowRight, AlertCircle, Compass, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '../context/ThemeContext';
 
 export default function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
-  const { t } = useTranslation();
-  const { theme } = useTheme();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const isRtl = i18n.dir() === 'rtl';
+
+  useEffect(() => {
+    document.dir = isRtl ? 'rtl' : 'ltr';
+  }, [isRtl]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -22,127 +25,130 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
       await login(formData.email, formData.password);
       navigate('/dashboard');
     } catch (err) {
-      console.error('Login error:', err);
-      const errorMessage = 
-        err.response?.data?.message || 
-        err.response?.data?.data?.message ||
-        err.message ||
-        'Login failed. Please check your credentials.';
-      setError(errorMessage);
+      setError(err.response?.data?.message || t('auth.login_failed'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 py-12 px-4 relative overflow-hidden font-sans transition-colors duration-300">
+    <div className="min-h-screen flex text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-950 transition-colors duration-500">
       
-      {/* Decorative Background Elements */}
-      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-fuchsia-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
-      <div className="w-full max-w-[420px] relative z-10 animate-in fade-in zoom-in-95 duration-500">
+      {/* Left Column - Branding (Hidden on mobile) */}
+      <div className={`hidden lg:flex lg:w-1/2 relative overflow-hidden bg-slate-900 items-center justify-center ${isRtl ? 'order-last' : ''}`}>
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/50 via-slate-900 to-emerald-900/50 z-0"></div>
+        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at center, #ffffff 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
         
-        {/* Logo Section */}
-        <div className="text-center mb-8 flex flex-col items-center">
-          <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center mb-4 text-indigo-600 dark:text-indigo-400">
-            <Compass size={36} strokeWidth={2.5} />
+        <div className={`absolute top-10 z-10 flex items-center gap-3 ${isRtl ? 'right-10' : 'left-10'}`}>
+          <Compass className="text-[var(--cc-primary)]" size={32} />
+          <span className="text-xl font-black tracking-tight text-white">CareerCompass</span>
+        </div>
+
+        <div className="relative z-10 p-12 max-w-xl text-start">
+          <div className="space-y-6">
+            <h2 className="text-4xl lg:text-5xl font-black leading-tight text-white">
+              {t('auth.login_welcome_part1', 'Welcome back to your')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--cc-primary)] to-[var(--cc-secondary)]">{t('auth.login_welcome_part2', 'professional journey.')}</span>
+            </h2>
+            <p className="text-slate-400 text-lg leading-relaxed">
+              {t('auth.login_desc')}
+            </p>
           </div>
-          <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight mb-2">{t('login.title')}</h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">{t('login.subtitle')}</p>
-        </div>
-
-        {/* Login Card */}
-        <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl shadow-slate-200/40 dark:shadow-black/20 border border-slate-100 dark:border-slate-700 p-8 sm:p-10">
           
-          {error && (
-            <div className="mb-6 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900 text-rose-600 dark:text-rose-400 px-4 py-3.5 rounded-xl text-sm font-bold flex items-start gap-2.5 animate-in slide-in-from-top-2">
-              <AlertCircle size={18} className="shrink-0 mt-0.5" />
-              <span>{error}</span>
+          <div className="mt-12 flex items-center gap-4 text-slate-500 text-sm font-semibold">
+            <div className={`flex ${isRtl ? 'space-x-reverse -space-x-3' : '-space-x-3'}`}>
+              <div className="w-10 h-10 rounded-full border-2 border-slate-900 bg-indigo-500"></div>
+              <div className="w-10 h-10 rounded-full border-2 border-slate-900 bg-emerald-500"></div>
+              <div className="w-10 h-10 rounded-full border-2 border-slate-900 bg-fuchsia-500 flex items-center justify-center text-white text-xs">+2k</div>
             </div>
-          )}
+            <span>{t('auth.professionals_joined')}</span>
+          </div>
+        </div>
+      </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Right Column - Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative">
+        <div className="absolute inset-0 pointer-events-none opacity-[0.02] dark:opacity-[0.05]" 
+             style={{ backgroundImage: 'radial-gradient(var(--cc-primary) 0.5px, transparent 0.5px)', backgroundSize: '24px 24px' }} />
+        
+        <div className="w-full max-w-md space-y-8 relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+          
+          <div className="text-center lg:text-start space-y-2 mb-10">
+            <div className="lg:hidden w-16 h-16 bg-slate-900 dark:bg-white/5 rounded-2xl mx-auto mb-6 flex items-center justify-center text-[var(--cc-primary)] shadow-xl">
+              <Compass size={32} />
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-black tracking-tight">{t('login.signInBtn')}</h1>
+            <p className="text-slate-500 font-medium">{t('auth.enter_credentials')}</p>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 p-8 sm:p-10 rounded-3xl shadow-2xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-800 relative overflow-hidden">
             
-            {/* Email Input */}
-            <div className="space-y-1.5">
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 pl-1">
-                {t('login.emailLabel')}
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                  <Mail size={18} />
+            {error && (
+                <div className="bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 p-4 rounded-xl text-rose-600 dark:text-rose-400 text-xs font-bold flex gap-3 items-center mb-6">
+                    <AlertCircle size={16} className="shrink-0" /> {error}
                 </div>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-600"
-                  placeholder="you@example.com"
-                />
-              </div>
-            </div>
+            )}
 
-            {/* Password Input */}
-            <div className="space-y-1.5">
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 pl-1">
-                {t('login.passwordLabel')}
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                  <Lock size={18} />
+            <form onSubmit={handleSubmit} className="space-y-5 text-start">
+                <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">{t('hud_labels.email_endpoint')}</label>
+                    <div className="relative">
+                        <Mail className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 text-slate-400`} size={18} />
+                        <input 
+                            type="email" 
+                            name="email" 
+                            value={formData.email} 
+                            onChange={handleChange} 
+                            required
+                            className={`w-full bg-slate-50 dark:bg-slate-800/50 border border-transparent focus:border-[var(--cc-primary)]/50 ${isRtl ? 'pr-12 pl-4' : 'ps-12 pe-4'} py-4 rounded-xl text-slate-900 dark:text-white font-semibold text-sm outline-none transition-all focus:bg-white dark:focus:bg-slate-800 shadow-sm`}
+                            placeholder="mail@example.com"
+                        />
+                    </div>
                 </div>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-600"
-                  placeholder="••••••••"
-                />
-              </div>
-            </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-2 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white font-bold py-3.5 rounded-xl transition-all shadow-md shadow-indigo-200 dark:shadow-none disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>{t('login.signingIn')}</span>
-                </>
-              ) : (
-                <>
-                  <span>{t('login.signInBtn')}</span>
-                  <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                </>
-              )}
-            </button>
-          </form>
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">{t('hud_labels.access_key')}</label>
+                      <Link to="#" className="text-xs font-bold text-[var(--cc-primary)] hover:underline">{t('auth.forgot_password')}</Link>
+                    </div>
+                    <div className="relative">
+                        <Lock className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 text-slate-400`} size={18} />
+                        <input 
+                            type="password" 
+                            name="password" 
+                            value={formData.password} 
+                            onChange={handleChange} 
+                            required
+                            className={`w-full bg-slate-50 dark:bg-slate-800/50 border border-transparent focus:border-[var(--cc-primary)]/50 ${isRtl ? 'pr-12 pl-4' : 'ps-12 pe-4'} py-4 rounded-xl text-slate-900 dark:text-white font-semibold text-sm outline-none transition-all focus:bg-white dark:focus:bg-slate-800 shadow-sm`}
+                            placeholder="••••••••"
+                        />
+                    </div>
+                </div>
+
+                <button 
+                    disabled={loading}
+                    className="w-full py-4 mt-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-2 transition-all"
+                >
+                    {loading ? (t('login.signingIn')) : <>{t('login.signInBtn')} <ArrowRight size={18} className={isRtl ? 'rotate-180' : ''} /></>}
+                </button>
+            </form>
+            
+            <div className="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800">
+              <p className="text-center text-slate-500 font-medium text-sm">
+                  {t('login.noAccount')} <Link to="/register" className="text-[var(--cc-primary)] hover:underline font-bold mx-1">{t('login.createAccount')}</Link>
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-center gap-2 text-slate-400 dark:text-slate-600 mt-8">
+              <ShieldCheck size={14} />
+              <span className="text-[10px] font-black tracking-widest uppercase">{t('auth.secure_connection')}</span>
+          </div>
 
         </div>
-
-        {/* Footer Link */}
-        <div className="mt-8 text-center animate-in fade-in delay-150 duration-500">
-          <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">
-            {t('login.noAccount')}{' '}
-            <Link to="/register" className="text-indigo-600 hover:text-indigo-700 font-bold transition-colors">
-              {t('login.createAccount')}
-            </Link>
-          </p>
-        </div>
-
       </div>
     </div>
   );

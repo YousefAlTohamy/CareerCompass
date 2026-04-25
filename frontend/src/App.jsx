@@ -1,4 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { AuthProvider } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -24,6 +26,12 @@ import GapAnalysis from './pages/user/GapAnalysis';
 import Profile from './pages/user/Profile';
 import MarketIntelligence from './pages/user/MarketIntelligence';
 import Applications from './pages/user/Applications';
+import CVBuilder from './pages/user/CVBuilder';
+import MockInterview from './pages/user/MockInterview';
+import LearningPaths from './pages/user/LearningPaths';
+import CareerPlanner from './pages/user/CareerPlanner';
+import Mentorship from './pages/user/Mentorship';
+import ToolsHub from './pages/user/ToolsHub';
 
 // ── Admin pages ──────────────────────────────────────────────────────────────
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -35,6 +43,8 @@ import AdminSources from './pages/admin/AdminSources';
 import AdminTargets from './pages/admin/AdminTargets';
 
 import './index.css';
+
+import Settings from './pages/user/Settings';
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -89,6 +99,14 @@ function AnimatedRoutes() {
             }
           />
           <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/market"
             element={
               <ProtectedRoute>
@@ -101,6 +119,54 @@ function AnimatedRoutes() {
             element={
               <ProtectedRoute>
                 <Applications />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/cv-builder"
+            element={
+              <ProtectedRoute>
+                <CVBuilder />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mock-interview"
+            element={
+              <ProtectedRoute>
+                <MockInterview />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/learning"
+            element={
+              <ProtectedRoute>
+                <LearningPaths />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/career-planner"
+            element={
+              <ProtectedRoute>
+                <CareerPlanner />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mentorship"
+            element={
+              <ProtectedRoute>
+                <Mentorship />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tools"
+            element={
+              <ProtectedRoute>
+                <ToolsHub />
               </ProtectedRoute>
             }
           />
@@ -178,20 +244,35 @@ function AnimatedRoutes() {
 }
 
 import { ThemeProvider } from './context/ThemeContext';
+import ScrollToTop from './components/ScrollToTop';
+
+function AppLayout() {
+  const { i18n } = useTranslation();
+  const isRtl = i18n.language.startsWith('ar');
+
+  return (
+    <div 
+      dir={isRtl ? 'rtl' : 'ltr'}
+      style={{ direction: isRtl ? 'rtl' : 'ltr' }}
+      className="min-h-screen transition-colors duration-300 flex flex-col"
+    >
+      <Navbar />
+      <div className="flex-grow pt-16">
+        <AnimatedRoutes />
+      </div>
+      <Footer />
+    </div>
+  );
+}
 
 function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
         <Router>
+          <ScrollToTop />
           <AuthProvider>
-            <Navbar />
-            <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300 pt-16 flex flex-col">
-              <div className="flex-grow">
-                <AnimatedRoutes />
-              </div>
-              <Footer />
-            </div>
+            <AppLayout />
           </AuthProvider>
         </Router>
       </ThemeProvider>

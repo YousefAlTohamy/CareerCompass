@@ -2,34 +2,32 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
-  Briefcase, MapPin, Calendar, ChevronRight, Trash2, ExternalLink, Activity,
-  BookmarkPlus, Send, Users, CheckCircle2, XCircle, Target, AlertCircle, Archive
+  Briefcase, MapPin, Calendar, Trash2, Activity,
+  BookmarkPlus, Send, Users, CheckCircle2, XCircle, Target, Globe, Archive,
+  ArrowRight, Sparkles, Filter, ChevronRight, LayoutGrid, List
 } from 'lucide-react';
 import applicationsAPI from '../../api/applications';
 import Swal from 'sweetalert2';
 import { useTranslation } from 'react-i18next';
+import HUDLayout from '../../components/HUDLayout';
 
-// --- STATUS CONFIGURATION (API uses: saved, applied, interviewing, offered, rejected, archived) ---
+// --- STATUS CONFIGURATION ---
 export const getStatusConfig = (t) => ({
-  saved:        { label: t('tracker.status.saved'),        color: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700', icon: BookmarkPlus },
-  applied:      { label: t('tracker.status.applied'),      color: 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800', icon: Send },
-  interviewing: { label: t('tracker.status.interviewing'), color: 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800', icon: Users },
-  offered:      { label: t('tracker.status.offered'),      color: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800', icon: CheckCircle2 },
-  rejected:     { label: t('tracker.status.rejected'),     color: 'bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800', icon: XCircle },
-  archived:     { label: t('tracker.status.archived', 'Archived'), color: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700', icon: Archive },
+  saved:        { label: t('tracker.status.saved'),        color: 'indigo',  icon: BookmarkPlus,  progress: 20 },
+  applied:      { label: t('tracker.status.applied'),      color: 'blue',    icon: Send,          progress: 40 },
+  interviewing: { label: t('tracker.status.interviewing'), color: 'amber',   icon: Users,         progress: 70 },
+  offered:      { label: t('tracker.status.offered'),      color: 'emerald', icon: CheckCircle2,  progress: 100 },
+  rejected:     { label: t('tracker.status.rejected'),     color: 'rose',    icon: XCircle,       progress: 100 },
+  archived:     { label: t('tracker.status.archived', 'Archived'), color: 'slate', icon: Archive, progress: 100 },
 });
 
-// --- RELATIVE DATE HELPER ---
 function getRelativeDate(dateStr, t) {
   if (!dateStr) return '';
   const date = new Date(dateStr);
   const now = new Date();
-  const diffMs = now - date;
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
   if (diffDays === 0) return t('tracker.today', 'Today');
   if (diffDays === 1) return t('tracker.yesterday', 'Yesterday');
-  if (diffDays < 7) return `${diffDays} ${t('tracker.days_ago', 'days ago')}`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)} ${t('tracker.weeks_ago', 'weeks ago')}`;
   return date.toLocaleDateString();
 }
 
@@ -38,327 +36,202 @@ export default function Applications() {
   const statusConfig = getStatusConfig(t);
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
+  const [viewMode, setViewMode] = useState('list'); // 'list' or 'grid'
 
-  useEffect(() => {
-    loadApplications();
-  }, []);
+  useEffect(() => { loadApplications(); }, []);
 
-  /* ─── Data fetching ──────────────────────────────────────────────── */
   const loadApplications = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await applicationsAPI.getApplications();
-      setApplications(response.data?.data ?? []);
-    } catch (err) {
-      console.error('Failed to load applications:', err);
-      setError('Failed to load applications. Please try again.');
-    } finally {
-      setLoading(false);
+    try { 
+      setLoading(true); 
+      const response = await applicationsAPI.getApplications(); 
+      setApplications(response.data?.data ?? []); 
     }
+    catch (err) { console.error(err); } 
+    finally { setLoading(false); }
   };
 
-  /* ─── Status update ──────────────────────────────────────────────── */
   const handleStatusChange = async (id, newStatus) => {
-    setApplications((prev) =>
-      prev.map((app) => (app.id === id ? { ...app, status: newStatus } : app))
-    );
-    try {
-      await applicationsAPI.updateApplicationStatus(id, newStatus);
-      const statusConfig = getStatusConfig(t);
-      const statusLabel = statusConfig[newStatus]?.label || newStatus;
-      Swal.fire({
-        toast: true,
-        position: 'top-end',
-        icon: 'success',
-        title: `${t('tracker.status_updated')} ${statusLabel}`,
-        showConfirmButton: false,
-        timer: 2000,
-        timerProgressBar: true,
-      });
-    } catch (err) {
-      console.error('Failed to update status:', err);
-      loadApplications();
-      setError(t('tracker.error_update'));
-    }
+    setApplications((prev) => prev.map((app) => (app.id === id ? { ...app, status: newStatus } : app)));
+    try { await applicationsAPI.updateApplicationStatus(id, newStatus); }
+    catch (err) { loadApplications(); }
   };
 
-  /* ─── Delete ─────────────────────────────────────────────────────── */
   const handleDelete = async (id) => {
+    const isDark = document.documentElement.classList.contains('dark');
     const result = await Swal.fire({
-      title: t('tracker.delete_confirm'),
-      text: t('tracker.delete_desc', 'Remove this job from your tracker?'),
-      icon: 'warning',
-      showCancelButton: true,
+      title: t('tracker.delete_confirm'), 
+      icon: 'warning', 
+      showCancelButton: true, 
       confirmButtonColor: '#6366f1',
       cancelButtonColor: '#f43f5e',
-      confirmButtonText: t('tracker.delete_yes', 'Yes, remove it!'),
-      cancelButtonText: t('profile.cancel'),
-      background: document.documentElement.classList.contains('dark') ? '#1e293b' : '#ffffff',
-      color: document.documentElement.classList.contains('dark') ? '#f1f5f9' : '#1e293b',
-      borderRadius: '1.25rem',
-      customClass: {
-        title: 'font-black text-slate-800 dark:text-white',
-        htmlContainer: 'font-medium text-slate-600 dark:text-slate-400',
-        confirmButton: 'rounded-xl font-bold px-6 py-3',
-        cancelButton: 'rounded-xl font-bold px-6 py-3',
-      },
+      background: isDark ? '#1e293b' : '#fff',
+      color: isDark ? '#fff' : '#000',
     });
-
-    if (!result.isConfirmed) return;
-
-    setApplications((prev) => prev.filter((app) => app.id !== id));
-    try {
-      await applicationsAPI.deleteApplication(id);
-      Swal.fire({
-        toast: true,
-        position: 'top-end',
-        icon: 'success',
-        title: t('tracker.removed_success'),
-        showConfirmButton: false,
-        timer: 3000,
-        timerProgressBar: true,
-      });
-    } catch (err) {
-      console.error('Failed to delete application:', err);
-      loadApplications();
-      Swal.fire({
-        icon: 'error',
-        title: t('profile.error'),
-        text: t('tracker.error_delete'),
-        confirmButtonColor: '#6363f1',
-      });
+    if (result.isConfirmed) {
+      setApplications((prev) => prev.filter((app) => app.id !== id));
+      try { await applicationsAPI.deleteApplication(id); } catch (err) { loadApplications(); }
     }
   };
 
-  /* ─── Derived state ──────────────────────────────────────────────── */
-  const filteredApps =
-    activeTab === 'all'
-      ? applications
-      : applications.filter((app) => app.status === activeTab);
+  const filteredApps = activeTab === 'all' ? applications : applications.filter((app) => app.status === activeTab);
+  
+  const stats = {
+    total: applications.length,
+    interviews: applications.filter(a => a.status === 'interviewing').length,
+    active: applications.filter(a => !['rejected', 'archived', 'saved'].includes(a.status)).length,
+    success: applications.filter(a => a.status === 'offered').length
+  };
 
-  const interviewCount = applications.filter((a) => a.status === 'interviewing').length;
+  return (
+    <HUDLayout loading={loading} loadingType="standard">
+      <div className="max-w-7xl mx-auto px-4 pt-32 pb-20 space-y-10 relative z-10">
+        
+        {/* --- HERO HEADER SECTION --- */}
+        <div className="relative">
+          <div className="absolute -top-16 -left-16 w-80 h-80 bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none" />
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-10 relative z-10">
+            <div className="space-y-3 text-start">
+              <div className="flex items-center gap-3">
+                <div className="flex -space-x-1.5">
+                  {[1, 2, 3].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_#6366f1]" />)}
+                </div>
+                <span className="micro-typography text-indigo-600 dark:text-indigo-400 font-black tracking-[0.2em] uppercase text-[9px]">Mission Tracker // active_nodes</span>
+              </div>
+              <h1 className="text-4xl md:text-5xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 dark:from-white dark:via-indigo-200 dark:to-white">
+                {t('tracker.title')}
+              </h1>
+              <p className="text-slate-500 dark:text-slate-400 text-base font-medium max-w-lg leading-relaxed">
+                {t('tracker.subtitle')}
+              </p>
+            </div>
 
-  /* ─── SKELETON LOADING STATE ─────────────────────────────────────── */
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-10 px-4 sm:px-6 lg:px-8 font-sans pb-24 transition-colors duration-300">
-        <div className="max-w-5xl mx-auto space-y-6 animate-pulse">
-          <div className="h-32 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700" />
-          <div className="flex gap-2 pb-2">
-            <div className="h-10 w-24 bg-slate-200 dark:bg-slate-800 rounded-xl" />
-            <div className="h-10 w-20 bg-slate-200 dark:bg-slate-800 rounded-xl" />
-            <div className="h-10 w-20 bg-slate-200 dark:bg-slate-800 rounded-xl" />
+            {/* BENTO STATS */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full lg:w-auto">
+              {[
+                { label: t('hud_labels.total_roles'), val: stats.total, color: 'indigo' },
+                { label: t('tracker.status.interviewing'), val: stats.interviews, color: 'amber' },
+                { label: 'Active', val: stats.active, color: 'blue' },
+                { label: 'Offers', val: stats.success, color: 'emerald' }
+              ].map((s, i) => (
+                <div key={i} className="glass-card !rounded-[2rem] p-5 flex flex-col items-center justify-center border-slate-200 dark:border-white/5 bg-white/50 dark:bg-white/5 backdrop-blur-xl min-w-[120px] shadow-lg">
+                  <span className="micro-typography text-slate-400 mb-0.5 text-[7px] font-black">{s.label.toUpperCase()}</span>
+                  <span className={`text-3xl font-black text-${s.color}-600 dark:text-${s.color}-400 tabular-nums`}>{s.val}</span>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-32 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700" />
+        </div>
+
+        {/* --- CONTROLS & TABS --- */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 px-1">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 hide-scrollbar w-full md:w-auto">
+            <button 
+              onClick={() => setActiveTab('all')} 
+              className={`px-5 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === 'all' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 translate-y-[-1px]' : 'glass-card border-slate-200 dark:border-white/5 text-slate-500 dark:text-slate-400 bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10'}`}
+            >
+              {t('tracker.all_roles')}
+            </button>
+            {Object.entries(statusConfig).map(([key, config]) => (
+              <button 
+                key={key} 
+                onClick={() => setActiveTab(key)} 
+                className={`px-5 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${activeTab === key ? 'bg-slate-900 dark:bg-white text-white dark:text-black shadow-lg translate-y-[-1px]' : 'glass-card border-slate-200 dark:border-white/5 text-slate-500 dark:text-slate-400 bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10'}`}
+              >
+                <config.icon size={10} /> {config.label}
+              </button>
             ))}
           </div>
-        </div>
-      </div>
-    );
-  }
 
-  /* ─── RENDER ─────────────────────────────────────────────────────── */
-  return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-10 px-4 sm:px-6 lg:px-8 font-sans pb-24 transition-colors duration-300">
-      <div className="max-w-5xl mx-auto space-y-8">
-        {/* HEADER SECTION */}
-        <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden transition-colors duration-300">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 dark:bg-indigo-900/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
-
-          <div className="relative z-10 w-full">
-            <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3 mb-2">
-              <div className="p-2.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 rounded-xl">
-                <Activity size={24} strokeWidth={2.5} />
-              </div>
-              {t('tracker.title')}
-            </h1>
-            <p className="text-slate-500 dark:text-slate-400 font-medium">{t('tracker.subtitle', 'Manage your saved opportunities and track your interview progress.')}</p>
-          </div>
-
-          {/* QUICK STATS */}
-          <div className="flex gap-4 relative z-10 w-full md:w-auto">
-            <div className="flex-1 md:flex-none bg-slate-50 dark:bg-slate-900/50 px-5 py-3 rounded-2xl border border-slate-100 dark:border-slate-700 text-center">
-              <p className="text-2xl font-black text-slate-800 dark:text-white">{applications.length}</p>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">{t('tracker.total_tracked', 'Total Tracked')}</p>
-            </div>
-            <div className="flex-1 md:flex-none bg-indigo-50 dark:bg-indigo-900/30 px-5 py-3 rounded-2xl border border-indigo-100 dark:border-indigo-800 text-center">
-              <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400">{interviewCount}</p>
-              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400 dark:text-indigo-500">{t('tracker.interviews', 'Interviews')}</p>
-            </div>
+          <div className="flex items-center gap-2 glass-card !rounded-xl p-1 border-slate-200 dark:border-white/5 bg-white/50 dark:bg-white/5 shrink-0">
+             <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}><List size={16} /></button>
+             <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}><LayoutGrid size={16} /></button>
           </div>
         </div>
 
-        {/* Error banner */}
-        {error && (
-          <div className="p-4 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900 rounded-xl flex items-center gap-3 text-rose-600 dark:text-rose-400 font-medium">
-            <AlertCircle size={20} />
-            <span className="flex-1">{error}</span>
-            <button onClick={loadApplications} className="text-xs font-bold underline hover:no-underline">
-              Retry
-            </button>
-          </div>
-        )}
-
-        {/* TABS (FILTERS) */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 hide-scrollbar">
-          <button
-            onClick={() => setActiveTab('all')}
-            className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${
-              activeTab === 'all' ? 'bg-slate-900 dark:bg-indigo-600 text-white shadow-md' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
-            }`}
-          >
-            {t('tracker.all_roles', 'All Roles')}
-          </button>
-          {Object.entries(getStatusConfig(t)).map(([key, config]) => (
-            <button
-              key={key}
-              onClick={() => setActiveTab(activeTab === key ? 'all' : key)}
-              className={`px-5 py-2.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap ${
-                activeTab === key ? 'bg-slate-900 dark:bg-indigo-600 text-white shadow-md' : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
-              }`}
-            >
-              {config.label}
-            </button>
-          ))}
-        </div>
-
-        {/* APPLICATIONS LIST */}
-        <div className="space-y-4">
-          {/* EMPTY STATE */}
-          {filteredApps.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white dark:bg-slate-800 rounded-3xl p-16 text-center border border-slate-200 dark:border-slate-700 border-dashed shadow-sm transition-colors duration-300"
-            >
-              <Briefcase size={48} className="mx-auto text-slate-300 mb-4" />
-              <h3 className="text-xl font-black text-slate-700 dark:text-white mb-2">
-                {activeTab === 'all' ? t('tracker.empty_title', 'Your tracker is empty') : `${t('tracker.no_apps_for')} "${getStatusConfig(t)[activeTab]?.label}"`}
-              </h3>
-              <p className="text-slate-500 dark:text-slate-400 font-medium mb-6">
-                {activeTab === 'all'
-                  ? t('tracker.empty_desc', 'Start browsing jobs and save them to track your progress.')
-                  : t('tracker.filter_empty', 'Try selecting a different filter above.')}
-              </p>
-              {activeTab === 'all' ? (
-                <Link
-                  to="/jobs"
-                  className="inline-flex items-center gap-2 bg-indigo-600 dark:bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors shadow-sm"
-                >
-                  {t('tracker.explore_jobs', 'Explore Jobs')} <ChevronRight size={18} className="rtl-flip" />
-                </Link>
-              ) : (
-                <button
-                  onClick={() => setActiveTab('all')}
-                  className="inline-flex items-center gap-2 bg-indigo-600 dark:bg-indigo-500 text-white font-bold py-3 px-6 rounded-xl hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-colors shadow-sm"
-                >
-                  {t('tracker.show_all', 'Show All')} <ChevronRight size={18} className="rtl-flip" />
-                </button>
-              )}
-            </motion.div>
-          )}
-
-          {/* APPLICATION CARDS */}
+        {/* --- MAIN CONTENT AREA --- */}
+        <div className={viewMode === 'list' ? 'space-y-4' : 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'}>
           <AnimatePresence mode="popLayout">
-            {filteredApps.map((app, index) => {
-              const StatusIcon = statusConfig[app.status]?.icon ?? BookmarkPlus;
-              return (
-                <motion.div
-                  key={app.id}
-                  layout
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="bg-white dark:bg-slate-800 rounded-3xl p-5 md:p-6 shadow-sm border border-slate-200 dark:border-slate-700 hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-500 transition-all group"
-                >
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    {/* Left: Job Info */}
-                    <div className="flex-1">
-                      <div className="flex flex-wrap items-center gap-3 mb-3">
-                        <span
-                          className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border flex items-center gap-1.5 ${
-                            getStatusConfig(t)[app.status]?.color ?? getStatusConfig(t).saved.color
-                          } ${document.documentElement.classList.contains('dark') ? 'brightness-110 contrast-125' : ''}`}
-                        >
-                          <StatusIcon size={12} /> {getStatusConfig(t)[app.status]?.label ?? app.status}
-                        </span>
-                        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-1">
-                          <Calendar size={12} /> {t('tracker.added', 'Added')} {getRelativeDate(app.created_at, t)}
-                        </span>
-                      </div>
-
-                      <h3 className="text-xl font-black text-slate-800 dark:text-white mb-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                        {app.job?.title ?? t('jobs.untitled_job', 'Untitled Role')}
-                      </h3>
-
-                      <div className="flex flex-wrap items-center gap-4 text-sm font-bold text-slate-500 dark:text-slate-400">
-                        <span className="text-slate-700 dark:text-slate-300">{app.job?.company ?? '—'}</span>
-                        {app.job?.location && (
-                          <span className="flex items-center gap-1">
-                            <MapPin size={14} /> {app.job.location}
-                          </span>
-                        )}
-                      </div>
+            {filteredApps.length === 0 ? (
+              <motion.div 
+                key="empty"
+                initial={{ opacity: 0, scale: 0.95 }} 
+                animate={{ opacity: 1, scale: 1 }} 
+                className="col-span-full glass-card p-24 text-center border-dashed border-slate-200 dark:border-white/10 opacity-60 flex flex-col items-center justify-center space-y-6"
+              >
+                <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400"><Briefcase size={32} /></div>
+                <div className="space-y-1">
+                   <h3 className="text-xl font-black uppercase tracking-tight">{t('tracker.no_jobs', 'NO_DATA_NODES')}</h3>
+                   <p className="text-sm font-medium text-slate-400">{t('tracker.no_jobs_subtitle', 'Start by saving interesting opportunities from the hub.')}</p>
+                </div>
+                <Link to="/jobs" className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-indigo-500/20 hover:scale-105 transition-all">{t('tracker.find_jobs')}</Link>
+              </motion.div>
+            ) : filteredApps.map((app, idx) => (
+              <motion.div
+                layout
+                key={app.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ delay: idx * 0.05 }}
+                className={`glass-card border-slate-200 dark:border-white/5 bg-white/60 dark:bg-white/5 backdrop-blur-xl group overflow-hidden ${viewMode === 'list' ? 'flex flex-col md:flex-row md:items-center p-5 gap-6' : 'p-6 flex flex-col space-y-6'}`}
+              >
+                {/* Job Info */}
+                <div className={`flex-1 flex gap-5 items-start text-start ${viewMode === 'grid' ? 'flex-col' : ''}`}>
+                  <div className={`w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white shrink-0 shadow-lg font-black text-xl`}>
+                    {app.job?.company?.charAt(0) || 'C'}
+                  </div>
+                  <div className="space-y-1 overflow-hidden">
+                    <div className="flex items-center gap-2">
+                       <span className="px-2 py-0.5 bg-slate-100 dark:bg-white/10 rounded text-[8px] font-black text-slate-500 uppercase">{app.job?.source || 'PORTAL'}</span>
+                       <span className="text-[8px] font-black text-slate-400">#NODE_{String(app.id).slice(0,6)}</span>
                     </div>
-
-                    {/* Right: Actions & Status Update */}
-                    <div className="flex flex-col sm:flex-row items-center gap-3 md:pl-6 md:border-l border-slate-100 dark:border-slate-700 shrink-0">
-                      {/* Status Updater Dropdown */}
-                      <select
-                        value={app.status}
-                        onChange={(e) => handleStatusChange(app.id, e.target.value)}
-                        className="w-full sm:w-auto bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm font-bold rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer appearance-none"
-                      >
-                        {Object.entries(getStatusConfig(t)).map(([key, config]) => (
-                          <option key={key} value={key}>
-                            {config.label}
-                          </option>
-                        ))}
-                      </select>
-
-                      <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <Link
-                          to={`/gap-analysis/${app.job?.id}`}
-                          className="flex-1 sm:flex-none flex items-center justify-center p-2.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:text-white rounded-xl transition-colors"
-                          title={t('jobs.analyze')}
-                        >
-                          <Target size={18} />
-                        </Link>
-
-                        {app.job?.url && (
-                          <a
-                            href={app.job.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex-1 sm:flex-none flex items-center justify-center p-2.5 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-900 dark:hover:bg-black hover:text-white rounded-xl transition-colors"
-                            title={t('jobs.apply')}
-                          >
-                            <ExternalLink size={18} />
-                          </a>
-                        )}
-
-                        <button
-                          onClick={() => handleDelete(app.id)}
-                          className="flex-1 sm:flex-none flex items-center justify-center p-2.5 bg-rose-50 dark:bg-rose-900/20 text-rose-500 dark:text-rose-400 hover:bg-rose-500 dark:hover:bg-rose-600 hover:text-white rounded-xl transition-colors"
-                          title={t('tracker.delete')}
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
+                    <h3 className="text-lg font-black tracking-tight text-slate-900 dark:text-white uppercase truncate group-hover:text-indigo-600 transition-colors">
+                      {app.job?.title || 'Unknown Role'}
+                    </h3>
+                    <div className="flex items-center gap-4 text-[9px] font-bold text-slate-400 uppercase">
+                      <span className="flex items-center gap-1"><Globe size={10} className="text-indigo-500" /> {app.job?.company}</span>
+                      <span className="flex items-center gap-1"><MapPin size={10} className="text-fuchsia-500" /> {app.job?.location || 'Remote'}</span>
                     </div>
                   </div>
-                </motion.div>
-              );
-            })}
+                </div>
+
+                {/* Status Controls */}
+                <div className={`flex items-center gap-4 ${viewMode === 'grid' ? 'w-full justify-between pt-4 border-t border-slate-100 dark:border-white/5' : 'md:w-auto w-full justify-end'}`}>
+                   <div className="flex flex-col items-end gap-1">
+                      <span className="text-[7px] font-black text-slate-400 uppercase">{t('tracker.last_update')}</span>
+                      <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1"><Calendar size={10} /> {getRelativeDate(app.updated_at, t)}</span>
+                   </div>
+                   
+                   <div className="h-8 w-[1px] bg-slate-100 dark:bg-white/10" />
+
+                   <select 
+                    value={app.status} 
+                    onChange={(e) => handleStatusChange(app.id, e.target.value)}
+                    className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-[9px] font-black uppercase outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all text-${statusConfig[app.status]?.color}-600 dark:text-${statusConfig[app.status]?.color}-400`}
+                   >
+                     {Object.entries(statusConfig).map(([key, config]) => (
+                       <option key={key} value={key} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">{config.label}</option>
+                     ))}
+                   </select>
+
+                   <button 
+                    onClick={() => handleDelete(app.id)}
+                    className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all"
+                   >
+                     <Trash2 size={16} />
+                   </button>
+                </div>
+              </motion.div>
+            ))}
           </AnimatePresence>
         </div>
       </div>
-    </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}} />
+    </HUDLayout>
   );
 }

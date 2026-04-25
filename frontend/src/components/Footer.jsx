@@ -8,78 +8,104 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 pt-16 pb-8 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+    <footer className="relative pt-32 pb-12 overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-500">
+      {/* Background HUD Decor */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05]" 
+           style={{ backgroundImage: 'radial-gradient(var(--cc-primary) 0.5px, transparent 0.5px)', backgroundSize: '24px 24px' }} />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-16 mb-24">
           
-          {/* Brand section */}
-          <div className="col-span-1 md:col-span-1 space-y-6">
-            <Link to="/" className="flex items-center gap-2.5 group w-fit">
-              <div className="bg-indigo-600 text-white p-1.5 rounded-xl shadow-md shadow-indigo-200 group-hover:scale-105 transition-transform">
-                <Compass size={24} strokeWidth={2.5} />
+          <div className="col-span-1 md:col-span-1 space-y-10">
+            <Link to="/" className="flex items-center gap-3 group w-fit">
+              <div className="relative">
+                <div className="absolute inset-0 bg-[var(--cc-primary)] blur-lg opacity-20 group-hover:opacity-40 transition-opacity" />
+                <div className="relative bg-[var(--cc-primary)] text-slate-900 p-2.5 rounded-xl shadow-xl shadow-cyan-500/20 group-hover:scale-110 transition-transform">
+                  <Compass size={22} strokeWidth={2.5} />
+                </div>
               </div>
-              <span className="font-black text-xl tracking-tight text-slate-800 dark:text-white">
-                Career<span className="text-indigo-600">Compass</span>
+              <span className="text-2xl tracking-tighter text-slate-900 dark:text-white font-light">
+                Career<span className="text-[var(--cc-primary)] font-black">Compass</span>
               </span>
             </Link>
-            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium leading-relaxed">
+            
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium leading-relaxed max-w-xs">
               {t('home.footer.brand_desc')}
             </p>
+
             <div className="flex items-center gap-4">
-              <a href="#" className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all border border-slate-200 dark:border-slate-700">
-                <Twitter size={18} />
-              </a>
-              <a href="#" className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all border border-slate-200 dark:border-slate-700">
-                <Linkedin size={18} />
-              </a>
-              <a href="#" className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all border border-slate-200 dark:border-slate-700">
-                <Github size={18} />
-              </a>
+              {[Twitter, Linkedin, Github].map((Icon, i) => (
+                <a 
+                  key={i} 
+                  href="#" 
+                  className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 hover:border-[var(--cc-primary)] hover:bg-cyan-500/10 transition-all text-slate-400 hover:text-[var(--cc-primary)] shadow-sm"
+                >
+                  <Icon size={18} />
+                </a>
+              ))}
             </div>
           </div>
 
-          {/* Platform Links */}
-          <div className="space-y-6">
-            <h4 className="text-slate-800 dark:text-white font-black text-sm uppercase tracking-widest">{t('nav.tracker')}</h4>
-            <ul className="space-y-3">
-              <li><Link to="/jobs" className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-bold transition-colors">{t('nav.jobs')}</Link></li>
-              <li><Link to="/market" className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-bold transition-colors">{t('nav.market')}</Link></li>
-              <li><Link to="/applications" className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-bold transition-colors">{t('nav.tracker')}</Link></li>
+          <div className="space-y-8">
+            <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-[var(--cc-primary)] opacity-80">{t('nav.tracker')}</h4>
+            <ul className="space-y-4">
+              {[ {n: t('nav.jobs'), p: '/jobs'}, {n: t('nav.market'), p: '/market'}, {n: t('nav.tracker'), p: '/applications'} ].map(l => (
+                <li key={l.p}>
+                  <Link to={l.p} className="text-slate-500 dark:text-slate-400 hover:text-[var(--cc-primary)] text-sm font-semibold transition-all">
+                    {l.n}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* Resources Links */}
-          <div className="space-y-6">
-            <h4 className="text-slate-800 dark:text-white font-black text-sm uppercase tracking-widest">{t('home.footer.resources')}</h4>
-            <ul className="space-y-3">
-              <li><Link to="/about" className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-bold transition-colors">{t('home.footer.about')}</Link></li>
-              <li><Link to="/status" className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-bold transition-colors">{t('home.footer.status')}</Link></li>
-              <li><a href="mailto:support@careercompass.ai" className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-bold transition-colors flex items-center gap-2"><Mail size={14} /> {t('home.footer.support')}</a></li>
+          <div className="space-y-8">
+            <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-[var(--cc-primary)] opacity-80">{t('home.footer.resources')}</h4>
+            <ul className="space-y-4">
+              <li><Link to="/about" className="text-slate-500 dark:text-slate-400 hover:text-[var(--cc-primary)] text-sm font-semibold transition-all">{t('home.footer.about')}</Link></li>
+              <li><Link to="/status" className="text-slate-500 dark:text-slate-400 hover:text-[var(--cc-primary)] text-sm font-semibold transition-all">{t('home.footer.status')}</Link></li>
+              <li>
+                <a href="mailto:support@careercompass.ai" className="text-[var(--cc-primary)] text-sm font-black flex items-center gap-2 group">
+                  <Mail size={14} className="group-hover:translate-x-1 transition-transform" /> 
+                  {t('home.footer.support')}
+                </a>
+              </li>
             </ul>
           </div>
 
-          {/* Legal Links */}
-          <div className="space-y-6">
-            <h4 className="text-slate-800 dark:text-white font-black text-sm uppercase tracking-widest">{t('home.footer.legal')}</h4>
-            <ul className="space-y-3">
-              <li><Link to="/privacy" className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-bold transition-colors">{t('home.footer.privacy')}</Link></li>
-              <li><Link to="/terms" className="text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-bold transition-colors">{t('home.footer.terms')}</Link></li>
+          <div className="space-y-8">
+            <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-[var(--cc-primary)] opacity-80">{t('home.footer.legal')}</h4>
+            <ul className="space-y-4">
+              <li><Link to="/privacy" className="text-slate-500 dark:text-slate-400 hover:text-[var(--cc-primary)] text-sm font-semibold transition-all">{t('home.footer.privacy')}</Link></li>
+              <li><Link to="/terms" className="text-slate-500 dark:text-slate-400 hover:text-[var(--cc-primary)] text-sm font-semibold transition-all">{t('home.footer.terms')}</Link></li>
             </ul>
           </div>
 
         </div>
 
-        {/* Bottom Section */}
-        <div className="pt-8 border-t border-slate-100 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-slate-500 dark:text-slate-500 text-xs font-bold leading-relaxed">
-            &copy; {currentYear} Career Compass. {t('home.footer.rights')}
+        {/* HUD Scanner Divider */}
+        <div className="relative h-px w-full bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-800 to-transparent">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--cc-primary)] to-transparent opacity-30 blur-sm" />
+        </div>
+
+        <div className="pt-12 flex flex-col md:flex-row justify-between items-center gap-8">
+          <p className="text-slate-400 text-[10px] uppercase tracking-widest font-black">
+            &copy; {currentYear} <span className="text-[var(--cc-primary)]">Career Compass</span>. 
+            <span className="font-medium ml-2 opacity-50">{t('home.footer.rights')}</span>
           </p>
-          <div className="flex items-center gap-2">
-             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('home.footer.operational')}</span>
+          
+          <div className="flex items-center gap-4 px-5 py-2.5 rounded-full border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 shadow-sm backdrop-blur-md">
+             <div className="relative flex items-center justify-center">
+               <span className="absolute w-3 h-3 rounded-full bg-emerald-500/20 animate-ping"></span>
+               <span className="relative w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]"></span>
+             </div>
+             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+               {t('home.footer.operational')}
+             </span>
           </div>
         </div>
       </div>
     </footer>
   );
 }
+
