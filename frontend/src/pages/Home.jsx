@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import CustomCursor from '../components/CustomCursor';
 import '../styles/compass.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -324,6 +325,7 @@ export default function Home() {
 
   return (
     <div style={{ minHeight: '100vh', fontFamily: "'Inter', sans-serif", position: 'relative', overflow: 'hidden' }}>
+      <CustomCursor />
       <GlowOrbs />
 
       {/* ══════ §2 HERO SECTION ══════════════════════════════════════════════ */}
