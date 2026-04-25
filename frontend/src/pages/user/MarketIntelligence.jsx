@@ -9,6 +9,7 @@ import {
 } from 'recharts';
 import { marketIntelligenceAPI } from '../../api/endpoints';
 import { useTranslation } from 'react-i18next';
+import HUDLayout from '../../components/HUDLayout';
 
 // --- BULLETPROOF HELPERS ---
 export const safeArray = (arr) => Array.isArray(arr) ? arr : [];
@@ -94,30 +95,30 @@ export default function MarketIntelligence() {
   // --- SKELETON LOADING STATE ---
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-8 px-4 sm:px-6 lg:px-8 font-sans pb-24 transition-colors">
-        <div className="max-w-7xl mx-auto space-y-6 animate-pulse">
+      <HUDLayout loading={true} loadingType="standard">
+        <div className="max-w-7xl mx-auto px-4 pt-32 space-y-6 animate-pulse">
           <div className="flex justify-between items-end gap-4">
-            <div className="h-20 w-64 bg-slate-200 rounded-2xl" />
-            <div className="h-10 w-32 bg-slate-200 rounded-xl" />
+            <div className="h-20 w-64 bg-slate-200 dark:bg-white/5 rounded-2xl" />
+            <div className="h-10 w-32 bg-slate-200 dark:bg-white/5 rounded-xl" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-32 bg-white rounded-3xl border border-slate-200" />
+              <div key={i} className="h-32 bg-white dark:bg-white/5 rounded-3xl border border-slate-200 dark:border-white/5" />
             ))}
           </div>
           <div className="grid lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-8 h-[340px] bg-white rounded-3xl border border-slate-200" />
-            <div className="lg:col-span-4 h-[340px] bg-white rounded-3xl border border-slate-200" />
+            <div className="lg:col-span-8 h-[340px] bg-white dark:bg-white/5 rounded-3xl border border-slate-200 dark:border-white/5" />
+            <div className="lg:col-span-4 h-[340px] bg-white dark:bg-white/5 rounded-3xl border border-slate-200 dark:border-white/5" />
           </div>
-          <div className="h-48 bg-slate-200 rounded-3xl" />
+          <div className="h-48 bg-slate-200 dark:bg-white/5 rounded-3xl" />
         </div>
-      </div>
+      </HUDLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8 font-sans pb-24 transition-colors duration-500">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <HUDLayout loading={loading} loadingType="standard">
+      <div className="max-w-7xl mx-auto px-4 pt-32 space-y-8">
         {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
@@ -298,6 +299,6 @@ export default function MarketIntelligence() {
           </div>
         </motion.div>
       </div>
-    </div>
+    </HUDLayout>
   );
 }
