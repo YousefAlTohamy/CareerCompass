@@ -19,6 +19,7 @@ import { useScrapingStatus } from '../../hooks/useScrapingStatus';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import HUDLayout from '../../components/HUDLayout';
+import HUDSkeleton from '../../components/HUDSkeleton';
 
 // --- BULLETPROOF HELPERS ---
 export const getSkillName = (skill) => {
@@ -164,14 +165,29 @@ export default function GapAnalysis() {
 
   useEffect(() => { loadAnalysis(); }, [jobId]);
 
-  if (loading || (status === 'processing' && !analysis)) {
+  if (loading) {
     return (
       <HUDLayout loading={true} loadingType="standard">
-        <div className="max-w-7xl mx-auto pt-32 px-4 space-y-6">
-          <div className="h-10 w-64 bg-slate-200 dark:bg-white/5 animate-pulse rounded-full" />
+        <div className="max-w-7xl mx-auto px-4 pt-32 space-y-10 relative z-10">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-slate-200 dark:border-white/5">
+             <div className="space-y-4">
+                <HUDSkeleton variant="rect" className="h-4 w-32" />
+                <HUDSkeleton variant="rect" className="h-10 w-64" />
+                <HUDSkeleton variant="rect" className="h-4 w-96" />
+             </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+             {[1,2,3,4].map(i => <HUDSkeleton key={i} variant="rect" className="h-32 rounded-3xl" />)}
+          </div>
+
           <div className="grid lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-8 space-y-8"><div className="h-[400px] bg-white dark:bg-white/5 rounded-[2rem] animate-pulse shadow-sm" /></div>
-            <div className="lg:col-span-4 space-y-8"><div className="h-[400px] bg-white dark:bg-white/5 rounded-[2rem] animate-pulse shadow-sm" /></div>
+             <div className="lg:col-span-8 space-y-6">
+                <HUDSkeleton variant="rect" className="h-[500px] rounded-[2rem]" />
+             </div>
+             <div className="lg:col-span-4 space-y-6">
+                <HUDSkeleton variant="rect" className="h-[500px] rounded-[2rem]" />
+             </div>
           </div>
         </div>
       </HUDLayout>

@@ -10,6 +10,7 @@ import {
 import { marketIntelligenceAPI } from '../../api/endpoints';
 import { useTranslation } from 'react-i18next';
 import HUDLayout from '../../components/HUDLayout';
+import HUDSkeleton from '../../components/HUDSkeleton';
 
 // --- BULLETPROOF HELPERS ---
 export const safeArray = (arr) => Array.isArray(arr) ? arr : [];
@@ -96,21 +97,27 @@ export default function MarketIntelligence() {
   if (loading) {
     return (
       <HUDLayout loading={true} loadingType="standard">
-        <div className="max-w-7xl mx-auto px-4 pt-32 space-y-6 animate-pulse">
-          <div className="flex justify-between items-end gap-4">
-            <div className="h-20 w-64 bg-slate-200 dark:bg-white/5 rounded-2xl" />
-            <div className="h-10 w-32 bg-slate-200 dark:bg-white/5 rounded-xl" />
+        <div className="max-w-7xl mx-auto px-4 pt-32 space-y-10 relative z-10">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-slate-200 dark:border-white/5">
+             <div className="space-y-4">
+                <HUDSkeleton variant="rect" className="h-4 w-32" />
+                <HUDSkeleton variant="rect" className="h-10 w-64" />
+                <HUDSkeleton variant="rect" className="h-4 w-96" />
+             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-32 bg-white dark:bg-white/5 rounded-3xl border border-slate-200 dark:border-white/5" />
-            ))}
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+             {[1,2,3,4].map(i => <HUDSkeleton key={i} variant="rect" className="h-32 rounded-3xl" />)}
           </div>
+
           <div className="grid lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-8 h-[340px] bg-white dark:bg-white/5 rounded-3xl border border-slate-200 dark:border-white/5" />
-            <div className="lg:col-span-4 h-[340px] bg-white dark:bg-white/5 rounded-3xl border border-slate-200 dark:border-white/5" />
+             <div className="lg:col-span-8 space-y-6">
+                <HUDSkeleton variant="rect" className="h-[400px] rounded-3xl" />
+             </div>
+             <div className="lg:col-span-4 space-y-6">
+                <HUDSkeleton variant="rect" className="h-[400px] rounded-3xl" />
+             </div>
           </div>
-          <div className="h-48 bg-slate-200 dark:bg-white/5 rounded-3xl" />
         </div>
       </HUDLayout>
     );

@@ -10,6 +10,7 @@ import {
 import { jobsAPI, gapAnalysisAPI } from '../../api/endpoints';
 import applicationsAPI from '../../api/applications';
 import { useTranslation } from 'react-i18next';
+import HUDEmptyState from '../../components/HUDEmptyState';
 import HUDLayout from '../../components/HUDLayout';
 import TypingEffect from '../../components/TypingEffect';
 
@@ -209,10 +210,11 @@ export default function Jobs() {
                <div className="space-y-3">
                   <AnimatePresence mode="popLayout">
                     {jobs.length === 0 ? (
-                      <div className="py-24 text-center glass-card border-dashed border-slate-200 dark:border-white/5 opacity-40">
-                         <Database size={32} className="mx-auto mb-3" />
-                         <p className="text-[10px] font-black uppercase">{t('jobs.no_results_criteria')}</p>
-                      </div>
+                      <HUDEmptyState 
+                        icon={Search}
+                        title={t('jobs.no_results_criteria', 'No Signals Detected')}
+                        description={t('common.no_data_desc')}
+                      />
                     ) : jobs.map((job, idx) => (
                       <motion.div 
                         key={job.id} 
