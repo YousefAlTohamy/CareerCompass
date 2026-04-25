@@ -52,6 +52,7 @@ export default function Navbar() {
         { name: t('nav.jobs'), path: '/jobs', icon: 'ph-briefcase' },
         { name: t('nav.tracker'), path: '/applications', icon: 'ph-compass' },
         { name: t('nav.market'), path: '/market', icon: 'ph-chart-line-up' },
+        { name: t('nav.tools', 'Tools'), path: '/tools', icon: 'ph-lightning' },
       ];
 
   return (

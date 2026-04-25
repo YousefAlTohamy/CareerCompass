@@ -2,7 +2,7 @@ import { Compass } from 'lucide-react';
 import ProcessingAnimation from './ProcessingAnimation';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function HUDLayout({ children, loading = false, loadingType = 'scanning' }) {
+export default function HUDLayout({ children, loading = false, loadingType = 'standard' }) {
   return (
     <div className="relative w-full h-full">
       {/* Dynamic Background Noise */}
@@ -24,11 +24,27 @@ export default function HUDLayout({ children, loading = false, loadingType = 'sc
             initial={{ opacity: 0 }} 
             animate={{ opacity: 1 }} 
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-50/50 dark:bg-slate-950/50 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-white/20 dark:bg-slate-950/20 backdrop-blur-xl"
           >
             <div className="relative">
-               <div className="absolute inset-0 bg-indigo-500 blur-2xl opacity-20 animate-pulse" />
-               <Compass className="text-indigo-600 dark:text-indigo-400 animate-spin-slow relative z-10" size={60} strokeWidth={1} />
+               <div className="absolute inset-0 bg-indigo-500 blur-3xl opacity-20 animate-pulse" />
+               <motion.div
+                 animate={{ 
+                   rotate: [0, 360],
+                   scale: [0.95, 1.05, 0.95]
+                 }}
+                 transition={{ 
+                   rotate: { repeat: Infinity, duration: 10, ease: "linear" },
+                   scale: { repeat: Infinity, duration: 4, ease: "easeInOut" }
+                 }}
+                 className="relative z-10 flex items-center justify-center"
+               >
+                 <Compass className="text-indigo-600 dark:text-indigo-400" size={80} strokeWidth={0.5} />
+                 <div className="absolute w-20 h-20 border border-indigo-500/20 rounded-full animate-ping" />
+               </motion.div>
+               <div className="mt-8 text-center">
+                  <div className="text-[10px] font-black uppercase tracking-[0.5em] text-indigo-500 animate-pulse">Initializing Neural Link</div>
+               </div>
             </div>
           </motion.div>
         )}
@@ -39,14 +55,11 @@ export default function HUDLayout({ children, loading = false, loadingType = 'sc
       </div>
       
       <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes spin-slow {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .animate-spin-slow {
-          animation: spin-slow 8s linear infinite;
-        }
+        .fluid-bg-container { filter: blur(100px); }
+        .fluid-blob { position: absolute; border-radius: 50%; mix-blend-mode: multiply; }
+        .dark .fluid-blob { mix-blend-mode: screen; }
       `}} />
     </div>
   );
 }
+

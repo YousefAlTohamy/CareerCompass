@@ -26,6 +26,12 @@ import GapAnalysis from './pages/user/GapAnalysis';
 import Profile from './pages/user/Profile';
 import MarketIntelligence from './pages/user/MarketIntelligence';
 import Applications from './pages/user/Applications';
+import CVBuilder from './pages/user/CVBuilder';
+import MockInterview from './pages/user/MockInterview';
+import LearningPaths from './pages/user/LearningPaths';
+import CareerPlanner from './pages/user/CareerPlanner';
+import Mentorship from './pages/user/Mentorship';
+import ToolsHub from './pages/user/ToolsHub';
 
 // ── Admin pages ──────────────────────────────────────────────────────────────
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -113,6 +119,54 @@ function AnimatedRoutes() {
             element={
               <ProtectedRoute>
                 <Applications />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/cv-builder"
+            element={
+              <ProtectedRoute>
+                <CVBuilder />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mock-interview"
+            element={
+              <ProtectedRoute>
+                <MockInterview />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/learning"
+            element={
+              <ProtectedRoute>
+                <LearningPaths />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/career-planner"
+            element={
+              <ProtectedRoute>
+                <CareerPlanner />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/mentorship"
+            element={
+              <ProtectedRoute>
+                <Mentorship />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tools"
+            element={
+              <ProtectedRoute>
+                <ToolsHub />
               </ProtectedRoute>
             }
           />
