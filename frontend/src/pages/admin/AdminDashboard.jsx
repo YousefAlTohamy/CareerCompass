@@ -19,7 +19,6 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { adminAPI } from '../../api/endpoints';
 import HUDLayout from '../../components/HUDLayout';
-import { useTranslation } from 'react-i18next';
 
 export default function AdminDashboard() {
   const { t } = useTranslation();
@@ -63,11 +62,11 @@ export default function AdminDashboard() {
       if (response.data && response.data.success) {
         setStats(response.data.data);
       } else {
-        setError('Invalid response from server.');
+        setError(t('admin.system.invalid_response'));
       }
     } catch (err) {
       console.error('Failed to fetch admin stats:', err);
-      setError('Failed to load dashboard statistics.');
+      setError(t('admin.system.failed_stats'));
     } finally {
       setLoading(false);
     }
@@ -83,8 +82,23 @@ export default function AdminDashboard() {
       console.error('Health check failed:', err);
       setHealthData({
         status: 'critical',
-        services: { 'Database': 'offline', 'Cache & Queue': 'offline', 'AI Services': 'offline' }
+        services: { 
+            [t('admin.health.database')]: 'offline', 
+            [t('admin.health.cache')]: 'offline', 
+            [t('admin.health.ai')]: 'offline' 
+        }
       });
+    }
+  };
+
+  const checkBatchProgress = async () => {
+    try {
+      const response = await adminAPI.getAdminBatchProgress();
+      if (response.data && response.data.success) {
+        setBatchProgress(response.data.data);
+      }
+    } catch (err) {
+      console.error('Batch progress check failed:', err);
     }
   };
 
@@ -107,258 +121,196 @@ export default function AdminDashboard() {
       title: t('admin.stats.sources'),
       value: stats?.total_sources?.toLocaleString() || '0',
       icon: 'ph-database',
-      color: 'from-fuchsia-500/20 to-purple-500/20',
-      accent: 'text-fuchsia-400',
+      color: 'from-purple-500/20 to-fuchsia-500/20',
+      accent: 'text-purple-400',
     },
     {
       title: t('admin.stats.targets'),
       value: stats?.total_targets?.toLocaleString() || '0',
       icon: 'ph-target',
-      color: 'from-amber-500/20 to-orange-500/20',
-      accent: 'text-amber-400',
+      color: 'from-orange-500/20 to-amber-500/20',
+      accent: 'text-orange-400',
     },
   ];
 
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-slate-900/90 backdrop-blur-xl p-4 border border-indigo-500/30 shadow-2xl rounded-2xl">
-          <p className="text-slate-400 font-black mb-1 text-[10px] uppercase tracking-widest">{label}</p>
-          <p className="text-white font-black text-xl flex items-center gap-2">
-            <i className="ph-fill ph-briefcase text-indigo-400 text-lg"/> 
-            {payload[0].value}
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
+  const chartData = stats?.jobs_by_month?.map(item => ({
+    name: item.month,
+    count: item.count
+  })) || [];
 
   return (
-    <HUDLayout loading={loading}>
-      <div className="p-6 max-w-7xl mx-auto pb-20 space-y-10 pt-28">
+    <HUDLayout>
+      <div className="p-6 max-w-7xl mx-auto pb-20 space-y-8 pt-28">
         
         {/* Header Section */}
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="flex flex-col md:flex-row md:items-end justify-between gap-6"
-        >
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="h-px w-8 bg-indigo-500" />
-              <span className="text-[11px] font-black uppercase tracking-[0.3em] text-indigo-500">{t('admin.title')}</span>
-            </div>
-            <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-slate-900 dark:text-white">
-              {t('admin.diagnostics')} <span className="text-indigo-600 dark:text-indigo-400">{t('admin.neural_performance')}</span>
+            <h1 className="text-3xl font-black tracking-tight text-white flex items-center gap-3">
+              <LayoutDashboard className="text-[var(--cc-primary)]" />
+              {t('admin.title')}
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-3 text-sm font-medium max-w-lg">
-              {t('dashboard.market')}
+            <p className="text-slate-500 font-mono text-sm mt-1">
+              // UNIT_ID: CC-ADMIN-ALPHA-01 // STATUS: {healthData.status.toUpperCase()}
             </p>
           </div>
-
-          <div className="flex items-center gap-4">
-             <button 
-               onClick={fetchDashboardStats}
-               className="p-3 rounded-2xl bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:text-indigo-500 transition-all active:scale-90"
-             >
-               <i className="ph-bold ph-arrows-clockwise text-xl" />
-             </button>
-          </div>
-        </motion.div>
-
-        {/* Error Alert */}
-        {error && (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center gap-4 text-rose-500"
+          <button 
+            onClick={fetchDashboardStats}
+            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all text-xs font-bold uppercase tracking-widest text-[var(--cc-primary)]"
           >
-            <i className="ph-fill ph-warning-circle text-2xl" />
-            <div className="text-sm font-bold">{error}</div>
-          </motion.div>
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            {t('common.refresh')}
+          </button>
+        </div>
+
+        {error && (
+          <div className="bg-rose-500/10 border border-rose-500/30 p-4 rounded-xl text-rose-400 text-xs font-bold flex gap-3 items-center">
+            <AlertCircle size={16} /> {error}
+          </div>
         )}
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {statCards.map((stat, index) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {statCards.map((card, idx) => (
             <motion.div
-              key={stat.title}
+              key={idx}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="group relative"
+              transition={{ delay: idx * 0.1 }}
+              className={`relative overflow-hidden p-6 rounded-3xl border border-white/5 bg-gradient-to-br ${card.color} group hover:border-[var(--cc-primary)]/30 transition-all`}
             >
-              <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-20 blur-xl group-hover:opacity-40 transition-opacity rounded-3xl`} />
-              <div className="relative bg-white/40 dark:bg-slate-950/40 backdrop-blur-xl border border-white/40 dark:border-white/5 rounded-3xl p-6 shadow-sm overflow-hidden">
-                <div className="flex justify-between items-start mb-4">
-                  <div className={`p-3 rounded-2xl bg-white dark:bg-slate-900 shadow-premium ${stat.accent}`}>
-                    <i className={`ph-thin ${stat.icon} text-3xl`} />
-                  </div>
-                  <div className="flex items-center gap-1.5 px-2 py-1 bg-white/50 dark:bg-white/5 rounded-lg border border-white/20">
-                     <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                     <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Live</span>
-                  </div>
+              <div className="relative z-10">
+                <div className={`p-3 rounded-2xl bg-black/20 w-fit mb-4 ${card.accent}`}>
+                  <i className={`${card.icon} text-2xl`} />
                 </div>
-                <div>
-                  <h3 className="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">{stat.title}</h3>
-                  <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{stat.value}</div>
-                </div>
-                {/* Decorative scanning line */}
-                <div className="absolute bottom-0 left-0 h-[1px] w-full bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-700" />
+                <div className="text-slate-400 text-xs font-black uppercase tracking-widest mb-1">{card.title}</div>
+                <div className="text-3xl font-black text-white tracking-tight">{card.value}</div>
+              </div>
+              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-20 transition-opacity">
+                <i className={`${card.icon} text-8xl -mr-4 -mt-4`} />
               </div>
             </motion.div>
           ))}
         </div>
 
-        {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* Scraping Activity Chart */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="lg:col-span-2 bg-white/40 dark:bg-slate-950/40 backdrop-blur-xl border border-white/40 dark:border-white/5 rounded-3xl p-8 shadow-premium"
-          >
-            <div className="flex items-center justify-between mb-10">
-              <div>
-                <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-3">
-                  <i className="ph-thin ph-chart-bar text-indigo-500 text-2xl" />
-                  {t('admin.inbound_flow')}
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">Daily job scraping activity volume</p>
-              </div>
-              <div className="flex items-center gap-2">
-                 <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">7-Day Matrix</span>
-              </div>
-            </div>
-            
-            <div className="h-[350px] w-full">
-              {stats?.jobs_chart_data && stats.jobs_chart_data.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={stats.jobs_chart_data} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#00D2FF" stopOpacity={0.8} />
-                        <stop offset="100%" stopColor="#9D50BB" stopOpacity={0.4} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                    <XAxis 
-                      dataKey="date" 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{ fill: 'var(--cc-text-tertiary)', fontSize: 10, fontWeight: 900 }}
-                      dy={15}
-                    />
-                    <YAxis 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{ fill: 'var(--cc-text-tertiary)', fontSize: 10, fontWeight: 900 }}
-                    />
-                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-                    <Bar 
-                      dataKey="count" 
-                      fill="url(#barGrad)" 
-                      radius={[12, 12, 4, 4]} 
-                      barSize={40}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center border border-dashed border-white/10 rounded-2xl bg-white/5">
-                  <i className="ph-thin ph-cloud-slash text-5xl text-slate-300 dark:text-slate-700 mb-4" />
-                  <p className="text-slate-400 font-bold text-sm">// NO_DATA_STREAM_DETECTED</p>
+          {/* Main Chart */}
+          <div className="lg:col-span-2 glass-card p-8 border-white/5 rounded-3xl space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                  <TrendingUp size={20} />
                 </div>
-              )}
+                <div>
+                  <h3 className="text-lg font-bold text-white">{t('admin.neural_performance')}</h3>
+                  <p className="text-xs text-slate-500 font-mono">SIGNAL_STRENGTH: OPTIMAL</p>
+                </div>
+              </div>
             </div>
-          </motion.div>
+
+            <div className="h-[300px] w-full mt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                  <XAxis 
+                    dataKey="name" 
+                    stroke="rgba(255,255,255,0.3)" 
+                    fontSize={10} 
+                    tickLine={false} 
+                    axisLine={false}
+                    tick={{ fontFamily: 'var(--cc-mono)' }}
+                  />
+                  <YAxis 
+                    stroke="rgba(255,255,255,0.3)" 
+                    fontSize={10} 
+                    tickLine={false} 
+                    axisLine={false}
+                    tick={{ fontFamily: 'var(--cc-mono)' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
+                    itemStyle={{ color: '#00D2FF' }}
+                    cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                  />
+                  <Bar dataKey="count" fill="url(#barGradient)" radius={[6, 6, 0, 0]} />
+                  <defs>
+                    <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#00D2FF" />
+                      <stop offset="100%" stopColor="#9D50BB" />
+                    </linearGradient>
+                  </defs>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
 
           {/* System Health Sidebar */}
           <div className="space-y-6">
-             <motion.div 
-               initial={{ opacity: 0, x: 20 }}
-               animate={{ opacity: 1, x: 0 }}
-               transition={{ delay: 0.5 }}
-               className="bg-slate-900 rounded-[32px] p-8 border border-white/10 shadow-2xl relative overflow-hidden group"
-             >
-                {/* Background Glow */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/20 blur-[60px] group-hover:bg-emerald-500/40 transition-all duration-700" />
-                
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-8">
-                    <h3 className="text-lg font-black text-white flex items-center gap-3">
-                      <i className="ph-thin ph-shield-check text-emerald-400 text-2xl" />
-                      {t('admin.diagnostics')}
-                    </h3>
-                    <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                      healthData.status === 'operational' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-                      healthData.status === 'checking' ? 'bg-slate-700 text-slate-300 border-slate-600' : 'bg-rose-500/20 text-rose-400 border-rose-500/30'
-                    }`}>
-                      {t(`admin.health.${healthData.status}`)}
+            
+            <div className="glass-card p-6 border-white/5 rounded-3xl space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                  <Activity size={20} />
+                </div>
+                <h3 className="text-lg font-bold text-white">{t('admin.health.status')}</h3>
+              </div>
+
+              <div className="space-y-4">
+                {Object.entries(healthData.services).map(([service, status]) => (
+                  <div key={service} className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/5">
+                    <div className="flex items-center gap-3">
+                      <Server size={14} className="text-slate-500" />
+                      <span className="text-sm font-medium text-slate-300">{service}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${status === 'online' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : status === 'checking' ? 'bg-amber-500 animate-pulse' : 'bg-rose-500'}`} />
+                      <span className={`text-[10px] font-black uppercase tracking-widest ${status === 'online' ? 'text-emerald-400' : status === 'checking' ? 'text-amber-400' : 'text-rose-400'}`}>
+                        {status === 'online' ? t('admin.system.online') : status === 'checking' ? t('admin.system.checking') : t('admin.system.offline')}
+                      </span>
                     </div>
                   </div>
+                ))}
+              </div>
 
-                  <div className="space-y-5">
-                    {Object.entries(healthData.services).map(([serviceName, serviceStatus]) => (
-                      <div key={serviceName} className="bg-white/5 border border-white/5 p-4 rounded-2xl group/item hover:bg-white/10 transition-colors">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-slate-300 group-hover/item:text-white transition-colors">{serviceName}</span>
-                          <div className="flex items-center gap-3">
-                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
-                              {serviceStatus === 'online' ? t('admin.health.operational') : serviceStatus === 'offline' ? t('admin.health.degraded') : t('admin.health.checking')}
-                            </span>
-                            <div className={`w-2 h-2 rounded-full ${
-                              serviceStatus === 'online' ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.6)] animate-pulse' :
-                              serviceStatus === 'checking' ? 'bg-slate-500' : 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.6)]'
-                            }`}></div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+              <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('admin.health.last_checked')}</span>
+                <span className="text-xs font-mono text-slate-400">{new Date().toLocaleTimeString()}</span>
+              </div>
+            </div>
+
+            {/* Ingestion Monitor Card */}
+            <div className="glass-card p-6 border-white/5 rounded-3xl bg-gradient-to-br from-indigo-500/5 to-transparent relative overflow-hidden group">
+               <div className="relative z-10 space-y-4">
+                  <div className="flex items-center justify-between">
+                     <div className="flex items-center gap-2">
+                        <Zap size={16} className="text-amber-400" />
+                        <span className="text-xs font-black uppercase tracking-widest text-slate-400">Signal Ingestion</span>
+                     </div>
+                     {batchProgress?.status === 'running' && <Loader2 size={14} className="text-amber-400 animate-spin" />}
                   </div>
-
-                  <div className="mt-8 pt-6 border-t border-white/5">
-                     <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">LAST_SYNC</div>
-                     <div className="text-xs font-mono text-emerald-400/70">{new Date().toLocaleTimeString()} :: NODE_OS_STABLE</div>
+                  
+                  <div className="space-y-1">
+                     <div className="flex justify-between text-[10px] font-mono mb-1">
+                        <span className="text-slate-500">EPOCH_BATCH_01</span>
+                        <span className="text-[var(--cc-primary)]">{batchProgress?.progress || 0}%</span>
+                     </div>
+                     <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                        <motion.div 
+                           initial={{ width: 0 }}
+                           animate={{ width: `${batchProgress?.progress || 0}%` }}
+                           className="h-full bg-gradient-to-r from-[var(--cc-primary)] to-indigo-500"
+                        />
+                     </div>
                   </div>
-                </div>
-             </motion.div>
+                  
+                  <p className="text-[10px] text-slate-500 font-mono leading-tight">
+                     // THREAD_STATE: {batchProgress?.status?.toUpperCase() || 'STANDBY'} <br/>
+                     // LAST_PULSE: {batchProgress?.last_run || 'N/A'}
+                  </p>
+               </div>
+            </div>
 
-             {/* Quick Actions */}
-             <motion.div 
-               initial={{ opacity: 0, x: 20 }}
-               animate={{ opacity: 1, x: 0 }}
-               transition={{ delay: 0.6 }}
-               className="bg-white/40 dark:bg-slate-950/40 backdrop-blur-xl border border-white/40 dark:border-white/5 rounded-[32px] p-8 shadow-premium"
-             >
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-6">Internal Links</h3>
-                <div className="grid grid-cols-1 gap-3">
-                  {[
-                    { name: 'User Directory', path: '/admin/users', icon: 'ph-users', color: 'text-blue-500' },
-                    { name: 'Job Index', path: '/admin/jobs', icon: 'ph-briefcase', color: 'text-emerald-500' },
-                    { name: 'Data Sources', path: '/admin/sources', icon: 'ph-database', color: 'text-fuchsia-500' },
-                  ].map((link) => (
-                    <a 
-                      key={link.name} 
-                      href={link.path}
-                      className="flex items-center justify-between p-4 rounded-2xl bg-white/50 dark:bg-white/5 border border-slate-100 dark:border-white/5 hover:border-indigo-500/50 hover:bg-white dark:hover:bg-white/10 transition-all group"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className={`p-2 rounded-xl bg-slate-100 dark:bg-slate-900 ${link.color} shadow-sm group-hover:scale-110 transition-transform`}>
-                          <i className={`ph-bold ${link.icon} text-lg`} />
-                        </div>
-                        <span className="font-bold text-slate-700 dark:text-slate-300 text-sm">{link.name}</span>
-                      </div>
-                      <i className="ph-bold ph-caret-right text-slate-300 dark:text-slate-700 group-hover:text-indigo-500 transition-colors" />
-                    </a>
-                  ))}
-                </div>
-             </motion.div>
           </div>
-
         </div>
       </div>
     </HUDLayout>
