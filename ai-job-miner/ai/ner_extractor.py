@@ -45,6 +45,7 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+from ai.canonicalizer import SkillCanonicalizer
 
 # ---------------------------------------------------------------------------
 # Master skill lexicon
@@ -194,6 +195,8 @@ class CustomSkillExtractor:
     def __init__(self, use_spacy: bool = True, spacy_model: str = "en_core_web_sm") -> None:
         self._nlp = _try_load_spacy(spacy_model) if use_spacy else None
         self._use_spacy = self._nlp is not None
+        # Canonicalize common synonyms/variants (standard list from JSON if provided)
+        self._canonicalizer = SkillCanonicalizer(known_skills=None)
 
     def extract_skills(self, text: str) -> list[str]:
         """
@@ -256,5 +259,6 @@ class CustomSkillExtractor:
 
         # Sort by first-appearance position and return canonical names
         skills_sorted = sorted(found.keys(), key=lambda s: found[s])
-        logger.info("[NER] Extracted %d skills: %s", len(skills_sorted), skills_sorted)
-        return skills_sorted
+        canonical = self._canonicalizer.canonicalize_many(skills_sorted)
+        logger.info("[NER] Extracted %d skills (canonical): %s", len(canonical), canonical)
+        return canonical

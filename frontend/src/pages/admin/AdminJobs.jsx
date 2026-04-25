@@ -1,7 +1,24 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { adminAPI } from '../../api/endpoints';
 import HUDLayout from '../../components/HUDLayout';
+import { 
+  Briefcase, 
+  Search, 
+  Trash2, 
+  Eye, 
+  MapPin, 
+  Building2,
+  ChevronLeft,
+  ChevronRight,
+  Link as LinkIcon,
+  Timer,
+  AlertTriangle,
+  Info,
+  X,
+  RefreshCw
+} from 'lucide-react';
 import Swal from 'sweetalert2';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +29,13 @@ const AdminJobs = () => {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // DLQ Modal State
+  const [dlqOpen, setDlqOpen] = useState(false);
+  const [dlqData, setDlqData] = useState(null);
+  const [dlqLoading, setDlqLoading] = useState(false);
+  const [dlqRetrying, setDlqRetrying] = useState(false);
+
+  // Pagination & Search State (URL Synced)
   const [searchParams, setSearchParams] = useSearchParams();
   const initialPage = parseInt(searchParams.get('page')) || 1;
   const initialSearch = searchParams.get('search') || '';
@@ -110,6 +134,14 @@ const AdminJobs = () => {
             <p className="text-slate-500 dark:text-slate-400 mt-3 text-sm font-medium max-w-lg">
               {t('dashboard.market')}
             </p>
+    <>
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      
+      {/* Header Section */}
+      <div>
+        <h1 className="text-3xl font-black text-slate-800 flex items-center gap-3">
+          <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl">
+            <Briefcase className="w-7 h-7" />
           </div>
 
           <div className="relative group w-full md:w-96">
@@ -142,6 +174,40 @@ const AdminJobs = () => {
                   <th className="p-6">{t('jobs.source')}</th>
                   <th className="p-6">{t('admin.skill_chips')}</th>
                   <th className="p-6 text-right">{t('admin.access_protocols')}</th>
+      {/* Table Card */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[900px]">
+            <thead className="bg-slate-50/80 text-slate-500 uppercase text-xs font-bold tracking-wider border-b border-slate-200">
+              <tr>
+                <th className="p-5 w-1/3">Job Details</th>
+                <th className="p-5">Source</th>
+                <th className="p-5">{t('admin_jobs.col_discovered')}</th>
+                <th className="p-5">{t('admin_jobs.col_failed')}</th>
+                <th className="p-5">{t('admin_jobs.col_duration')}</th>
+                <th className="p-5">{t('admin_jobs.col_success_rate')}</th>
+                <th className="p-5 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {loading && jobs.length === 0 ? (
+                 <tr>
+                 <td colSpan="7" className="p-12 text-center">
+                   <div className="flex flex-col items-center justify-center text-slate-400 space-y-3">
+                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                     <p className="font-medium text-sm">Loading jobs...</p>
+                   </div>
+                 </td>
+               </tr>
+              ) : jobs.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="p-12 text-center">
+                    <div className="flex flex-col items-center justify-center text-slate-400 space-y-3">
+                      <Briefcase className="w-12 h-12 text-slate-300 stroke-1" />
+                      <p className="font-medium text-sm text-slate-500">No jobs found in the database.</p>
+                      {activeSearch && <p className="text-xs">Try adjusting your search criteria.</p>}
+                    </div>
+                  </td>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -221,6 +287,111 @@ const AdminJobs = () => {
               </tbody>
             </table>
           </div>
+                      </div>
+                    </td>
+
+                    {/* Source Column */}
+                    <td className="p-5">
+                       <div className="flex items-center gap-2">
+                         <div className="w-6 h-6 rounded bg-indigo-50 flex items-center justify-center text-indigo-500 shrink-0">
+                           <LinkIcon size={12} />
+                         </div>
+                         <span className="text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
+                           {job.source || 'Unknown'}
+                         </span>
+                       </div>
+                    </td>
+
+                    {/* Metrics Columns */}
+                    <td className="p-5">
+                      <span className="text-sm font-bold text-slate-700">
+                        {job.discovered_count ?? 0}
+                      </span>
+                    </td>
+
+                    <td className="p-5">
+                      <div className="flex items-center gap-1">
+                        <span className={`text-sm font-bold ${(job.failed_count ?? 0) > 0 ? 'text-rose-600' : 'text-slate-400'}`}>
+                          {(job.failed_count ?? 0) > 0 && <AlertTriangle size={12} className="inline-block mr-1" />}
+                          {job.failed_count ?? 0}
+                        </span>
+                        {(job.failed_count ?? 0) > 0 && (
+                          <button
+                            onClick={async () => {
+                              setDlqOpen(true);
+                              setDlqLoading(true);
+                              setDlqData(null);
+                              try {
+                                const res = await adminAPI.getFailedUrls(job.id);
+                                if (res.data && res.data.success) {
+                                  setDlqData(res.data.data);
+                                }
+                              } catch (err) {
+                                console.error('Failed to fetch DLQ:', err);
+                              } finally {
+                                setDlqLoading(false);
+                              }
+                            }}
+                            className="p-1 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                            title={t('admin_jobs.view_failures')}
+                          >
+                            <Info size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+
+                    <td className="p-5">
+                      <span className="text-sm font-medium text-slate-600 flex items-center gap-1">
+                        <Timer size={12} className="text-slate-400" />
+                        {job.processing_time_ms ? `${(job.processing_time_ms / 1000).toFixed(1)}s` : '—'}
+                      </span>
+                    </td>
+
+                    <td className="p-5">
+                      {(() => {
+                        const discovered = job.discovered_count ?? 0;
+                        const failed = job.failed_count ?? 0;
+                        const total = discovered + failed;
+                        if (total === 0) return <span className="text-xs text-slate-400">—</span>;
+                        const rate = Math.round((discovered / total) * 100);
+                        const color = rate > 80 ? 'bg-emerald-100 text-emerald-700' : rate >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700';
+                        return (
+                          <span className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-black ${color}`}>
+                            {rate}%
+                          </span>
+                        );
+                      })()}
+                    </td>
+
+                    {/* Status Column Removed */}
+
+                    {/* Actions Column */}
+                    <td className="p-5 text-right">
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => navigate(`/admin/jobs/${job.id}`)}
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(job.id)}
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                          title="Delete Job"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                    
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
           {/* Pagination */}
           <div className="p-6 border-t border-white/5 flex items-center justify-between bg-slate-100/30 dark:bg-white/5 backdrop-blur-xl">
@@ -247,6 +418,112 @@ const AdminJobs = () => {
         </motion.div>
       </div>
     </HUDLayout>
+    </div>
+
+    {/* DLQ Modal */}
+    {dlqOpen && (
+      <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden border border-slate-200 flex flex-col">
+          {/* Header */}
+          <div className="p-6 border-b border-slate-100 flex justify-between items-center shrink-0">
+            <h2 className="text-lg font-bold text-slate-800">
+              {t('admin_jobs.dlq_title')}
+            </h2>
+            <button
+              onClick={() => setDlqOpen(false)}
+              className="text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 p-2 rounded-xl transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {dlqLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 space-y-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+              </div>
+            ) : dlqData && dlqData.failed_urls && dlqData.failed_urls.length > 0 ? (
+              <div className="space-y-3">
+                {dlqData.failed_urls.map((item) => (
+                  <div key={item.id} className={`p-4 rounded-xl border ${item.retried ? 'bg-slate-50 border-slate-200 opacity-60' : 'bg-rose-50/50 border-rose-100'}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-mono text-slate-700 truncate" title={item.url}>
+                          {item.url}
+                        </p>
+                        <div className="flex items-center gap-3 mt-2">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600 bg-rose-100 px-2 py-0.5 rounded-md">
+                            <AlertTriangle size={10} />
+                            {item.reason}
+                          </span>
+                          {item.source_name && (
+                            <span className="text-[11px] font-medium text-slate-500">
+                              {t('admin_jobs.dlq_source')}: {item.source_name}
+                            </span>
+                          )}
+                          {item.retried && (
+                            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
+                              {t('admin_jobs.dlq_retried')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-slate-400 space-y-2">
+                <AlertTriangle size={32} className="text-slate-300" />
+                <p className="text-sm font-medium">{t('admin_jobs.dlq_no_failures')}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="p-5 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
+            <button
+              onClick={() => setDlqOpen(false)}
+              className="px-5 py-2.5 text-slate-600 hover:bg-slate-200 rounded-xl font-bold transition-colors text-sm"
+            >
+              {t('admin_jobs.dlq_close')}
+            </button>
+            {dlqData && dlqData.failed_urls && dlqData.failed_urls.filter(u => !u.retried).length > 0 && (
+              <button
+                disabled={dlqRetrying}
+                onClick={async () => {
+                  setDlqRetrying(true);
+                  try {
+                    const ids = dlqData.failed_urls.filter(u => !u.retried).map(u => u.id);
+                    await adminAPI.retryFailedUrls(ids);
+                    // Update local state
+                    setDlqData(prev => ({
+                      ...prev,
+                      failed_urls: prev.failed_urls.map(u => ({ ...u, retried: true }))
+                    }));
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: t('admin_jobs.dlq_retry_success'), showConfirmButton: false, timer: 2000 });
+                  } catch (err) {
+                    Swal.fire({ icon: 'error', title: t('admin_jobs.dlq_retry_error'), confirmButtonColor: '#6366f1' });
+                  } finally {
+                    setDlqRetrying(false);
+                  }
+                }}
+                className={`px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-all ${
+                  dlqRetrying
+                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'
+                }`}
+              >
+                <RefreshCw size={14} className={dlqRetrying ? 'animate-spin' : ''} />
+                {t('admin_jobs.dlq_retry_all')}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+  </>
   );
 };
 

@@ -6,11 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Job;
 use App\Models\ScrapingSource;
+use App\Models\ScrapingJob;
 use App\Models\TargetJobRole;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Bus;
 
 class DashboardController extends Controller
 {
@@ -37,6 +40,17 @@ class DashboardController extends Controller
                 ->orderBy('date', 'asc')
                 ->get();
 
+            // Scraper overview metrics
+            $activeSources = ScrapingSource::active()->get();
+            $avgHealth = $activeSources->count() > 0
+                ? round($activeSources->avg(fn ($s) => $s->calculateHealthScore()), 1)
+                : 100.0;
+
+            $jobs24h = Job::where('created_at', '>=', now()->subHours(24))->count();
+
+            $recentFailures = ScrapingJob::where('created_at', '>=', now()->subHours(24))
+                ->sum('failed_count');
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -44,7 +58,14 @@ class DashboardController extends Controller
                     'total_jobs' => $totalJobs,
                     'total_sources' => $totalSources,
                     'total_targets' => $totalTargets,
-                    'jobs_chart_data' => $jobsChartData
+                    'jobs_chart_data' => $jobsChartData,
+                    'scraper_overview' => [
+                        'jobs_last_24h'    => $jobs24h,
+                        'avg_health_score' => $avgHealth,
+                        'active_sources'   => $activeSources->count(),
+                        'total_sources'    => $totalSources,
+                        'recent_failures'  => (int) $recentFailures,
+                    ],
                 ]
             ]);
         } catch (\Exception $e) {
@@ -108,5 +129,103 @@ class DashboardController extends Controller
                 'services' => $services
             ]
         ]);
+    }
+
+    /**
+     * Get the current batch progress for a running market scraping batch.
+     */
+    public function getBatchProgress(): JsonResponse
+    {
+        try {
+            $batch = DB::table('job_batches')
+                ->where('name', 'like', 'market-scraping:%')
+                ->orderByDesc('created_at')
+                ->first();
+
+            if (!$batch) {
+                return response()->json([
+                    'success' => true,
+                    'data'    => ['active' => false],
+                ]);
+            }
+
+            $totalJobs     = (int) $batch->total_jobs;
+            $pendingJobs   = (int) $batch->pending_jobs;
+            $failedJobs    = (int) $batch->failed_jobs;
+            $processedJobs = $totalJobs - $pendingJobs;
+            $progress      = $totalJobs > 0 ? round(($processedJobs / $totalJobs) * 100) : 0;
+            $finished      = !is_null($batch->finished_at);
+
+            return response()->json([
+                'success' => true,
+                'data'    => [
+                    'active'         => !$finished,
+                    'batch_id'       => $batch->id,
+                    'name'           => $batch->name,
+                    'progress'       => $progress,
+                    'total_jobs'     => $totalJobs,
+                    'processed_jobs' => $processedJobs,
+                    'failed_jobs'    => $failedJobs,
+                    'finished'       => $finished,
+                    'cancelled'      => !is_null($batch->cancelled_at),
+                    'created_at'     => $batch->created_at,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch batch progress',
+            ], 500);
+        }
+    }
+
+    /**
+     * Get failed URLs (DLQ) for a specific scraping job.
+     */
+    public function getFailedUrls(int $scrapingJobId): JsonResponse
+    {
+        try {
+            $job = \App\Models\ScrapingJob::findOrFail($scrapingJobId);
+
+            $failedUrls = $job->failedUrls()
+                ->orderByDesc('created_at')
+                ->get(['id', 'url', 'reason', 'source_name', 'retried', 'created_at']);
+
+            return response()->json([
+                'success' => true,
+                'data'    => [
+                    'job_title'   => $job->job_title,
+                    'failed_urls' => $failedUrls,
+                ],
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['success' => false, 'message' => 'Scraping job not found'], 404);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to fetch DLQ data'], 500);
+        }
+    }
+
+    /**
+     * Mark failed URLs as retried and dispatch a re-scrape for them.
+     */
+    public function retryFailedUrls(Request $request): JsonResponse
+    {
+        try {
+            $ids = $request->input('ids', []);
+
+            if (empty($ids)) {
+                return response()->json(['success' => false, 'message' => 'No failure IDs provided'], 422);
+            }
+
+            \App\Models\ScrapingFailedUrl::whereIn('id', $ids)->update(['retried' => true]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Failures marked as retried',
+                'count'   => count($ids),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Retry action failed'], 500);
+        }
     }
 }

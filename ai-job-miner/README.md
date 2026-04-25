@@ -82,11 +82,16 @@ classDiagram
         -DOM_DFS_Traversal()
         -Text_Density_Heuristic()
     }
+    class PlaywrightScraper {
+        +scrape(url)
+        -Render_JS_Headless()
+    }
     class JsonApiScraper {
         +scrape(url)
     }
     ScraperFactory ..> BaseScraper : Instantiates
     BaseScraper <|-- HtmlSmartScraper : Inherits
+    BaseScraper <|-- PlaywrightScraper : Inherits
     BaseScraper <|-- JsonApiScraper : Inherits
 ```
 
@@ -99,11 +104,14 @@ classDiagram
 ```mermaid
 graph TD
     A[Laravel / Trigger] -->|Queue| B(ScrapingEngine)
-    B --> C{ScraperFactory}
+    B --> Z[DiscoveryEngine]
+    Z -->|Deduplicated Links| C{ScraperFactory}
     C -->|HTML Site| D[HtmlSmartScraper]
+    C -->|SPA / JS-Heavy| D2[PlaywrightScraper]
     C -->|API Source| E[JsonApiScraper]
 
-    D --> F[DOM DFS & Heuristics]
+    D2 -->|Rendered DOM| F[DOM DFS & Heuristics]
+    D --> F
     E --> G[JSON Parser]
 
     F --> H[Data Pipeline]
@@ -239,6 +247,7 @@ The **Factory Pattern** decouples the _creation_ of objects from their _use_. Ca
 # factories/scraper_factory.py
 _SCRAPER_REGISTRY = {
     "html": HtmlSmartScraper,
+    "spa":  PlaywrightScraper,
     "api":  JsonApiScraper,
     # "xml": XmlScraper,  ← add new types here only
 }
@@ -294,12 +303,30 @@ asyncio.run(main())
 
 ---
 
-## Phase 2: Smart DOM Analysis
+## Phase 2: Smart Discovery & DOM Analysis
 
-**Files:** `core/heuristics.py` · `strategies/html_scraper.py` (updated)
+**Files:** `core/discovery.py` · `core/heuristics.py` · `strategies/html_scraper.py` · `strategies/playwright_scraper.py`
 
-Phase 2 eliminates the need for brittle, site-specific CSS selectors or XPath expressions.
-Instead, we use four complementary **CS algorithms** to extract structured data from _any_ HTML page.
+Phase 2 acts as the engine's eyes, automatically discovering job links and eliminating the need for brittle, site-specific CSS selectors. Instead, we use a headless browser for rendering and complementary **CS algorithms** to extract structured data from _any_ HTML page.
+
+---
+
+### Automated Link Discovery Engine (`core/discovery.py`)
+
+> **CS Concept:** Constrained Web Crawling with Heuristic Filtering.
+
+Before scraping individual jobs, the `DiscoveryEngine` processes a root URL (e.g., a search page or company careers page) to find candidate job postings.
+
+- **Constraint Matrix**: Rejects links that navigate off-domain (preventing infinite crawls), limits max discoveries, and filters out invalid schemes.
+- **Heuristics vs Regex**: If no strict Regex is provided, it relies on heuristic path segment matching (e.g., links containing `/job/` or `/jobs/`, while ignoring `/careers/` lists).
+- **Deduplication Bridge**: Hashes discovered URLs via the `JobDeduplicator` to ensure the same job link is never queued twice across scraping runs.
+
+---
+
+### Headless SPA Rendering (`PlaywrightScraper`)
+
+For Single Page Applications (SPAs) built with React, Vue, or Angular, traditional HTTP GET requests return empty `<div>` shells. 
+The `"spa"` strategy launches a headless Chromium instance via `Playwright`, waits for the `networkidle` state, and returns the fully rendered DOM. This output is then seamlessly passed into the standard `HtmlSmartScraper` heuristics.
 
 ---
 

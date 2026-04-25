@@ -18,6 +18,7 @@ import logging
 from core.base_scraper import BaseScraper
 from strategies.api_scraper import JsonApiScraper
 from strategies.html_scraper import HtmlSmartScraper
+from strategies.playwright_scraper import PlaywrightScraper
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ logger = logging.getLogger(__name__)
 _SCRAPER_REGISTRY: dict[str, type[BaseScraper]] = {
     "html": HtmlSmartScraper,
     "api": JsonApiScraper,
+    "spa": PlaywrightScraper,
 }
 
 

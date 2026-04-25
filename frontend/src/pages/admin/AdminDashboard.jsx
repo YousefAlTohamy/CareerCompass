@@ -1,5 +1,21 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
+import { 
+  Users, 
+  Briefcase, 
+  Database, 
+  Target, 
+  TrendingUp, 
+  Activity, 
+  AlertCircle,
+  Server,
+  RefreshCw,
+  LayoutDashboard,
+  HeartPulse,
+  Zap,
+  Loader2
+} from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { adminAPI } from '../../api/endpoints';
 import HUDLayout from '../../components/HUDLayout';
@@ -20,11 +36,23 @@ export default function AdminDashboard() {
     }
   });
 
+  // Batch Progress State
+  const [batchProgress, setBatchProgress] = useState(null);
+
   useEffect(() => {
     fetchDashboardStats();
     checkSystemHealth();
     const healthInterval = setInterval(checkSystemHealth, 30000);
-    return () => clearInterval(healthInterval);
+    
+    // Initial batch progress check
+    checkBatchProgress();
+    // Poll batch progress every 5 seconds
+    const batchInterval = setInterval(checkBatchProgress, 5000);
+    
+    return () => {
+      clearInterval(healthInterval);
+      clearInterval(batchInterval);
+    };
   }, []);
 
   const fetchDashboardStats = async () => {

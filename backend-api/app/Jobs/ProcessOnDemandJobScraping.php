@@ -46,6 +46,7 @@ class ProcessOnDemandJobScraping implements ShouldQueue
      */
     public function handle(): void
     {
+        $startedAt = microtime(true);
         $scrapingJob = ScrapingJob::find($this->scrapingJobId);
 
         if (!$scrapingJob) {
@@ -65,28 +66,46 @@ class ProcessOnDemandJobScraping implements ShouldQueue
             $result = $this->scrapeJobTitleFromAI($this->jobTitle, $this->maxResults, $sources);
 
             if (!$result || empty($result['jobs'])) {
-                $scrapingJob->markAsFailed('No jobs found or AI Engine error');
+                $scrapingJob->markAsFailed(
+                    errorMessage: 'No jobs found or AI Engine error',
+                    discoveredCount: 0,
+                    failedCount: 0,
+                    processingTimeMs: (int) round((microtime(true) - $startedAt) * 1000),
+                );
                 return;
             }
 
             // Store jobs
+            $discovered = count($result['jobs']);
             $stored = 0;
             $duplicates = 0;
+            $failed = 0;
 
             foreach ($result['jobs'] as $jobData) {
-                $storeResult = $this->storeJob($jobData);
-                if ($storeResult['stored']) {
-                    $stored++;
-                } else {
-                    $duplicates++;
+                try {
+                    $storeResult = $this->storeJob($jobData);
+                    if ($storeResult['stored']) {
+                        $stored++;
+                    } else {
+                        $duplicates++;
+                    }
+                } catch (\Throwable $e) {
+                    $failed++;
+                    Log::warning('Failed to store scraped job (on-demand)', [
+                        'job_title' => $this->jobTitle,
+                        'error' => $e->getMessage(),
+                    ]);
                 }
             }
 
             // Mark as completed
             $scrapingJob->markAsCompleted(
-                count($result['jobs']),
-                $stored,
-                $duplicates
+                found: $discovered,
+                stored: $stored,
+                duplicated: $duplicates,
+                discoveredCount: $discovered,
+                failedCount: $failed,
+                processingTimeMs: (int) round((microtime(true) - $startedAt) * 1000),
             );
 
             // Calculate skill importance
@@ -106,7 +125,12 @@ class ProcessOnDemandJobScraping implements ShouldQueue
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            $scrapingJob->markAsFailed($e->getMessage());
+            $scrapingJob->markAsFailed(
+                errorMessage: $e->getMessage(),
+                discoveredCount: 0,
+                failedCount: 0,
+                processingTimeMs: (int) round((microtime(true) - $startedAt) * 1000),
+            );
         }
     }
 

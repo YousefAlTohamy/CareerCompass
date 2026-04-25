@@ -65,6 +65,13 @@ _LOCATION_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Generic Website / Portfolio (excluding LinkedIn/GitHub)
+# Looks for common TLDs but filters out major social platforms
+_WEBSITE_RE = re.compile(
+    r"(?:https?://)?(?:www\.)?([a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}(?:/\S*)?)",
+    re.IGNORECASE,
+)
+
 # Noise filter for phone: pure digits or very short strings are false positives
 _MIN_PHONE_LEN = 7
 
@@ -131,12 +138,27 @@ def extract_contacts(text: str) -> dict:
     location_match = _LOCATION_RE.search(text)
     location = _clean_location(location_match.group(1)) if location_match else None
 
+    # ── Portfolio / Website ──────────────────────────────────────────────────
+    website_matches = _WEBSITE_RE.findall(text)
+    portfolio_url = None
+    for ws in website_matches:
+        ws_low = ws.lower()
+        # Filter out email domains, LinkedIn, GitHub, and common noise
+        if email and ws_low in email.lower():
+            continue
+        if any(x in ws_low for x in ("linkedin.com", "github.com", "google.com", "facebook.com", "twitter.com", "instagram.com", "b.sc", "m.sc", "ph.d")):
+            continue
+        # If it looks like a real domain
+        portfolio_url = ws if ws.startswith("http") else "https://" + ws
+        break
+
     return {
-        "email":        email,
-        "phone":        phone,
-        "linkedin_url": linkedin_url,
-        "github_url":   github_url,
-        "location":     location,
+        "email":         email,
+        "phone":         phone,
+        "linkedin_url":  linkedin_url,
+        "github_url":    github_url,
+        "location":      location,
+        "portfolio_url": portfolio_url,
     }
 
 

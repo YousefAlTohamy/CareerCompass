@@ -3,6 +3,35 @@
 > **Layer 3 Matching — Facade Pattern**  
 > A single entry-point combining `ai-job-miner` + `ai-cv-analyzer` into one unified hybrid pipeline, exposed as a **FastAPI microservice** for Laravel integration.
 
+```mermaid
+sequenceDiagram
+    participant Laravel
+    participant Gateway as AI Hybrid Orchestrator
+    participant CVAnalyzer as ai-cv-analyzer
+    participant JobMiner as ai-job-miner
+
+    %% Use Case 1: Job Match Gap Analysis
+    rect rgb(240, 248, 255)
+        note right of Laravel: Use Case: Job Match (Zero Re-parsing)
+        Laravel->>Gateway: POST /api/hybrid-match (DB CV Text + Job Description)
+        Gateway->>CVAnalyzer: calculate_match() [Semantic + Domain Scoring]
+        CVAnalyzer-->>Gateway: Semantic Score
+        Gateway->>JobMiner: match_score() [TF-IDF Keyword Scoring]
+        JobMiner-->>Gateway: TF-IDF Score
+        Gateway-->>Laravel: Weighted Final Hybrid Score
+    end
+
+    %% Use Case 2: Market Scraping
+    rect rgb(245, 255, 250)
+        note right of Laravel: Use Case: Background Market Scraping
+        Laravel->>Gateway: POST /scrape-jobs (Sources + Query)
+        Gateway->>Gateway: Inject Adzuna specific queries & credentials
+        Gateway->>JobMiner: Parallel stream_jobs(URL List)
+        JobMiner-->>Gateway: Unified list of Scraped Jobs
+        Gateway-->>Laravel: JSON Response {"jobs": [...]}
+    end
+```
+
 ---
 
 ## Overview
@@ -140,11 +169,32 @@ Scrape job listing URL using `ScrapingEngine` → up to 5 parsed job dicts.
 
 ### `POST /test-source`
 
-Test a single configured job scraping source and inject search queries. Automatically converts `adzuna.com` queries and overrides parameters based on the `.env` settings.
+Test a single configured job scraping source and inject search queries. 
+
+**Adzuna Query Injection**: This endpoint (and `/scrape-jobs`) contains specialized logic to intercept requests destined for `adzuna.com`. It dynamically maps Laravel's generic search parameters (`q`, `search`) to Adzuna's API spec (`what`) and overrides pagination (`limit` -> `results_per_page`). It also automatically injects `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` from the `.env` file, forcing the scraper into `api` mode and bypassing HTML scraping bottlenecks.
 
 ### `POST /scrape-jobs`
 
 Background market scraping endpoint. Batch streams multiple job sources concurrently and unifies the return structure without internal HTML scraping bottlenecks. Used by Laravel's `ProcessMarketScraping` job.
+
+**Request Schema (`ScrapeJobsRequest`):**
+```json
+{
+  "query": "Software Engineer",
+  "max_results": 30,
+  "use_samples": false,
+  "calculate_statistics": true,
+  "sources": [
+    {
+      "id": 1,
+      "name": "Adzuna Tech",
+      "endpoint": "https://api.adzuna.com/v1/api/jobs/gb/search/1",
+      "type": "html",
+      "params": {"category": "it-jobs"}
+    }
+  ]
+}
+```
 
 ### `POST /api/hybrid-match`
 
@@ -160,22 +210,47 @@ Compute weighted hybrid match score.
 }
 ```
 
-**Formula:** `Final = (Semantic × 60%) + (TF-IDF × 40%)`
+**Formula:** `Final = (Adaptive Layer 3 × 60%) + (TF-IDF × 40%)`
 
 **Response:**
 ```json
 {
   "hybrid_match_score": 74.3,
-  "semantic_score": 68.1,
-  "tfidf_score": 84.2,
+  "semantic_match_pct": 68.1,
+  "tfidf_score_pct": 84.2,
   "missing_skills": ["kubernetes", "fastapi"],
-  "formula": "Final = (Semantic × 60%) + (TF-IDF × 40%)"
+  "formula": "Final = (Adaptive Layer 3 × 60%) + (TF-IDF × 40%)"
 }
 ```
 
 ### `POST /api/process-cv`
 
 End-to-End Orchestration. Combines CV parsing and job scraping natively. Consumes a `cv_file` and `job_url` from form data, saves a temporary file, and runs `process_hybrid_application`.
+
+**Response Payload (`job`, `cv`, `scores`):**
+```json
+{
+  "job": {
+    "url": "https://...",
+    "title": "Backend Engineer",
+    "job_type": "Full-time",
+    "skills": ["python", "aws"]
+  },
+  "cv": {
+    "extraction_method": "v3-orchestrator",
+    "skills": ["Python", "Docker"],
+    "domain": "Technology & Software",
+    "parsing_status": "success",
+    "contact": { "email": "user@example.com" }
+  },
+  "scores": {
+    "semantic_match_pct": 82.5,
+    "tfidf_score_pct": 71.2,
+    "final_score_pct": 77.9,
+    "missing_skills": ["aws"]
+  }
+}
+```
 
 ---
 

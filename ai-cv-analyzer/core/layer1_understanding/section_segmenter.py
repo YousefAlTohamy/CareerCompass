@@ -27,6 +27,8 @@ SectionType = Literal[
     "education",
     "skills",
     "projects",
+    "certificates",
+    "languages",
     "uncategorized",
 ]
 
@@ -110,6 +112,21 @@ _SECTION_REFERENCE_PHRASES: Dict[SectionType, List[str]] = {
         "Portfolio",
         "Academic Projects",
         "Personal Projects",
+    ],
+    "certificates": [
+        "Certificates",
+        "Certifications",
+        "Licenses",
+        "Professional Training",
+        "Awards",
+        "Honors",
+        "Achievements",
+    ],
+    "languages": [
+        "Languages",
+        "Linguistic Skills",
+        "Language Proficiency",
+        "Spoken Languages",
     ],
 }
 
@@ -436,6 +453,9 @@ class _HeaderPatterns:
             "projects": "projects",
             "project experience": "projects",
             "selected projects": "projects",
+            "certificates": "certificates",
+            "certifications": "certificates",
+            "languages": "languages",
         }
 
         def rx(*alts: str) -> re.Pattern[str]:
@@ -491,6 +511,22 @@ class _HeaderPatterns:
                     r"\bprofile\b",
                     r"\babout\b",
                     r"\bobjective\b",
+                ),
+            ),
+            (
+                "certificates",
+                rx(
+                    r"\bcertificates\b",
+                    r"\bcertifications\b",
+                    r"\bawards\b",
+                    r"\bhonors\b",
+                ),
+            ),
+            (
+                "languages",
+                rx(
+                    r"\blanguages\b",
+                    r"\blinguistic\b",
                 ),
             ),
         ]

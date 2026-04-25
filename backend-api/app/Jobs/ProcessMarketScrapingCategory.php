@@ -6,128 +6,128 @@ use App\Models\Job;
 use App\Models\JobRoleStatistic;
 use App\Models\ScrapingJob;
 use App\Models\ScrapingSource;
-use Illuminate\Bus\Batch;
-use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Artisan;
-use Throwable;
+use Illuminate\Bus\Batchable;
 
-class ProcessMarketScraping implements ShouldQueue
+class ProcessMarketScrapingCategory implements ShouldQueue
 {
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $timeout = 600; // 10 minutes – multiple sources may take longer
-    public $tries = 2;      // Fail fast; sources independently retry inside Python
-    public $backoff = 5;    // 5-second backoff before retry
+    public $timeout = 600;
+    public $tries = 2;
+    public $backoff = 5;
 
-    protected ?array $jobCategories;
-    protected int $maxResultsPerCategory;
-
-    /**
-     * Create a new job instance.
-     */
-    public function __construct(?array $jobCategories = null, int $maxResultsPerCategory = 30)
-    {
-        $this->jobCategories = $jobCategories;
-        $this->maxResultsPerCategory = $maxResultsPerCategory;
+    public function __construct(
+        protected string $category,
+        protected int $maxResultsPerCategory = 30,
+        protected array $sources = [],
+    ) {
     }
 
-    /**
-     * Execute the job.
-     */
     public function handle(): void
     {
-        if ($this->batch()?->cancelled()) {
-            Log::info('Market scraping batch cancelled before start');
-            return;
-        }
+        $startedAt = microtime(true);
 
-        $categoriesToProcess = $this->jobCategories ?? \App\Models\TargetJobRole::where('is_active', true)->pluck('name')->toArray();
-
-        if (empty($categoriesToProcess)) {
-            Log::info('No active job categories to scrape');
-            return;
-        }
-
-        Log::info('Starting automated market scraping', [
-            'categories' => $categoriesToProcess,
+        Log::info("Scraping category (batched): {$this->category}", [
             'max_per_category' => $this->maxResultsPerCategory,
         ]);
 
-        $sources = $this->getActiveSources();
+        $scrapingJob = ScrapingJob::create([
+            'job_title' => $this->category,
+            'type' => 'scheduled',
+            'status' => 'pending',
+        ]);
 
-        $jobs = collect($categoriesToProcess)
-            ->map(fn (string $category) => new ProcessMarketScrapingCategory(
-                category: $category,
-                maxResultsPerCategory: $this->maxResultsPerCategory,
-                sources: $sources,
-            ))
-            ->all();
+        $scrapingJob->markAsStarted();
 
-        Bus::batch($jobs)
-            ->name('market-scraping:' . now()->toDateTimeString())
-            ->then(function (Batch $batch) use ($categoriesToProcess) {
-                Log::info('Market scraping batch completed', [
-                    'batch_id' => $batch->id,
-                    'categories' => $categoriesToProcess,
-                    'total_jobs' => $batch->totalJobs,
-                    'failed_jobs' => $batch->failedJobs,
-                ]);
-            })
-            ->catch(function (Batch $batch, Throwable $e) {
-                Log::error('Market scraping batch encountered an error', [
-                    'batch_id' => $batch->id,
-                    'error' => $e->getMessage(),
-                ]);
-            })
-            ->finally(function (Batch $batch) {
-                Log::info('Market scraping batch finished (finally)', [
-                    'batch_id' => $batch->id,
-                    'cancelled' => $batch->cancelled(),
-                    'processed_jobs' => $batch->processedJobs(),
-                    'failed_jobs' => $batch->failedJobs,
-                ]);
-
-                try {
-                    Artisan::call('app:export-skills');
-                    Log::info('Successfully exported skills to JSON after market scraping batch');
-                } catch (\Exception $e) {
-                    Log::error('Failed to export skills to JSON', ['error' => $e->getMessage()]);
-                }
-            })
-            ->dispatch();
-    }
-
-    /**
-     * Retrieve all active scraping sources and serialize for the AI Engine.
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    protected function getActiveSources(): array
-    {
         try {
-            return ScrapingSource::where('status', 'active')
-                ->get(['id', 'name', 'endpoint', 'type', 'headers', 'params'])
-                ->map(fn($s) => [
-                    'id'       => $s->id,
-                    'name'     => $s->name,
-                    'endpoint' => $s->endpoint,
-                    'type'     => $s->type,
-                    'headers'  => $s->headers ?? [],
-                    'params'   => $s->params  ?? [],
-                ])
-                ->toArray();
-        } catch (\Exception $e) {
-            Log::error('Failed to load active scraping sources', ['error' => $e->getMessage()]);
-            return [];
+            $result = $this->scrapeJobsFromAI($this->category, $this->maxResultsPerCategory, $this->sources);
+
+            if (!$result || empty($result['jobs'])) {
+                $scrapingJob->markAsFailed(
+                    errorMessage: 'Failed to fetch data from AI Engine',
+                    discoveredCount: 0,
+                    failedCount: 0,
+                    processingTimeMs: (int) round((microtime(true) - $startedAt) * 1000),
+                );
+                return;
+            }
+
+            $discovered = count($result['jobs']);
+            $stored = 0;
+            $duplicates = 0;
+            $failed = 0;
+
+            foreach ($result['jobs'] as $jobData) {
+                try {
+                    $storeResult = $this->storeJob($jobData);
+                    if ($storeResult['stored']) {
+                        $stored++;
+                    } else {
+                        $duplicates++;
+                    }
+                } catch (\Throwable $e) {
+                    $failed++;
+                    Log::warning('Failed to store scraped job', [
+                        'category' => $this->category,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            $scrapingJob->markAsCompleted(
+                found: $discovered,
+                stored: $stored,
+                duplicated: $duplicates,
+                discoveredCount: $discovered,
+                failedCount: $failed,
+                processingTimeMs: (int) round((microtime(true) - $startedAt) * 1000),
+            );
+
+            $this->calculateSkillImportance($this->category);
+            $this->updateRoleStatistics($this->category, $result);
+
+            Log::info("Completed scraping for {$this->category} (batched)", [
+                'discovered' => $discovered,
+                'stored' => $stored,
+                'duplicates' => $duplicates,
+                'failed' => $failed,
+            ]);
+
+            // Check health for each source used in this job
+            if (!empty($this->sources)) {
+                foreach ($this->sources as $sourceData) {
+                    if (!empty($sourceData['id'])) {
+                        try {
+                            $sourceModel = ScrapingSource::find($sourceData['id']);
+                            if ($sourceModel) {
+                                $sourceModel->deactivateIfUnhealthy();
+                            }
+                        } catch (\Exception $e) {
+                            Log::error("Failed to check health for source ID {$sourceData['id']}", ['error' => $e->getMessage()]);
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::error("Error scraping category {$this->category} (batched)", [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            $scrapingJob->markAsFailed(
+                errorMessage: $e->getMessage(),
+                discoveredCount: 0,
+                failedCount: 0,
+                processingTimeMs: (int) round((microtime(true) - $startedAt) * 1000),
+            );
         }
     }
 
@@ -152,7 +152,7 @@ class ProcessMarketScraping implements ShouldQueue
                     'max_results'         => $maxResults,
                     'use_samples'         => false,
                     'calculate_statistics' => true,
-                    'sources'             => $sources,  // dynamic sources list
+                    'sources'             => $sources,
                 ]);
 
             if ($response->successful()) {
@@ -177,7 +177,6 @@ class ProcessMarketScraping implements ShouldQueue
      */
     protected function storeJob(array $jobData): array
     {
-        // Check for duplicates
         $existingJob = null;
 
         if (!empty($jobData['url'])) {
@@ -198,9 +197,8 @@ class ProcessMarketScraping implements ShouldQueue
             return ['stored' => false, 'job' => $existingJob];
         }
 
-        $sourceModel = \App\Models\ScrapingSource::where('name', $this->castToString($jobData['source'] ?? null, ''))->first();
+        $sourceModel = ScrapingSource::where('name', $this->castToString($jobData['source'] ?? null, ''))->first();
 
-        // Create new job
         $job = Job::create([
             'title' => $this->castToString($jobData['title'] ?? null, 'Unknown Position'),
             'company' => $this->castToString($jobData['company'] ?? null, 'Unknown Company'),
@@ -214,23 +212,19 @@ class ProcessMarketScraping implements ShouldQueue
             'scraping_source_id' => $sourceModel->id ?? null,
         ]);
 
-        // Attach skills
         if (!empty($jobData['skills']) && is_array($jobData['skills'])) {
             $skillIds = [];
 
             foreach ($jobData['skills'] as $skillItem) {
-                // Handle both string and array formats from Python
                 $skillName = is_array($skillItem) ? ($skillItem['name'] ?? '') : $skillItem;
                 $skillName = trim($skillName);
 
                 if (!empty($skillName)) {
-                    // Create the skill if it doesn't exist, or get it if it does
                     $skill = \App\Models\Skill::firstOrCreate(['name' => $skillName]);
                     $skillIds[] = $skill->id;
                 }
             }
 
-            // Sync the skills to the job
             if (!empty($skillIds)) {
                 $job->skills()->syncWithoutDetaching($skillIds);
             }
@@ -239,13 +233,9 @@ class ProcessMarketScraping implements ShouldQueue
         return ['stored' => true, 'job' => $job];
     }
 
-    /**
-     * Calculate skill importance for a job category.
-     */
     protected function calculateSkillImportance(string $jobTitle): void
     {
         try {
-            // Get all jobs for this title
             $jobs = Job::where('title', 'like', "%{$jobTitle}%")
                 ->with('skills')
                 ->get();
@@ -257,7 +247,6 @@ class ProcessMarketScraping implements ShouldQueue
             $totalJobs = $jobs->count();
             $skillFrequency = [];
 
-            // Count skill occurrences
             foreach ($jobs as $job) {
                 foreach ($job->skills as $skill) {
                     if (!isset($skillFrequency[$skill->id])) {
@@ -267,12 +256,10 @@ class ProcessMarketScraping implements ShouldQueue
                 }
             }
 
-            // Update importance scores
             foreach ($skillFrequency as $skillId => $data) {
                 $count = $data['count'];
                 $percentage = ($count / $totalJobs) * 100;
 
-                // Determine category
                 $category = 'nice_to_have';
                 if ($percentage > 70) {
                     $category = 'essential';
@@ -280,7 +267,6 @@ class ProcessMarketScraping implements ShouldQueue
                     $category = 'important';
                 }
 
-                // Update all job-skill pivot records for this role and skill
                 DB::table('job_skills')
                     ->whereIn('job_id', $jobs->pluck('id'))
                     ->where('skill_id', $skillId)
@@ -302,9 +288,6 @@ class ProcessMarketScraping implements ShouldQueue
         }
     }
 
-    /**
-     * Update role statistics.
-     */
     protected function updateRoleStatistics(string $roleTitle, array $scrapingResult): void
     {
         try {
@@ -334,33 +317,6 @@ class ProcessMarketScraping implements ShouldQueue
         }
     }
 
-    /**
-     * Handle a job failure.
-     */
-    public function failed(?\Throwable $exception): void
-    {
-        Log::error('Market scraping job failed permanently', [
-            'categories' => $this->jobCategories ?? \App\Models\TargetJobRole::where('is_active', true)->pluck('name')->toArray(),
-            'error' => $exception?->getMessage(),
-            'trace' => $exception?->getTraceAsString(),
-        ]);
-
-        $categoriesToUpdate = $this->jobCategories ?? \App\Models\TargetJobRole::where('is_active', true)->pluck('name')->toArray();
-
-        // Mark any pending scraping jobs as failed
-        ScrapingJob::where('type', 'scheduled')
-            ->where('status', 'processing')
-            ->whereIn('job_title', $categoriesToUpdate)
-            ->update([
-                'status' => 'failed',
-                'error_message' => $exception?->getMessage() ?? 'Job failed after maximum retries',
-                'updated_at' => now(),
-            ]);
-    }
-
-    /**
-     * Safely cast incoming potentially-array data to strings.
-     */
     private function castToString($value, $default = null)
     {
         if (is_null($value)) return $default;
@@ -368,3 +324,4 @@ class ProcessMarketScraping implements ShouldQueue
         return (string) $value;
     }
 }
+

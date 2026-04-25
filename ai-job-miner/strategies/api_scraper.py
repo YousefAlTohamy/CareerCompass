@@ -14,6 +14,7 @@ Design Pattern: Strategy Pattern
 
 import json
 import logging
+from typing import Any
 
 import aiohttp
 
@@ -86,12 +87,65 @@ class JsonApiScraper(BaseScraper):
                     url,
                     len(json_data) if isinstance(json_data, (dict, list)) else 1,
                 )
-                return {
+
+                field_map = kwargs.get("field_map", {})
+                
+                # Helper to get value by dotted path
+                def get_by_path(data: Any, path: str) -> Any:
+                    if not path or not isinstance(data, dict):
+                        return None
+                    keys = path.split(".")
+                    val = data
+                    for k in keys:
+                        if isinstance(val, dict) and k in val:
+                            val = val[k]
+                        else:
+                            return None
+                            
+                    # Safety check: prevent returning complex types directly
+                    if isinstance(val, (dict, list)):
+                        if isinstance(val, dict):
+                            for label in ["name", "display_name", "label", "title", "text"]:
+                                if label in val and isinstance(val[label], str):
+                                    return val[label].strip()
+                        try:
+                            return json.dumps(val)
+                        except Exception:
+                            return str(val)
+                    return val
+
+                # If the API returns a 'results' array (like Adzuna), take the first item
+                # (Assuming the engine fetches 1 URL per job or we just want the best match)
+                item = json_data
+                if isinstance(json_data, dict) and "results" in json_data and isinstance(json_data["results"], list):
+                    if json_data["results"]:
+                        item = json_data["results"][0]
+                    else:
+                        item = {}
+                elif isinstance(json_data, list) and len(json_data) > 0:
+                    item = json_data[0]
+
+                mapped_data = {
                     "type": "api",
                     "url": url,
                     "content": json_data,
                     "status": "success",
                 }
+
+                if field_map and isinstance(item, dict):
+                    mapped_data["title"] = get_by_path(item, field_map.get("title", "title"))
+                    mapped_data["company"] = get_by_path(item, field_map.get("company", "company"))
+                    mapped_data["location"] = get_by_path(item, field_map.get("location", "location"))
+                    mapped_data["description"] = get_by_path(item, field_map.get("description", "description"))
+                else:
+                    # Fallback mapping if no field_map provided
+                    if isinstance(item, dict):
+                        mapped_data["title"] = item.get("title")
+                        mapped_data["company"] = item.get("company")
+                        mapped_data["location"] = item.get("location")
+                        mapped_data["description"] = item.get("description")
+
+                return mapped_data
 
             except Exception as exc:  # noqa: BLE001
                 logger.error(
