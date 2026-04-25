@@ -25,20 +25,20 @@ const Preloader = ({ onComplete }) => {
       onComplete: () => {
         // Shutter split effect
         const exit = gsap.timeline({ onComplete });
-        exit.to(needleRef.current, { rotation: 0, duration: 0.3, ease: 'power3.out' });
-        exit.to(shutterL.current, { x: '-100%', duration: 0.6, ease: 'power4.inOut' }, 0.2);
-        exit.to(shutterR.current, { x: '100%', duration: 0.6, ease: 'power4.inOut' }, 0.2);
-        exit.to(wrapRef.current, { opacity: 0, duration: 0.3 }, 0.7);
+        exit.to(needleRef.current, { rotation: 0, duration: 0.2, ease: 'power3.out' });
+        exit.to(shutterL.current, { x: '-100%', duration: 0.4, ease: 'power4.inOut' }, 0.1);
+        exit.to(shutterR.current, { x: '100%', duration: 0.4, ease: 'power4.inOut' }, 0.1);
+        exit.to(wrapRef.current, { opacity: 0, duration: 0.2 }, 0.4);
       }
     });
 
     // Spin needle
-    gsap.to(needleRef.current, { rotation: 720, duration: 1.5, ease: 'power2.inOut', repeat: 0 });
+    gsap.to(needleRef.current, { rotation: 720, duration: 0.8, ease: 'power2.inOut', repeat: 0 });
 
     // Progress bar
     tl.to(barRef.current, {
       width: '100%',
-      duration: 1.2,
+      duration: 0.6,
       ease: 'power2.inOut',
       onUpdate: function () {
         const p = Math.round(this.progress() * 100);
@@ -109,9 +109,9 @@ const MagneticButton = ({ children, className = '', href, ...props }) => {
 };
 
 /* ════════════════════════════════════════════════════════════════════════════
-   §3  Glow Orbs Background
+   §3  Glow Orbs Background (Optimized)
    ════════════════════════════════════════════════════════════════════════════ */
-const GlowOrbs = () => {
+const GlowOrbs = React.memo(() => {
   const orbsRef = useRef([]);
 
   useEffect(() => {
@@ -150,7 +150,7 @@ const GlowOrbs = () => {
       ))}
     </>
   );
-};
+});
 
 /* ════════════════════════════════════════════════════════════════════════════
    §4  Radial Compass Navigation (Mobile)
@@ -247,14 +247,19 @@ export default function Home() {
     setLoaded(true);
   }, []);
 
-  // Mouse move handler for Bento Glow
+  // Mouse move handler for Bento Glow (Optimized with rAF)
+  const bentoRaf = useRef(null);
   const handleBentoMouseMove = (e) => {
     const card = e.currentTarget;
     const rect = card.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
-    card.style.setProperty('--x', `${x}%`);
-    card.style.setProperty('--y', `${y}%`);
+    
+    if (bentoRaf.current) cancelAnimationFrame(bentoRaf.current);
+    bentoRaf.current = requestAnimationFrame(() => {
+      card.style.setProperty('--x', `${x}%`);
+      card.style.setProperty('--y', `${y}%`);
+    });
   };
 
   /* ── Hero entrance animations (after loaded → DOM exists) ────────────── */
