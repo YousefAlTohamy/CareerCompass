@@ -6,37 +6,23 @@ import {
   toggleTargetRole,
   deleteTargetRole,
 } from "../../api/scrapingSources";
-import {
-  Plus,
-  Trash2,
-  Target,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-  Activity,
-  ArchiveX
-} from "lucide-react";
+import HUDLayout from "../../components/HUDLayout";
 import Swal from "sweetalert2";
+import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
-const getErrorMessage = (
-  error,
-  defaultMessage = "An unexpected error occurred.",
-) => {
-  if (error.response?.data?.errors) {
-    return Object.values(error.response.data.errors).flat().join("\n");
-  }
-  if (error.response?.data?.message) {
-    return error.response.data.message;
-  }
+const getErrorMessage = (error, defaultMessage = "An unexpected error occurred.") => {
+  if (error.response?.data?.errors) return Object.values(error.response.data.errors).flat().join("\n");
+  if (error.response?.data?.message) return error.response.data.message;
   return defaultMessage;
 };
 
 const AdminTargets = () => {
+  const { t } = useTranslation();
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newRoleName, setNewRoleName] = useState("");
 
-  // Pagination & Search State
   const [searchParams, setSearchParams] = useSearchParams();
   const initialPage = parseInt(searchParams.get('page')) || 1;
   const initialSearch = searchParams.get('search') || '';
@@ -50,12 +36,10 @@ const AdminTargets = () => {
     try {
       setLoading(true);
       const rolesRes = await getTargetRoles(currentPage, activeSearch);
-      
       if (rolesRes.data) {
         setRoles(rolesRes.data);
         setTotalPages(rolesRes.meta?.last_page || rolesRes.last_page || 1);
         setCurrentPage(rolesRes.meta?.current_page || rolesRes.current_page || 1);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
       } else {
         setRoles([]);
       }
@@ -67,7 +51,6 @@ const AdminTargets = () => {
     }
   }, [currentPage, activeSearch]);
 
-  // Debounced search logic
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       if (searchInput !== activeSearch) {
@@ -75,16 +58,13 @@ const AdminTargets = () => {
         setCurrentPage(1);
       }
     }, 500);
-
     return () => clearTimeout(delayDebounceFn);
   }, [searchInput, activeSearch]);
 
-  // URL Synchronization
   useEffect(() => {
     const params = {};
     if (currentPage > 1) params.page = currentPage;
     if (activeSearch) params.search = activeSearch;
-
     setSearchParams(params, { replace: true });
   }, [currentPage, activeSearch, setSearchParams]);
 
@@ -96,62 +76,38 @@ const AdminTargets = () => {
     e.preventDefault();
     if (!newRoleName.trim()) return;
     try {
-      const result = await addTargetRole({
-        name: newRoleName.trim(),
-        is_active: true,
-      });
+      const result = await addTargetRole({ name: newRoleName.trim(), is_active: true });
       const created = result.data || result;
-      setRoles((prev) => [created, ...prev]); // Add to top of list
+      setRoles((prev) => [created, ...prev]);
       setNewRoleName("");
-      Swal.fire({
-        toast: true,
-        position: "top-end",
-        icon: "success",
-        title: "Role added successfully",
-        showConfirmButton: false,
-        timer: 2000,
-      });
     } catch (error) {
       console.error(error);
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: getErrorMessage(error, "Failed to add role"),
-        confirmButtonColor: "#6366f1",
-      });
     }
   };
 
   const handleToggleRole = async (id) => {
-    // Optimistic UI Update for snappier feel
     setRoles((prev) => prev.map((r) => r.id === id ? { ...r, is_active: !r.is_active } : r));
     try {
       const result = await toggleTargetRole(id);
       const updated = result.data || result;
-      // Ensure backend state matches
       setRoles((prev) => prev.map((r) => (r.id === id ? updated : r)));
     } catch (error) {
       console.error(error);
-      // Revert if failed
       setRoles((prev) => prev.map((r) => r.id === id ? { ...r, is_active: !r.is_active } : r));
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: getErrorMessage(error, "Failed to toggle role"),
-        confirmButtonColor: "#6366f1",
-      });
     }
   };
 
   const handleDeleteRole = async (id) => {
     const result = await Swal.fire({
-      title: "Delete Role?",
-      text: "Are you sure you want to remove this role from the system?",
+      title: "Decommission Target?",
+      text: "Permanent removal of this occupational node from neural priority.",
       icon: "warning",
+      background: 'rgba(15, 23, 42, 0.95)',
+      color: '#fff',
       showCancelButton: true,
       confirmButtonColor: "#f43f5e",
-      cancelButtonColor: "#cbd5e1",
-      confirmButtonText: "Yes, delete it",
+      cancelButtonColor: "#334155",
+      confirmButtonText: "DECOMMISSION",
     });
 
     if (!result.isConfirmed) return;
@@ -159,15 +115,6 @@ const AdminTargets = () => {
     try {
       await deleteTargetRole(id);
       setRoles((prev) => prev.filter((r) => r.id !== id));
-      Swal.fire({
-        toast: true,
-        position: "top-end",
-        icon: "success",
-        title: "Role deleted",
-        showConfirmButton: false,
-        timer: 2000,
-      });
-      // Fetch roles if the page becomes empty
       if (roles.length === 1 && currentPage > 1) {
           setCurrentPage(prev => prev - 1);
       } else {
@@ -175,181 +122,176 @@ const AdminTargets = () => {
       }
     } catch (error) {
       console.error(error);
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: getErrorMessage(error, "Failed to delete role"),
-        confirmButtonColor: "#6366f1",
-      });
     }
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      {/* Header Section */}
-      <div>
-        <h1 className="text-3xl font-black text-slate-800 flex items-center gap-3">
-          <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl">
-            <Target className="w-7 h-7" />
+    <HUDLayout loading={loading}>
+      <div className="p-6 max-w-7xl mx-auto pb-20 space-y-10 pt-28">
+        
+        {/* Header Section */}
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex flex-col md:flex-row md:items-end justify-between gap-6"
+        >
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-px w-8 bg-indigo-500" />
+              <span className="text-[11px] font-black uppercase tracking-[0.3em] text-indigo-500">{t('admin.neural_performance')}</span>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-slate-900 dark:text-white">
+              {t('nav.admin_targets')} <span className="text-indigo-600 dark:text-indigo-400">{t('admin.neural_matrix')}</span>
+            </h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-3 text-sm font-medium max-w-lg">
+              {t('dashboard.market')}
+            </p>
           </div>
-          Target Job Roles
-        </h1>
-        <p className="text-slate-500 mt-2 text-sm font-medium">
-          Manage dynamically tracked professions. Active roles are prioritized in scraping pipelines.
-        </p>
-      </div>
 
-      {/* Toolbar: Search & Add Form */}
-      <div className="bg-white p-2 border border-slate-200 rounded-2xl shadow-sm flex flex-col lg:flex-row justify-between items-stretch gap-2">
-        {/* Search */}
-        <div className="relative flex-1 flex items-center bg-slate-50 rounded-xl px-4 py-3">
-          <Search className="text-slate-400 mr-3" size={20} />
-          <input
-            type="text"
-            placeholder="Search roles (e.g., Backend Developer)..."
-            className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-slate-700 font-medium placeholder-slate-400"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
-          {loading && <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600 ml-3"></div>}
-        </div>
+          <form onSubmit={handleAddRole} className="relative group w-full md:w-96">
+            <div className="absolute inset-0 bg-indigo-500/10 blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
+            <div className="relative flex items-center bg-white/40 dark:bg-slate-950/40 backdrop-blur-xl border border-white/40 dark:border-white/10 rounded-2xl px-5 py-3">
+              <i className="ph-fill ph-plus-circle text-indigo-500 text-xl mr-3" />
+              <input
+                type="text"
+                value={newRoleName}
+                onChange={(e) => setNewRoleName(e.target.value)}
+                placeholder={t('dashboard.target_role')}
+                className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-slate-700 dark:text-white font-black placeholder-slate-400 text-xs uppercase tracking-widest"
+              />
+              {newRoleName.trim() && (
+                <button type="submit" className="ml-2 text-[10px] font-black text-indigo-500 animate-pulse">EXECUTE</button>
+              )}
+            </div>
+          </form>
+        </motion.div>
 
-        {/* Add Form */}
-        <form onSubmit={handleAddRole} className="flex gap-2 flex-shrink-0 w-full lg:w-auto">
-          <input
-            type="text"
-            value={newRoleName}
-            onChange={(e) => setNewRoleName(e.target.value)}
-            placeholder="New role name"
-            className="w-full lg:w-64 px-4 py-3 text-sm font-medium bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
-          />
-          <button
-            type="submit"
-            disabled={!newRoleName.trim()}
-            className="px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:hover:bg-indigo-600 transition-all flex items-center justify-center gap-2 text-sm font-bold shadow-sm shadow-indigo-200"
-          >
-            <Plus className="w-5 h-5" />
-            <span className="hidden sm:inline">Add</span>
-          </button>
-        </form>
-      </div>
+        {/* Search Toolbar */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="relative group max-w-lg"
+        >
+          <div className="absolute inset-0 bg-indigo-500/10 blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
+          <div className="relative flex items-center bg-white/40 dark:bg-slate-950/40 backdrop-blur-xl border border-white/40 dark:border-white/10 rounded-2xl px-5 py-3">
+            <i className="ph-thin ph-magnifying-glass text-slate-400 text-xl mr-3" />
+            <input
+              type="text"
+              placeholder="Filter target nodes..."
+              className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-slate-700 dark:text-white font-medium placeholder-slate-400 text-sm"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+            />
+          </div>
+        </motion.div>
 
-      {/* Table Card */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[600px]">
-            <thead className="bg-slate-50/80 text-slate-500 uppercase text-xs font-bold tracking-wider border-b border-slate-200">
-              <tr>
-                <th className="p-5 w-1/2">Role Details</th>
-                <th className="p-5 text-center">Scraping Status</th>
-                <th className="p-5 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {loading && roles.length === 0 ? (
-                <tr>
-                  <td colSpan="3" className="p-12 text-center">
-                    <div className="flex flex-col items-center justify-center text-slate-400 space-y-3">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                      <p className="font-medium text-sm">Loading roles...</p>
-                    </div>
-                  </td>
+        {/* Table Container */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-white/40 dark:bg-slate-950/40 backdrop-blur-xl border border-white/40 dark:border-white/5 rounded-[32px] shadow-premium overflow-hidden"
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[700px]">
+              <thead>
+                <tr className="bg-slate-100/50 dark:bg-white/5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 border-b border-white/10">
+                  <th className="p-6">{t('admin.target_identity', 'Target Identity')}</th>
+                  <th className="p-6">{t('admin.neural_status', 'Neural Status')}</th>
+                  <th className="p-6 text-center">{t('admin.protocol_state', 'Protocol State')}</th>
+                  <th className="p-6 text-right">{t('admin.operations', 'Operations')}</th>
                 </tr>
-              ) : roles.length === 0 ? (
-                <tr>
-                  <td colSpan="3" className="p-12 text-center">
-                    <div className="flex flex-col items-center justify-center text-slate-400 space-y-3">
-                      <Target className="w-12 h-12 text-slate-300 stroke-1" />
-                      <p className="font-medium text-sm text-slate-500">No target roles found.</p>
-                      {activeSearch && <p className="text-xs">Try clearing your search.</p>}
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                roles.map((role) => (
-                  <tr
-                    key={role.id}
-                    className="hover:bg-slate-50/50 transition-colors group"
-                  >
-                    <td className="p-5">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${role.is_active ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
-                          {role.is_active ? <Activity size={18} strokeWidth={2.5} /> : <ArchiveX size={18} strokeWidth={2.5} />}
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                <AnimatePresence mode="popLayout">
+                  {roles.map((role, idx) => (
+                    <motion.tr 
+                      key={role.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      className="group hover:bg-white/40 dark:hover:bg-white/5 transition-all duration-300"
+                    >
+                      <td className="p-6">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${role.is_active ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-500' : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-400'}`}>
+                             <i className="ph-thin ph-target text-2xl" />
+                          </div>
+                          <div>
+                            <div className="font-black text-slate-900 dark:text-white text-sm uppercase tracking-tight">{role.name}</div>
+                            <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Ref_ID: {role.id.toString().padStart(4, '0')}</div>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-bold text-slate-800 text-sm">{role.name}</p>
-                          <p className="text-xs text-slate-400 mt-0.5 font-medium">Added: {new Date(role.created_at).toLocaleDateString()}</p>
+                      </td>
+                      <td className="p-6">
+                        <div className="flex flex-col gap-1">
+                           <span className={`text-[9px] font-black uppercase tracking-widest ${role.is_active ? 'text-emerald-500' : 'text-slate-400'}`}>
+                             {role.is_active ? t('admin.priority_active', 'PRIORITY_ACTIVE') : t('admin.node_standby', 'NODE_STANDBY')}
+                           </span>
+                           <div className="w-20 h-1 bg-slate-200 dark:bg-white/5 rounded-full overflow-hidden">
+                              <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: role.is_active ? '100%' : '10%' }}
+                                className={`h-full ${role.is_active ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-400'}`}
+                              />
+                           </div>
                         </div>
-                      </div>
-                    </td>
-                    
-                    <td className="p-5 text-center">
-                      <div className="flex items-center justify-center gap-3">
-                        <span className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md ${
-                          role.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
-                        }`}>
-                          {role.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                        
-                        {/* Custom Modern Toggle Switch */}
+                      </td>
+                      <td className="p-6 text-center">
                         <button
                           onClick={() => handleToggleRole(role.id)}
-                          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 ${
-                            role.is_active ? 'bg-indigo-600' : 'bg-slate-200'
+                          className={`relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                            role.is_active ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-800'
                           }`}
-                          role="switch"
-                          aria-checked={role.is_active}
                         >
                           <span
-                            aria-hidden="true"
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                              role.is_active ? 'translate-x-5' : 'translate-x-0'
+                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                              role.is_active ? 'ltr:translate-x-5 rtl:-translate-x-5' : 'translate-x-0'
                             }`}
                           />
                         </button>
-                      </div>
-                    </td>
-
-                    <td className="p-5 text-right">
-                      <button
-                        onClick={() => handleDeleteRole(role.id)}
-                        className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all inline-flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100"
-                        title="Delete Role"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        
-        {/* Server-Side Pagination Controls */}
-        <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-slate-50">
-          <span className="text-sm font-semibold text-slate-500">
-            Page <span className="text-slate-800">{currentPage}</span> of <span className="text-slate-800">{totalPages}</span>
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage <= 1 || loading}
-              className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all disabled:opacity-40 disabled:hover:bg-white flex items-center gap-1 bg-white shadow-sm"
-            >
-               <ChevronLeft size={16} /> Prev
-            </button>
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage >= totalPages || loading}
-              className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-all disabled:opacity-40 disabled:hover:bg-white flex items-center gap-1 bg-white shadow-sm"
-            >
-               Next <ChevronRight size={16} />
-            </button>
+                      </td>
+                      <td className="p-6 text-right">
+                        <button
+                          onClick={() => handleDeleteRole(role.id)}
+                          className="p-3 rounded-xl bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:text-rose-500 transition-all opacity-0 group-hover:opacity-100"
+                        >
+                          <i className="ph-thin ph-trash text-xl" />
+                        </button>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
+              </tbody>
+            </table>
           </div>
-        </div>
+
+          {/* Pagination */}
+          <div className="p-6 border-t border-white/5 flex items-center justify-between bg-slate-100/30 dark:bg-white/5 backdrop-blur-xl">
+             <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+               Data Stream {currentPage} of {totalPages}
+             </div>
+             <div className="flex items-center gap-3">
+               <button
+                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                 disabled={currentPage <= 1 || loading}
+                 className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:border-indigo-500 disabled:opacity-30 transition-all"
+               >
+                 <i className="ph-bold ph-caret-left" /> Back
+               </button>
+               <button
+                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                 disabled={currentPage >= totalPages || loading}
+                 className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:border-indigo-500 disabled:opacity-30 transition-all"
+               >
+                 Next <i className="ph-bold ph-caret-right" />
+               </button>
+             </div>
+          </div>
+        </motion.div>
       </div>
-    </div>
+    </HUDLayout>
   );
 };
 
