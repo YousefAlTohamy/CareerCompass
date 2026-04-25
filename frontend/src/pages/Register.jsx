@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Mail, Lock, User, ArrowRight, AlertCircle, Compass } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, ArrowLeft, AlertCircle, Compass, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export default function Register() {
+  const [step, setStep] = useState(1);
+  const totalSteps = 2;
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -21,180 +23,194 @@ export default function Register() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const nextStep = (e) => {
+    e.preventDefault();
+    if (step === 1) {
+      if (!formData.name || !formData.email) {
+        setError(t('register.errorEmpty') || 'Please fill out all fields.');
+        return;
+      }
+      setError('');
+      setStep(2);
+    }
+  };
+
+  const prevStep = () => {
+    setError('');
+    setStep(step - 1);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
     if (formData.password !== formData.password_confirmation) {
-      setError('Passwords do not match. Please check again.');
-      return;
+      setError(t('register.errorMismatch')); return;
     }
-
     setLoading(true);
-
     try {
       await register(formData);
       navigate('/dashboard');
     } catch (err) {
-      console.error('Registration error:', err);
-      const errorMessage = 
-        err.response?.data?.message || 
-        err.response?.data?.data?.message ||
-        err.message ||
-        'Registration failed. Please try again.';
-      setError(errorMessage);
+      setError(err.response?.data?.message || 'Registration failed.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900 py-12 px-4 relative overflow-hidden font-sans transition-colors duration-300">
+    <div className="min-h-screen relative overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white font-sans flex items-center justify-center py-12 px-4 transition-colors duration-500">
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05]" 
+           style={{ backgroundImage: 'radial-gradient(var(--cc-primary) 0.5px, transparent 0.5px)', backgroundSize: '24px 24px' }} />
       
-      {/* Decorative Background Elements */}
-      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-fuchsia-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
-      <div className="w-full max-w-[440px] relative z-10 animate-in fade-in zoom-in-95 duration-500">
-        
-        {/* Logo Section */}
-        <div className="text-center mb-8 flex flex-col items-center">
-          <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center mb-4 text-indigo-600 dark:text-indigo-400">
-            <Compass size={36} strokeWidth={2.5} />
-          </div>
-          <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight mb-2">{t('register.join_career_compass')}</h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">{t('register.create_account_journey')}</p>
-        </div>
-
-        {/* Register Card */}
-        <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl shadow-slate-200/40 dark:shadow-black/20 border border-slate-100 dark:border-slate-700 p-8 sm:p-10">
-
-          {error && (
-            <div className="mb-6 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900 text-rose-600 dark:text-rose-400 px-4 py-3.5 rounded-xl text-sm font-bold flex items-start gap-2.5 animate-in slide-in-from-top-2">
-              <AlertCircle size={18} className="shrink-0 mt-0.5" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-
-            {/* Name Input */}
-            <div className="space-y-1.5">
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 pl-1">
-                {t('register.nameLabel')}
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                  <User size={18} />
-                </div>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-600"
-                  placeholder="John Doe"
-                />
-              </div>
-            </div>
-
-            {/* Email Input */}
-            <div className="space-y-1.5">
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 pl-1">
-                {t('register.emailLabel')}
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                  <Mail size={18} />
-                </div>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-600"
-                  placeholder="you@example.com"
-                />
-              </div>
-            </div>
-
-            {/* Password Input */}
-            <div className="space-y-1.5">
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 pl-1">
-                {t('register.passwordLabel')}
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                  <Lock size={18} />
-                </div>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-600"
-                  placeholder="••••••••"
-                />
-              </div>
-            </div>
-
-            {/* Confirm Password Input */}
-            <div className="space-y-1.5">
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 pl-1">
-                {t('register.confirmPasswordLabel')}
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                  <Lock size={18} />
-                </div>
-                <input
-                  type="password"
-                  name="password_confirmation"
-                  value={formData.password_confirmation}
-                  onChange={handleChange}
-                  required
-                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all text-sm font-medium text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-600"
-                  placeholder="••••••••"
-                />
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-4 bg-indigo-600 dark:bg-indigo-500 hover:bg-indigo-700 dark:hover:bg-indigo-600 text-white font-bold py-3.5 rounded-xl transition-all shadow-md shadow-indigo-200 dark:shadow-none disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 group"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>{t('register.creatingAccount')}</span>
-                </>
-              ) : (
-                <>
-                  <span>{t('register.createAccountBtn')}</span>
-                  <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                </>
-              )}
-            </button>
-          </form>
-
-        </div>
-
-        {/* Footer Link */}
-        <div className="mt-8 text-center animate-in fade-in delay-150 duration-500">
-          <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">
-            {t('register.haveAccount')}{' '}
-            <Link to="/login" className="text-indigo-600 hover:text-indigo-700 font-bold transition-colors">
-              {t('register.signIn')}
-            </Link>
-          </p>
-        </div>
-
+      <div className="fluid-bg-container">
+        <div className="fluid-blob w-[600px] h-[600px] bg-indigo-500/10 top-[-10%] left-[-10%] opacity-20" />
+        <div className="fluid-blob w-[500px] h-[500px] bg-emerald-500/10 bottom-[-10%] right-[-5%] opacity-20" />
       </div>
+
+      <div className="w-full max-w-[480px] relative z-10 space-y-8 animate-in fade-in duration-700">
+        
+        <div className="text-center space-y-4">
+            <div className="w-20 h-20 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md rounded-2xl mx-auto flex items-center justify-center text-[var(--cc-primary)] border border-slate-200 dark:border-slate-800 shadow-xl shadow-[var(--cc-primary)]/10">
+                <Compass size={44} strokeWidth={1.5} className="animate-spin-slow" />
+            </div>
+            <div className="space-y-1">
+                <h1 className="text-3xl font-black tracking-tight">{t('register.join_career_compass')}</h1>
+                <p className="text-slate-500 text-sm font-medium">{t('register.create_account_journey')}</p>
+            </div>
+        </div>
+
+        <div className="glass-card p-10 border-slate-200 dark:border-slate-800 relative overflow-hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl shadow-2xl rounded-3xl">
+            
+            {/* Progress Bar */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--cc-primary)]">
+                  Step {step} of {totalSteps}
+                </span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  {step === 1 ? 'Identity' : 'Security'}
+                </span>
+              </div>
+              <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden flex">
+                <div 
+                  className="h-full bg-[var(--cc-primary)] transition-all duration-500 ease-out" 
+                  style={{ width: `${(step / totalSteps) * 100}%` }} 
+                />
+              </div>
+            </div>
+
+            {error && (
+                <div className="bg-rose-500/10 border border-rose-500/30 p-4 rounded-xl text-rose-600 dark:text-rose-400 text-xs font-bold flex gap-3 items-center mb-6">
+                    <AlertCircle size={16} className="shrink-0" /> {error}
+                </div>
+            )}
+
+            <form onSubmit={step === 1 ? nextStep : handleSubmit} className="space-y-6">
+                
+                {/* Step 1: Basic Info */}
+                {step === 1 && (
+                  <div className="space-y-5 animate-in slide-in-from-right-4 fade-in duration-300">
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">{t('hud_labels.operator_identity')}</label>
+                        <div className="relative">
+                            <User className="absolute start-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                            <input 
+                                name="name" 
+                                value={formData.name} 
+                                onChange={handleChange} 
+                                className="w-full bg-slate-100 dark:bg-slate-800/50 border border-transparent focus:border-[var(--cc-primary)]/50 ps-12 pe-4 py-4 rounded-xl text-slate-900 dark:text-white font-semibold text-sm outline-none transition-all" 
+                                placeholder={t('hud_labels.full_name')} 
+                                autoFocus
+                            />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">{t('hud_labels.email_endpoint')}</label>
+                        <div className="relative">
+                            <Mail className="absolute start-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                            <input 
+                                type="email" 
+                                name="email" 
+                                value={formData.email} 
+                                onChange={handleChange} 
+                                className="w-full bg-slate-100 dark:bg-slate-800/50 border border-transparent focus:border-[var(--cc-primary)]/50 ps-12 pe-4 py-4 rounded-xl text-slate-900 dark:text-white font-semibold text-sm outline-none transition-all" 
+                                placeholder="mail@example.com" 
+                            />
+                        </div>
+                    </div>
+                    
+                    <button 
+                        type="submit"
+                        className="w-full py-4 mt-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl shadow-lg hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 transition-all"
+                    >
+                        Next Step <ArrowRight size={18} />
+                    </button>
+                  </div>
+                )}
+
+                {/* Step 2: Security */}
+                {step === 2 && (
+                  <div className="space-y-5 animate-in slide-in-from-right-4 fade-in duration-300">
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">{t('hud_labels.access_key')}</label>
+                        <div className="relative">
+                            <Lock className="absolute start-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                            <input 
+                                type="password" 
+                                name="password" 
+                                value={formData.password} 
+                                onChange={handleChange} 
+                                required 
+                                className="w-full bg-slate-100 dark:bg-slate-800/50 border border-transparent focus:border-[var(--cc-primary)]/50 ps-12 pe-4 py-4 rounded-xl text-slate-900 dark:text-white font-semibold text-sm outline-none transition-all" 
+                                placeholder="••••••••" 
+                                autoFocus
+                            />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">{t('hud_labels.confirm')}</label>
+                        <div className="relative">
+                            <ShieldCheck className="absolute start-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                            <input 
+                                type="password" 
+                                name="password_confirmation" 
+                                value={formData.password_confirmation} 
+                                onChange={handleChange} 
+                                required 
+                                className="w-full bg-slate-100 dark:bg-slate-800/50 border border-transparent focus:border-[var(--cc-primary)]/50 ps-12 pe-4 py-4 rounded-xl text-slate-900 dark:text-white font-semibold text-sm outline-none transition-all" 
+                                placeholder="••••••••" 
+                            />
+                        </div>
+                    </div>
+                    
+                    <div className="flex gap-3 mt-4">
+                      <button 
+                          type="button"
+                          onClick={prevStep}
+                          className="py-4 px-6 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center justify-center"
+                      >
+                          <ArrowLeft size={18} />
+                      </button>
+                      <button 
+                          type="submit"
+                          disabled={loading} 
+                          className="flex-1 py-4 bg-[var(--cc-primary)] text-slate-900 font-black uppercase tracking-wider rounded-xl shadow-[0_0_20px_rgba(0,210,255,0.3)] hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 transition-all"
+                      >
+                          {loading ? t('register.creatingAccount') : <>{t('register.createAccountBtn')} <CheckCircle2 size={18} /></>}
+                      </button>
+                    </div>
+                  </div>
+                )}
+            </form>
+        </div>
+
+        <div className="text-center space-y-4">
+            <p className="text-slate-500 font-medium text-sm">
+                {t('register.haveAccount')} <Link to="/login" className="text-[var(--cc-primary)] hover:underline font-bold ml-1">{t('register.signIn')}</Link>
+            </p>
+        </div>
+      </div>
+      <style dangerouslySetInnerHTML={{ __html: `.animate-spin-slow { animation: spin-slow 20s linear infinite; } @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}} />
     </div>
   );
 }

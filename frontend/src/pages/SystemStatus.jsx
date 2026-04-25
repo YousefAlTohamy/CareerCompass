@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Activity, CheckCircle2, Server, Database, Globe, Zap, Cpu, RefreshCw, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export default function SystemStatus() {
     const { t } = useTranslation();
+
+    useEffect(() => {
+        document.dir = t('dir', 'ltr');
+    }, [t]);
 
     const systems = [
         { name: t('status_page.systems.api'), status: t('status_page.states.operational'), uptime: '99.98%', icon: Server, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
@@ -23,7 +27,6 @@ export default function SystemStatus() {
 
     return (
         <div className="min-h-screen relative overflow-hidden font-sans pt-32 pb-20 px-4 hud-scanner">
-            {/* ── 2026 Global Design Layer ────────────────────────────────────────── */}
             <div className="fluid-bg-container">
                 <div className="fluid-blob w-[500px] h-[500px] bg-indigo-500 top-[-10%] left-[-10%]" />
                 <div className="fluid-blob w-[400px] h-[400px] bg-emerald-500 bottom-[20%] right-[-5%] animation-delay-2000" />
@@ -34,7 +37,6 @@ export default function SystemStatus() {
 
             <div className="max-w-5xl mx-auto space-y-16 relative z-10">
                 
-                {/* Header Status Card */}
                 <motion.div 
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -68,6 +70,7 @@ export default function SystemStatus() {
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             className="btn-primary !px-10 !py-5 !rounded-2xl shrink-0 gap-3 border border-emerald-500/30 shadow-emerald-500/10 group"
+                            onClick={() => window.location.reload()}
                         >
                             <RefreshCw size={22} className="group-hover:rotate-180 transition-transform duration-500" />
                             {t('status_page.refresh')}
@@ -75,11 +78,10 @@ export default function SystemStatus() {
                     </div>
                 </motion.div>
 
-                {/* Services Section */}
                 <div className="space-y-8">
                     <div className="flex items-center gap-4 px-2">
                         <div className="h-px flex-grow bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-800 to-transparent" />
-                        <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 whitespace-nowrap">Core Infrastrucutre</h2>
+                        <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 whitespace-nowrap">Core Infrastructure</h2>
                         <div className="h-px flex-grow bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-800 to-transparent" />
                     </div>
                     
@@ -115,7 +117,6 @@ export default function SystemStatus() {
                     </div>
                 </div>
 
-                {/* History Section */}
                 <div className="space-y-10 pt-10">
                     <div className="flex justify-between items-center px-4">
                         <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{t('status_page.past_events')}</h2>
@@ -151,7 +152,6 @@ export default function SystemStatus() {
                     </div>
                 </div>
 
-                {/* Footer Note */}
                 <div className="text-center pt-20">
                      <div className="inline-flex items-center gap-3 px-6 py-3 glass-card !rounded-2xl border-white/10 dark:border-white/5 bg-white/5 text-slate-500 dark:text-slate-400 text-xs font-bold">
                         <AlertCircle size={14} className="text-indigo-500" />
@@ -161,7 +161,6 @@ export default function SystemStatus() {
 
             </div>
 
-             {/* Style Overrides for animations */}
              <style dangerouslySetInnerHTML={{ __html: `
                 .animation-delay-2000 {
                     animation-delay: 2s;
