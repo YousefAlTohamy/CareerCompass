@@ -1,4 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { AuthProvider } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -35,6 +37,8 @@ import AdminSources from './pages/admin/AdminSources';
 import AdminTargets from './pages/admin/AdminTargets';
 
 import './index.css';
+
+import Settings from './pages/user/Settings';
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -85,6 +89,14 @@ function AnimatedRoutes() {
             element={
               <ProtectedRoute allowAdmin={true}>
                 <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
               </ProtectedRoute>
             }
           />
@@ -180,6 +192,25 @@ function AnimatedRoutes() {
 import { ThemeProvider } from './context/ThemeContext';
 import ScrollToTop from './components/ScrollToTop';
 
+function AppLayout() {
+  const { i18n } = useTranslation();
+  const isRtl = i18n.language.startsWith('ar');
+
+  return (
+    <div 
+      dir={isRtl ? 'rtl' : 'ltr'}
+      style={{ direction: isRtl ? 'rtl' : 'ltr' }}
+      className="min-h-screen transition-colors duration-300 flex flex-col"
+    >
+      <Navbar />
+      <div className="flex-grow pt-16">
+        <AnimatedRoutes />
+      </div>
+      <Footer />
+    </div>
+  );
+}
+
 function App() {
   return (
     <ErrorBoundary>
@@ -187,13 +218,7 @@ function App() {
         <Router>
           <ScrollToTop />
           <AuthProvider>
-            <Navbar />
-            <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300 pt-16 flex flex-col">
-              <div className="flex-grow">
-                <AnimatedRoutes />
-              </div>
-              <Footer />
-            </div>
+            <AppLayout />
           </AuthProvider>
         </Router>
       </ThemeProvider>
