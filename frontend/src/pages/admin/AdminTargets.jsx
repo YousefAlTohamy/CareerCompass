@@ -18,7 +18,7 @@ const getErrorMessage = (error, defaultMessage = "An unexpected error occurred."
 };
 
 const AdminTargets = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newRoleName, setNewRoleName] = useState("");
@@ -80,6 +80,7 @@ const AdminTargets = () => {
       const created = result.data || result;
       setRoles((prev) => [created, ...prev]);
       setNewRoleName("");
+      Swal.fire({ toast: true, position: "top-end", icon: "success", title: t('sources.swal_added'), showConfirmButton: false, timer: 2000 });
     } catch (error) {
       console.error(error);
     }
@@ -99,15 +100,16 @@ const AdminTargets = () => {
 
   const handleDeleteRole = async (id) => {
     const result = await Swal.fire({
-      title: "Decommission Target?",
-      text: "Permanent removal of this occupational node from neural priority.",
+      title: t('admin.decommission_target'),
+      text: t('admin.decommission_text'),
       icon: "warning",
       background: 'rgba(15, 23, 42, 0.95)',
       color: '#fff',
       showCancelButton: true,
       confirmButtonColor: "#f43f5e",
       cancelButtonColor: "#334155",
-      confirmButtonText: "DECOMMISSION",
+      confirmButtonText: t('admin.decommission_btn'),
+      cancelButtonText: t('sources.cancel')
     });
 
     if (!result.isConfirmed) return;
@@ -120,6 +122,7 @@ const AdminTargets = () => {
       } else {
           fetchRoles();
       }
+      Swal.fire({ toast: true, position: "top-end", icon: "success", title: t('sources.swal_deleted'), showConfirmButton: false, timer: 2000 });
     } catch (error) {
       console.error(error);
     }
@@ -140,7 +143,7 @@ const AdminTargets = () => {
               <div className="h-px w-8 bg-indigo-500" />
               <span className="text-[11px] font-black uppercase tracking-[0.3em] text-indigo-500">{t('admin.neural_performance')}</span>
             </div>
-            <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-slate-900 dark:text-white">
+            <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-slate-900 dark:text-white leading-tight">
               {t('nav.admin_targets')} <span className="text-indigo-600 dark:text-indigo-400">{t('admin.neural_matrix')}</span>
             </h1>
             <p className="text-slate-500 dark:text-slate-400 mt-3 text-sm font-medium max-w-lg">
@@ -157,7 +160,7 @@ const AdminTargets = () => {
                 value={newRoleName}
                 onChange={(e) => setNewRoleName(e.target.value)}
                 placeholder={t('dashboard.target_role')}
-                className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-slate-700 dark:text-white font-black placeholder-slate-400 text-xs uppercase tracking-widest"
+                className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-slate-700 dark:text-white font-black placeholder-slate-400 text-[10px] uppercase tracking-widest"
               />
               {newRoleName.trim() && (
                 <button type="submit" className="ml-2 text-[10px] font-black text-indigo-500 animate-pulse">EXECUTE</button>
@@ -178,7 +181,7 @@ const AdminTargets = () => {
             <i className="ph-thin ph-magnifying-glass text-slate-400 text-xl mr-3" />
             <input
               type="text"
-              placeholder="Filter target nodes..."
+              placeholder={t('admin.filter_nodes')}
               className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-slate-700 dark:text-white font-medium placeholder-slate-400 text-sm"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
@@ -197,10 +200,10 @@ const AdminTargets = () => {
             <table className="w-full text-left border-collapse min-w-[700px]">
               <thead>
                 <tr className="bg-slate-100/50 dark:bg-white/5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 border-b border-white/10">
-                  <th className="p-6">{t('admin.target_identity', 'Target Identity')}</th>
-                  <th className="p-6">{t('admin.neural_status', 'Neural Status')}</th>
-                  <th className="p-6 text-center">{t('admin.protocol_state', 'Protocol State')}</th>
-                  <th className="p-6 text-right">{t('admin.operations', 'Operations')}</th>
+                  <th className="p-6">{t('admin.target_identity')}</th>
+                  <th className="p-6">{t('admin.neural_status')}</th>
+                  <th className="p-6 text-center">{t('admin.protocol_state')}</th>
+                  <th className="p-6 text-right">{t('admin.operations')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -227,7 +230,7 @@ const AdminTargets = () => {
                       <td className="p-6">
                         <div className="flex flex-col gap-1">
                            <span className={`text-[9px] font-black uppercase tracking-widest ${role.is_active ? 'text-emerald-500' : 'text-slate-400'}`}>
-                             {role.is_active ? t('admin.priority_active', 'PRIORITY_ACTIVE') : t('admin.node_standby', 'NODE_STANDBY')}
+                             {role.is_active ? t('admin.priority_active') : t('admin.node_standby')}
                            </span>
                            <div className="w-20 h-1 bg-slate-200 dark:bg-white/5 rounded-full overflow-hidden">
                               <motion.div 
@@ -247,7 +250,7 @@ const AdminTargets = () => {
                         >
                           <span
                             className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
-                              role.is_active ? 'ltr:translate-x-5 rtl:-translate-x-5' : 'translate-x-0'
+                              role.is_active ? (i18n.dir() === 'rtl' ? '-translate-x-5' : 'translate-x-5') : 'translate-x-0'
                             }`}
                           />
                         </button>
@@ -270,7 +273,7 @@ const AdminTargets = () => {
           {/* Pagination */}
           <div className="p-6 border-t border-white/5 flex items-center justify-between bg-slate-100/30 dark:bg-white/5 backdrop-blur-xl">
              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-               Data Stream {currentPage} of {totalPages}
+               {t('admin.data_stream')} {currentPage} of {totalPages}
              </div>
              <div className="flex items-center gap-3">
                <button
@@ -278,14 +281,14 @@ const AdminTargets = () => {
                  disabled={currentPage <= 1 || loading}
                  className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:border-indigo-500 disabled:opacity-30 transition-all"
                >
-                 <i className="ph-bold ph-caret-left" /> Back
+                 <i className={`ph-bold ${i18n.dir() === 'rtl' ? 'ph-caret-right' : 'ph-caret-left'}`} /> {t('sources.prev')}
                </button>
                <button
                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                  disabled={currentPage >= totalPages || loading}
                  className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:border-indigo-500 disabled:opacity-30 transition-all"
                >
-                 Next <i className="ph-bold ph-caret-right" />
+                 {t('sources.next')} <i className={`ph-bold ${i18n.dir() === 'rtl' ? 'ph-caret-left' : 'ph-caret-right'}`} />
                </button>
              </div>
           </div>
