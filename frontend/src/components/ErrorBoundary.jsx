@@ -1,55 +1,47 @@
-import { useState, useEffect } from 'react';
-import { AlertCircle } from 'lucide-react';
+import React from 'react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 
-export default function ErrorBoundary({ children }) {
-  const [hasError, setHasError] = useState(false);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const errorHandler = (event) => {
-      console.error('Error caught by boundary:', event.error);
-      setHasError(true);
-      setError(event.error?.message || 'An unexpected error occurred');
-    };
-
-    const unhandledRejectionHandler = (event) => {
-      console.error('Unhandled promise rejection:', event.reason);
-      setHasError(true);
-      setError(event.reason?.message || 'An unexpected error occurred');
-    };
-
-    window.addEventListener('error', errorHandler);
-    window.addEventListener('unhandledrejection', unhandledRejectionHandler);
-
-    return () => {
-      window.removeEventListener('error', errorHandler);
-      window.removeEventListener('unhandledrejection', unhandledRejectionHandler);
-    };
-  }, []);
-
-  if (hasError) {
-    return (
-      <div className="min-h-screen bg-red-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md">
-          <div className="flex items-center justify-center mb-4">
-            <AlertCircle className="text-red-600" size={48} />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2 text-center">
-            Something went wrong
-          </h1>
-          <p className="text-gray-600 text-center mb-6">
-            {error || 'An unexpected error occurred. Please try refreshing the page.'}
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
-          >
-            Refresh Page
-          </button>
-        </div>
-      </div>
-    );
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
   }
 
-  return children;
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error: error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('React Error Boundary caught an error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6 font-sans">
+          <div className="glass-card p-10 max-w-md w-full border-rose-500/20 bg-white dark:bg-slate-900 shadow-2xl text-center space-y-8">
+            <div className="w-20 h-20 bg-rose-500/10 rounded-3xl flex items-center justify-center mx-auto text-rose-500 border border-rose-500/20 shadow-lg">
+              <AlertCircle size={48} />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">SYSTEM_HALT</h1>
+              <p className="text-slate-500 dark:text-slate-400 font-medium">
+                {this.state.error?.message || 'An unexpected runtime error occurred during synthesis.'}
+              </p>
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-indigo-500/20 flex items-center justify-center gap-3 transition-all"
+            >
+              <RefreshCw size={18} /> Re-initialize App
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
 }
+
+export default ErrorBoundary;

@@ -21,8 +21,10 @@ export const ThemeProvider = ({ children }) => {
   useEffect(() => {
     // Handle Language & RTL
     const root = window.document.documentElement;
+    const body = window.document.body;
     root.setAttribute('lang', language);
-    root.setAttribute('dir', language === 'ar' ? 'rtl' : 'ltr');
+    root.setAttribute('dir', language.startsWith('ar') ? 'rtl' : 'ltr');
+    body.setAttribute('dir', language.startsWith('ar') ? 'rtl' : 'ltr');
     i18n.changeLanguage(language);
     localStorage.setItem('i18nextLng', language);
   }, [language]);
