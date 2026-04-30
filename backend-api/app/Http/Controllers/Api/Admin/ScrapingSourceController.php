@@ -105,7 +105,10 @@ class ScrapingSourceController extends Controller
 
         try {
             // Run the command and capture output
-            Artisan::call('scrape:test-sources', ['--timeout' => 45]);
+            Artisan::call('scrape:test-sources', [
+                '--timeout' => 45,
+                '--query'   => 'Software Engineer',
+            ]);
             $output = Artisan::output();
 
             // Basic heuristic to determine success

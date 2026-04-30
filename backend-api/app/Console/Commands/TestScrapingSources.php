@@ -9,6 +9,16 @@ use Illuminate\Support\Facades\Http;
 class TestScrapingSources extends Command
 {
     /**
+     * The placeholder token embedded in ScrapingSource endpoint URLs.
+     */
+    private const QUERY_PLACEHOLDER = '{query}';
+
+    /**
+     * Default search keyword used when testing sources.
+     * Chosen to be broad enough to return results on any job board.
+     */
+    private const DEFAULT_TEST_QUERY = 'Software Engineer';
+    /**
      * The name and signature of the console command.
      *
      * @var string
@@ -61,13 +71,24 @@ class TestScrapingSources extends Command
         $testQuery = $this->option('query');
 
         foreach ($sources as $source) {
+            // ── Resolve {query} placeholder in the endpoint URL ──────
+            $resolvedEndpoint = $source->endpoint;
+
+            if (str_contains($resolvedEndpoint, self::QUERY_PLACEHOLDER)) {
+                $resolvedEndpoint = str_replace(
+                    self::QUERY_PLACEHOLDER,
+                    rawurlencode($testQuery),
+                    $resolvedEndpoint
+                );
+                $this->line("  <fg=yellow>Using test query:</> <fg=white;options=bold>{$testQuery}</> → {$resolvedEndpoint}");
+            }
+
             $this->line("  <options=bold>Testing:</> {$source->name} <fg=gray>[{$source->type}]</>");
-            $this->line("  Debug: Query type: " . gettype($testQuery) . " | Value: " . json_encode($testQuery));
 
             try {
                 $result = match ($source->type) {
-                    'api'  => $this->testApiSource($source, $timeout),
-                    'html' => $this->testHtmlSource($source, $testQuery, $timeout),
+                    'api'  => $this->testApiSource($source, $resolvedEndpoint, $timeout),
+                    'html', 'spa' => $this->testHtmlSource($source, $resolvedEndpoint, $testQuery, $timeout),
                     default => ['ok' => false, 'error' => "Unknown source type '{$source->type}'"],
                 };
 
@@ -106,18 +127,19 @@ class TestScrapingSources extends Command
 
     /**
      * @param ScrapingSource $source
+     * @param string $resolvedEndpoint  The endpoint URL with {query} already resolved.
      * @param int $timeout
      * @return array
      */
-    private function testApiSource($source, int $timeout): array
+    private function testApiSource($source, string $resolvedEndpoint, int $timeout): array
     {
         // ── Adzuna: delegate to the Python engine ────────────────────────────
         // Reason: Cloudflare/Chef does TLS fingerprinting. Guzzle's TLS stack
         // is always detected as non-browser regardless of headers. The Python
         // engine (httpx) uses different TLS behaviour and already reads Adzuna
         // credentials from its own .env / environment variables.
-        if (str_contains($source->endpoint, 'adzuna.com')) {
-            return $this->testHtmlSource($source, 'developer', $timeout);
+        if (str_contains($resolvedEndpoint, 'adzuna.com')) {
+            return $this->testHtmlSource($source, $resolvedEndpoint, self::DEFAULT_TEST_QUERY, $timeout);
         }
 
         // ── All other API sources: call directly via Guzzle ──────────────────
@@ -137,7 +159,7 @@ class TestScrapingSources extends Command
             $response = Http::timeout($timeout)
                 ->withoutVerifying()
                 ->withHeaders($headers)
-                ->get($source->endpoint, $params);
+                ->get($resolvedEndpoint, $params);
 
             if (!$response->successful()) {
                 return [
@@ -183,11 +205,12 @@ class TestScrapingSources extends Command
 
     /**
      * @param ScrapingSource $source
+     * @param string $resolvedEndpoint  The endpoint URL with {query} already resolved.
      * @param string $query
      * @param int $timeout
      * @return array
      */
-    private function testHtmlSource($source, $query, int $timeout): array
+    private function testHtmlSource($source, string $resolvedEndpoint, $query, int $timeout): array
     {
         try {
             $aiEngineUrl = config('services.ai_engine.url', 'http://127.0.0.1:8001');
@@ -198,7 +221,7 @@ class TestScrapingSources extends Command
                     'source' => [
                         'id'       => $source->id,
                         'name'     => $source->name,
-                        'endpoint' => $source->endpoint,
+                        'endpoint' => $resolvedEndpoint,
                         'type'     => $source->type,
                         // Force object serialization so Python receives {} instead of [] for empty arrays
                         'headers'  => (object) ($source->headers ?? []),
