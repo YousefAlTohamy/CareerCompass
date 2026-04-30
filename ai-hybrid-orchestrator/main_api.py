@@ -132,6 +132,13 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+@app.on_event("startup")
+async def startup_event():
+    import asyncio
+    import sys
+    if sys.platform == 'win32':
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:8000", "http://localhost:5173"],

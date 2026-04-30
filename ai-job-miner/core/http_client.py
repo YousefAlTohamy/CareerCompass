@@ -196,16 +196,14 @@ class SmartAsyncClient:
 
     async def __aenter__(self) -> "SmartAsyncClient":
         try:
-            import aiohttp  # type: ignore
-            # ssl=False bypasses strict TLS fingerprinters that cause
-            # status=0 (connection reset) with aiohttp's default TLS stack.
-            connector = aiohttp.TCPConnector(ssl=False)
-            self._session = aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=self._timeout),
-                connector=connector,
+            from curl_cffi.requests import AsyncSession  # type: ignore
+            # impersonate="chrome124" is critical to bypass TLS fingerprinters (Status 0)
+            self._session = AsyncSession(
+                timeout=self._timeout,
+                impersonate="chrome124",
             )
         except ImportError:
-            # aiohttp not installed — tests will inject a mock
+            # curl_cffi not installed — tests will inject a mock
             self._session = None
         return self
 
@@ -304,9 +302,8 @@ class SmartAsyncClient:
         """Execute one HTTP GET and return (status_code, body_text)."""
         if self._session is None:
             raise RuntimeError("SmartAsyncClient must be used as an async context manager.")
-        async with self._session.get(url, headers=headers, **kwargs) as resp:
-            text = await resp.text()
-            return resp.status, text
+        resp = await self._session.get(url, headers=headers, **kwargs)
+        return resp.status_code, resp.text
 
     def _backoff_delay(self, attempt: int) -> float:
         """

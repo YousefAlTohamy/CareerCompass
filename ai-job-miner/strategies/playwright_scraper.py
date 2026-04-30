@@ -51,6 +51,7 @@ class PlaywrightScraper(BaseScraper):
                         headless=True,
                         channel="chrome",
                         slow_mo=50,
+                        ignore_default_args=["--enable-automation"],
                         args=[
                             "--no-sandbox",
                             "--disable-setuid-sandbox",
@@ -67,6 +68,7 @@ class PlaywrightScraper(BaseScraper):
                     browser = await p.chromium.launch(
                         headless=True,
                         slow_mo=50,
+                        ignore_default_args=["--enable-automation"],
                         args=[
                             "--no-sandbox",
                             "--disable-setuid-sandbox",
