@@ -99,6 +99,14 @@ _NEGATIVE_TITLE_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"\b(?:filter|sort|refine)\s+by\b", re.IGNORECASE),
     # "All jobs", "All openings"
     re.compile(r"\ball\s+(?:jobs?|openings?|positions?)\b", re.IGNORECASE),
+    # Strings starting with digits followed by "jobs" (e.g. "500 jobs in Cairo")
+    re.compile(r"^\d+\s+.*jobs?\s+in\b", re.IGNORECASE),
+    # "Apply now:" prefix — scraping artifact from job cards
+    re.compile(r"^\s*apply\s+now\s*:", re.IGNORECASE),
+    # "New!" or "NEW" prefix glued to a title during extraction
+    re.compile(r"^\s*new\s*!\s*", re.IGNORECASE),
+    # Salary range string mistakenly used as a title (e.g. "$80,000 - $120,000")
+    re.compile(r"^\s*\$[\d,]+\s*[-–—]\s*\$[\d,]+", re.IGNORECASE),
 ]
 
 # Ideal word-count range for a real job title

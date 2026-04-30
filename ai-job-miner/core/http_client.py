@@ -247,9 +247,22 @@ class SmartAsyncClient:
             # 1. Rate limit
             await self._bucket.acquire()
 
-            # 2. Rotate User-Agent
+            # 2. Rotate User-Agent + anti-fingerprint headers
             ua = random.choice(_USER_AGENTS)
-            headers = {**kwargs.pop("headers", {}), "User-Agent": ua}
+            headers = {
+                "User-Agent": ua,
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Referer": "https://www.google.com/",
+                "DNT": "1",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "cross-site",
+                "Sec-Fetch-User": "?1",
+                "Upgrade-Insecure-Requests": "1",
+                **kwargs.pop("headers", {}),
+            }
 
             try:
                 status, text = await self._do_request(url, headers=headers, **kwargs)

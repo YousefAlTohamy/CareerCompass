@@ -47,11 +47,37 @@ class PlaywrightScraper(BaseScraper):
                         "--no-sandbox",
                         "--disable-setuid-sandbox",
                         "--disable-dev-shm-usage",
+                        "--disable-blink-features=AutomationControlled",
                     ],
                 )
                 try:
-                    context = await browser.new_context()
+                    # ── Stealth browser context ───────────────────────────
+                    context = await browser.new_context(
+                        viewport={"width": 1920, "height": 1080},
+                        user_agent=(
+                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                            "AppleWebKit/537.36 (KHTML, like Gecko) "
+                            "Chrome/124.0.0.0 Safari/537.36"
+                        ),
+                        locale="en-US",
+                        timezone_id="America/New_York",
+                        color_scheme="light",
+                        extra_http_headers={
+                            "Accept-Language": "en-US,en;q=0.9",
+                            "Referer": "https://www.google.com/",
+                            "Sec-Fetch-Dest": "document",
+                            "Sec-Fetch-Mode": "navigate",
+                            "Sec-Fetch-Site": "cross-site",
+                            "Sec-Fetch-User": "?1",
+                            "Upgrade-Insecure-Requests": "1",
+                        },
+                    )
                     page = await context.new_page()
+
+                    # Mask the navigator.webdriver flag that bot-detectors check
+                    await page.add_init_script(
+                        "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+                    )
 
                     page.set_default_timeout(timeout_ms)
                     page.set_default_navigation_timeout(timeout_ms)

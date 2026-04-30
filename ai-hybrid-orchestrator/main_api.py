@@ -17,11 +17,19 @@ Run
 
 from __future__ import annotations
 
+# ── Windows asyncio compatibility ─────────────────────────────────────────────
+# Playwright requires the SelectorEventLoop on Windows.  The default
+# ProactorEventLoop causes "NotImplementedError" / "Event loop is closed"
+# errors.  This MUST run before any asyncio event-loop creation.
 import asyncio
+import sys
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 import contextlib
 import logging
 import os
-import sys
 import tempfile
 from contextlib import asynccontextmanager
 from pathlib import Path
