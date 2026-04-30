@@ -19,6 +19,9 @@ return new class extends Migration
             $table->integer('jobs_found')->nullable();
             $table->integer('jobs_stored')->nullable();
             $table->integer('jobs_duplicated')->nullable();
+            $table->unsignedInteger('discovered_count')->default(0);
+            $table->unsignedInteger('failed_count')->default(0);
+            $table->unsignedInteger('processing_time_ms')->default(0);
             $table->text('error_message')->nullable();
             $table->timestamp('started_at')->nullable();
             $table->timestamp('completed_at')->nullable();

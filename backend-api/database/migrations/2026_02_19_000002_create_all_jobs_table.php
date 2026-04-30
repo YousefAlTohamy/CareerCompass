@@ -22,7 +22,15 @@ return new class extends Migration
             $table->string('experience')->nullable();
             $table->string('url')->nullable();
             $table->string('source')->nullable()->comment('e.g., Wuzzuf, LinkedIn');
+            $table->foreignId('scraping_source_id')
+                ->nullable()
+                ->constrained('scraping_sources')
+                ->nullOnDelete();
             $table->timestamps();
+
+            // Unique constraints to prevent duplicate job postings
+            $table->unique('url', 'jobs_url_unique');
+            $table->unique(['title', 'company'], 'jobs_title_company_unique');
         });
     }
 
