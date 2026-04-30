@@ -24,6 +24,11 @@ class ProcessMarketScrapingCategory implements ShouldQueue
     public $tries = 2;
     public $backoff = 5;
 
+    /**
+     * The placeholder token embedded in ScrapingSource endpoint URLs.
+     */
+    private const QUERY_PLACEHOLDER = '{query}';
+
     public function __construct(
         protected string $category,
         protected int $maxResultsPerCategory = 30,
@@ -39,6 +44,14 @@ class ProcessMarketScrapingCategory implements ShouldQueue
             'max_per_category' => $this->maxResultsPerCategory,
         ]);
 
+        // ── Resolve {query} placeholders in source endpoints ──────────
+        $resolvedSources = $this->resolveSourcesForCategory($this->sources, $this->category);
+
+        if (empty($resolvedSources)) {
+            Log::warning("No sources with {query} placeholder available for: {$this->category}");
+            return;
+        }
+
         $scrapingJob = ScrapingJob::create([
             'job_title' => $this->category,
             'type' => 'scheduled',
@@ -48,7 +61,7 @@ class ProcessMarketScrapingCategory implements ShouldQueue
         $scrapingJob->markAsStarted();
 
         try {
-            $result = $this->scrapeJobsFromAI($this->category, $this->maxResultsPerCategory, $this->sources);
+            $result = $this->scrapeJobsFromAI($this->category, $this->maxResultsPerCategory, $resolvedSources);
 
             if (!$result || empty($result['jobs'])) {
                 $scrapingJob->markAsFailed(
@@ -170,6 +183,48 @@ class ProcessMarketScrapingCategory implements ShouldQueue
             Log::error('Failed to connect to AI Engine', ['error' => $e->getMessage()]);
             return null;
         }
+    }
+
+    // -----------------------------------------------------------------
+    // {query} placeholder resolution
+    // -----------------------------------------------------------------
+
+    /**
+     * Resolve the {query} placeholder in every source endpoint URL,
+     * replacing it with the URL-encoded category name.
+     *
+     * Sources that do NOT contain {query} are skipped with a log warning.
+     *
+     * @param  array   $sources   Raw source payloads from getActiveSources().
+     * @param  string  $category  The target job role name.
+     * @return array              Sources with resolved endpoint URLs.
+     */
+    private function resolveSourcesForCategory(array $sources, string $category): array
+    {
+        $resolved = [];
+
+        foreach ($sources as $source) {
+            $endpoint = $source['endpoint'] ?? '';
+
+            if (!str_contains($endpoint, self::QUERY_PLACEHOLDER)) {
+                Log::warning('[ProcessMarketScrapingCategory] Source has no {query} placeholder, skipping', [
+                    'source' => $source['name'] ?? 'unknown',
+                    'endpoint' => $endpoint,
+                    'category' => $category,
+                ]);
+                continue;
+            }
+
+            $source['endpoint'] = str_replace(
+                self::QUERY_PLACEHOLDER,
+                rawurlencode($category),
+                $endpoint
+            );
+
+            $resolved[] = $source;
+        }
+
+        return $resolved;
     }
 
     /**

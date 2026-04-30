@@ -4,6 +4,8 @@ namespace App\Console\Commands;
 
 use App\Models\Skill;
 use App\Models\Job;
+use App\Models\ScrapingSource;
+use App\Models\TargetJobRole;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -12,10 +14,10 @@ use Carbon\Carbon;
 class ScrapeJobs extends Command
 {
     protected $signature = 'jobs:scrape
-                            {--count=20 : Number of jobs to fetch per category}
+                            {--count=20 : Number of jobs to fetch per source/role pair}
                             {--queue : Run scraping in background queue}
                             {--categories=* : Specific job categories to scrape}';
-    protected $description = 'Scrape jobs from AI Engine and store in database';
+    protected $description = 'Scrape jobs from all active sources × target roles and store in database';
 
     // -----------------------------------------------------------------
     // Regex patterns that indicate a title is search metadata, not a
@@ -51,6 +53,11 @@ class ScrapeJobs extends Command
         '',
     ];
 
+    // -----------------------------------------------------------------
+    // The placeholder token embedded in ScrapingSource endpoint URLs.
+    // -----------------------------------------------------------------
+    private const QUERY_PLACEHOLDER = '{query}';
+
     public function handle()
     {
         $count = $this->option('count');
@@ -66,7 +73,6 @@ class ScrapeJobs extends Command
         if ($useQueue) {
             // Dispatch to queue for background processing
             $this->info('Dispatching scraping job to queue...');
-            $this->info('Categories: ' . implode(', ', $categories));
 
             \App\Jobs\ProcessMarketScraping::dispatch($categories, (int) $count);
 
@@ -75,67 +81,196 @@ class ScrapeJobs extends Command
             return 0;
         }
 
-        // Run synchronously (original behavior for single category)
-        if (empty($categories)) {
-            $categories = \App\Models\TargetJobRole::where('is_active', true)->pluck('name')->toArray();
+        // ── Synchronous mode: Source × Role nested loop ──────────────
+        $roles = $this->resolveRoles($categories);
+
+        if (empty($roles)) {
+            $this->warn('No active target roles found. Add roles on the Target Roles page.');
+            return 1;
         }
-        $query = $categories[0] ?? 'developer';
-        $this->info("Fetching {$count} jobs for: {$query}...");
 
-        $sources = \App\Models\ScrapingSource::where('status', 'active')->get()->toArray();
+        $sources = ScrapingSource::where('status', 'active')
+            ->get(['id', 'name', 'endpoint', 'type', 'headers', 'params']);
 
-        try {
-            $response = Http::timeout(60)
-                ->post('http://127.0.0.1:8001/scrape-jobs', [
-                    'query' => $query,
-                    'max_results' => $count,
-                    'use_samples' => false,
-                    'sources' => $sources,
-                ]);
+        if ($sources->isEmpty()) {
+            $this->warn('No active scraping sources configured.');
+            return 1;
+        }
 
-            if (!$response->successful()) {
-                $this->error('Failed to fetch jobs from AI Engine');
-                return 1;
-            }
+        $this->info("Starting global scrape: {$sources->count()} source(s) × " . count($roles) . " role(s)");
+        $this->newLine();
 
-            $data = $response->json();
-            $jobs = $data['jobs'] ?? [];
+        $totalStored = 0;
+        $totalRejected = 0;
+        $totalSkipped = 0;
 
-            $this->info("Found {$data['total_jobs']} jobs");
+        foreach ($sources as $source) {
+            foreach ($roles as $role) {
+                // ── Resolve {query} placeholder in endpoint URL ───────
+                $resolvedEndpoint = $this->resolveQueryPlaceholder($source->endpoint, $role);
 
-            $stored = 0;
-            $rejected = 0;
-
-            foreach ($jobs as $jobData) {
-                // ── Gatekeeper validation ─────────────────────────────
-                $rejection = $this->validateJobData($jobData);
-
-                if ($rejection !== null) {
-                    $rejected++;
-                    $sourceUrl = $jobData['url'] ?? 'unknown URL';
-                    $rawTitle  = $jobData['title'] ?? '(empty)';
-
-                    $this->warn("REJECTED: \"{$rawTitle}\" — {$rejection}");
-                    Log::warning('[ScrapeJobs] Job rejected', [
-                        'reason'  => $rejection,
-                        'title'   => $rawTitle,
-                        'company' => $jobData['company'] ?? null,
-                        'url'     => $sourceUrl,
+                if ($resolvedEndpoint === null) {
+                    $totalSkipped++;
+                    $this->warn("SKIP: Source \"{$source->name}\" has no {query} placeholder — skipping for \"{$role}\"");
+                    Log::warning('[ScrapeJobs] Source skipped (no {query} placeholder)', [
+                        'source' => $source->name,
+                        'role'   => $role,
+                        'url'    => $source->endpoint,
                     ]);
                     continue;
                 }
 
-                $this->storeJob($jobData);
-                $stored++;
-                $this->line("Stored: {$jobData['title']}");
-            }
+                $this->info("▶ [{$source->name}] × [{$role}]");
+                $this->line("  URL: {$resolvedEndpoint}");
 
-            $this->info("Successfully stored {$stored} jobs! ({$rejected} rejected)");
-            return 0;
-        } catch (\Exception $e) {
-            $this->error('Error: ' . $e->getMessage());
-            return 1;
+                // Build the source payload with the resolved endpoint
+                $sourcePayload = [
+                    'id'       => $source->id,
+                    'name'     => $source->name,
+                    'endpoint' => $resolvedEndpoint,
+                    'type'     => $source->type,
+                    'headers'  => $source->headers ?? [],
+                    'params'   => $source->params  ?? [],
+                ];
+
+                try {
+                    $result = $this->scrapeFromAI($role, $count, [$sourcePayload]);
+
+                    if (!$result || empty($result['jobs'])) {
+                        $this->line("  ⚠ No jobs returned.");
+                        continue;
+                    }
+
+                    $stored = 0;
+                    $rejected = 0;
+
+                    foreach ($result['jobs'] as $jobData) {
+                        // ── Gatekeeper validation ─────────────────────
+                        $rejection = $this->validateJobData($jobData);
+
+                        if ($rejection !== null) {
+                            $rejected++;
+                            $this->line("  REJECTED: \"{$jobData['title']}\" — {$rejection}");
+                            Log::warning('[ScrapeJobs] Job rejected', [
+                                'reason'  => $rejection,
+                                'title'   => $jobData['title'] ?? '(empty)',
+                                'company' => $jobData['company'] ?? null,
+                                'url'     => $jobData['url'] ?? 'unknown',
+                                'source'  => $source->name,
+                                'role'    => $role,
+                            ]);
+                            continue;
+                        }
+
+                        $this->storeJob($jobData);
+                        $stored++;
+                    }
+
+                    $totalStored += $stored;
+                    $totalRejected += $rejected;
+
+                    $this->line("  ✓ Stored: {$stored} | Rejected: {$rejected}");
+                } catch (\Exception $e) {
+                    $this->error("  ✗ Error: {$e->getMessage()}");
+                    Log::error('[ScrapeJobs] Scraping failed', [
+                        'source' => $source->name,
+                        'role'   => $role,
+                        'error'  => $e->getMessage(),
+                    ]);
+                }
+            }
         }
+
+        $this->newLine();
+        $this->info("═══════════════════════════════════════════════════");
+        $this->info("  COMPLETE: {$totalStored} stored | {$totalRejected} rejected | {$totalSkipped} skipped");
+        $this->info("═══════════════════════════════════════════════════");
+
+        return 0;
+    }
+
+    // -----------------------------------------------------------------
+    // URL template resolution
+    // -----------------------------------------------------------------
+
+    /**
+     * Replace the {query} placeholder in a source endpoint with a
+     * URL-encoded job role name.
+     *
+     * Returns the resolved URL, or NULL if the endpoint does not
+     * contain the {query} placeholder.
+     *
+     * @param  string  $endpoint  e.g. "https://indeed.com/jobs?q={query}&l=Remote"
+     * @param  string  $role      e.g. "Backend Developer"
+     * @return string|null        e.g. "https://indeed.com/jobs?q=Backend%20Developer&l=Remote"
+     */
+    private function resolveQueryPlaceholder(string $endpoint, string $role): ?string
+    {
+        if (!str_contains($endpoint, self::QUERY_PLACEHOLDER)) {
+            return null;
+        }
+
+        return str_replace(self::QUERY_PLACEHOLDER, rawurlencode($role), $endpoint);
+    }
+
+    /**
+     * Resolve which roles to scrape from CLI args or the database.
+     *
+     * @param  array|null  $categories  Explicit categories from --categories flag.
+     * @return array<string>
+     */
+    private function resolveRoles(?array $categories): array
+    {
+        if (!empty($categories)) {
+            return $categories;
+        }
+
+        return TargetJobRole::where('is_active', true)
+            ->pluck('name')
+            ->toArray();
+    }
+
+    // -----------------------------------------------------------------
+    // AI Engine HTTP client
+    // -----------------------------------------------------------------
+
+    /**
+     * Send a scrape request to the Python AI Engine.
+     *
+     * @param  string  $query       The search query (role name).
+     * @param  int     $maxResults  Max jobs per source.
+     * @param  array   $sources     Array of resolved source payloads.
+     * @return array|null
+     */
+    private function scrapeFromAI(string $query, int $maxResults, array $sources): ?array
+    {
+        $aiEngineUrl = config('services.ai_engine.url', 'http://127.0.0.1:8001');
+        $timeout = config('services.ai_engine.timeout', 120);
+
+        $response = Http::timeout($timeout)
+            ->retry(2, 500, function ($exception) {
+                return $exception instanceof \Illuminate\Http\Client\ConnectionException ||
+                    ($exception instanceof \Illuminate\Http\Client\RequestException &&
+                        $exception->response &&
+                        $exception->response->status() >= 500);
+            })
+            ->post("{$aiEngineUrl}/scrape-jobs", [
+                'query'               => $query,
+                'max_results'         => $maxResults,
+                'use_samples'         => false,
+                'calculate_statistics' => false,
+                'sources'             => $sources,
+            ]);
+
+        if (!$response->successful()) {
+            Log::error('[ScrapeJobs] AI Engine returned non-200', [
+                'status' => $response->status(),
+                'body'   => $response->body(),
+            ]);
+            return null;
+        }
+
+        return $response->json();
     }
 
     // -----------------------------------------------------------------
