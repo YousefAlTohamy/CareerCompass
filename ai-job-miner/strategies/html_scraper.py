@@ -25,7 +25,7 @@ import aiohttp
 from bs4 import BeautifulSoup
 
 from core.base_scraper import BaseScraper
-from core.heuristics import extract_semantic_sibling, find_highest_density_node
+from core.heuristics import extract_semantic_sibling, find_highest_density_node, is_likely_job_title
 
 logger = logging.getLogger(__name__)
 
@@ -111,16 +111,31 @@ class HtmlSmartScraper(BaseScraper):
 
                 h1 = soup.find("h1")
                 if h1 and h1.get_text(strip=True):
-                    title = h1.get_text(separator=" ", strip=True)
-                    logger.info("[HtmlSmartScraper] Title from <h1>: '%s'", title)
-                else:
+                    h1_text = h1.get_text(separator=" ", strip=True)
+                    if is_likely_job_title(h1_text):
+                        title = h1_text
+                        logger.info("[HtmlSmartScraper] Title from <h1>: '%s'", title)
+                    else:
+                        logger.warning(
+                            "[HtmlSmartScraper] <h1> rejected by title validator: '%s'",
+                            h1_text[:100],
+                        )
+
+                if not title:
                     page_title_tag = soup.find("title")
                     if page_title_tag and page_title_tag.get_text(strip=True):
                         raw = page_title_tag.get_text(separator=" ", strip=True)
-                        title = _TITLE_SUFFIX_NOISE.sub("", raw).strip()
-                        logger.info(
-                            "[HtmlSmartScraper] Title fallback from <title>: '%s'", title
-                        )
+                        candidate = _TITLE_SUFFIX_NOISE.sub("", raw).strip()
+                        if is_likely_job_title(candidate):
+                            title = candidate
+                            logger.info(
+                                "[HtmlSmartScraper] Title fallback from <title>: '%s'", title
+                            )
+                        else:
+                            logger.warning(
+                                "[HtmlSmartScraper] <title> rejected by title validator: '%s'",
+                                candidate[:100],
+                            )
 
                 # ── Step 3.5: Company (best-effort) ──────────────────────────
                 og_site = soup.find("meta", attrs={"property": "og:site_name"})
