@@ -52,30 +52,30 @@ logger = logging.getLogger(__name__)
 # Real-browser User-Agent strings (sampled from caniuse.com analytics 2024)
 # ---------------------------------------------------------------------------
 _USER_AGENTS: tuple[str, ...] = (
-    # Chrome – Windows
+    # Chrome 124 – Windows
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-    # Chrome – macOS
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    # Chrome 124 – macOS
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     # Firefox – Windows
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) "
-    "Gecko/20100101 Firefox/124.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) "
+    "Gecko/20100101 Firefox/125.0",
     # Firefox – Linux
-    "Mozilla/5.0 (X11; Linux x86_64; rv:124.0) "
-    "Gecko/20100101 Firefox/124.0",
+    "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) "
+    "Gecko/20100101 Firefox/125.0",
     # Safari – macOS
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_3_1) AppleWebKit/605.1.15 "
-    "(KHTML, like Gecko) Version/17.3.1 Safari/605.1.15",
-    # Edge – Windows
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_1) AppleWebKit/605.1.15 "
+    "(KHTML, like Gecko) Version/17.4.1 Safari/605.1.15",
+    # Edge 124 – Windows
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0",
-    # Chrome – Android
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0",
+    # Chrome 124 – Android
     "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/122.0.6261.119 Mobile Safari/537.36",
+    "(KHTML, like Gecko) Chrome/124.0.6367.82 Mobile Safari/537.36",
     # Safari – iOS
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_3_1 like Mac OS X) "
-    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3.1 "
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X) "
+    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 "
     "Mobile/15E148 Safari/604.1",
 )
 
@@ -197,8 +197,12 @@ class SmartAsyncClient:
     async def __aenter__(self) -> "SmartAsyncClient":
         try:
             import aiohttp  # type: ignore
+            # ssl=False bypasses strict TLS fingerprinters that cause
+            # status=0 (connection reset) with aiohttp's default TLS stack.
+            connector = aiohttp.TCPConnector(ssl=False)
             self._session = aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(total=self._timeout),
+                connector=connector,
             )
         except ImportError:
             # aiohttp not installed — tests will inject a mock

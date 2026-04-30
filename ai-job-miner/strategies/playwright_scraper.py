@@ -10,7 +10,9 @@ pipeline.
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import random
 
 from core.base_scraper import BaseScraper
 from strategies.html_scraper import HtmlSmartScraper
@@ -41,15 +43,37 @@ class PlaywrightScraper(BaseScraper):
 
             html: str
             async with async_playwright() as p:
-                browser = await p.chromium.launch(
-                    headless=True,
-                    args=[
-                        "--no-sandbox",
-                        "--disable-setuid-sandbox",
-                        "--disable-dev-shm-usage",
-                        "--disable-blink-features=AutomationControlled",
-                    ],
-                )
+                # Use the system-installed Chrome (channel='chrome') for a
+                # genuine TLS fingerprint that WAFs trust.  Falls back to
+                # bundled Chromium if Chrome is not found.
+                try:
+                    browser = await p.chromium.launch(
+                        headless=True,
+                        channel="chrome",
+                        slow_mo=50,
+                        args=[
+                            "--no-sandbox",
+                            "--disable-setuid-sandbox",
+                            "--disable-dev-shm-usage",
+                            "--disable-blink-features=AutomationControlled",
+                        ],
+                    )
+                except Exception:
+                    # Chrome not installed — fall back to bundled Chromium
+                    logger.warning(
+                        "[PlaywrightScraper] Chrome channel unavailable, "
+                        "falling back to bundled Chromium."
+                    )
+                    browser = await p.chromium.launch(
+                        headless=True,
+                        slow_mo=50,
+                        args=[
+                            "--no-sandbox",
+                            "--disable-setuid-sandbox",
+                            "--disable-dev-shm-usage",
+                            "--disable-blink-features=AutomationControlled",
+                        ],
+                    )
                 try:
                     # ── Stealth browser context ───────────────────────────
                     context = await browser.new_context(
@@ -85,6 +109,10 @@ class PlaywrightScraper(BaseScraper):
 
                     if wait_for_selector:
                         await page.wait_for_selector(wait_for_selector, timeout=timeout_ms)
+
+                    # Random human-like delay before extraction — lets JS
+                    # finish rendering and avoids bot-timing signatures.
+                    await asyncio.sleep(random.uniform(2, 5))
 
                     html = await page.content()
                 finally:
