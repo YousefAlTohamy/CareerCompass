@@ -13,6 +13,8 @@ Functions
 ---------
 clean_text(text)           — strip HTML tags, normalize Unicode & whitespace
 remove_noise(title)        — remove job-title noise words via Regex FSM
+clean_job_title(title)     — deep-clean job titles: strip scraping noise,
+                             remove embedded locations / salaries / platform names
 extract_salary(text)       — parse salary ranges into a structured dict
 extract_experience(text)   — parse experience requirements into a dict
 extract_job_type(text)     — classify employment type (Full-time, Contract …)
@@ -76,6 +78,113 @@ _NOISE_PATTERN: re.Pattern = re.compile(
     r"(?i)\b(?:" + "|".join(_NOISE_WORDS) + r")\b[:\-–,]?\s*",
     re.IGNORECASE,
 )
+
+# ---------------------------------------------------------------------------
+# Scraping-noise patterns stripped from job titles
+# These are artifacts of page rendering (badges, CTAs, result counts)
+# that end up concatenated to the title during extraction.
+# ---------------------------------------------------------------------------
+_SCRAPING_PREFIX_NOISE: list[re.Pattern] = [
+    # Badges / labels prepended to titles: "New!", "Hot:", "Featured - ", "Promoted ·"
+    re.compile(
+        r"^\s*(?:new|hot|featured|promoted|sponsored|trending|exclusive|popular)"
+        r"\s*[!:·•\-–—|]*\s*",
+        re.IGNORECASE,
+    ),
+    # CTA prefixes: "Apply now:", "Easy Apply - ", "Quick apply · "
+    re.compile(
+        r"^\s*(?:apply\s+now|easy\s+apply|quick\s+apply|one[\s-]click\s+apply)"
+        r"\s*[:\-–—·•|]*\s*",
+        re.IGNORECASE,
+    ),
+    # Numeric job-count prefixes: "3 jobs - ", "1,200+ jobs · "
+    re.compile(
+        r"^\s*\d[\d,]*\+?\s*(?:jobs?|results?|positions?|openings?)\s*[:\-–—·•|]*\s*",
+        re.IGNORECASE,
+    ),
+    # Date / freshness prefixes: "3d ago · ", "Just posted - ", "Today · "
+    re.compile(
+        r"^\s*(?:\d+[dhm]\s+ago|just\s+posted|posted\s+today|today|yesterday)"
+        r"\s*[:\-–—·•|]*\s*",
+        re.IGNORECASE,
+    ),
+]
+
+_SCRAPING_SUFFIX_NOISE: list[re.Pattern] = [
+    # Trailing CTA: " - Apply now", " | Easy Apply"
+    re.compile(
+        r"\s*[:\-–—·•|]+\s*(?:apply\s+now|easy\s+apply|quick\s+apply)\s*$",
+        re.IGNORECASE,
+    ),
+    # Trailing job count: " - 500+ jobs", " | 3 positions"
+    re.compile(
+        r"\s*[:\-–—·•|]+\s*\d[\d,]*\+?\s*(?:jobs?|results?|positions?|openings?)\s*$",
+        re.IGNORECASE,
+    ),
+    # Trailing freshness: " · 3d ago", " - Posted today"
+    re.compile(
+        r"\s*[:\-–—·•|]+\s*(?:\d+[dhm]\s+ago|just\s+posted|posted\s+today|today|yesterday)\s*$",
+        re.IGNORECASE,
+    ),
+    # Trailing platform names: " | LinkedIn", " - Indeed", " · Glassdoor"
+    re.compile(
+        r"\s*[:\-–—·•|]+\s*(?:linkedin|indeed|glassdoor|ziprecruiter|monster"
+        r"|careerbuilder|dice|hired|angellist|workday|lever|greenhouse|bamboohr)\s*$",
+        re.IGNORECASE,
+    ),
+]
+
+# Redundant info patterns that get concatenated into titles during extraction
+_REDUNDANT_INFO_PATTERNS: list[re.Pattern] = [
+    # Inline salary with separator: "- $80k-$100k", "| $80,000 - $100,000"
+    re.compile(
+        r"\s*[\-–—|·,]+\s*[$£€¥₹]\s*\d[\d,]*"
+        r"(?:\.\d+)?\s*k?\s*(?:[\-–—\s]+(?:to\s+)?[$£€¥₹]?\s*\d[\d,]*(?:\.\d+)?\s*k?)?\s*"
+        r"(?:per\s+(?:year|annum|month|hour|week))?\s*",
+        re.IGNORECASE,
+    ),
+    # Standalone salary at end: "$80k-$100k", "£50k", "€40,000 per year"
+    re.compile(
+        r"\s+[$£€¥₹]\s*\d[\d,]*"
+        r"(?:\.\d+)?\s*k?\s*(?:[\-–—\s]+(?:to\s+)?[$£€¥₹]?\s*\d[\d,]*(?:\.\d+)?\s*k?)?\s*"
+        r"(?:per\s+(?:year|annum|month|hour|week))?\s*$",
+        re.IGNORECASE,
+    ),
+    # Salary with currency code: "- USD 80k-100k", "| EGP 10,000"
+    re.compile(
+        r"\s*[\-–—|·,]+\s*(?:USD|GBP|EUR|EGP|SAR|AED|INR|JPY)\s*\d[\d,]*"
+        r"(?:\.\d+)?\s*k?\s*(?:[\-–—\s]+(?:to\s+)?\d[\d,]*(?:\.\d+)?\s*k?)?\s*",
+        re.IGNORECASE,
+    ),
+    # Location suffix with separator: "- in New York", "| in United States"
+    re.compile(
+        r"\s*[\-–—|·,]+\s*(?:in|near|at|based\s+in)\s+[A-Z][a-zA-Z\s,]{2,40}\s*$",
+        re.IGNORECASE,
+    ),
+    # Location suffix without separator: "in New York" at end of string
+    re.compile(
+        r"\s+(?:in|near|at|based\s+in)\s+[A-Z][a-zA-Z\s,]{2,40}\s*$",
+    ),
+    # Parenthesized location: "(New York, NY)", "(Remote - US)"
+    re.compile(
+        r"\s*\(\s*(?:remote\s*[-–—]?\s*)?[A-Z][a-zA-Z\s,]{2,40}\)\s*",
+        re.IGNORECASE,
+    ),
+    # Platform attribution: "on LinkedIn", "via Indeed", "at Glassdoor"
+    re.compile(
+        r"\s*(?:on|via|at|from)\s+(?:linkedin|indeed|glassdoor|ziprecruiter"
+        r"|monster|careerbuilder|dice|hired|angellist)\s*$",
+        re.IGNORECASE,
+    ),
+    # "per year/month/hour" remnant (after salary number was removed)
+    re.compile(
+        r"\s*[\-–—|·,]*\s*per\s+(?:year|annum|month|hour|week)\s*$",
+        re.IGNORECASE,
+    ),
+]
+
+# Max word count for a cleaned title — beyond this it's likely a sentence
+_TITLE_MAX_WORDS_AFTER_CLEAN: int = 10
 
 # ---------------------------------------------------------------------------
 # Currency symbols / codes mapped to ISO 4217 codes
@@ -193,6 +302,94 @@ def remove_noise(title: str) -> str:
     cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
 
     logger.debug("[cleaners.remove_noise] '%s' → '%s'", title, cleaned)
+    return cleaned
+
+
+# ===========================================================================
+# 2b. clean_job_title  (NEW — deep title sanitisation)
+# ===========================================================================
+
+def clean_job_title(title: str) -> str:
+    """
+    Deep-clean a raw job title by stripping scraping artefacts, embedded
+    metadata, and accidentally concatenated information.
+
+    This function is designed to run **after** ``clean_text`` and
+    ``remove_noise``, applying three additional cleaning layers:
+
+    Layers
+    ------
+    1. **Scraping Noise Stripping** — removes badge labels (``"New!"``,
+       ``"Featured"``), CTA prefixes/suffixes (``"Apply now:"``,
+       ``"Easy Apply"``), job-count fragments (``"500+ jobs"``), freshness
+       tags (``"3d ago"``), and platform names (``"LinkedIn"``).
+
+    2. **Redundant Info Stripping** — removes salary ranges
+       (``"$80k-$100k"``), location names (``"in New York"``), and
+       platform attributions (``"on Indeed"``) that were accidentally
+       concatenated into the title during DOM extraction.
+
+    3. **Sanity Validation** — titles exceeding 10 words after cleaning
+       are truncated to the first 10 words with a warning, since genuine
+       job titles rarely exceed 8 words.
+
+    Parameters
+    ----------
+    title : str
+        A job title string that has ideally already been processed by
+        ``clean_text()`` and ``remove_noise()``.
+
+    Returns
+    -------
+    str
+        The cleaned title, or an empty string if the entire input was noise.
+
+    Examples
+    --------
+    >>> clean_job_title("New! Senior Python Developer - $80k-$100k")
+    'Senior Python Developer'
+
+    >>> clean_job_title("Apply now: Data Analyst in Cairo, Egypt | LinkedIn")
+    'Data Analyst'
+
+    >>> clean_job_title("3d ago · Staff ML Engineer - Remote")
+    'Staff ML Engineer'
+    """
+    if not title:
+        return ""
+
+    cleaned = title.strip()
+
+    # ── Layer 1: Strip scraping noise (prefixes then suffixes) ──────────
+    for pattern in _SCRAPING_PREFIX_NOISE:
+        cleaned = pattern.sub("", cleaned).strip()
+
+    for pattern in _SCRAPING_SUFFIX_NOISE:
+        cleaned = pattern.sub("", cleaned).strip()
+
+    # ── Layer 2: Strip redundant concatenated info ──────────────────────
+    for pattern in _REDUNDANT_INFO_PATTERNS:
+        cleaned = pattern.sub("", cleaned).strip()
+
+    # ── Layer 3: Final punctuation / whitespace normalisation ───────────
+    # Strip residual separators left at boundaries after removals
+    cleaned = re.sub(r"^\s*[\-–—|·•:,]+\s*|\s*[\-–—|·•:,]+\s*$", "", cleaned)
+    cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
+
+    # ── Layer 4: Word-count sanity check ────────────────────────────────
+    words = cleaned.split()
+    if len(words) > _TITLE_MAX_WORDS_AFTER_CLEAN:
+        truncated = " ".join(words[:_TITLE_MAX_WORDS_AFTER_CLEAN])
+        logger.warning(
+            "[cleaners.clean_job_title] Title too long (%d words), truncating: "
+            "'%s' → '%s'",
+            len(words),
+            cleaned[:120],
+            truncated,
+        )
+        cleaned = truncated
+
+    logger.debug("[cleaners.clean_job_title] '%s' → '%s'", title[:80], cleaned)
     return cleaned
 
 

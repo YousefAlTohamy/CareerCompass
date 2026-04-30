@@ -1,10 +1,16 @@
 """
 ai/ner_extractor.py
 ====================
-Phase 4 — Custom Skill Extraction Engine
+Phase 4 — Custom Skill Extraction & Title Validation Engine
 
 Implements a hybrid skill extraction strategy that works reliably **without**
 any ML model, but optionally leverages spaCy's Entity Ruler when available.
+
+Also provides a title extraction & validation layer that:
+- Defines a refined system prompt for LLM-based title extraction
+- Validates extracted titles against negative patterns (search metadata,
+  job counts, platform names) to prevent garbage data from passing through
+- Flags invalid titles for Dead Letter Queue (DLQ) routing
 
 Extraction layers (in order of priority)
 -----------------------------------------
@@ -41,6 +47,7 @@ from __future__ import annotations
 
 import logging
 import re
+from dataclasses import dataclass, field
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -124,6 +131,101 @@ _SKILL_PATTERNS: list[tuple[str, re.Pattern]] = [
     )
     for skill in _FLAT_SKILLS
 ]
+
+
+# ---------------------------------------------------------------------------
+# Title Extraction — LLM System Prompt & Validation
+# ---------------------------------------------------------------------------
+
+TITLE_EXTRACTION_SYSTEM_PROMPT: str = """You are a precision job-title extraction engine.
+
+Your ONLY task is to extract the professional job title from the provided
+text. Follow these rules strictly:
+
+1. Extract ONLY the professional job title (e.g. "Senior Software Engineer",
+   "Data Analyst", "Product Manager"). Return the title and nothing else.
+
+2. DISCARD all of the following if present in the input:
+   - Search metadata: result counts ("4,178,000+ jobs"), pagination
+     ("Showing 1-25 of 500"), "Results for ..."
+   - Platform names: "LinkedIn", "Indeed", "Glassdoor", "ZipRecruiter"
+   - Location information: city names, countries, "in New York",
+     "United States"
+   - Job count phrases: "500+ results", "Browse jobs"
+   - Salary information: "$80k-$100k", "EGP 10,000"
+   - Noise labels: "New!", "Hot", "Featured", "Apply now", "Easy Apply"
+   - Freshness tags: "3d ago", "Posted today", "Just posted"
+
+3. If the input contains NO identifiable professional job title (i.e. it
+   is entirely search metadata, navigation text, or noise), return exactly
+   the string: "Unknown"
+
+4. Do NOT invent or guess a title. If uncertain, return "Unknown".
+
+5. The output must be 1-8 words maximum. Do not include explanations,
+   punctuation beyond what's in the title, or surrounding text.
+
+Examples:
+  Input: "4,178,000+ jobs in United States"  →  Output: "Unknown"
+  Input: "Senior Python Developer - New York | LinkedIn"  →  Output: "Senior Python Developer"
+  Input: "Showing 1-25 of 500 results for software engineer"  →  Output: "Software Engineer"
+  Input: "Staff Machine Learning Engineer"  →  Output: "Staff Machine Learning Engineer"
+  Input: "Apply now: Data Analyst · 3d ago"  →  Output: "Data Analyst"
+"""
+
+# Values that indicate the AI extraction failed to find a real title
+_INVALID_TITLE_SENTINELS: frozenset[str] = frozenset({
+    "unknown", "n/a", "none", "null", "not found", "not available",
+    "no title", "untitled", "undefined", "", "error",
+})
+
+# Regex patterns that indicate the "title" is still search metadata
+_TITLE_REJECTION_PATTERNS: list[re.Pattern[str]] = [
+    # Job count strings: "4,178,000+ jobs", "500 results"
+    re.compile(
+        r"\d{1,3}(?:,\d{3})*\+?\s*(?:jobs?|results?|positions?|openings?|vacancies)",
+        re.IGNORECASE,
+    ),
+    # Pagination: "Showing 1-25", "Page 1 of 50"
+    re.compile(r"\bshowing\s+\d+\s*[-–—]\s*\d+", re.IGNORECASE),
+    re.compile(r"\bpage\s+\d+\s+of\s+\d+", re.IGNORECASE),
+    # "Results for ..."
+    re.compile(r"\bresults?\s+for\b", re.IGNORECASE),
+    # "Jobs in [Location]"
+    re.compile(r"\bjobs?\s+(?:in|near|around)\s+[A-Z]", re.IGNORECASE),
+    # Platform names as sole content
+    re.compile(
+        r"^\s*(?:linkedin|indeed|glassdoor|ziprecruiter|monster|careerbuilder)\s*$",
+        re.IGNORECASE,
+    ),
+    # "Browse/Search/Find jobs"
+    re.compile(r"\b(?:browse|search|find|explore)\s+(?:jobs?|careers?)\b", re.IGNORECASE),
+    # Pure numeric strings
+    re.compile(r"^[\d\s,+.\-]+$"),
+]
+
+
+@dataclass
+class TitleValidationResult:
+    """
+    Result of title extraction and validation.
+
+    Attributes
+    ----------
+    title : str
+        The cleaned, validated title — or empty string if invalid.
+    is_valid : bool
+        Whether the title passed all validation checks.
+    should_flag_dlq : bool
+        Whether this record should be routed to the Dead Letter Queue
+        due to an unrecoverable title quality issue.
+    rejection_reason : str
+        Human-readable explanation if the title was rejected.
+    """
+    title: str = ""
+    is_valid: bool = False
+    should_flag_dlq: bool = False
+    rejection_reason: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -262,3 +364,148 @@ class CustomSkillExtractor:
         canonical = self._canonicalizer.canonicalize_many(skills_sorted)
         logger.info("[NER] Extracted %d skills (canonical): %s", len(canonical), canonical)
         return canonical
+
+    # -------------------------------------------------------------------
+    # Title extraction & validation
+    # -------------------------------------------------------------------
+
+    def extract_and_validate_title(
+        self,
+        raw_title: str,
+        ai_extracted_title: Optional[str] = None,
+    ) -> TitleValidationResult:
+        """
+        Validate (and optionally refine) a job title, flagging garbage
+        data for the Dead Letter Queue.
+
+        The method accepts two inputs:
+
+        1. ``raw_title`` — the title extracted by heuristic DOM scraping.
+        2. ``ai_extracted_title`` — (optional) the title returned by an
+           LLM that was prompted with ``TITLE_EXTRACTION_SYSTEM_PROMPT``.
+
+        Validation pipeline
+        -------------------
+        1. Prefer ``ai_extracted_title`` if it is present and non-sentinel.
+        2. Fall back to ``raw_title``.
+        3. Apply regex rejection patterns to catch residual search metadata.
+        4. Check word count (reject titles > 12 words or < 2 words).
+        5. If the final title is still invalid, flag for DLQ.
+
+        Parameters
+        ----------
+        raw_title : str
+            Heuristic-extracted title from the scraper.
+        ai_extracted_title : str, optional
+            Title returned by the LLM extraction step.
+
+        Returns
+        -------
+        TitleValidationResult
+            Validated result with DLQ flag if needed.
+
+        Examples
+        --------
+        >>> ext = CustomSkillExtractor(use_spacy=False)
+        >>> r = ext.extract_and_validate_title("Senior Python Developer")
+        >>> r.is_valid, r.title
+        (True, 'Senior Python Developer')
+
+        >>> r = ext.extract_and_validate_title("4,178,000+ jobs in United States")
+        >>> r.is_valid, r.should_flag_dlq
+        (False, True)
+        """
+        # ── Step 1: Choose best candidate ──────────────────────────────
+        candidate = ""
+
+        if ai_extracted_title:
+            cleaned_ai = ai_extracted_title.strip()
+            if cleaned_ai.lower() not in _INVALID_TITLE_SENTINELS:
+                candidate = cleaned_ai
+
+        if not candidate and raw_title:
+            candidate = raw_title.strip()
+
+        if not candidate:
+            return TitleValidationResult(
+                title="",
+                is_valid=False,
+                should_flag_dlq=True,
+                rejection_reason="Both raw and AI titles are empty or sentinel values.",
+            )
+
+        # ── Step 2: Check sentinel values ──────────────────────────────
+        if candidate.lower() in _INVALID_TITLE_SENTINELS:
+            logger.warning(
+                "[NER] Title is a sentinel value: '%s'", candidate
+            )
+            return TitleValidationResult(
+                title="",
+                is_valid=False,
+                should_flag_dlq=True,
+                rejection_reason=f"Title is a sentinel value: '{candidate}'",
+            )
+
+        # ── Step 3: Regex rejection patterns ───────────────────────────
+        valid, reason = self._is_title_valid(candidate)
+        if not valid:
+            logger.warning(
+                "[NER] Title rejected by validation: '%s' — %s",
+                candidate[:100],
+                reason,
+            )
+            return TitleValidationResult(
+                title="",
+                is_valid=False,
+                should_flag_dlq=True,
+                rejection_reason=reason,
+            )
+
+        logger.info("[NER] Title validated: '%s'", candidate)
+        return TitleValidationResult(
+            title=candidate,
+            is_valid=True,
+            should_flag_dlq=False,
+            rejection_reason="",
+        )
+
+    @staticmethod
+    def _is_title_valid(title: str) -> tuple[bool, str]:
+        """
+        Apply regex rejection patterns and structural checks to a title.
+
+        Returns
+        -------
+        tuple[bool, str]
+            ``(True, "")`` if valid, ``(False, reason)`` if rejected.
+        """
+        # Check against rejection patterns
+        for pattern in _TITLE_REJECTION_PATTERNS:
+            if pattern.search(title):
+                return (
+                    False,
+                    f"Matches rejection pattern: {pattern.pattern!r}",
+                )
+
+        # Word-count check
+        words = title.split()
+        if len(words) < 2:
+            return (
+                False,
+                f"Too few words ({len(words)}): '{title}'",
+            )
+        if len(words) > 12:
+            return (
+                False,
+                f"Too many words ({len(words)}): '{title[:80]}'",
+            )
+
+        # Check minimum alphanumeric ratio (reject strings like "--- | ---")
+        alnum_count = sum(1 for c in title if c.isalnum())
+        if len(title) > 0 and alnum_count / len(title) < 0.50:
+            return (
+                False,
+                f"Low alphanumeric ratio ({alnum_count}/{len(title)}): '{title[:80]}'",
+            )
+
+        return (True, "")
