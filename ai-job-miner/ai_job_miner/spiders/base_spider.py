@@ -87,7 +87,8 @@ class BasePlaywrightSpider(scrapy.Spider):
             html_response = response.replace(body=content.encode('utf-8'))
             
             # Delegate to child spider's extraction logic
-            yield from self.parse_job(html_response)
+            for item in self.parse_job(html_response):
+                yield item
             
         finally:
             await page.close()

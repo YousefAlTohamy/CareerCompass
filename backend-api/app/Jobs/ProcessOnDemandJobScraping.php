@@ -174,34 +174,25 @@ class ProcessOnDemandJobScraping implements ShouldQueue
     protected function calculateSkillImportance(string $jobTitle): void
     {
         try {
-            // Get all jobs matching this title
-            $jobs = Job::where('title', 'like', "%{$jobTitle}%")
-                ->with('skills')
-                ->get();
+            $totalJobs = Job::where('title', 'like', "%{$jobTitle}%")->count();
 
-            if ($jobs->isEmpty()) {
+            if ($totalJobs === 0) {
                 return;
             }
 
-            $totalJobs = $jobs->count();
-            $skillFrequency = [];
+            $skillStats = DB::table('job_skills')
+                ->join('job_postings', 'job_skills.job_id', '=', 'job_postings.id')
+                ->where('job_postings.title', 'like', "%{$jobTitle}%")
+                ->select(
+                    'job_skills.skill_id',
+                    DB::raw('COUNT(DISTINCT job_skills.job_id) as job_count')
+                )
+                ->groupBy('job_skills.skill_id')
+                ->get();
 
-            // Count skill occurrences
-            foreach ($jobs as $job) {
-                foreach ($job->skills as $skill) {
-                    if (!isset($skillFrequency[$skill->id])) {
-                        $skillFrequency[$skill->id] = ['count' => 0, 'skill' => $skill];
-                    }
-                    $skillFrequency[$skill->id]['count']++;
-                }
-            }
+            foreach ($skillStats as $stat) {
+                $percentage = ($stat->job_count / $totalJobs) * 100;
 
-            // Update importance scores
-            foreach ($skillFrequency as $skillId => $data) {
-                $count = $data['count'];
-                $percentage = ($count / $totalJobs) * 100;
-
-                // Determine category
                 $category = 'nice_to_have';
                 if ($percentage > 70) {
                     $category = 'essential';
@@ -209,21 +200,18 @@ class ProcessOnDemandJobScraping implements ShouldQueue
                     $category = 'important';
                 }
 
-                // Update pivot records
                 DB::table('job_skills')
-                    ->whereIn('job_id', $jobs->pluck('id'))
-                    ->where('skill_id', $skillId)
+                    ->join('job_postings', 'job_skills.job_id', '=', 'job_postings.id')
+                    ->where('job_postings.title', 'like', "%{$jobTitle}%")
+                    ->where('job_skills.skill_id', $stat->skill_id)
                     ->update([
-                        'importance_score' => round($percentage, 2),
-                        'importance_category' => $category,
-                        'updated_at' => now(),
+                        'job_skills.importance_score' => round($percentage, 2),
+                        'job_skills.importance_category' => $category,
+                        'job_skills.updated_at' => now(),
                     ]);
             }
 
-            Log::info("Updated skill importance for on-demand job: {$jobTitle}", [
-                'total_jobs' => $totalJobs,
-                'unique_skills' => count($skillFrequency),
-            ]);
+            Log::info("Updated skill importance for on-demand job: {$jobTitle}");
         } catch (\Exception $e) {
             Log::error("Error calculating skill importance for {$jobTitle}", [
                 'error' => $e->getMessage(),
@@ -244,9 +232,9 @@ class ProcessOnDemandJobScraping implements ShouldQueue
             
             // Get top skills
             $topSkills = DB::table('job_skills')
-                ->join('jobs', 'job_skills.job_id', '=', 'jobs.id')
+                ->join('job_postings', 'job_skills.job_id', '=', 'job_postings.id')
                 ->join('skills', 'job_skills.skill_id', '=', 'skills.id')
-                ->where('jobs.title', 'like', "%{$roleTitle}%")
+                ->where('job_postings.title', 'like', "%{$roleTitle}%")
                 ->select('skills.name', DB::raw('COUNT(skills.id) as count'))
                 ->groupBy('skills.id', 'skills.name')
                 ->orderByDesc('count')
