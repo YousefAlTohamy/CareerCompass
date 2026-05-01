@@ -133,11 +133,12 @@ services:
       sh -c "npm install && npm run dev -- --host 0.0.0.0"
 
   # ==========================================
-  # AI Services: Python Gateway & Scrapers
+  # AI Services: Python Gateway & Scrapers (Mono-container)
   # ==========================================
   ai-gateway:
-    # Playwright image is required because ai-job-miner needs browser automation libraries
-    image: mcr.microsoft.com/playwright/python:v1.44.0-jammy
+    build:
+      context: .
+      dockerfile: ./docker/python/Dockerfile
     container_name: ai-gateway
     restart: unless-stopped
     # The hybrid orchestrator loads the other AI modules via sys.path injection
@@ -154,12 +155,6 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-    command: >
-      sh -c "
-      pip install --no-cache-dir -r /app/ai-cv-analyzer/requirements.txt &&
-      pip install --no-cache-dir -r /app/ai-job-miner/requirements.txt &&
-      uvicorn main_api:app --host 0.0.0.0 --port 8001 --reload
-      "
 
   # ==========================================
   # Infrastructure: Nginx Reverse Proxy
