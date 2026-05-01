@@ -26,15 +26,17 @@ class ProcessOnDemandJobScraping implements ShouldQueue
     protected string $jobTitle;
     protected int $scrapingJobId;
     protected int $maxResults;
+    protected ?int $sourceId;
 
     /**
      * Create a new job instance.
      */
-    public function __construct(string $jobTitle, int $scrapingJobId, int $maxResults = 30)
+    public function __construct(string $jobTitle, int $scrapingJobId, int $maxResults = 30, ?int $sourceId = null)
     {
         $this->jobTitle = $jobTitle;
         $this->scrapingJobId = $scrapingJobId;
         $this->maxResults = $maxResults;
+        $this->sourceId = $sourceId;
 
         // High priority queue
         $this->onQueue('high');
@@ -65,12 +67,23 @@ class ProcessOnDemandJobScraping implements ShouldQueue
             $scrapyPath = base_path('../ai-job-miner');
             
             // Build the Scrapy command
-            // Note: We use escapeshellarg for safety, though Process handles argument escaping internally when using arrays
             $command = [
                 'scrapy', 'crawl', 'linkedin', 
                 '-a', 'query=' . $this->jobTitle,
                 '-a', 'limit=' . $this->maxResults
             ];
+            
+            if ($this->sourceId) {
+                $command[] = '-a';
+                $command[] = 'source_id=' . $this->sourceId;
+                
+                // Set cache to true
+                Cache::put("scraping_source_{$this->sourceId}_status", [
+                    'is_scraping' => true, 
+                    'count' => 0, 
+                    'job_id' => $this->scrapingJobId
+                ], now()->addHours(2));
+            }
 
             Log::info("Executing Scrapy", ['command' => implode(' ', $command)]);
 
@@ -128,6 +141,12 @@ class ProcessOnDemandJobScraping implements ShouldQueue
                 'stored' => $stored,
                 'duplicates' => $duplicates,
             ]);
+
+            if ($this->sourceId) {
+                $status = Cache::get("scraping_source_{$this->sourceId}_status", ['count' => 0]);
+                $status['is_scraping'] = false;
+                Cache::put("scraping_source_{$this->sourceId}_status", $status, now()->addHours(2));
+            }
         } catch (\Exception $e) {
             Log::error("Error in on-demand scraping for {$this->jobTitle}", [
                 'error' => $e->getMessage(),
@@ -140,6 +159,12 @@ class ProcessOnDemandJobScraping implements ShouldQueue
                 failedCount: 0,
                 processingTimeMs: (int) round((microtime(true) - $startedAt) * 1000),
             );
+
+            if ($this->sourceId) {
+                $status = Cache::get("scraping_source_{$this->sourceId}_status", ['count' => 0]);
+                $status['is_scraping'] = false;
+                Cache::put("scraping_source_{$this->sourceId}_status", $status, now()->addHours(2));
+            }
         }
     }
 

@@ -35,6 +35,18 @@ class ScrapedJobController extends Controller
                 $validated
             );
 
+            // Increment Cache count if source_id is provided
+            if (!empty($validated['scraping_source_id'])) {
+                $sourceId = $validated['scraping_source_id'];
+                $status = \Illuminate\Support\Facades\Cache::get("scraping_source_{$sourceId}_status");
+                if ($status && isset($status['is_scraping']) && $status['is_scraping']) {
+                    if ($job->wasRecentlyCreated) {
+                        $status['count'] = ($status['count'] ?? 0) + 1;
+                        \Illuminate\Support\Facades\Cache::put("scraping_source_{$sourceId}_status", $status, now()->addHours(2));
+                    }
+                }
+            }
+
             return response()->json([
                 'message' => 'Job imported successfully',
                 'job_id' => $job->id,

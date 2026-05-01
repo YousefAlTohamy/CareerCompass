@@ -125,8 +125,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/users/{id}/toggle-ban', [AdminUserController::class, 'toggleBan']);
 
         // Specific routes MUST come before apiResource (wildcards)
+        Route::get('scraping-sources/status', [ScrapingSourceController::class, 'getStatus']);
         Route::patch('scraping-sources/{scrapingSource}/toggle', [ScrapingSourceController::class, 'toggleStatus']);
         Route::post('scraping-sources/test', [ScrapingSourceController::class, 'test']);
+        Route::post('scraping-sources/{id}/test', [ScrapingSourceController::class, 'testSingle']);
 
         // Full CRUD for scraping sources
         Route::apiResource('scraping-sources', ScrapingSourceController::class);

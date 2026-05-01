@@ -28,6 +28,18 @@ Schedule::job(new ProcessMarketScraping())
         Log::error('Market scraping job failed');
     });
 
+// Execute Daily Scraping
+Schedule::command('scraping:execute-daily')
+    ->dailyAt('03:00')
+    ->name('daily-scraping-execution')
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        Log::info('Daily scraping execution completed successfully');
+    })
+    ->onFailure(function () {
+        Log::error('Daily scraping execution failed');
+    });
+
 // Skill Importance Calculation: Daily at 04:00 AM
 // Recalculates skill importance scores for all job titles after scraping
 // Uses withoutOverlapping to prevent concurrent executions
