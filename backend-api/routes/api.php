@@ -78,7 +78,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/scraping-status/{jobId}', [JobController::class, 'checkScrapingStatus'])->name('api.scraping.status');
 
     // Python Scraper Integration
+    Route::post('/jobs/import/check', [ScrapedJobController::class, 'checkExistence']);
     Route::post('/jobs/import', [ScrapedJobController::class, 'import']);
+    Route::post('/jobs/import/failed', [ScrapedJobController::class, 'reportFailure']);
 
     // Gap Analysis
     Route::get('/gap-analysis/job/{jobId}', [GapAnalysisController::class, 'analyzeJob']);

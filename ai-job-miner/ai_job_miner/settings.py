@@ -35,8 +35,8 @@ DOWNLOADER_MIDDLEWARES = {
 
 # Pipelines
 ITEM_PIPELINES = {
-    'ai_job_miner.pipelines.NERPipeline': 100,
-    'ai_job_miner.pipelines.DeduplicationPipeline': 200,
+    'ai_job_miner.pipelines.DeduplicationPipeline': 100,
+    'ai_job_miner.pipelines.NERPipeline': 200,
     'ai_job_miner.pipelines.LaravelExportPipeline': 300,
 }
 

@@ -50,15 +50,22 @@ class SkillCanonicalizer:
     def _load_standard_skills_from_file(self) -> list[str]:
         path = os.getenv("STANDARD_SKILLS_PATH", "").strip()
         if not path:
-            return []
+            # Default to the config folder in the Scrapy project root
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            path = os.path.join(base_dir, "config", "standard_skills.json")
+            
         try:
+            if not os.path.exists(path):
+                return []
             with open(path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             if isinstance(data, list):
                 return [str(x) for x in data if str(x).strip()]
             if isinstance(data, dict) and isinstance(data.get("skills"), list):
                 return [str(x) for x in data["skills"] if str(x).strip()]
-        except Exception:
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to load standard skills: {e}")
             return []
         return []
 

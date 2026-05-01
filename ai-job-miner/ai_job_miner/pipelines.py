@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import re
 from itemadapter import ItemAdapter
 from scrapy.exceptions import DropItem
 
@@ -11,12 +12,74 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
+class DeduplicationPipeline:
+    """
+    Prevents sending the same job posting to the backend multiple times during a single run.
+    Uses a simple memory set. Also queries the Laravel backend for persistent deduplication.
+    """
+    def __init__(self):
+        self.seen_urls = set()
+        self.api_check_url = os.getenv('LARAVEL_API_CHECK_URL', 'http://127.0.0.1:8000/api/jobs/import/check')
+        self.api_token = os.getenv('LARAVEL_API_TOKEN', 'YOUR_SANCTUM_TOKEN')
+        
+        transport = httpx.AsyncHTTPTransport(retries=1)
+        self.client = httpx.AsyncClient(transport=transport, timeout=5.0)
+
+    async def process_item(self, item, spider):
+        adapter = ItemAdapter(item)
+        url = adapter.get('url')
+        
+        if not url:
+            return item
+
+        # 1. Local Memory Check
+        if url in self.seen_urls:
+            raise DropItem(f"Duplicate job found in local cache: {url}")
+            
+        self.seen_urls.add(url)
+        
+        # 2. Persistent Backend Check
+        headers = {
+            "Authorization": f"Bearer {self.api_token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        
+        try:
+            response = await self.client.post(self.api_check_url, json={"url": url}, headers=headers)
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('exists'):
+                    raise DropItem(f"Duplicate job found in database: {url}")
+        except httpx.RequestError as e:
+            logger.warning(f"Backend deduplication check failed for {url}: {e}")
+            # If backend check fails, we proceed rather than dropping, to not lose data
+            
+        return item
+        
+    def close_spider(self, spider):
+        import asyncio
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.create_task(self.client.aclose())
+            else:
+                loop.run_until_complete(self.client.aclose())
+        except Exception:
+            pass
+
+
 class NERPipeline:
     """
     Pipeline to extract skills and clean up the title/description using the NER module.
     """
     def __init__(self):
         self.extractor = CustomSkillExtractor(use_spacy=True)
+        # Redundant boilerplate regex
+        self.boilerplate_pattern = re.compile(
+            r'(?i)\b(apply now|about the company|about us|show more|click here|read more)\b', 
+            re.IGNORECASE
+        )
 
     def process_item(self, item, spider):
         adapter = ItemAdapter(item)
@@ -31,50 +94,42 @@ class NERPipeline:
         title_res = self.extractor.extract_and_validate_title(title)
         if not title_res.is_valid:
             if title_res.should_flag_dlq:
-                # In production, we'd route this to DLQ or log as failed
                 logger.warning(f"Invalid Title flagged for DLQ: {title_res.rejection_reason}")
             raise DropItem(f"Invalid Job Title: {title}")
             
         adapter['title'] = title_res.title
         
-        # 2. Skill Extraction from Description
-        # Basic text cleanup before NER
-        clean_desc = self._strip_html(description)
+        # 2. Advanced Data Cleaning
+        clean_desc = self._clean_html(description)
         adapter['description'] = clean_desc
         
+        # 3. Skill Extraction from Cleaned Description
         extracted_skills = self.extractor.extract_skills(clean_desc)
         adapter['skills'] = extracted_skills
         
         # Optionally populate requirements as the raw text for now
-        # or use a heuristics module to slice the "Requirements" section out.
         adapter['requirements'] = ""
 
         return item
 
-    def _strip_html(self, text):
+    def _clean_html(self, text):
         from bs4 import BeautifulSoup
         if not text:
             return ""
-        return BeautifulSoup(text, "html.parser").get_text(separator="\n").strip()
-
-
-class DeduplicationPipeline:
-    """
-    Prevents sending the same job posting to the backend multiple times during a single run.
-    Uses a simple memory set. For distributed scraping, use Redis.
-    """
-    def __init__(self):
-        self.seen_urls = set()
-
-    def process_item(self, item, spider):
-        adapter = ItemAdapter(item)
-        url = adapter.get('url')
         
-        if url in self.seen_urls:
-            raise DropItem(f"Duplicate job found: {url}")
+        # Strip structural noise while preserving whitespace
+        soup = BeautifulSoup(text, "html.parser")
+        
+        # Remove script and style elements
+        for script in soup(["script", "style", "noscript"]):
+            script.extract()
             
-        self.seen_urls.add(url)
-        return item
+        clean_text = soup.get_text(separator="\n", strip=True)
+        
+        # Remove redundant boilerplate
+        clean_text = self.boilerplate_pattern.sub('', clean_text)
+        
+        return clean_text.strip()
 
 
 class LaravelExportPipeline:
@@ -84,7 +139,10 @@ class LaravelExportPipeline:
     def __init__(self):
         self.api_url = os.getenv('LARAVEL_API_URL', 'http://127.0.0.1:8000/api/jobs/import')
         self.api_token = os.getenv('LARAVEL_API_TOKEN', 'YOUR_SANCTUM_TOKEN')
-        self.client = httpx.AsyncClient()
+        
+        # Implement robust retries
+        transport = httpx.AsyncHTTPTransport(retries=3)
+        self.client = httpx.AsyncClient(transport=transport, timeout=15.0)
 
     async def process_item(self, item, spider):
         adapter = ItemAdapter(item)
@@ -112,12 +170,12 @@ class LaravelExportPipeline:
         }
 
         try:
-            response = await self.client.post(self.api_url, json=payload, headers=headers, timeout=10.0)
+            response = await self.client.post(self.api_url, json=payload, headers=headers)
             
             if response.status_code in (200, 201):
-                logger.info(f"Successfully exported job to Laravel: {adapter.get('title')} at {adapter.get('company')}")
+                logger.info(f"Successfully exported job to Laravel: '{adapter.get('title')}' at {adapter.get('company')}")
             else:
-                logger.error(f"Failed to export job to Laravel. Status: {response.status_code}, Body: {response.text}")
+                logger.error(f"Failed to export job. Status: {response.status_code}, Body: {response.text}")
                 
         except httpx.RequestError as e:
             logger.error(f"HTTP Request failed while exporting job: {e}")
@@ -125,9 +183,6 @@ class LaravelExportPipeline:
         return item
         
     def close_spider(self, spider):
-        # We must explicitly close the httpx AsyncClient in a synchronous method 
-        # or manage it correctly, but Scrapy pipelines prefer synchronous close.
-        # Alternatively, we could just rely on the OS cleaning up sockets.
         import asyncio
         try:
             loop = asyncio.get_event_loop()
@@ -135,5 +190,5 @@ class LaravelExportPipeline:
                 loop.create_task(self.client.aclose())
             else:
                 loop.run_until_complete(self.client.aclose())
-        except Exception as e:
+        except Exception:
             pass

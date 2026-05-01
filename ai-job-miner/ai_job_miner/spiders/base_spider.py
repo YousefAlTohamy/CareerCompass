@@ -22,8 +22,44 @@ class BasePlaywrightSpider(scrapy.Spider):
                     "playwright": True,
                     "playwright_include_page": True,
                 },
-                callback=self.parse
+                callback=self.parse,
+                errback=self.on_error
             )
+
+    async def on_error(self, failure):
+        logger.error(f"Request failed: {failure.request.url}, error: {repr(failure.value)}")
+        page = failure.request.meta.get("playwright_page")
+        if page:
+            await page.close()
+            
+        import httpx
+        import os
+        from datetime import datetime
+        
+        api_failed_url = os.getenv('LARAVEL_API_FAILED_URL', 'http://127.0.0.1:8000/api/jobs/import/failed')
+        api_token = os.getenv('LARAVEL_API_TOKEN', 'YOUR_SANCTUM_TOKEN')
+        
+        payload = {
+            "url": failure.request.url,
+            "error_message": repr(failure.value),
+            "failed_at": datetime.now().isoformat()
+        }
+        
+        headers = {
+            "Authorization": f"Bearer {api_token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(api_failed_url, json=payload, headers=headers, timeout=5.0)
+                if response.status_code in (200, 201):
+                    logger.info(f"Successfully reported failure to DLQ for {failure.request.url}")
+                else:
+                    logger.error(f"Failed to report to DLQ. Status: {response.status_code}, Body: {response.text}")
+        except Exception as e:
+            logger.error(f"Failed to contact DLQ endpoint: {e}")
 
     async def parse(self, response):
         page = response.meta.get("playwright_page")
