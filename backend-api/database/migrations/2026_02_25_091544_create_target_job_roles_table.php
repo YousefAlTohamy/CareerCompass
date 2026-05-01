@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('target_job_roles', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
+            $table->string('search_query')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });

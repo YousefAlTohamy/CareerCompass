@@ -29,6 +29,7 @@ class DatabaseSeeder extends Seeder
         // Seed admin user account
         $this->call(AdminUserSeeder::class);
 
-
+        // Seed scraping proxies
+        $this->call(ScrapingProxySeeder::class);
     }
 }
