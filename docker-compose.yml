@@ -116,7 +116,9 @@ services:
   # Frontend: React / Vite
   # ==========================================
   frontend:
-    image: node:20-alpine
+    build:
+      context: .
+      dockerfile: ./docker/frontend/Dockerfile
     container_name: frontend
     restart: unless-stopped
     working_dir: /app
@@ -129,8 +131,8 @@ services:
       - "5173:5173"
     networks:
       - career-compass-network
-    command: >
-      sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    depends_on:
+      - app
 
   # ==========================================
   # AI Services: Python Gateway & Scrapers (Mono-container)
