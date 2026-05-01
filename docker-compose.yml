@@ -1,0 +1,147 @@
+version: '3.8'
+
+networks:
+  career-compass-network:
+    name: career-compass-network
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+
+services:
+  # ==========================================
+  # Infrastructure: Database
+  # ==========================================
+  db:
+    image: postgres:15-alpine
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+      POSTGRES_DB: ${DB_DATABASE:-career_compass}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - career-compass-network
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_DATABASE:-career_compass}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ==========================================
+  # Infrastructure: Cache & Queues
+  # ==========================================
+  redis:
+    image: redis:alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - career-compass-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # ==========================================
+  # Backend: Laravel 11 API
+  # ==========================================
+  backend:
+    # Using serversideup/php which comes with PHP extensions required for Laravel out of the box
+    image: serversideup/php:8.2-cli
+    container_name: backend-api
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      # Map the source code for hot-reloading
+      - ./backend-api:/var/www/html
+    ports:
+      - "8000:8000"
+    networks:
+      - career-compass-network
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "composer install && php artisan serve --host=0.0.0.0 --port=8000"
+
+  # ==========================================
+  # Frontend: React / Vite
+  # ==========================================
+  frontend:
+    image: node:20-alpine
+    container_name: frontend
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      # Map the source code for hot-reloading
+      - ./frontend:/app
+      # Prevent local node_modules from overwriting container's linux binaries
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    networks:
+      - career-compass-network
+    command: >
+      sh -c "npm install && npm run dev -- --host 0.0.0.0"
+
+  # ==========================================
+  # AI Services: Python Gateway & Scrapers
+  # ==========================================
+  ai-gateway:
+    # Playwright image is required because ai-job-miner needs browser automation libraries
+    image: mcr.microsoft.com/playwright/python:v1.44.0-jammy
+    container_name: ai-gateway
+    restart: unless-stopped
+    # The hybrid orchestrator loads the other AI modules via sys.path injection
+    working_dir: /app/ai-hybrid-orchestrator
+    volumes:
+      # Map all three AI services for hot-reloading and sys.path resolution
+      - ./ai-hybrid-orchestrator:/app/ai-hybrid-orchestrator
+      - ./ai-cv-analyzer:/app/ai-cv-analyzer
+      - ./ai-job-miner:/app/ai-job-miner
+    ports:
+      - "8001:8001"
+    networks:
+      - career-compass-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "
+      pip install --no-cache-dir -r /app/ai-cv-analyzer/requirements.txt &&
+      pip install --no-cache-dir -r /app/ai-job-miner/requirements.txt &&
+      uvicorn main_api:app --host 0.0.0.0 --port 8001 --reload
+      "
+
+  # ==========================================
+  # Infrastructure: Nginx Reverse Proxy
+  # ==========================================
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    networks:
+      - career-compass-network
+    depends_on:
+      - backend
+      - frontend
+      - ai-gateway
+    # Note: To use Nginx, create an nginx.conf file and mount it:
+    # volumes:
+    #   - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
