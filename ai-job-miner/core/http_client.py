@@ -52,30 +52,30 @@ logger = logging.getLogger(__name__)
 # Real-browser User-Agent strings (sampled from caniuse.com analytics 2024)
 # ---------------------------------------------------------------------------
 _USER_AGENTS: tuple[str, ...] = (
-    # Chrome – Windows
+    # Chrome 124 – Windows
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-    # Chrome – macOS
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    # Chrome 124 – macOS
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     # Firefox – Windows
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) "
-    "Gecko/20100101 Firefox/124.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) "
+    "Gecko/20100101 Firefox/125.0",
     # Firefox – Linux
-    "Mozilla/5.0 (X11; Linux x86_64; rv:124.0) "
-    "Gecko/20100101 Firefox/124.0",
+    "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) "
+    "Gecko/20100101 Firefox/125.0",
     # Safari – macOS
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_3_1) AppleWebKit/605.1.15 "
-    "(KHTML, like Gecko) Version/17.3.1 Safari/605.1.15",
-    # Edge – Windows
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_1) AppleWebKit/605.1.15 "
+    "(KHTML, like Gecko) Version/17.4.1 Safari/605.1.15",
+    # Edge 124 – Windows
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0",
-    # Chrome – Android
+    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0",
+    # Chrome 124 – Android
     "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/122.0.6261.119 Mobile Safari/537.36",
+    "(KHTML, like Gecko) Chrome/124.0.6367.82 Mobile Safari/537.36",
     # Safari – iOS
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_3_1 like Mac OS X) "
-    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3.1 "
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X) "
+    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 "
     "Mobile/15E148 Safari/604.1",
 )
 
@@ -196,12 +196,14 @@ class SmartAsyncClient:
 
     async def __aenter__(self) -> "SmartAsyncClient":
         try:
-            import aiohttp  # type: ignore
-            self._session = aiohttp.ClientSession(
-                timeout=aiohttp.ClientTimeout(total=self._timeout),
+            from curl_cffi.requests import AsyncSession  # type: ignore
+            # impersonate="chrome124" is critical to bypass TLS fingerprinters (Status 0)
+            self._session = AsyncSession(
+                timeout=self._timeout,
+                impersonate="chrome124",
             )
         except ImportError:
-            # aiohttp not installed — tests will inject a mock
+            # curl_cffi not installed — tests will inject a mock
             self._session = None
         return self
 
@@ -247,9 +249,22 @@ class SmartAsyncClient:
             # 1. Rate limit
             await self._bucket.acquire()
 
-            # 2. Rotate User-Agent
+            # 2. Rotate User-Agent + anti-fingerprint headers
             ua = random.choice(_USER_AGENTS)
-            headers = {**kwargs.pop("headers", {}), "User-Agent": ua}
+            headers = {
+                "User-Agent": ua,
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Referer": "https://www.google.com/",
+                "DNT": "1",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "cross-site",
+                "Sec-Fetch-User": "?1",
+                "Upgrade-Insecure-Requests": "1",
+                **kwargs.pop("headers", {}),
+            }
 
             try:
                 status, text = await self._do_request(url, headers=headers, **kwargs)
@@ -287,9 +302,8 @@ class SmartAsyncClient:
         """Execute one HTTP GET and return (status_code, body_text)."""
         if self._session is None:
             raise RuntimeError("SmartAsyncClient must be used as an async context manager.")
-        async with self._session.get(url, headers=headers, **kwargs) as resp:
-            text = await resp.text()
-            return resp.status, text
+        resp = await self._session.get(url, headers=headers, **kwargs)
+        return resp.status_code, resp.text
 
     def _backoff_delay(self, attempt: int) -> float:
         """

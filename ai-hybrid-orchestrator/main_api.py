@@ -17,11 +17,28 @@ Run
 
 from __future__ import annotations
 
+# ── Windows asyncio compatibility ─────────────────────────────────────────────
+# Playwright requires the SelectorEventLoop on Windows.  The default
+# ProactorEventLoop causes "NotImplementedError" / "Event loop is closed"
+# errors.  This MUST run before any asyncio event-loop creation.
 import asyncio
+import sys
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+# nest_asyncio allows Playwright to create nested event loops inside the
+# already-running FastAPI/uvicorn loop — prevents "This event loop is
+# already running" errors.
+try:
+    import nest_asyncio  # type: ignore
+    nest_asyncio.apply()
+except ImportError:
+    pass  # Optional dependency — not fatal if missing
+
 import contextlib
 import logging
 import os
-import sys
 import tempfile
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -114,6 +131,13 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+@app.on_event("startup")
+async def startup_event():
+    import asyncio
+    import sys
+    if sys.platform == 'win32':
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 app.add_middleware(
     CORSMiddleware,
@@ -532,6 +556,16 @@ async def process_cv_endpoint(job_url: str = Form(...), cv_file: UploadFile = Fi
 
 if __name__ == "__main__":
     import uvicorn
+
+    # ── Re-apply Windows asyncio policy for direct execution ──────────
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+        try:
+            import nest_asyncio  # type: ignore
+            nest_asyncio.apply()
+        except ImportError:
+            pass
+
     uvicorn.run("main_api:app", host="0.0.0.0", port=8001, reload=True)
 
 

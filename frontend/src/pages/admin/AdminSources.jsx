@@ -609,6 +609,7 @@ const AdminSources = () => {
                         >
                           <option value="api">API Endpoint</option>
                           <option value="html">HTML Extraction</option>
+                          <option value="spa">SPA (Playwright)</option>
                         </select>
                       </div>
                    </div>

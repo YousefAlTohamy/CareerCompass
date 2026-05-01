@@ -11,17 +11,26 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('job_skills', function (Blueprint $table) {
+        Schema::create('job_skills', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('job_id')->constrained('job_postings')->onDelete('cascade');
+            $table->foreignId('skill_id')->constrained()->onDelete('cascade');
+            $table->boolean('required')->default(true);
+
             // Importance score (0-100 percentage)
-            $table->decimal('importance_score', 5, 2)->nullable()->after('required');
+            $table->decimal('importance_score', 5, 2)->nullable();
 
             // Importance category based on frequency
             $table->enum('importance_category', ['essential', 'important', 'nice_to_have'])
                 ->nullable()
-                ->after('importance_score')
                 ->comment('essential: >70%, important: 40-70%, nice_to_have: <40%');
 
-            // Index for faster queries
+            $table->timestamps();
+
+            // Ensure unique combination of job and skill
+            $table->unique(['job_id', 'skill_id']);
+
+            // Indexes for faster queries
             $table->index('importance_category');
             $table->index('importance_score');
         });
@@ -32,10 +41,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('job_skills', function (Blueprint $table) {
-            $table->dropIndex(['importance_category']);
-            $table->dropIndex(['importance_score']);
-            $table->dropColumn(['importance_score', 'importance_category']);
-        });
+        Schema::dropIfExists('job_skills');
     }
 };

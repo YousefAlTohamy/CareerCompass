@@ -9,7 +9,7 @@ return new class extends Migration
     /**
      * Run the migrations.
      * Creates the scraping_sources table which stores dynamic data-source
-     * configurations (API endpoints and HTML targets) for the hybrid scraper.
+     * configurations (API endpoints, HTML targets, and SPA pages) for the hybrid scraper.
      */
     public function up(): void
     {
@@ -19,11 +19,17 @@ return new class extends Migration
             // Human-readable label shown in the admin dashboard
             $table->string('name');
 
-            // Full URL / API base endpoint
+            // Full URL / API base endpoint (may contain {query} placeholder)
             $table->string('endpoint');
 
             // Determines which scraping strategy the Python engine will apply
-            $table->enum('type', ['api', 'html'])->default('api');
+            $table->enum('type', ['api', 'html', 'json', 'spa'])->default('api');
+
+            // Discovery mode determines how the backend (and AI engine) should treat this source
+            $table->enum('mode', ['static', 'discovery'])->default('static');
+
+            // Regex (or heuristic pattern string) used by the AI discovery engine to extract job links
+            $table->string('pattern')->nullable();
 
             // Soft-toggle so admins can pause a source without deleting it
             $table->enum('status', ['active', 'inactive'])->default('active');

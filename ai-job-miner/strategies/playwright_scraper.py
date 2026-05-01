@@ -10,7 +10,9 @@ pipeline.
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import random
 
 from core.base_scraper import BaseScraper
 from strategies.html_scraper import HtmlSmartScraper
@@ -41,17 +43,67 @@ class PlaywrightScraper(BaseScraper):
 
             html: str
             async with async_playwright() as p:
-                browser = await p.chromium.launch(
-                    headless=True,
-                    args=[
-                        "--no-sandbox",
-                        "--disable-setuid-sandbox",
-                        "--disable-dev-shm-usage",
-                    ],
-                )
+                # Use the system-installed Chrome (channel='chrome') for a
+                # genuine TLS fingerprint that WAFs trust.  Falls back to
+                # bundled Chromium if Chrome is not found.
                 try:
-                    context = await browser.new_context()
+                    browser = await p.chromium.launch(
+                        headless=True,
+                        channel="chrome",
+                        slow_mo=50,
+                        ignore_default_args=["--enable-automation"],
+                        args=[
+                            "--no-sandbox",
+                            "--disable-setuid-sandbox",
+                            "--disable-dev-shm-usage",
+                            "--disable-blink-features=AutomationControlled",
+                        ],
+                    )
+                except Exception:
+                    # Chrome not installed — fall back to bundled Chromium
+                    logger.warning(
+                        "[PlaywrightScraper] Chrome channel unavailable, "
+                        "falling back to bundled Chromium."
+                    )
+                    browser = await p.chromium.launch(
+                        headless=True,
+                        slow_mo=50,
+                        ignore_default_args=["--enable-automation"],
+                        args=[
+                            "--no-sandbox",
+                            "--disable-setuid-sandbox",
+                            "--disable-dev-shm-usage",
+                            "--disable-blink-features=AutomationControlled",
+                        ],
+                    )
+                try:
+                    # ── Stealth browser context ───────────────────────────
+                    context = await browser.new_context(
+                        viewport={"width": 1920, "height": 1080},
+                        user_agent=(
+                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                            "AppleWebKit/537.36 (KHTML, like Gecko) "
+                            "Chrome/124.0.0.0 Safari/537.36"
+                        ),
+                        locale="en-US",
+                        timezone_id="America/New_York",
+                        color_scheme="light",
+                        extra_http_headers={
+                            "Accept-Language": "en-US,en;q=0.9",
+                            "Referer": "https://www.google.com/",
+                            "Sec-Fetch-Dest": "document",
+                            "Sec-Fetch-Mode": "navigate",
+                            "Sec-Fetch-Site": "cross-site",
+                            "Sec-Fetch-User": "?1",
+                            "Upgrade-Insecure-Requests": "1",
+                        },
+                    )
                     page = await context.new_page()
+
+                    # Mask the navigator.webdriver flag that bot-detectors check
+                    await page.add_init_script(
+                        "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+                    )
 
                     page.set_default_timeout(timeout_ms)
                     page.set_default_navigation_timeout(timeout_ms)
@@ -59,6 +111,10 @@ class PlaywrightScraper(BaseScraper):
 
                     if wait_for_selector:
                         await page.wait_for_selector(wait_for_selector, timeout=timeout_ms)
+
+                    # Random human-like delay before extraction — lets JS
+                    # finish rendering and avoids bot-timing signatures.
+                    await asyncio.sleep(random.uniform(2, 5))
 
                     html = await page.content()
                 finally:

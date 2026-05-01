@@ -21,6 +21,7 @@ return new class extends Migration
             $table->date('end_date')->nullable();
             $table->boolean('is_current')->default(false);
             $table->text('description')->nullable();
+            $table->json('technologies')->nullable();
             $table->timestamps();
 
             $table->index(['user_id']);
