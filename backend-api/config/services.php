@@ -52,4 +52,9 @@ return [
         'timeout' => env('AI_CV_ANALYZER_TIMEOUT', 120),
     ],
 
+    // Scrapy Integration (Python Scraper Token)
+    'scrapy' => [
+        'token' => env('SCRAPY_API_TOKEN'),
+    ],
+
 ];
