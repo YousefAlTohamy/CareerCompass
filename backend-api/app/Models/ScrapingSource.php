@@ -69,6 +69,14 @@ class ScrapingSource extends Model
     }
 
     /**
+     * Failed URLs originating from this source.
+     */
+    public function failedUrls(): HasMany
+    {
+        return $this->hasMany(ScrapingFailedUrl::class, 'scraping_source_id');
+    }
+
+    /**
      * Check if the source is active.
      */
     public function isActive(): bool

@@ -25,9 +25,21 @@ class Job extends Model
         'salary_range',
         'job_type',
         'experience',
+        'requirements',
+        'skills',
+        'work_type',
         'url',
         'source',
         'scraping_source_id',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'skills' => 'array',
     ];
 
     // -----------------------------------------------------------------

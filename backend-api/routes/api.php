@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\Admin\DashboardController;
 use App\Http\Controllers\Api\Admin\AdminJobController;
 use App\Http\Controllers\Api\Admin\AdminUserController;
 use App\Http\Controllers\Api\Admin\TargetJobRoleController;
+use App\Http\Controllers\Api\ScrapedJobController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -75,6 +76,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/jobs/scrape', [JobController::class, 'scrapeAndStore']);
     Route::post('/jobs/scrape-if-missing', [JobController::class, 'scrapeJobTitleIfMissing']);
     Route::get('/scraping-status/{jobId}', [JobController::class, 'checkScrapingStatus'])->name('api.scraping.status');
+
+    // Python Scraper Integration
+    Route::post('/jobs/import', [ScrapedJobController::class, 'import']);
 
     // Gap Analysis
     Route::get('/gap-analysis/job/{jobId}', [GapAnalysisController::class, 'analyzeJob']);
