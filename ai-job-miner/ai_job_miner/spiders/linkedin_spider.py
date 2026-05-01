@@ -4,10 +4,18 @@ from ai_job_miner.items import JobItem
 class LinkedinSpider(BasePlaywrightSpider):
     name = "linkedin"
     allowed_domains = ["linkedin.com"]
-    start_urls = [
-        # Example target URL. In production, this would be injected via arguments or API
-        "https://www.linkedin.com/jobs/view/123456789"
-    ]
+    def __init__(self, query=None, limit=30, source_id=1, *args, **kwargs):
+        super(LinkedinSpider, self).__init__(*args, **kwargs)
+        self.query = query
+        self.limit = int(limit)
+        self.source_id = int(source_id)
+        
+        if query:
+            import urllib.parse
+            encoded_query = urllib.parse.quote(query)
+            self.start_urls = [f"https://www.linkedin.com/jobs/search/?keywords={encoded_query}"]
+        else:
+            self.start_urls = ["https://www.linkedin.com/jobs/search/"]
     
     # The selector to expand the full job description on LinkedIn
     show_more_selector = "button.show-more-less-html__button"

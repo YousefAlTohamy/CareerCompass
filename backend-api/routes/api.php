@@ -81,6 +81,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/jobs/import/check', [ScrapedJobController::class, 'checkExistence']);
     Route::post('/jobs/import', [ScrapedJobController::class, 'import']);
     Route::post('/jobs/import/failed', [ScrapedJobController::class, 'reportFailure']);
+    Route::get('/proxies/active', function () {
+        return \App\Models\ScrapingProxy::where('is_active', true)
+            ->get(['protocol', 'host', 'port', 'username', 'password']);
+    });
 
     // Gap Analysis
     Route::get('/gap-analysis/job/{jobId}', [GapAnalysisController::class, 'analyzeJob']);

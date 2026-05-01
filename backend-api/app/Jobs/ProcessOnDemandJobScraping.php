@@ -6,23 +6,22 @@ use App\Models\Job;
 use App\Models\JobRoleStatistic;
 use App\Models\ScrapingJob;
 use App\Models\ScrapingSource;
-use App\Models\Skill;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Process;
 
 class ProcessOnDemandJobScraping implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $timeout = 180; // 3 minutes for on-demand requests
-    public $tries = 2;      // Fail fast; sources independently retry inside Python
-    public $backoff = 5;    // 5-second backoff before retry
+    public $timeout = 600; // 10 minutes for Scrapy execution
+    public $tries = 2;
+    public $backoff = 5;
 
     protected string $jobTitle;
     protected int $scrapingJobId;
@@ -55,48 +54,59 @@ class ProcessOnDemandJobScraping implements ShouldQueue
         }
 
         try {
-            Log::info("Starting on-demand scraping for: {$this->jobTitle}");
+            Log::info("Starting on-demand scraping via Scrapy for: {$this->jobTitle}");
 
             $scrapingJob->markAsStarted();
 
-            // Fetch active scraping sources from the database
-            $sources = $this->getActiveSources();
+            // Count jobs before scraping to measure discovered
+            $jobsBeforeCount = Job::where('title', 'like', "%{$this->jobTitle}%")->count();
 
-            // Call AI Engine for specific job title
-            $result = $this->scrapeJobTitleFromAI($this->jobTitle, $this->maxResults, $sources);
+            // Setup Scrapy command execution
+            $scrapyPath = base_path('../ai-job-miner');
+            
+            // Build the Scrapy command
+            // Note: We use escapeshellarg for safety, though Process handles argument escaping internally when using arrays
+            $command = [
+                'scrapy', 'crawl', 'linkedin', 
+                '-a', 'query=' . $this->jobTitle,
+                '-a', 'limit=' . $this->maxResults
+            ];
 
-            if (!$result || empty($result['jobs'])) {
-                $scrapingJob->markAsFailed(
-                    errorMessage: 'No jobs found or AI Engine error',
-                    discoveredCount: 0,
-                    failedCount: 0,
-                    processingTimeMs: (int) round((microtime(true) - $startedAt) * 1000),
-                );
-                return;
+            Log::info("Executing Scrapy", ['command' => implode(' ', $command)]);
+
+            $process = Process::path($scrapyPath)
+                ->env([
+                    'LARAVEL_API_TOKEN' => config('services.scrapy.token', 'YOUR_SANCTUM_TOKEN'),
+                    'LARAVEL_API_URL' => url('/api/jobs/import'),
+                    'LARAVEL_API_CHECK_URL' => url('/api/jobs/import/check'),
+                    'LARAVEL_API_FAILED_URL' => url('/api/jobs/import/failed'),
+                    'LARAVEL_API_PROXIES_URL' => url('/api/proxies/active'),
+                ])
+                ->timeout($this->timeout)
+                ->run($command);
+
+            if ($process->failed()) {
+                Log::error('Scrapy execution failed', [
+                    'error' => $process->errorOutput(),
+                    'output' => $process->output(),
+                ]);
+                throw new \Exception("Scrapy process failed: " . $process->errorOutput());
             }
 
-            // Store jobs
-            $discovered = count($result['jobs']);
-            $stored = 0;
+            Log::info('Scrapy process completed', ['output' => $process->output()]);
+
+            // Wait a moment for async pipelines to flush to database
+            sleep(2);
+
+            // Count jobs after scraping
+            $jobsAfterCount = Job::where('title', 'like', "%{$this->jobTitle}%")->count();
+            $stored = max(0, $jobsAfterCount - $jobsBeforeCount);
+            
+            // Since deduplication pipeline handles duplicates, we can estimate duplicates if needed,
+            // but for simplicity, we just mark what was stored.
+            $discovered = $stored; // Approximate
             $duplicates = 0;
             $failed = 0;
-
-            foreach ($result['jobs'] as $jobData) {
-                try {
-                    $storeResult = $this->storeJob($jobData);
-                    if ($storeResult['stored']) {
-                        $stored++;
-                    } else {
-                        $duplicates++;
-                    }
-                } catch (\Throwable $e) {
-                    $failed++;
-                    Log::warning('Failed to store scraped job (on-demand)', [
-                        'job_title' => $this->jobTitle,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-            }
 
             // Mark as completed
             $scrapingJob->markAsCompleted(
@@ -112,10 +122,9 @@ class ProcessOnDemandJobScraping implements ShouldQueue
             $this->calculateSkillImportance($this->jobTitle);
 
             // Update role statistics
-            $this->updateRoleStatistics($this->jobTitle, $result);
+            $this->updateRoleStatistics($this->jobTitle);
 
             Log::info("Completed on-demand scraping for {$this->jobTitle}", [
-                'found' => count($result['jobs']),
                 'stored' => $stored,
                 'duplicates' => $duplicates,
             ]);
@@ -132,197 +141,6 @@ class ProcessOnDemandJobScraping implements ShouldQueue
                 processingTimeMs: (int) round((microtime(true) - $startedAt) * 1000),
             );
         }
-    }
-
-    /**
-     * Retrieve all active scraping sources and serialize for the AI Engine.
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    protected function getActiveSources(): array
-    {
-        try {
-            return ScrapingSource::active()
-                ->get(['id', 'name', 'endpoint', 'type', 'headers', 'params'])
-                ->map(fn($s) => [
-                    'id'       => $s->id,
-                    'name'     => $s->name,
-                    'endpoint' => $s->endpoint,
-                    'type'     => $s->type,
-                    'headers'  => $s->headers ?? [],
-                    'params'   => $s->params  ?? [],
-                ])
-                ->toArray();
-        } catch (\Exception $e) {
-            Log::error('Failed to load active scraping sources (on-demand)', ['error' => $e->getMessage()]);
-            return [];
-        }
-    }
-
-    /**
-     * Scrape specific job title from AI Engine.
-     */
-    protected function scrapeJobTitleFromAI(string $jobTitle, int $maxResults, array $sources = []): ?array
-    {
-        try {
-            $aiEngineUrl = config('services.ai_engine.url', 'http://127.0.0.1:8001');
-            $timeout = config('services.ai_engine.timeout', 120);
-
-            $response = Http::timeout($timeout)
-                ->retry(2, 500, function ($exception, $request) {
-                    return $exception instanceof \Illuminate\Http\Client\ConnectionException ||
-                        ($exception instanceof \Illuminate\Http\Client\RequestException &&
-                            $exception->response &&
-                            $exception->response->status() >= 500);
-                })
-                ->post("{$aiEngineUrl}/scrape-jobs", [
-                    'query'               => $jobTitle,
-                    'max_results'         => $maxResults,
-                    'use_samples'         => false,
-                    'calculate_statistics' => true,
-                    'sources'             => $sources,  // dynamic sources list
-                ]);
-
-            if ($response->successful()) {
-                return $response->json();
-            }
-
-            Log::error('AI Engine on-demand scraping failed', [
-                'job_title' => $jobTitle,
-                'status'    => $response->status(),
-            ]);
-
-            return null;
-        } catch (\Exception $e) {
-            Log::error('Failed to connect to AI Engine for on-demand scraping', [
-                'error' => $e->getMessage(),
-            ]);
-            return null;
-        }
-    }
-
-    /**
-     * Store a single job with its skills.
-     */
-    protected function storeJob(array $jobData): array
-    {
-        // Normalize URL to prevent duplicates from tracking parameters
-        $normalizedUrl = null;
-        if (!empty($jobData['url'])) {
-            $urlStr = $this->castToString($jobData['url']);
-            $normalizedUrl = $this->normalizeUrl($urlStr);
-        }
-
-        // Check for duplicates
-        $existingJob = null;
-
-        if ($normalizedUrl) {
-            $existingJob = Job::where('url', $normalizedUrl)->first();
-        }
-
-        if (!$existingJob) {
-            $title = $this->castToString($jobData['title'] ?? null, 'Unknown Position');
-            $company = $this->castToString($jobData['company'] ?? null, 'Unknown Company');
-
-            $existingJob = Job::where('title', $title)
-                ->where('company', $company)
-                ->first();
-        }
-
-        if ($existingJob) {
-            return ['stored' => false, 'job' => $existingJob];
-        }
-
-        // Create new job with race condition protection
-        try {
-            $job = Job::create([
-                'title' => $this->castToString($jobData['title'] ?? null, 'Unknown Position'),
-                'company' => $this->castToString($jobData['company'] ?? null, 'Unknown Company'),
-                'description' => $this->castToString($jobData['description'] ?? null, 'No description provided'),
-                'location' => $this->castToString($jobData['location'] ?? null, 'Unknown'),
-                'salary_range' => $this->castToString($jobData['salary_range'] ?? null, null),
-                'job_type' => $this->castToString($jobData['job_type'] ?? null, null),
-                'experience' => $this->castToString($jobData['experience'] ?? null, null),
-                'url' => $normalizedUrl ?? $this->castToString($jobData['url'] ?? null, null),
-                'source' => $this->castToString($jobData['source'] ?? null, 'unknown'),
-            ]);
-        } catch (\Illuminate\Database\QueryException $e) {
-            // Handle duplicate entry error (race condition)
-            if ($e->getCode() == 23000 || str_contains($e->getMessage(), 'Duplicate entry')) {
-                $title = $this->castToString($jobData['title'] ?? null, 'Unknown Position');
-                $company = $this->castToString($jobData['company'] ?? null, 'Unknown Company');
-
-                Log::info('Duplicate job prevented by database constraint in queue job', [
-                    'title' => $title,
-                    'company' => $company,
-                ]);
-
-                // Fetch existing job
-                $existingJob = Job::where('url', $normalizedUrl ?? $this->castToString($jobData['url'] ?? null))
-                    ->orWhere(function ($q) use ($title, $company) {
-                        $q->where('title', $title)
-                            ->where('company', $company);
-                    })
-                    ->first();
-
-                return ['stored' => false, 'job' => $existingJob];
-            }
-
-            // Re-throw if it's a different error
-            throw $e;
-        }
-
-        // Attach skills
-        if (!empty($jobData['skills']) && is_array($jobData['skills'])) {
-            $skillNames = collect($jobData['skills'])->pluck('name')->toArray();
-            $skills = Skill::whereIn('name', $skillNames)->get();
-
-            if ($skills->isNotEmpty()) {
-                $job->skills()->sync($skills->pluck('id'));
-            }
-        }
-
-        return ['stored' => true, 'job' => $job];
-    }
-
-    /**
-     * Normalize URL by removing query parameters and fragments.
-     * Prevents duplicates from tracking parameters (e.g., utm_source).
-     *
-     * @param string $url
-     * @return string|null
-     */
-    protected function normalizeUrl(string $url): ?string
-    {
-        if (empty($url)) {
-            return null;
-        }
-
-        // Parse URL and rebuild without query string and fragment
-        $parsed = parse_url($url);
-
-        if (!$parsed || !isset($parsed['host'])) {
-            return $url; // Return as-is if parsing fails
-        }
-
-        $normalized = '';
-
-        // Rebuild URL: scheme://host/path
-        if (isset($parsed['scheme'])) {
-            $normalized .= $parsed['scheme'] . '://';
-        }
-
-        if (isset($parsed['host'])) {
-            $normalized .= $parsed['host'];
-        }
-
-        if (isset($parsed['path'])) {
-            $normalized .= $parsed['path'];
-        }
-
-        // Ignore query (?...) and fragment (#...)
-
-        return $normalized;
     }
 
     /**
@@ -391,25 +209,35 @@ class ProcessOnDemandJobScraping implements ShouldQueue
     /**
      * Update role statistics.
      */
-    protected function updateRoleStatistics(string $roleTitle, array $scrapingResult): void
+    protected function updateRoleStatistics(string $roleTitle): void
     {
         try {
             $statistic = JobRoleStatistic::firstOrNew(['role_title' => $roleTitle]);
 
-            $topSkills = [];
-            if (!empty($scrapingResult['statistics']['skills'])) {
-                $topSkills = collect($scrapingResult['statistics']['skills'])
-                    ->sortByDesc('percentage')
-                    ->take(10)
-                    ->toArray();
-            }
+            // Simplified statistics generation
+            $jobsCount = Job::where('title', 'like', "%{$roleTitle}%")->count();
+            
+            // Get top skills
+            $topSkills = DB::table('job_skills')
+                ->join('jobs', 'job_skills.job_id', '=', 'jobs.id')
+                ->join('skills', 'job_skills.skill_id', '=', 'skills.id')
+                ->where('jobs.title', 'like', "%{$roleTitle}%")
+                ->select('skills.name', DB::raw('COUNT(skills.id) as count'))
+                ->groupBy('skills.id', 'skills.name')
+                ->orderByDesc('count')
+                ->limit(10)
+                ->get()
+                ->map(function ($skill) use ($jobsCount) {
+                    return [
+                        'name' => $skill->name,
+                        'percentage' => $jobsCount > 0 ? round(($skill->count / $jobsCount) * 100, 2) : 0
+                    ];
+                })
+                ->toArray();
 
             $statistic->updateStatistics([
-                'total_jobs' => $scrapingResult['total_jobs'] ?? 0,
+                'total_jobs' => $jobsCount,
                 'top_skills' => $topSkills,
-                'average_experience' => $scrapingResult['statistics']['average_experience'] ?? null,
-                'common_locations' => $scrapingResult['statistics']['common_locations'] ?? [],
-                'salary_range' => $scrapingResult['statistics']['salary_range'] ?? null,
             ]);
 
             Log::info("Updated role statistics for on-demand job: {$roleTitle}");
@@ -438,15 +266,5 @@ class ProcessOnDemandJobScraping implements ShouldQueue
                 $exception?->getMessage() ?? 'Job failed after maximum retries'
             );
         }
-    }
-
-    /**
-     * Safely cast incoming potentially-array data to strings.
-     */
-    private function castToString($value, $default = null)
-    {
-        if (is_null($value)) return $default;
-        if (is_array($value)) return implode(', ', array_filter($value));
-        return (string) $value;
     }
 }

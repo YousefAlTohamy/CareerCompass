@@ -276,7 +276,9 @@ export default function Jobs() {
                                 <div className="flex flex-wrap gap-4 text-[9px] font-black text-slate-500 uppercase tracking-widest">
                                    <span className="flex items-center gap-1.5"><MapPin size={12} className="text-indigo-500" /> {selectedJob.location || 'Remote'}</span>
                                    <span className="flex items-center gap-1.5"><Briefcase size={12} className="text-fuchsia-500" /> {formatValue(selectedJob.job_type)}</span>
-                                   <span className="flex items-center gap-1.5 text-emerald-500"><DollarSign size={12} /> {selectedJob.salary || 'Competitive'}</span>
+                                   {selectedJob.work_type && <span className="flex items-center gap-1.5"><Layers size={12} className="text-amber-500" /> {formatValue(selectedJob.work_type)}</span>}
+                                   {selectedJob.experience && <span className="flex items-center gap-1.5"><TrendingUp size={12} className="text-rose-500" /> {selectedJob.experience}</span>}
+                                   <span className="flex items-center gap-1.5 text-emerald-500"><DollarSign size={12} /> {selectedJob.salary_range || selectedJob.salary || 'Competitive'}</span>
                                 </div>
                              </div>
                              <div className="flex md:flex-col gap-3 shrink-0">
@@ -364,6 +366,36 @@ export default function Jobs() {
                                </motion.div>
                              )}
                           </div>
+
+                          <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-white/5">
+                             <div className="flex items-center gap-2">
+                                <Cpu className="text-indigo-500" size={16} />
+                                <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">EXTRACTED_SKILLS</h4>
+                             </div>
+                             {selectedJob.skills && selectedJob.skills.length > 0 ? (
+                               <div className="flex flex-wrap gap-2">
+                                  {selectedJob.skills.map((skill, i) => (
+                                    <span key={i} className="px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-black rounded-xl uppercase tracking-wider shadow-sm">
+                                      {skill.name}
+                                    </span>
+                                  ))}
+                               </div>
+                             ) : (
+                               <p className="text-xs text-slate-500 font-medium">No explicit skills mapped yet.</p>
+                             )}
+                          </div>
+
+                          {selectedJob.requirements && (
+                          <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-white/5">
+                             <div className="flex items-center gap-2">
+                                <Target className="text-fuchsia-500" size={16} />
+                                <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">REQUIREMENTS</h4>
+                             </div>
+                             <div className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed whitespace-pre-wrap font-medium bg-fuchsia-50/50 dark:bg-fuchsia-900/5 p-6 rounded-3xl border border-fuchsia-100 dark:border-fuchsia-500/10">
+                                {selectedJob.requirements}
+                             </div>
+                          </div>
+                          )}
 
                           <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-white/5">
                              <div className="flex items-center gap-2">

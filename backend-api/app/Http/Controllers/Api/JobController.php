@@ -195,7 +195,7 @@ class JobController extends Controller
     }
 
     /**
-     * Trigger job scraping via AI Engine and store results.
+     * Trigger job scraping via Scrapy and return immediately.
      */
     public function scrapeAndStore(Request $request): JsonResponse
     {
@@ -216,102 +216,46 @@ class JobController extends Controller
         try {
             $query = $request->input('query');
             $maxResults = $request->input('max_results', 50);
-            $useSamples = $request->input('use_samples', false);
 
-            Log::info('Initiating job scraping', [
+            Log::info('Initiating job scraping via Scrapy', [
                 'query' => $query,
                 'max_results' => $maxResults,
-                'use_samples' => $useSamples,
                 'user_id' => auth()->id(),
             ]);
 
-            // Call AI Engine to scrape jobs
-            $aiResponse = $this->scrapeJobsFromAI($query, $maxResults, $useSamples);
-
-            if (!$aiResponse || !isset($aiResponse['jobs'])) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Failed to scrape jobs from AI Engine',
-                ], 500);
-            }
-
-            $scrapedJobs = $aiResponse['jobs'];
-            $storedCount = 0;
-            $duplicateCount = 0;
-
-            // Store each job
-            foreach ($scrapedJobs as $jobData) {
-                $result = $this->storeJob($jobData);
-                if ($result['stored']) {
-                    $storedCount++;
-                } else {
-                    $duplicateCount++;
-                }
-            }
-
-            Log::info('Job scraping completed', [
-                'total_scraped' => count($scrapedJobs),
-                'stored' => $storedCount,
-                'duplicates' => $duplicateCount,
+            // Create scraping job tracking record
+            $scrapingJob = ScrapingJob::create([
+                'job_title' => $query,
+                'type' => 'on_demand',
+                'status' => 'pending',
             ]);
+
+            // Dispatch to high-priority queue
+            ProcessOnDemandJobScraping::dispatch($query, $scrapingJob->id, $maxResults);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Jobs scraped and stored successfully',
+                'message' => 'Jobs scraping dispatched to background process',
                 'data' => [
-                    'total_scraped' => count($scrapedJobs),
-                    'stored' => $storedCount,
-                    'duplicates_skipped' => $duplicateCount,
                     'query' => $query,
-                    'source' => $aiResponse['source'] ?? 'unknown',
+                    'scraping_job_id' => $scrapingJob->id,
                 ],
             ]);
         } catch (\Exception $e) {
-            Log::error('Job scraping failed', [
+            Log::error('Job scraping dispatch failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'An error occurred while scraping jobs',
+                'message' => 'An error occurred while initiating scraping',
                 'error' => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
     }
 
-    /**
-     * Call AI Engine to scrape jobs.
-     */
-    private function scrapeJobsFromAI(string $query, int $maxResults, bool $useSamples): ?array
-    {
-        try {
-            $aiEngineUrl = config('services.ai_engine.url', 'http://127.0.0.1:8001');
-            $timeout = config('services.ai_engine.timeout', 30);
 
-            $response = Http::timeout($timeout)->post("{$aiEngineUrl}/scrape-jobs", [
-                'query' => $query,
-                'max_results' => $maxResults,
-                'use_samples' => $useSamples,
-            ]);
-
-            if ($response->successful()) {
-                return $response->json();
-            }
-
-            Log::error('AI Engine scraping failed', [
-                'status' => $response->status(),
-                'body' => $response->body(),
-            ]);
-
-            return null;
-        } catch (\Exception $e) {
-            Log::error('Failed to connect to AI Engine for scraping', [
-                'error' => $e->getMessage(),
-            ]);
-            return null;
-        }
-    }
 
     /**
      * Store a single job with its skills.

@@ -36,13 +36,40 @@ class ProxyRotationMiddleware:
 
     @classmethod
     def from_crawler(cls, crawler):
-        # We can pull from settings or .env here
-        # E.g. proxies = crawler.settings.getlist('PROXY_LIST')
-        # For demonstration, using a mock list. 
-        # In production, fetch from Laravel API.
-        proxies = [
-            # "http://username:password@proxy.example.com:8080",
-        ]
+        proxies = []
+        import os
+        import requests
+        
+        api_url = os.getenv('LARAVEL_API_PROXIES_URL', 'http://127.0.0.1:8000/api/proxies/active')
+        api_token = os.getenv('LARAVEL_API_TOKEN', 'YOUR_SANCTUM_TOKEN')
+        
+        try:
+            response = requests.get(
+                api_url,
+                headers={"Authorization": f"Bearer {api_token}", "Accept": "application/json"},
+                timeout=10
+            )
+            if response.status_code == 200:
+                data = response.json()
+                for p in data:
+                    # Construct proxy URL: protocol://username:password@host:port
+                    protocol = p.get('protocol', 'http')
+                    host = p.get('host')
+                    port = p.get('port')
+                    user = p.get('username')
+                    pwd = p.get('password')
+                    
+                    if host and port:
+                        if user and pwd:
+                            proxies.append(f"{protocol}://{user}:{pwd}@{host}:{port}")
+                        else:
+                            proxies.append(f"{protocol}://{host}:{port}")
+                logger.info(f"Loaded {len(proxies)} proxies from Laravel API")
+            else:
+                logger.warning(f"Failed to fetch proxies. Status: {response.status_code}")
+        except Exception as e:
+            logger.error(f"Error fetching proxies from Laravel API: {e}")
+
         return cls(proxies)
 
     def process_request(self, request, spider):
