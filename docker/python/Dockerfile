@@ -7,16 +7,12 @@ WORKDIR /app
 RUN pip install --no-cache-dir --upgrade pip
 
 # Copy the requirements files first to leverage Docker's layer caching.
-# We copy all three directories to catch any requirements.txt files.
-# The wildcard ensures COPY doesn't fail if a file doesn't exist.
 COPY ./ai-cv-analyzer/requirements.txt /app/ai-cv-analyzer/requirements.txt
 COPY ./ai-job-miner/requirements.txt /app/ai-job-miner/requirements.txt
-COPY ./ai-hybrid-orchestrator/requirements.txt* /app/ai-hybrid-orchestrator/
 
 # Install dependencies from all available requirements.txt
 RUN pip install --no-cache-dir -r /app/ai-cv-analyzer/requirements.txt \
-    && pip install --no-cache-dir -r /app/ai-job-miner/requirements.txt \
-    && if [ -f "/app/ai-hybrid-orchestrator/requirements.txt" ]; then pip install --no-cache-dir -r /app/ai-hybrid-orchestrator/requirements.txt; fi
+    && pip install --no-cache-dir -r /app/ai-job-miner/requirements.txt
 
 # Explicitly install the Chromium browser for Playwright
 RUN playwright install chromium
