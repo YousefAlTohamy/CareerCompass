@@ -70,7 +70,7 @@ class CvController extends Controller
         } catch (ConnectionException $e) {
             Log::error('AI Gateway unreachable', [
                 'user_id' => $user->id,
-                'url'     => config('services.ai_gateway.url', 'http://127.0.0.1:8001'),
+                'url'     => config('services.ai_gateway.url', 'http://127.0.0.1:8002'),
                 'error'   => $e->getMessage(),
             ]);
 

@@ -244,7 +244,7 @@ class ScrapeJobs extends Command
      */
     private function scrapeFromAI(string $query, int $maxResults, array $sources): ?array
     {
-        $aiEngineUrl = config('services.ai_engine.url', 'http://127.0.0.1:8001');
+        $aiEngineUrl = config('services.ai_engine.url', 'http://127.0.0.1:8002');
         $timeout = config('services.ai_engine.timeout', 120);
 
         $response = Http::timeout($timeout)

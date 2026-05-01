@@ -213,7 +213,7 @@ class TestScrapingSources extends Command
     private function testHtmlSource($source, string $resolvedEndpoint, $query, int $timeout): array
     {
         try {
-            $aiEngineUrl = config('services.ai_engine.url', 'http://127.0.0.1:8001');
+            $aiEngineUrl = config('services.ai_engine.url', 'http://127.0.0.1:8002');
 
             $response = Http::timeout($timeout)
                 ->withoutVerifying()
@@ -257,7 +257,7 @@ class TestScrapingSources extends Command
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             return [
                 'ok'    => false,
-                'error' => "Cannot reach AI Engine at " . config('services.ai_engine.url', 'http://127.0.0.1:8001') .
+                'error' => "Cannot reach AI Engine at " . config('services.ai_engine.url', 'http://127.0.0.1:8002') .
                     " — is it running? ({$e->getMessage()})",
             ];
         } catch (\Exception $e) {

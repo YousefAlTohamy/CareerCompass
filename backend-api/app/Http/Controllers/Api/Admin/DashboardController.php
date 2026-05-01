@@ -111,7 +111,7 @@ class DashboardController extends Controller
         // 3. Check AI Microservice (Python Orchestrator)
         // Pings the root or health endpoint, handles connection timeouts gracefully
         try {
-            $response = Http::timeout(3)->get(config('services.ai_engine.url', 'http://127.0.0.1:8001'));
+            $response = Http::timeout(3)->get(config('services.ai_engine.url', 'http://127.0.0.1:8002'));
             // Either a 200 OK or even a 404 means the service is physically up and responding
             if ($response->successful() || $response->status() === 404) {
                 $services['AI Services'] = 'online';

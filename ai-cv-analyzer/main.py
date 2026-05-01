@@ -112,7 +112,86 @@ async def startup_event():
 # ---------------------------------------------------------------------------
 @app.get("/")
 def health_check():
-    return {"status": "operational", "version": "v2.0 (Phase 5)"}
+    return {"status": "operational", "version": "v2.0 (Phase 5)", "service": "Career Compass AI Engine"}
+
+
+# ---------------------------------------------------------------------------
+# Hybrid Match endpoint (migrated from ai-hybrid-orchestrator)
+# ---------------------------------------------------------------------------
+from pydantic import BaseModel
+from typing import List
+
+# Import TF-IDF matcher from ai-job-miner
+import sys as _sys
+_JOB_MINER_ROOT = Path(__file__).resolve().parent.parent / "ai-job-miner"
+if str(_JOB_MINER_ROOT) not in _sys.path:
+    _sys.path.append(str(_JOB_MINER_ROOT))
+
+try:
+    from ai.matcher import match_score as _tfidf_match_score
+    _HAS_TFIDF = True
+    logger.info("TF-IDF matcher loaded from ai-job-miner")
+except ImportError:
+    _HAS_TFIDF = False
+    logger.warning("ai-job-miner not found — TF-IDF scoring disabled, semantic-only mode")
+
+
+class HybridMatchRequest(BaseModel):
+    cv_skills: List[str]
+    cv_text: str
+    job_description: str
+    job_skills: List[str] = []
+
+
+@app.post("/api/hybrid-match", tags=["Matching"])
+async def hybrid_match(body: HybridMatchRequest):
+    """
+    Compute a weighted hybrid match score between a CV and a job description.
+
+    **Formula:** `Final = (Semantic × 60%) + (TF-IDF × 40%)`
+
+    Returns:
+    - **hybrid_match_score** (0–100)
+    - **semantic_match_pct** (60% component)
+    - **tfidf_score_pct** (40% component)
+    - **missing_skills** list
+    """
+    if not body.cv_text.strip():
+        raise HTTPException(status_code=422, detail="cv_text must not be empty.")
+    if not body.job_description.strip():
+        raise HTTPException(status_code=422, detail="job_description must not be empty.")
+
+    try:
+        # Semantic/Adaptive Match score — deep learning embeddings & rules (60% weight)
+        matcher = IntelligentMatcher()
+        semantic_result = matcher.calculate_match(
+            cv_data={"raw_text": body.cv_text, "skills": body.cv_skills},
+            job_data={"description": body.job_description, "skills": body.job_skills},
+        )
+        semantic_match_pct = semantic_result.get("match_score", 0.0)
+        missing_skills = semantic_result.get("missing_skills", [])
+
+        # TF-IDF score — pure math keyword verification (40% weight)
+        if _HAS_TFIDF:
+            tfidf_raw = _tfidf_match_score(body.cv_text, body.job_description)
+            tfidf_score_pct = round(tfidf_raw * 100, 2)
+        else:
+            tfidf_score_pct = 0.0
+
+        # Weighted final score
+        final_score = round((semantic_match_pct * 0.60) + (tfidf_score_pct * 0.40), 2)
+
+        return {
+            "hybrid_match_score": final_score,
+            "semantic_match_pct": semantic_match_pct,
+            "tfidf_score_pct": tfidf_score_pct,
+            "missing_skills": missing_skills,
+            "formula": "Final = (Adaptive Layer 3 × 60%) + (TF-IDF × 40%)",
+        }
+
+    except Exception as exc:
+        logger.exception("hybrid-match failed")
+        raise HTTPException(status_code=500, detail=f"Matching error: {exc}") from exc
 
 
 # ---------------------------------------------------------------------------

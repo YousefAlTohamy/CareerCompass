@@ -28,7 +28,8 @@ class CvProcessingService implements CvProcessingServiceInterface
 
     public function __construct()
     {
-        $this->gatewayUrl = env('CV_AI_SERVICE_URL', 'http://127.0.0.1:8001/api/parse-cv');
+        $baseUrl = rtrim(config('services.ai_cv_analyzer.url', 'http://127.0.0.1:8002'), '/');
+        $this->gatewayUrl = "{$baseUrl}/api/parse-cv";
         $this->timeout    = (int) config('services.ai_cv_analyzer.timeout', 120);
     }
 

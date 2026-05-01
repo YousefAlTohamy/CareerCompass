@@ -26,7 +26,7 @@ use RuntimeException;
 class GapAnalysisService implements GapAnalysisServiceInterface
 {
     /**
-     * AI Master Gateway URL (Port 8001). Set AI_ORCHESTRATOR_URL in .env.
+     * AI Engine URL (Port 8002). All AI services consolidated here.
      */
     private string $gatewayUrl;
 
@@ -34,7 +34,7 @@ class GapAnalysisService implements GapAnalysisServiceInterface
 
     public function __construct()
     {
-        $this->gatewayUrl = rtrim(config('services.ai_orchestrator.url', 'http://127.0.0.1:8001'), '/');
+        $this->gatewayUrl = rtrim(config('services.ai_orchestrator.url', 'http://127.0.0.1:8002'), '/');
         $this->timeout    = (int) config('services.ai_cv_analyzer.timeout', 60);
     }
 
