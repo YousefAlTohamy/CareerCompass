@@ -1,0 +1,12 @@
+vendor/
+node_modules/
+.env
+.git/
+.dockerignore
+Dockerfile
+storage/*.key
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/logs/*.log
+bootstrap/cache/*

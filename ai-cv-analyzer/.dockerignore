@@ -1,0 +1,9 @@
+__pycache__/
+.env
+.git/
+.dockerignore
+Dockerfile
+venv/
+.pytest_cache/
+*.pdf
+*.log
