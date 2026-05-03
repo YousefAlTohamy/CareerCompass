@@ -1,0 +1,105 @@
+version: '3.8'
+
+services:
+  # Infrastructure: MySQL Database
+  db:
+    image: mysql:8.0
+    container_name: cc-db
+    restart: always
+    environment:
+      MYSQL_DATABASE: career_compass
+      MYSQL_USER: cc_user
+      MYSQL_PASSWORD: cc_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - cc-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cc-network
+
+  # Backend: Laravel API
+  backend-api:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile
+    container_name: cc-backend
+    volumes:
+      - ./backend-api:/app
+      - /app/vendor
+    environment:
+      DB_HOST: db
+      DB_DATABASE: career_compass
+      DB_USERNAME: cc_user
+      DB_PASSWORD: cc_password
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - cc-network
+
+  # Frontend: React + Vite
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cc-frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    networks:
+      - cc-network
+
+  # AI CV Analyzer: FastAPI
+  ai-cv-analyzer:
+    build:
+      context: ./ai-cv-analyzer
+      dockerfile: Dockerfile
+    container_name: cc-cv-analyzer
+    volumes:
+      - ./ai-cv-analyzer:/app
+    ports:
+      - "8000:8000"
+    networks:
+      - cc-network
+
+  # AI Job Miner: Scrapy Worker
+  ai-job-miner:
+    build:
+      context: ./ai-job-miner
+      dockerfile: Dockerfile
+    container_name: cc-job-miner
+    volumes:
+      - ./ai-job-miner:/app
+    # Internet access is enabled by default in bridge mode
+    networks:
+      - cc-network
+
+  # Nginx: Reverse Proxy
+  nginx:
+    image: nginx:stable-alpine
+    container_name: cc-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+      - ./backend-api:/app # Needed for PHP-FPM static file serving and path mapping
+    depends_on:
+      - backend-api
+      - frontend
+    networks:
+      - cc-network
+
+networks:
+  cc-network:
+    driver: bridge
+
+volumes:
+  cc-db-data:
