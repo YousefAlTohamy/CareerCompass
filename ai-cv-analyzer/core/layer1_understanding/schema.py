@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any, Dict, List, Literal, Optional
 
+# pyrefly: ignore [missing-import]
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, confloat
 
 ConfidenceScore = confloat(ge=0.0, le=1.0)
@@ -32,6 +33,7 @@ class ContactInfo(StrictModel):
 class Profile(StrictModel):
     full_name: Optional[str] = None
     current_title: Optional[str] = None
+    alternative_titles: List[str] = Field(default_factory=list)
     headline: Optional[str] = None
     contact: ContactInfo = Field(default_factory=ContactInfo)
     summary: Optional[str] = None
@@ -79,7 +81,7 @@ class ExperienceSection(StrictModel):
 class AnalysisSection(StrictModel):
     summary: Optional[str] = None
     predicted_role: Optional[str] = None
-    seniority: Optional[Literal["intern", "junior", "mid", "senior", "lead", "principal"]] = None
+    seniority: Optional[Literal["intern", "junior", "mid", "senior", "lead", "principal", "manager"]] = None
     primary_domain: Optional[str] = None
     strengths: List[str] = Field(default_factory=list)
     gaps: List[str] = Field(default_factory=list)

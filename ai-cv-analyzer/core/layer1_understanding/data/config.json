@@ -1,0 +1,154 @@
+{
+  "section_config": {
+    "reference_phrases": {
+      "profile_summary": [
+        "Professional Summary",
+        "About Me",
+        "Career Summary",
+        "Career Objective",
+        "Profile Overview",
+        "Personal Statement",
+        "Executive Summary",
+        "Objective"
+      ],
+      "experience": [
+        "Work Experience",
+        "Professional Experience",
+        "Employment History",
+        "Career History",
+        "Work History",
+        "Relevant Experience"
+      ],
+      "education": [
+        "Education",
+        "Academic Background",
+        "Academic Qualifications",
+        "Educational Background",
+        "Degrees and Certifications",
+        "Courses",
+        "Relevant Courses",
+        "Certifications and Training"
+      ],
+      "skills": [
+        "Technical Skills",
+        "Core Competencies",
+        "Skills and Technologies",
+        "Areas of Expertise",
+        "Key Skills",
+        "Professional Skills",
+        "Tools and Technologies"
+      ],
+      "projects": [
+        "Projects",
+        "Selected Projects",
+        "Project Experience",
+        "Portfolio",
+        "Academic Projects",
+        "Personal Projects",
+        "Notable Projects",
+        "Technical Projects",
+        "Project"
+      ],
+      "certificates": [
+        "Certificates",
+        "Certifications",
+        "Licenses",
+        "Professional Training",
+        "Awards",
+        "Honors",
+        "Achievements"
+      ],
+      "languages": [
+        "Languages",
+        "Linguistic Skills",
+        "Language Proficiency",
+        "Spoken Languages"
+      ]
+    },
+    "exact_matches": {
+      "summary": "profile_summary",
+      "profile": "profile_summary",
+      "about": "profile_summary",
+      "about me": "profile_summary",
+      "professional summary": "profile_summary",
+      "career summary": "profile_summary",
+      "objective": "profile_summary",
+      "work experience": "experience",
+      "experience": "experience",
+      "employment history": "experience",
+      "professional experience": "experience",
+      "education": "education",
+      "academic background": "education",
+      "technical skills": "skills",
+      "skills": "skills",
+      "core skills": "skills",
+      "key skills": "skills",
+      "projects": "projects",
+      "project": "projects",
+      "project experience": "projects",
+      "selected projects": "projects",
+      "certificates": "certificates",
+      "certifications": "certificates",
+      "languages": "languages"
+    }
+  },
+  "contact_config": {
+    "location_reject_words": [
+      "supports", "offers", "includes", "provides", "allows", "enables", "features", "designed", "built",
+      "developed", "created", "contains", "aims", "helps", "based on", "uses", "through", "and", "with", "for",
+      "delivering", "managing", "tracking", "booking", "providing"
+    ]
+  },
+  "title_config": {
+    "blacklist": [
+      "objective", "summary", "profile", "about", "contact", 
+      "experience", "education", "skills", "projects", "certificates",
+      "professional profile", "career objective", "career summary"
+    ],
+    "action_verbs": [
+      "developed", "managed", "led", "engineered", "collaborated",
+      "designed", "created", "built", "implemented", "delivered",
+      "facilitated", "spearheaded", "orchestrated", "architected",
+      "integrated", "tested", "deployed", "maintained", "improved",
+      "optimized", "resolved", "coordinated", "analyzed"
+    ]
+  },
+  "skill_config": {
+    "noise_blocklist": [
+      "ahmed", "mohamed", "ali", "omar", "sara", "sarwat", "malak", "john",
+      "jane", "david", "michael", "chris", "anna", "mary", "james", "robert",
+      "passenger", "driver", "user", "client", "team", "member", "manager",
+      "instructor", "student", "intern", "freelance", "remote", "course",
+      "certificate", "project", "app", "application", "system", "platform",
+      "service", "process", "data", "design", "development", "management",
+      "present", "current", "experience", "skills", "education", "work",
+      "profile", "summary", "objective", "contact", "references"
+    ]
+  },
+  "seniority_config": {
+    "title_keywords": {
+      "intern": "intern",
+      "trainee": "intern",
+      "apprentice": "intern",
+      "junior": "junior",
+      "jr": "junior",
+      "associate": "junior",
+      "mid": "mid",
+      "intermediate": "mid",
+      "senior": "senior",
+      "sr": "senior",
+      "staff": "senior",
+      "lead": "lead",
+      "team lead": "lead",
+      "tech lead": "lead",
+      "manager": "lead",
+      "head of": "lead",
+      "director": "principal",
+      "principal": "principal",
+      "vp": "principal",
+      "chief": "principal",
+      "architect": "senior",
+      "fellow": "principal"
+    }
+  }
+}
