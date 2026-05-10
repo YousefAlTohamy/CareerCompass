@@ -75,8 +75,6 @@ const AdminUsers = () => {
       title: isCurrentlyBanned ? t('admin.actions.unban_user') : t('admin.actions.ban_user'),
       text: `${t('admin.actions.irreversible')} "${name}"`,
       icon: 'warning',
-      background: 'rgba(15, 23, 42, 0.95)',
-      color: '#fff',
       showCancelButton: true,
       confirmButtonColor: isCurrentlyBanned ? '#10b981' : '#f43f5e',
       cancelButtonColor: '#334155',
@@ -102,28 +100,28 @@ const AdminUsers = () => {
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-1">
-            <h1 className="text-4xl font-black tracking-tight text-white">{t('admin.stats.users')}</h1>
+            <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white">{t('admin.stats.users')}</h1>
             <p className="text-slate-500 font-mono text-sm tracking-widest uppercase">// AUTH_DIRECTORY_PULSE</p>
           </div>
 
           <div className="relative w-full md:w-96">
-            <Search className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 text-slate-500`} size={18} />
+            <Search className={`absolute ${isRtl ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 text-slate-400`} size={18} />
             <input 
               type="text"
               placeholder={t('mentorship.search')}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className={`w-full bg-white/5 border border-white/10 ${isRtl ? 'pr-12 pl-4' : 'ps-12 pe-4'} py-3 rounded-2xl text-white font-medium outline-none focus:border-[var(--cc-primary)] transition-all`}
+              className={`w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 ${isRtl ? 'pr-12 pl-4' : 'ps-12 pe-4'} py-3.5 rounded-2xl text-slate-900 dark:text-white font-medium outline-none focus:border-indigo-500 dark:focus:border-[var(--cc-primary)] shadow-sm transition-all`}
             />
           </div>
         </div>
 
         {/* Users Table */}
-        <div className="glass-card overflow-hidden border-white/5 rounded-3xl">
+        <div className="glass-card overflow-hidden border-slate-200 dark:border-white/5 rounded-3xl shadow-xl">
           <div className="overflow-x-auto">
             <table className={`w-full text-start border-collapse`}>
               <thead>
-                <tr className="bg-white/5 border-b border-white/10 text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                <tr className="bg-slate-50 dark:bg-white/5 border-b border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest">
                   <th className="px-6 py-4 text-start">{t('cv_builder.full_name')}</th>
                   <th className="px-6 py-4 text-start">{t('hud_labels.email_endpoint')}</th>
                   <th className="px-6 py-4 text-start">{t('admin.status')}</th>
@@ -139,18 +137,18 @@ const AdminUsers = () => {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     key={user.id} 
-                    className="hover:bg-white/5 transition-colors group"
+                    className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group"
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-xs font-bold text-white ring-2 ring-white/10 shadow-lg">
                           {getInitials(user.name)}
                         </div>
-                        <span className="font-bold text-white group-hover:text-[var(--cc-primary)] transition-colors">{user.name}</span>
+                        <span className="font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-[var(--cc-primary)] transition-colors">{user.name}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm font-mono text-slate-400">{user.email}</span>
+                      <span className="text-sm font-mono text-slate-500 dark:text-slate-400">{user.email}</span>
                     </td>
                     <td className="px-6 py-4">
                       <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter ${user.is_banned ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`}>
