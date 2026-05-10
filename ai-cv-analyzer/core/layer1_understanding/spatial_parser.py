@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from statistics import median
 from typing import Iterable, List, Literal, Optional, Sequence, Tuple
 
+# pyrefly: ignore [missing-import]
 import pdfplumber
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,7 @@ class _Word:
     x1: float
     top: float
     bottom: float
+    size: float = 12.0
 
     @property
     def height(self) -> float:
@@ -53,6 +55,7 @@ class _Segment:
     x1: float
     top: float
     bottom: float
+    size: float = 12.0
 
     @property
     def center_y(self) -> float:
@@ -140,6 +143,9 @@ def extract_spatial_text_from_pdf(
                 segments = _split_rows_into_segments(rows, gap_threshold)
                 ordered_lines = _order_segments_by_columns_then_rows(segments, cluster_threshold)
 
+                # Fix 1: De-hyphenate lines (e.g. Lar- \n avel -> Laravel)
+                ordered_lines = _dehyphenate_lines(ordered_lines)
+
                 spatial_text = "\n".join(ordered_lines).strip()
                 spatial_word_count = len(re.findall(r"\S+", spatial_text))
 
@@ -206,7 +212,7 @@ def _extract_words(page) -> List[_Word]:
     raw_words = page.extract_words(
         keep_blank_chars=False,
         use_text_flow=False,
-        extra_attrs=[],
+        extra_attrs=["size"],
     )
     words: List[_Word] = []
     for w in raw_words or []:
@@ -224,6 +230,7 @@ def _extract_words(page) -> List[_Word]:
                     x1=float(w["x1"]),
                     top=float(w["top"]),
                     bottom=float(w["bottom"]),
+                    size=float(w.get("size", 12.0)),
                 )
             )
         except Exception:
@@ -317,6 +324,7 @@ def _segment_from_words(words: Sequence[_Word]) -> _Segment:
         x1=max(w.x1 for w in words),
         top=min(w.top for w in words),
         bottom=max(w.bottom for w in words),
+        size=max((w.size for w in words), default=12.0),
     )
 
 
@@ -338,6 +346,10 @@ def _order_segments_by_columns_then_rows(
 
     sorted_segs = sorted(segments, key=lambda s: (s.x0, s.center_y))
     columns: List[Tuple[float, int, List[_Segment]]] = []  # (x_centroid, member_count, segments)
+    
+    # Feature 1: Compute median size for header heuristics
+    all_sizes = [s.size for s in segments if s.size > 0]
+    median_size = float(median(all_sizes)) if all_sizes else 12.0
 
     for seg in sorted_segs:
         best_idx = -1
@@ -358,20 +370,87 @@ def _order_segments_by_columns_then_rows(
         else:
             columns.append((seg.x0, 1, [seg]))
 
-    columns.sort(key=lambda c: c[0])
-
+    # Fix 2: Spatial Row Merging (Date-on-right support)
+    # Instead of reading column-by-column, we flatten and sort by Y then X.
+    # If segments share the same center_y (within tolerance), they are merged into
+    # a single logical line. This preserves context for NER (e.g. Title | Date).
+    
+    all_segs = sorted(segments, key=lambda s: (s.center_y, s.x0))
+    
     lines: List[str] = []
-    for _, _, col_segments in columns:
-        col_segments_sorted = sorted(col_segments, key=lambda s: (s.center_y, s.x0))
-        for seg in col_segments_sorted:
-            if seg.text:
-                lines.append(seg.text)
+    current_row: List[_Segment] = []
+    row_y: Optional[float] = None
+    y_threshold = 3.0 # Points tolerance for being on the "same line"
 
-        # Separate columns (keeps readability and reduces accidental merges)
-        if lines and lines[-1] != "":
-            lines.append("")
+    for seg in all_segs:
+        if row_y is None:
+            row_y = seg.center_y
+            current_row = [seg]
+        elif abs(seg.center_y - row_y) <= y_threshold:
+            current_row.append(seg)
+        else:
+            # Finalize previous row
+            row_text = _build_row_text(current_row, median_size)
+            if row_text:
+                lines.append(row_text)
+            row_y = seg.center_y
+            current_row = [seg]
+            
+    if current_row:
+        row_text = _build_row_text(current_row, median_size)
+        if row_text:
+            lines.append(row_text)
 
-    # Trim trailing blank
-    while lines and lines[-1] == "":
-        lines.pop()
     return lines
+
+
+def _build_row_text(segments: List[_Segment], median_size: float) -> str:
+    """Helper to join segments in a row, applying header hints and gap detection."""
+    if not segments:
+        return ""
+    
+    # Sort segments in row by X to ensure logical reading order
+    segments.sort(key=lambda s: s.x0)
+    
+    res = ""
+    for i, s in enumerate(segments):
+        prefix = "[H] " if s.size > median_size * 1.15 else ""
+        text = prefix + s.text
+        
+        if i == 0:
+            res = text
+        else:
+            # If gap > 80 points, it's likely a date/location on the right side.
+            # Use a pipe separator to help downstream segmentation/NER see the gap.
+            gap = segments[i].x0 - segments[i-1].x1
+            sep = " | " if gap > 80 else " "
+            res += sep + text
+    return res
+
+
+def _dehyphenate_lines(lines: List[str]) -> List[str]:
+    """
+    Fix 1: Merge lines where a word was split by a hyphen at the end of a line.
+    Example: "[H] Lar-" + "avel" -> "[H] Laravel"
+    """
+    if not lines:
+        return []
+
+    new_lines: List[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        # Check if line ends with a hyphen (ignoring trailing whitespace)
+        if line.endswith("-") and (i + 1) < len(lines):
+            next_line = lines[i + 1].strip()
+            # If next line starts with lowercase or is very short, it's likely a continuation
+            if next_line and (next_line[0].islower() or len(next_line.split()) == 1):
+                # Merge: remove hyphen from current, append next
+                merged = line[:-1] + next_line
+                new_lines.append(merged)
+                i += 2  # skip next
+                continue
+        
+        new_lines.append(line)
+        i += 1
+    return new_lines

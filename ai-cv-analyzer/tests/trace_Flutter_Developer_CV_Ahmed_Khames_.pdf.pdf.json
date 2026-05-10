@@ -1,0 +1,424 @@
+{
+  "parsing_status": "success",
+  "profile": {
+    "full_name": "Ahmed Khames",
+    "current_title": "Junior Flutter Developer",
+    "alternative_titles": [
+      "Mobile App Developer",
+      "Prompt Trainer"
+    ],
+    "headline": null,
+    "contact": {
+      "email": "ahmedkham1234567@gmail.com",
+      "phone": "+201276898296",
+      "location": "Alexandria, Egypt",
+      "linkedin_url": "https://www.linkedin.com/in/ahmed-khames",
+      "github_url": "https://github.com/Ahmed-Khames2",
+      "portfolio_url": "https://udemy.com/certificate"
+    },
+    "summary": "Ahmed Khames\nJunior Flutter Developer\nAlexandria, Egypt | +201276898296\nahmedkham1234567@gmail.com | https://www.linkedin.com/in/ahmed-khames |\nhttps://github.com/Ahmed-Khames2\n\nAspiring Junior Flutter Developer and final-year Computer Science student with hands-on experience building realworld applications. Skilled in Flutter, Firebase, REST APIs, and responsive UI design. Built and deployed production-\nlevel apps that improved usability and performance. Eager to contribute to impactful mobile solutions and grow within a\ncollaborative development team. Completed multiple real-world projects with production-level features despite being in\nan early career stage.",
+    "confidence_score": 0.93
+  },
+  "stats": {
+    "page_count": 3,
+    "char_count": 3778,
+    "word_count": 518,
+    "language_hint": null
+  },
+  "skills": {
+    "items": [
+      {
+        "confidence_score": 0.65,
+        "name": "Agile Development",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Bloc",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Clean Architecture",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Cubit",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Dart",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "DB",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Feature-Based Architecture Tawseela",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Firebase",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Firebase Firestore , Local Storage",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Flutter",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Git",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "GitHub",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "JSON",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "LLM",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "MVVM",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "OpenStreetMap API",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "OTP Authentication",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "OTP- based",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Provider",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Responsive Design",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "REST APIs",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "SharedPreferences",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "UI",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "UI/UX",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Version Control",
+        "category": "hard",
+        "evidence": "ner"
+      }
+    ],
+    "confidence_score": 0.6500000000000001
+  },
+  "experience": {
+    "items": [
+      {
+        "confidence_score": 0.85,
+        "title": "Prompt Trainer",
+        "company": "Unknown Company",
+        "location": null,
+        "start_date": "2024-10-01",
+        "end_date": "2024-12-01",
+        "is_current": false,
+        "description": [
+          "AI  (Freelance) | Oct 2024 – Dec 2024",
+          "Outlier AI - Remote",
+          "Trained AI models to better underst and and respond to user prompts by evaluating outputs, reviewing over 200+",
+          "prompts weekly.",
+          "Provided human feedback to enhance LLM per for mance and language accuracy, contributing to an estimated 15%",
+          "improvement in prompt-response alignment.",
+          "Cross-Plat for m Mobile App Developer Intern"
+        ],
+        "technologies": [
+          "AI",
+          "LLM"
+        ]
+      },
+      {
+        "confidence_score": 0.85,
+        "title": "AI",
+        "company": "Unknown Company",
+        "location": null,
+        "start_date": "2025-07-01",
+        "end_date": "2026-05-09",
+        "is_current": true,
+        "description": [
+          "Outlier  - Remote",
+          "Trned  models to better underst and and respond to user prompts by evaluating outputs, reviewing over 200+",
+          "prompts weekly.",
+          "Provided human feedback to enhance LLM per for mance and language accuracy, contributing to an estimated 15%",
+          "improvement in prompt-response alignment.",
+          "Cross-Plat for m Mobile App Developer Intern Jul 2025 – Present",
+          "DEPI – Remote",
+          "Soft Skills: Improved teamwork, communication, and presentation skills through collaborative projects and freelance",
+          "coaching sessions, participating in 2+ team-based tasks and presenting progress in weekly reviews.",
+          "Technical Skills: Built cross-plat for m mobile apps using Flutter, with focus on API integration, Firebase, and",
+          "responsive UI design, resulting in a 30% reduction in front-end issues during testing.",
+          "Volunteer Mobile App Developer |"
+        ],
+        "technologies": [
+          "API",
+          "Firebase",
+          "Flutter",
+          "LLM",
+          "UI"
+        ]
+      },
+      {
+        "confidence_score": 0.85,
+        "title": "Volunteer",
+        "company": "Unknown Company",
+        "location": null,
+        "start_date": "2025-06-01",
+        "end_date": "2026-05-09",
+        "is_current": true,
+        "description": [
+          "DEPI – Remote",
+          "Soft Skills: Improved teamwork, communication, and presentation skills through collaborative projects and freelance",
+          "coaching sessions, participating in 2+ team-based tasks and presenting progress in weekly reviews.",
+          "Technical Skills: Built cross-plat for m mobile apps using Flutter, with focus on API integration, Firebase, and",
+          "responsive UI design, resulting in a 30% reduction in front-end issues during testing.",
+          "Mobile App Developer | Jun 2025 – Present"
+        ],
+        "technologies": [
+          "API",
+          "Firebase",
+          "Flutter",
+          "UI"
+        ]
+      }
+    ],
+    "confidence_score": 0.85
+  },
+  "analysis": {
+    "summary": null,
+    "predicted_role": "Junior Flutter Developer",
+    "seniority": "Intern",
+    "primary_domain": "Mobile App Development",
+    "strengths": [
+      "Diverse technical portfolio with 6 technologies used across roles."
+    ],
+    "gaps": [
+      "Employment gap of 6 months detected between 'Prompt Trainer' (ended 2024-12-01) and 'Volunteer' (started 2025-06-01)."
+    ],
+    "red_flags": [
+      "Potential job hopping: 3 roles lasted less than 1 year within the last 5 years. Consider explaining short tenures in a cover letter.",
+      "Roles 'Volunteer' and 'AI' overlap by ~10 months. If these were not simultaneous positions, dates may need correction."
+    ],
+    "confidence_score": 0.75,
+    "metadata": {
+      "segmentation": {
+        "found_sections": [
+          "certificates",
+          "education",
+          "experience",
+          "profile_summary",
+          "projects",
+          "skills"
+        ],
+        "sections_missing": [],
+        "anomalies": [],
+        "sections_text": {
+          "profile_summary": "Ahmed Khames\nJunior Flutter Developer\nAlexandria, Egypt | +201276898296\nahmedkham1234567@gmail.com | https://www.linkedin.com/in/ahmed-khames |\nhttps://github.com/Ahmed-Khames2\n\nAspiring Junior Flutter Developer and final-year Computer Science student with hands-on experience building realworld applications. Skilled in Flutter, Firebase, REST APIs, and responsive UI design. Built and deployed production-\nlevel apps that improved usability and performance. Eager to contribute to impactful mobile solutions and grow within a\ncollaborative development team. Completed multiple real-world projects with production-level features despite being in\nan early career stage.",
+          "education": "Faculty of Computer Science and Information – Kafr El-Sheikh University\nBachelor of Science in Computer Science\nOct 2022 – Present\nExpected Graduation: June 2026\nCurrent GPA: 3.4 / 4.0",
+          "experience": "AI Prompt Trainer (Freelance) | Oct 2024 – Dec 2024\nOutlier AI - Remote\n- Trained AI models to better understand and respond to user prompts by evaluating outputs, reviewing over 200+\nprompts weekly.\n- Provided human feedback to enhance LLM performance and language accuracy, contributing to an estimated 15%\nimprovement in prompt-response alignment.\nCross-Platform Mobile App Developer Intern Jul 2025 – Present\nDEPI – Remote\n- Soft Skills: Improved teamwork, communication, and presentation skills through collaborative projects and freelance\ncoaching sessions, participating in 2+ team-based tasks and presenting progress in weekly reviews.\n- Technical Skills: Built cross-platform mobile apps using Flutter, with focus on API integration, Firebase, and\nresponsive UI design, resulting in a 30% reduction in front-end issues during testing.\nVolunteer Mobile App Developer | Jun 2025 – Present",
+          "projects": "Collaborating with a student team to develop a quality management mobile app using Flutter. Contributing to UI\ndesign, code structure, and progress presentations during meetings.\nGitHub: github.com/Malak308/Quality_Management\n\nAlQuds App\nAn offline Islamic mobile app offering complete Azkar sections, full Quran without internet, prayer times based on\ngovernorates in Egypt, and a dual Hijri/Gregorian calendar with Islamic and national events. Also includes 99 Names\nof Allah with descriptions, a customizable digital tasbeeh, and a welcoming audio reminder to send blessings upon the\nProphet .ﷺ The app supports both light and dark themes with a fully custom UI.\nDownload: drive.google.com/ALQudes App\nTechnologies: Flutter · Bloc · SharedPreferences · JSON · Responsive Design · Feature-Based Architecture\nTawseela App\nA ride-booking app designed for university students to book intercity and short-distance trips. The app supports realtime ride tracking, passenger and driver management, and a seamless booking experience. It also features OTP-\nbased authentication and a structured registration process.\nGitHub: github.com/interesta22/Tawseela-App.git\nTechnologies: Flutter · Firebase · OpenStreetMap API · OTP Authentication · Clean Architecture",
+          "skills": "Flutter · Dart · Firebase · REST APIs · JSON · Git & GitHub · UI/UX · Responsive Design · Agile Development ·\nVersion Control · State Management (Bloc, Cubit, Provider) · MVVM · Clean Architecture · DB(SharedPreferences ,\nFirebase Firestore , Local Storage)\n\nTeamwork · Communication Skills · Self-Motivation · Presentation · Time Management · Remote Collaboration ·\nAdaptability · Team Leadership",
+          "certificates": "Flutter & Development Course\nInstructor: Sarwat Samy – Udemy · Fep2024\nCertificate: udemy.com/certificate\nFlutter Advanced Course: Bloc and MVVM Pattern\nInstructor: Sarwat Samy – Udemy · July 2025\nCertificate: udemy.com/certificate"
+        }
+      },
+      "experience": {
+        "total_experience_years": 1.1,
+        "skill_durations": {
+          "AI": 0.17,
+          "LLM": 1.02,
+          "API": 0.94,
+          "Firebase": 0.94,
+          "Flutter": 0.94,
+          "UI": 0.94
+        },
+        "top_skills_by_years": [
+          {
+            "skill": "LLM",
+            "years": 1.02
+          },
+          {
+            "skill": "API",
+            "years": 0.94
+          },
+          {
+            "skill": "Firebase",
+            "years": 0.94
+          }
+        ],
+        "action_verb_score": 0.2,
+        "gap_details": [
+          "Employment gap of 6 months detected between 'Prompt Trainer' (ended 2024-12-01) and 'Volunteer' (started 2025-06-01)."
+        ]
+      },
+      "extraction": {
+        "source": "spatial",
+        "spatial_status": "ok",
+        "word_count_spatial": 518,
+        "raw_text": "Ahmed Khames\nJunior Flutter Developer\nAlexandria, Egypt | +201276898296\nahmedkham1234567@gmail.com | https://www.linkedin.com/in/ahmed-khames |\nhttps://github.com/Ahmed-Khames2\nObjective\nAspiring Junior Flutter Developer and final-year Computer Science student with hands-on experience building realworld applications. Skilled in Flutter, Firebase, REST APIs, and responsive UI design. Built and deployed production-\nlevel apps that improved usability and performance. Eager to contribute to impactful mobile solutions and grow within a\ncollaborative development team. Completed multiple real-world projects with production-level features despite being in\nan early career stage.\nEducation\nFaculty of Computer Science and Information – Kafr El-Sheikh University\nBachelor of Science in Computer Science\nOct 2022 – Present\nExpected Graduation: June 2026\nCurrent GPA: 3.4 / 4.0\nExperience\nAI Prompt Trainer (Freelance) | Oct 2024 – Dec 2024\nOutlier AI - Remote\n- Trained AI models to better understand and respond to user prompts by evaluating outputs, reviewing over 200+\nprompts weekly.\n- Provided human feedback to enhance LLM performance and language accuracy, contributing to an estimated 15%\nimprovement in prompt-response alignment.\nCross-Platform Mobile App Developer Intern Jul 2025 – Present\nDEPI – Remote\n- Soft Skills: Improved teamwork, communication, and presentation skills through collaborative projects and freelance\ncoaching sessions, participating in 2+ team-based tasks and presenting progress in weekly reviews.\n- Technical Skills: Built cross-platform mobile apps using Flutter, with focus on API integration, Firebase, and\nresponsive UI design, resulting in a 30% reduction in front-end issues during testing.\nVolunteer Mobile App Developer | Jun 2025 – Present\nKafr El-Sheikh University – Faculty Project\n\nCollaborating with a student team to develop a quality management mobile app using Flutter. Contributing to UI\ndesign, code structure, and progress presentations during meetings.\nGitHub: github.com/Malak308/Quality_Management\nSkills & abilities\nTechnical Skills\nFlutter · Dart · Firebase · REST APIs · JSON · Git & GitHub · UI/UX · Responsive Design · Agile Development ·\nVersion Control · State Management (Bloc, Cubit, Provider) · MVVM · Clean Architecture · DB(SharedPreferences ,\nFirebase Firestore , Local Storage)\nSoft Skills\nTeamwork · Communication Skills · Self-Motivation · Presentation · Time Management · Remote Collaboration ·\nAdaptability · Team Leadership\nProjects\nAlQuds App\nAn offline Islamic mobile app offering complete Azkar sections, full Quran without internet, prayer times based on\ngovernorates in Egypt, and a dual Hijri/Gregorian calendar with Islamic and national events. Also includes 99 Names\nof Allah with descriptions, a customizable digital tasbeeh, and a welcoming audio reminder to send blessings upon the\nProphet .ﷺ The app supports both light and dark themes with a fully custom UI.\nDownload: drive.google.com/ALQudes App\nTechnologies: Flutter · Bloc · SharedPreferences · JSON · Responsive Design · Feature-Based Architecture\nTawseela App\nA ride-booking app designed for university students to book intercity and short-distance trips. The app supports realtime ride tracking, passenger and driver management, and a seamless booking experience. It also features OTP-\nbased authentication and a structured registration process.\nGitHub: github.com/interesta22/Tawseela-App.git\nTechnologies: Flutter · Firebase · OpenStreetMap API · OTP Authentication · Clean Architecture\nCertifications\nFlutter & Development Course\nInstructor: Sarwat Samy – Udemy · Fep2024\nCertificate: udemy.com/certificate\nFlutter Advanced Course: Bloc and MVVM Pattern\nInstructor: Sarwat Samy – Udemy · July 2025\nCertificate: udemy.com/certificate"
+      },
+      "layer2": {
+        "experience": {
+          "total_experience_years": 1.1
+        },
+        "seniority_details": {
+          "level": "Intern",
+          "verb_score": 0.57,
+          "semantic_match": "Intern"
+        },
+        "categorized_skills": {
+          "hard_skills": [
+            "Agile Development",
+            "Bloc",
+            "Clean Architecture",
+            "Cubit",
+            "Dart",
+            "DB",
+            "Feature-Based Architecture Tawseela",
+            "Firebase",
+            "Firebase Firestore , Local Storage",
+            "Flutter",
+            "Git",
+            "GitHub",
+            "JSON",
+            "LLM",
+            "MVVM",
+            "OpenStreetMap API",
+            "OTP Authentication",
+            "OTP- based",
+            "Provider",
+            "Responsive Design",
+            "REST APIs",
+            "SharedPreferences",
+            "UI",
+            "UI/UX",
+            "Version Control"
+          ],
+          "soft_skills": [],
+          "management_skills": []
+        },
+        "domain_scores": {
+          "Technology & Software": 0.19146519899368286,
+          "Healthcare & Medicine": 0.09061671048402786,
+          "Finance & Accounting": 0.04515089839696884,
+          "Education & Training": 0.1572197675704956,
+          "Legal & Law": 0.025133874267339706,
+          "Marketing & Sales": 0.044371917843818665,
+          "Creative Arts & Design": 0.24953073263168335,
+          "Manufacturing & Engineering": 0.08747286349534988,
+          "Human Resources": 0.12138579040765762,
+          "Customer Service & Support": 0.22899428009986877,
+          "Science & Research": 0.10376235842704773,
+          "Construction & Trades": 0.11394190788269043,
+          "Backend Development": 0.2125813215970993,
+          "Frontend Development": 0.32196730375289917,
+          "Full Stack Development": 0.26507577300071716,
+          "Mobile App Development": 0.5967134833335876,
+          "Data Science & AI": 0.18325017392635345,
+          "DevOps & Cloud": 0.1965523511171341,
+          "UI/UX Design": 0.3955051302909851,
+          "Quality Assurance & Testing": 0.21748556196689606,
+          "Cybersecurity": 0.03535750135779381
+        }
+      }
+    },
+    "domain_scores": {
+      "Technology & Software": 0.19146519899368286,
+      "Healthcare & Medicine": 0.09061671048402786,
+      "Finance & Accounting": 0.04515089839696884,
+      "Education & Training": 0.1572197675704956,
+      "Legal & Law": 0.025133874267339706,
+      "Marketing & Sales": 0.044371917843818665,
+      "Creative Arts & Design": 0.24953073263168335,
+      "Manufacturing & Engineering": 0.08747286349534988,
+      "Human Resources": 0.12138579040765762,
+      "Customer Service & Support": 0.22899428009986877,
+      "Science & Research": 0.10376235842704773,
+      "Construction & Trades": 0.11394190788269043,
+      "Backend Development": 0.2125813215970993,
+      "Frontend Development": 0.32196730375289917,
+      "Full Stack Development": 0.26507577300071716,
+      "Mobile App Development": 0.5967134833335876,
+      "Data Science & AI": 0.18325017392635345,
+      "DevOps & Cloud": 0.1965523511171341,
+      "UI/UX Design": 0.3955051302909851,
+      "Quality Assurance & Testing": 0.21748556196689606,
+      "Cybersecurity": 0.03535750135779381
+    }
+  }
+}

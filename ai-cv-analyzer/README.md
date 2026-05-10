@@ -1,33 +1,80 @@
-# 🧠 AI CV Analyzer
+# 🧠 AI CV Analyzer (Core Matchmaking Engine)
 
-> **V3 AI Pipeline — Layer 1 Understanding**  
-> Universal document extraction with spatial normalization, semantic segmentation, advanced NER, contact extraction, canonicalization, and temporal parsing.  
-> **Layer 2 — Professional Domain Classification (Centroid Matching + Zero-Shot DistilBART Fallback)**  
-> **Layer 3 — Semantic Matching Engine (Adaptive Seniority-Weighted Scoring)**
+> **V3.5 AI Pipeline — The 3-Layer Decision Intelligence Architecture**  
+> **Layer 1 — Spatial Understanding:** Universal extraction with spatial normalization, semantic segmentation, and temporal parsing.  
+> **Layer 2 — Modular Classification:** Specialist engines for Domain (BERT), Seniority (Hybrid), and Skill Categorization.  
+> **Layer 3 — Intelligent Matchmaking:** Semantic similarity + Constraint validation + Human-readable Fit Analysis.
 
-A **6-stage V3 AI pipeline** that converts any CV file into a structured, canonicalized profile with contact information and intelligently matches it against job descriptions using semantic embeddings and hard-skill overlap scoring.
+A **state-of-the-art 3-layer AI pipeline** that converts raw CV files into structured decision-ready intelligence, enabling high-precision candidate matching against complex Job Descriptions.
 
 ```mermaid
 graph TD
-    A[Raw PDF/Image] --> B(Spatial Parser / pdfplumber)
-    B -->|Char Density < 150 or failure| C(OCR Fallback / EasyOCR)
-    B --> D
-    C --> D(Section Segmenter<br>Exact → Regex → Semantic)
-    D --> E(NER Engine<br>BERT, chunked, INT8)
-    E --> F(Canonicalizer<br>5-Level Resolution Chain)
-    F --> G(Experience Engine<br>Dates, Durations, Red Flags)
-    G --> H(Contact Extractor)
-    H --> I[CVParseResult JSON]
-    I --> J(Layer 2: Centroid Classifier<br>12 Industry + 9 Tech Domains)
-    J --> K(Layer 3: Adaptive Matcher<br>3-Component Seniority-Weighted)
-    K --> L((Final JSON Response))
+    subgraph Layer1 [Layer 1: Spatial Understanding]
+    A[Raw PDF/Image] --> B(Spatial Parser)
+    B -->|OCR| C(OCR Pipeline)
+    B --> D(Section Segmenter)
+    D --> E(Advanced NER)
+    E --> F(Experience Engine)
+    F --> G(Contact Extractor)
+    end
+
+    subgraph Layer2 [Layer 2: Modular Classification]
+    G --> H(Domain Engine)
+    G --> I(Seniority Engine)
+    G --> J(Skill Engine)
+    end
+
+    subgraph Layer3 [Layer 3: Decision Intelligence]
+    H & I & J --> K(Intelligent Matcher)
+    K --> L(Fit Analysis Generator)
+    L --> M((Final Decision JSON))
+    end
+```
+
+---
+
+## 🚀 Key Innovation: Data-Driven Intelligence
+Unlike hardcoded ATS systems, our pipeline is **fully decoupled from its business logic**. All keywords, taxonomies, and rules are stored in externalized `config.json` files within each layer, allowing for instant tuning without code changes.
+
+- **Layer 1 Config**: Headers, blacklists, and location rejection filters.
+- **Layer 2 Taxonomy**: Industry domains, tech clusters, and seniority action verbs.
+- **Layer 3 Config**: Weights for matchmaking components (Semantic vs. Skills vs. Domain).
+
+---
+
+## 📂 Project Structure
+
+```
+ai-cv-analyzer/
+│
+├── core/                            
+│   ├── layer1_understanding/         # Spatial & Semantic Extraction
+│   │   ├── data/config.json          # Layer 1 rules & headers
+│   │   ├── section_segmenter.py      # Multi-stage segmentation (Exact -> Regex -> Semantic)
+│   │   ├── contact_extractor.py      # Improved LinkedIn & Location detection
+│   │   └── ...
+│   │
+│   ├── layer2_classification/        # Professional Profiling
+│   │   ├── data/taxonomy.json        # Unified domain & skill clusters
+│   │   ├── domain_engine.py          # BERT-based industry classification
+│   │   ├── seniority_engine.py       # Years-of-experience + Action-verb logic
+│   │   └── skill_engine.py           # Hard/Soft skill clustering
+│   │
+│   └── layer3_matching/              # Decision Making
+│       ├── similarity.py             # Intelligent Matcher (Multi-factor scoring)
+│       ├── fit_analysis_generator.py # Generates human-readable recruitment insights
+│       └── job_description_engine.py # Structured JD parsing
+│
+├── tests/                            # Deep Trace artifacts & test data
+├── trace_cv.py                       # CLI Tool for full end-to-end deep tracing
+└── main.py                           # FastAPI Production Gateway
 ```
 
 ---
 
 ## Table of Contents
 
-1. [V3 AI Pipeline Architecture](#v3-ai-pipeline-architecture)
+1. [V3.5 AI Pipeline Architecture](#v35-ai-pipeline-architecture)
 2. [Directory Structure](#directory-structure)
 3. [6-Stage V3 Pipeline (Layer 1)](#6-stage-v3-pipeline-layer-1)
 4. [Pydantic CVParseResult Schema](#pydantic-cvparseresult-schema)
@@ -41,13 +88,13 @@ graph TD
 
 ---
 
-## V3 AI Pipeline Architecture
+## V3.5 AI Pipeline Architecture
 
 | Attribute     | Detail                                                                         |
 | ------------- | ------------------------------------------------------------------------------ |
 | **Language**  | Python 3.11+                                                                   |
 | **Framework** | FastAPI — async REST API gateway on port **8002**                              |
-| **ML Models** | `dslim/bert-base-NER` (or custom), `valhalla/distilbart-mnli-12-1` (fallback), `all-MiniLM-L6-v2` |
+| **ML Models** | `dslim/bert-base-NER`, `all-MiniLM-L6-v2`, `distilbart-mnli-12-1`              |
 | **OCR Stack** | PyMuPDF (text PDFs), EasyOCR + OpenCV (scanned images)    |
 | **Lifecycle** | **Singleton Pattern** — all models pre-loaded at startup                       |
 | **Port**      | **8002** — explicitly isolated from ai-hybrid-orchestrator (8001)              |
@@ -66,32 +113,6 @@ ai-cv-analyzer/
 ├── main.py                          # FastAPI sub-service gateway (port 8002)
 ├── .env.example                     # Environment template (GEMINI_API_KEY, HF_TOKEN, NER_MODEL_PATH)
 ├── .gitignore                       # Custom rules for weights, training data, test PDFs
-│
-├── core/                            # The 3 Layers of Intelligence
-│   ├── layer1_understanding/
-│   │   ├── orchestrator.py          # V3 Facade: spatial → NER → contacts → experience → canonicalizer
-│   │   ├── spatial_parser.py        # pdfplumber Row Grouper — layout-aware extraction
-│   │   ├── section_segmenter.py     # Semantic section segmentation (Sentence-Transformers ready)
-│   │   ├── advanced_ner.py          # BERT NER with context window validation (±3 words)
-│   │   ├── experience_engine.py     # Temporal engine — python-dateutil date parsing
-│   │   ├── canonicalizer.py         # RapidFuzz fuzzy deduplication
-│   │   ├── contact_extractor.py     # Regex: email, phone, LinkedIn, GitHub, location
-│   │   ├── schema.py                # Pydantic CVParseResult, ContactInfo, SkillItem, etc.
-│   │   └── ocr_pipeline.py          # EasyOCR + OpenCV (scanned PDFs / images)
-│   │
-│   ├── layer2_classification/
-│   │   └── classifier.py            # BART-MNLI zero-shot domain classifier (Singleton)
-│   │
-│   └── layer3_matching/
-│       ├── embedder.py              # Sentence-BERT: text → 384-dim vector (Singleton)
-│       └── similarity.py            # IntelligentMatcher: semantic + skill-overlap scoring
-│
-├── models/                          # Saved model weights (Git-ignored)
-│   ├── .gitkeep                     # Preserves directory in Git
-│   ├── ner_weights/
-│   │   └── career_compass_ner_final/  # Custom fine-tuned NER (optional, auto-detected)
-│   ├── class_weights/               # BART-MNLI cached weights (auto-downloaded)
-│   └── sent_bert/                   # Sentence-BERT cached weights (auto-downloaded)
 │
 ├── training/                        # Training data & scripts (large files Git-ignored)
 │   ├── train_ner.ipynb              # Colab notebook: synthetic data + fine-tuning

@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 from core.layer1_understanding.advanced_ner import AdvancedNEREngine
 from core.layer1_understanding.canonicalizer import DataCanonicalizer
 from core.layer1_understanding.experience_engine import ExperienceEngine
+from core.layer1_understanding.utils import load_layer1_config
 from core.layer1_understanding.schema import (
     AnalysisSection,
     CVParseResult,
@@ -48,15 +49,16 @@ except ImportError:
     SemanticEmbedder = None  # type: ignore[misc,assignment]
     EMBEDDER_AVAILABLE = False
 
-# Lazy import for Domain Classifier (Layer 2)
+# Lazy import for Layer 2 Classification Orchestrator
 try:
-    from ..layer2_classification.classifier import CVDomainClassifier
+    from core.layer2_classification.orchestrator import ClassificationOrchestrator
+    from core.layer2_classification.classifier import CVDomainClassifier
     from .advanced_ner import _looks_like_contact_line
     CLASSIFIER_AVAILABLE = True
 except ImportError as e:
     logger = logging.getLogger(__name__)
-    logger.warning("Failed to import Layer 2 classifier: %s", str(e))
-    CVDomainClassifier = None  # type: ignore[misc,assignment]
+    logger.warning("Failed to import Layer 2 orchestrator: %s", str(e))
+    ClassificationOrchestrator = None  # type: ignore[misc,assignment]
     CLASSIFIER_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
@@ -117,14 +119,16 @@ class CVOrchestrator:
             semantic_skill_threshold=self._config.semantic_skill_threshold,
         )
 
-        self._classifier = None
+        self._layer2_orchestrator = None
         if CLASSIFIER_AVAILABLE:
             try:
-                self._classifier = CVDomainClassifier()
-                logger.info("Layer 2 Domain Classifier (Singleton) initialized for orchestrator.")
+                # We still need the underlying singleton classifier for the engines
+                domain_classifier = CVDomainClassifier()
+                self._layer2_orchestrator = ClassificationOrchestrator(domain_classifier)
+                logger.info("Layer 2 Orchestrator initialized for main orchestrator.")
             except Exception as e:
-                logger.warning("CVDomainClassifier failed to initialize: %s | Details: %s", type(e).__name__, str(e))
-                self._classifier = None
+                logger.warning("ClassificationOrchestrator failed to initialize: %s", e)
+                self._layer2_orchestrator = None
 
     # ------------------------------------------------------------------
     # Public entry point
@@ -169,7 +173,7 @@ class CVOrchestrator:
             logger.info("⏱ Spatial Parsing: %.1fms", spatial_ms)
         except Exception as e:
             logger.exception("Spatial parsing failed: %s", e)
-            return self._attempt_ocr_fallback(pdf_bytes, page_count=0, reason="spatial_exception")
+            return self._attempt_ocr_fallback(pdf_bytes, page_count=0, reason="spatial_exception", filename=filename)
 
         # -- Phase 1b: Evaluate spatial quality --
         extraction_source = "spatial"
@@ -180,7 +184,7 @@ class CVOrchestrator:
 
         if needs_ocr:
             t_ocr_start = time.perf_counter()
-            ocr_result = self._attempt_ocr_fallback(pdf_bytes, page_count=spatial.page_count, reason=self._ocr_reason(spatial, char_count))
+            ocr_result = self._attempt_ocr_fallback(pdf_bytes, page_count=spatial.page_count, reason=self._ocr_reason(spatial, char_count), filename=filename)
             ocr_ms = (time.perf_counter() - t_ocr_start) * 1000
             logger.info("⏱ OCR Fallback: %.1fms", ocr_ms)
             if ocr_result is not None:
@@ -192,12 +196,17 @@ class CVOrchestrator:
 
         # -- Phase 2+: NLP pipeline on the extracted text --
         t_nlp = time.perf_counter()
+        # Store raw_text_with_hints before stripping for metadata, then strip for NLP
+        raw_text_with_hints = ordered_text
+        ordered_text_clean = re.sub(r'^\[H\] ', '', ordered_text, flags=re.MULTILINE)
         nlp_result = self._run_nlp_pipeline(
-            ordered_text=ordered_text,
+            ordered_text=ordered_text_clean,
+            raw_text_with_hints=raw_text_with_hints,
             page_count=spatial.page_count,
             extraction_source=extraction_source,
             spatial_status=spatial.status,
             spatial_word_count=spatial.word_count,
+            filename=filename,
         )
         nlp_ms = (time.perf_counter() - t_nlp) * 1000
         logger.info("⏱ NLP Pipeline: %.1fms", nlp_ms)
@@ -239,6 +248,7 @@ class CVOrchestrator:
         *,
         page_count: int,
         reason: str,
+        filename: Optional[str] = None,
     ) -> Optional[CVParseResult]:
         """
         Try to reconstruct the full text via OCR.
@@ -288,10 +298,12 @@ class CVOrchestrator:
 
         return self._run_nlp_pipeline(
             ordered_text=ocr_text,
+            raw_text_with_hints=ocr_text,
             page_count=page_count or len(page_images),
             extraction_source="ocr",
             spatial_status="no_text",
             spatial_word_count=0,
+            filename=filename,
         )
 
     # ------------------------------------------------------------------
@@ -302,10 +314,12 @@ class CVOrchestrator:
         self,
         *,
         ordered_text: str,
+        raw_text_with_hints: str,
         page_count: int,
         extraction_source: str,
         spatial_status: str,
         spatial_word_count: int,
+        filename: Optional[str] = None,
     ) -> CVParseResult:
         """
         Run segmentation → NER → canonicalization → experience extraction on
@@ -393,6 +407,9 @@ class CVOrchestrator:
 
             skills_raw.append(s)
 
+        # Fix 1: NER Noise Filter — remove hallucinated skills before canonicalization
+        skills_raw = _filter_noise_skills(skills_raw, full_name=name_candidate.full_name if name_candidate else "")
+
         t2 = time.time()
         try:
             canonical_skills = self._canonicalizer.canonicalize_skills(
@@ -430,16 +447,44 @@ class CVOrchestrator:
         # Title Detection Logic: Header -> Experience -> NER Fallback
         header_title = None
         first_lines = [ln.strip() for ln in ordered_text.splitlines() if ln.strip()][:5]
+        
+        # Load Title Blacklist from config
+        from .utils import load_layer1_config
+        _L1_CONFIG = load_layer1_config()["title_config"]
+        TITLE_BLACKLIST = set(_L1_CONFIG["blacklist"])
+
         # Look for a title in the first 5 lines (skipping the name)
         for ln in first_lines[1:]: 
             # If the line looks like a role (not contact info, not too long)
             if not _looks_like_contact_line(ln) and 5 < len(ln) < 50:
-                header_title = _clean_title_line(ln)
-                if header_title: break
+                clean_ln = _clean_title_line(ln)
+                if clean_ln and clean_ln.lower() not in TITLE_BLACKLIST:
+                    header_title = clean_ln
+                    break
 
         current_title = header_title or self._rank_current_title(exp_text, segments.sections) or (entities.get("roles") or [None])[0]
+        
+        # Fallback if title is still missing or blocked
+        if (not current_title or current_title.lower() in TITLE_BLACKLIST) and entities.get("roles"):
+            # Take the first role from NER that isn't blacklisted
+            for r in entities.get("roles", []):
+                if r.lower() not in TITLE_BLACKLIST:
+                    current_title = r
+                    break
 
         experience_items = self._build_experience_items(exp_text, predicted_title=current_title)
+        
+        # Feature 3: Alternative Titles — collect from NER + experience items
+        all_ner_roles = {r.strip() for r in entities.get("roles", []) if r.strip() and len(r) < 50}
+        exp_roles = {it.title for it in experience_items if it.title and it.title != "Professional Experience"}
+        alt_titles_set = all_ner_roles | exp_roles
+        if current_title in alt_titles_set:
+            alt_titles_set.remove(current_title)
+        # Filter out single-word or trivially short titles (noise from NER)
+        alternative_titles = sorted([
+            t for t in alt_titles_set
+            if len(t.split()) >= 2 and len(t) >= 8
+        ])
         experience_section = ExperienceSection(
             items=experience_items,
             confidence_score=_aggregate_confidence(
@@ -514,7 +559,7 @@ class CVOrchestrator:
                     parts = [p.strip() for p in re.split(r"[|•]", ln)]
                     for p in parts:
                         # If a part looks like "City, Country"
-                        if "," in p and len(p) < 40:
+                        if "," in p and len(p) < 30 and len(p.split()) <= 4 and not any(x in p.lower() for x in ["app", "short", "distance", "http", "www"]):
                             final_location = p
                             break
                 if final_location: break
@@ -540,6 +585,7 @@ class CVOrchestrator:
         profile = Profile(
             full_name=name_candidate.full_name if name_candidate else None,
             current_title=current_title,
+            alternative_titles=alternative_titles,
             headline=headline,
             summary=segments.sections.get("profile_summary"),
             confidence_score=name_candidate.confidence_score if name_candidate else 0.0,
@@ -556,28 +602,39 @@ class CVOrchestrator:
         # Determine parsing_status based on extraction source
         parsing_status = "ocr_fallback" if extraction_source == "ocr" else "success"
 
-        # -- Phase 2: Domain Classification (Layer 2) --
-        primary_domain = None
-        domain_scores = {}
-        if self._classifier is not None:
+        # -- Phase 2: Classification Enrichment (Layer 2) --
+        if self._layer2_orchestrator is not None:
             try:
-                # Build structured input for better classification accuracy
-                temp_cv_data = {
-                    "skills": {"items": [{"name": s.name} for s in skill_items]},
-                    "experience": {"items": [{"title": it.title, "technologies": it.technologies} for it in experience_items]},
-                    "analysis": {"metadata": {"extraction": {"raw_text": ordered_text}}}
+                # Prepare data for Layer 2
+                cv_data_for_l2 = {
+                    "filename": filename or "unknown",
+                    "profile": profile.model_dump(),
+                    "skills": skills_section.model_dump(),
+                    "experience": experience_section.model_dump(),
+                    "analysis": {"metadata": {"experience": {"total_experience_years": total_years}}}
                 }
-                domain_scores = self._classifier.predict_domain_from_cv_data(temp_cv_data)
-                if domain_scores:
-                    primary_domain = max(domain_scores, key=domain_scores.get)
-                    logger.info("Layer 2 Classified Domain: %s (confidence=%.2f)", primary_domain, domain_scores[primary_domain])
+                # Enrich!
+                enriched_data = self._layer2_orchestrator.enrich_cv_analysis(cv_data_for_l2)
+                
+                # Update local analysis variables
+                l2_analysis = enriched_data.get("analysis", {})
+                primary_domain = l2_analysis.get("primary_domain")
+                seniority = l2_analysis.get("seniority")
+                metadata_l2 = l2_analysis.get("metadata", {})
             except Exception as e:
-                logger.warning("Layer 2 Domain Classification failed: %s", e)
+                logger.warning("Layer 2 Enrichment failed: %s", e)
+                primary_domain = None
+                seniority = None
+                metadata_l2 = {}
+        else:
+            primary_domain = None
+            seniority = None
+            metadata_l2 = {}
 
         analysis = AnalysisSection(
             summary=None,
             predicted_role=current_title,
-            seniority=seniority,
+            seniority=self._normalize_seniority(seniority),
             primary_domain=primary_domain,
             strengths=strengths,
             gaps=all_gaps,
@@ -591,6 +648,10 @@ class CVOrchestrator:
                     "found_sections": list(segments.analysis.found_sections),
                     "sections_missing": list(segments.analysis.sections_missing),
                     "anomalies": list(segments.analysis.anomalies),
+                    "sections_text": {
+                        k: re.sub(r'^\[H\] ', '', v, flags=re.MULTILINE)
+                        for k, v in segments.sections.items()
+                    },
                 },
                 "experience": {
                     "total_experience_years": total_years,
@@ -605,10 +666,7 @@ class CVOrchestrator:
                     "word_count_spatial": spatial_word_count,
                     "raw_text": ordered_text,
                 },
-                "domain_classification": {
-                    "primary": primary_domain,
-                    "all_scores": domain_scores
-                }
+                "layer2": metadata_l2
             },
         )
 
@@ -649,6 +707,16 @@ class CVOrchestrator:
     # Experience helpers
     # ------------------------------------------------------------------
 
+    def _normalize_seniority(self, seniority: Optional[str]) -> Optional[str]:
+        if not seniority: return None
+        s = seniority.lower()
+        if "intern" in s: return "intern"
+        if "junior" in s: return "junior"
+        if "mid" in s: return "mid"
+        if "senior" in s: return "senior"
+        if "lead" in s or "manager" in s: return "lead"
+        return "mid" # Fallback
+
     def _build_experience_items(self, experience_text: str, predicted_title: Optional[str] = None) -> List[ExperienceItem]:
         """
         Phase-4: Advanced Segmentation.
@@ -666,7 +734,8 @@ class CVOrchestrator:
 
         if not merged:
             # Fallback if no dates are found
-            entities = self._ner.extract_entities(experience_text)
+            clean_fallback_text = re.sub(r'https?://\S+|www\.\S+|github\.com/\S+', '', experience_text, flags=re.IGNORECASE)
+            entities = self._ner.extract_entities(clean_fallback_text)
             comp = entities.get("orgs", ["Unknown Company"])[0] if entities.get("orgs") else "Unknown Company"
             loc = entities.get("locations", [None])[0] if entities.get("locations") else None
             role = entities.get("roles", [predicted_title or "Professional Experience"])[0] if entities.get("roles") else (predicted_title or "Professional Experience")
@@ -709,8 +778,11 @@ class CVOrchestrator:
 
             block_text = experience_text[block_start:block_end].strip()
 
+            # Sanitize URLs to prevent NER misclassification (Problem 3)
+            clean_block_text = re.sub(r'https?://\S+|www\.\S+|github\.com/\S+', '', block_text, flags=re.IGNORECASE)
+
             # Extract specific entities for THIS block using the initialized NER engine
-            entities = self._ner.extract_entities(block_text)
+            entities = self._ner.extract_entities(clean_block_text)
 
             comp = entities.get("orgs", ["Unknown Company"])[0] if entities.get("orgs") else "Unknown Company"
             loc = entities.get("locations", [None])[0] if entities.get("locations") else None
@@ -887,34 +959,66 @@ def _aggregate_confidence(values: Sequence[float], *, default: float) -> float:
 
 
 # ---------------------------------------------------------------------------
+# Fix 1: NER Noise Skill Filter
+# ---------------------------------------------------------------------------
+
+# Generic non-skill words that NER often mis-tags
+_SKILL_BLOCKLIST: set = set(load_layer1_config()["skill_config"]["noise_blocklist"])
+
+# Pattern: alphanumeric codes like "Fep2024", "React18", "py3", "v2"
+_ALPHANUMERIC_CODE_RE = re.compile(r'^[A-Za-z]{1,5}\d{2,}$|^\d+[A-Za-z]{1,5}$')
+
+
+def _filter_noise_skills(skills: List[str], full_name: str = "") -> List[str]:
+    """
+    Remove hallucinated or noisy skill entries produced by the NER model.
+    Applies four independent rejection rules — each valid for any CV:
+
+    1. Person-name blocklist (common Arabic + English first names).
+    2. Alphanumeric codes (Fep2024, py3, v2…).
+    3. Generic non-skill nouns (passenger, driver, instructor…).
+    4. Tokens that are substrings of the candidate's own name.
+    """
+    # Build name token set from the candidate's full name (case-insensitive)
+    name_tokens: set = set()
+    if full_name:
+        name_tokens = {t.lower().strip() for t in full_name.split() if t.strip()}
+
+    filtered: List[str] = []
+    for skill in skills:
+        skill_lower = skill.lower().strip()
+
+        # Rule 4: reject if any word in the skill matches a name token
+        skill_words = {w.lower().strip(".,;:()") for w in skill.split()}
+        if skill_words & name_tokens:
+            logger.debug("NER noise filter: dropped '%s' (matches person name)", skill)
+            continue
+
+        # Rule 1: reject if whole skill is a known person name / generic noun
+        if skill_lower in _SKILL_BLOCKLIST:
+            logger.debug("NER noise filter: dropped '%s' (blocklist)", skill)
+            continue
+
+        # Rule 2: reject alphanumeric codes (course IDs, version strings)
+        if _ALPHANUMERIC_CODE_RE.match(skill.strip()):
+            logger.debug("NER noise filter: dropped '%s' (alphanumeric code)", skill)
+            continue
+
+        # Rule 3: single-char tokens are noise
+        if len(skill.strip()) < 2:
+            continue
+
+        filtered.append(skill)
+
+    return filtered
+
+
+# ---------------------------------------------------------------------------
 # Phase 4: Seniority inference (pure function)
 # ---------------------------------------------------------------------------
 
 # Title keyword → seniority mapping (checked against the most recent title)
-_TITLE_SENIORITY_KEYWORDS: Dict[str, str] = {
-    "intern": "intern",
-    "trainee": "intern",
-    "apprentice": "intern",
-    "junior": "junior",
-    "jr": "junior",
-    "associate": "junior",
-    "mid": "mid",
-    "intermediate": "mid",
-    "senior": "senior",
-    "sr": "senior",
-    "staff": "senior",
-    "lead": "lead",
-    "team lead": "lead",
-    "tech lead": "lead",
-    "manager": "lead",
-    "head of": "lead",
-    "director": "principal",
-    "principal": "principal",
-    "vp": "principal",
-    "chief": "principal",
-    "architect": "senior",
-    "fellow": "principal",
-}
+_TITLE_SENIORITY_KEYWORDS: Dict[str, str] = load_layer1_config()["seniority_config"]["title_keywords"]
 
 _SENIORITY_ORDER = ["intern", "junior", "mid", "senior", "lead", "principal"]
 
@@ -1006,17 +1110,64 @@ def _clean_title_line(line: str) -> Optional[str]:
 
 _BULLET_RE = re.compile(r"^\s*(?:[\-\*\u2022•·]|[0-9]{1,2}[.)])\s+")
 
-
 def _extract_bullets(text: str) -> List[str]:
+    """
+    Fix 3: Robust experience bullet extraction.
+    Handles:
+    1. Splitting merged words (Architectedanddelivered -> Architected and delivered).
+    2. Proper bullet point identification.
+    3. Cleaning trailing/leading noise.
+    """
+    if not text:
+        return []
+        
     lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
     bullets: List[str] = []
+    
     for ln in lines:
-        ln2 = _BULLET_RE.sub("", ln).strip()
-        if ln2 and ln2 != ln:
-            bullets.append(ln2)
+        # Step 1: Detect and fix "glued" words (always run for experience lines)
+        ln = _fix_glued_text(ln)
+        
+        # Step 2: Strip bullet markers
+        ln_clean = _BULLET_RE.sub("", ln).strip()
+        
+        # Step 3: Final polish
+        if len(ln_clean) > 5:
+            bullets.append(ln_clean)
+            
     if bullets:
         return bullets[:30]
     return lines[:30]
+
+
+def _fix_glued_text(text: str) -> str:
+    """
+    Heuristic-based splitting of words glued together by PDF extraction.
+    Splits on CamelCase, and common word boundaries.
+    """
+    # 1. Split on lowercase followed by Uppercase (CamelCase)
+    text = re.sub(r"([a-z])([A-Z])", r"\1 \2", text)
+    
+    # 2. Split on lowercase followed by digit
+    text = re.sub(r"([a-z])(\d)", r"\1 \2", text)
+    
+    # 3. Split on digit followed by letter
+    text = re.sub(r"(\d)([A-Za-z])", r"\1 \2", text)
+
+    # 4. Fix common glued words (and, for, the, with, using, etc.)
+    # We look for these words embedded in longer strings
+    common_glued = [
+        "and", "for", "the", "with", "using", "from", "into", "delivery", "delivered",
+        "API", "REST", "MySQL", "PHP", "System", "Laravel", "Stripe", "GitHub", "backend", "frontend"
+    ]
+    for word in common_glued:
+        # Only split if it's inside a longer string
+        text = re.sub(rf"([a-z])({word})([a-z])", r"\1 \2 \3", text, flags=re.IGNORECASE)
+        # Or at the end/start of a glued block
+        text = re.sub(rf"([a-z])({word})", r"\1 \2", text, flags=re.IGNORECASE)
+        text = re.sub(rf"({word})([a-z])", r"\1 \2", text, flags=re.IGNORECASE)
+        
+    return text.strip()
 
 
 def _merge_best_ranges(ranges) -> List[Any]:

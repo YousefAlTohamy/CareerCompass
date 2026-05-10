@@ -1,0 +1,39 @@
+{
+  "adaptive_weights": {
+    "intern": {
+      "semantic": 0.30,
+      "skills": 0.60,
+      "domain": 0.10
+    },
+    "junior": {
+      "semantic": 0.40,
+      "skills": 0.40,
+      "domain": 0.20
+    },
+    "mid": {
+      "semantic": 0.35,
+      "skills": 0.35,
+      "domain": 0.30
+    },
+    "senior": {
+      "semantic": 0.25,
+      "skills": 0.25,
+      "domain": 0.50
+    },
+    "lead": {
+      "semantic": 0.20,
+      "skills": 0.20,
+      "domain": 0.60
+    },
+    "default": {
+      "semantic": 0.35,
+      "skills": 0.35,
+      "domain": 0.30
+    }
+  },
+  "thresholds": {
+    "fuzzy_match": 85,
+    "domain_cutoff": 0.65,
+    "min_pass_score": 50
+  }
+}

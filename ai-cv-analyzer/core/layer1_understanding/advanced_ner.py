@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 try:
+    # pyrefly: ignore [missing-import]
     from transformers import pipeline
 
     TRANSFORMERS_AVAILABLE = True
@@ -17,6 +18,7 @@ except ImportError:
     TRANSFORMERS_AVAILABLE = False
 
 try:
+    # pyrefly: ignore [missing-import]
     import torch
     TORCH_AVAILABLE = True
 except ImportError:

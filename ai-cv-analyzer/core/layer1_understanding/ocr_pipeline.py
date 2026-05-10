@@ -1,9 +1,12 @@
 import logging
 from typing import Optional
+# pyrefly: ignore [missing-import]
 import numpy as np
+# pyrefly: ignore [missing-import]
 import cv2
 
 try:
+    # pyrefly: ignore [missing-import]
     import easyocr
     # Initialize reader once (Singleton pattern) for performance
     # Will download the model on first run (~150MB)
@@ -57,6 +60,7 @@ def extract_images_from_pdf_bytes(file_bytes: bytes) -> list[bytes]:
     extracts the raw image bytes from the PDF to be fed into the OCR engine.
     (Implementation placeholder relying on PyMuPDF pixmaps)
     """
+    # pyrefly: ignore [missing-import]
     import fitz
     images_bytes = []
     try:
