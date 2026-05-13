@@ -5,7 +5,7 @@ namespace App\Jobs;
 use App\Models\Job;
 use App\Models\JobRoleStatistic;
 use App\Models\ScrapingJob;
-use App\Models\ScrapingSource;
+use App\Services\ScraperClient;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -13,7 +13,6 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Bus\Batchable;
 
@@ -23,16 +22,17 @@ class ProcessMarketScrapingCategory implements ShouldQueue
 
     public $timeout = 600; // 10 minutes per category processing
     public $tries = 2;
-    public $backoff = 5;
+    public $backoff = [5, 15, 45];
 
     public function __construct(
         protected string $category,
         protected int $maxResultsPerCategory = 30,
         protected array $sources = [],
     ) {
+        $this->onQueue('scraping');
     }
 
-    public function handle(): void
+    public function handle(ScraperClient $scraperClient): void
     {
         $startedAt = microtime(true);
 
@@ -52,19 +52,19 @@ class ProcessMarketScrapingCategory implements ShouldQueue
         ]);
 
         $scrapingJob->markAsStarted();
+        $failedSources = 0;
 
         try {
             // Count jobs before scraping to measure discovered amount
             $jobsBeforeCount = Job::where('title', 'like', "%{$this->category}%")->count();
-
-            // Setup Scrapy command execution path
-            $scrapyPath = base_path('../ai-job-miner');
+            $attemptedSources = 0;
 
             foreach ($this->sources as $sourceData) {
                 if (empty($sourceData['id'])) {
                     continue;
                 }
 
+                $attemptedSources++;
                 $sourceId = $sourceData['id'];
 
                 // Deduplication check: Respect the Cache system to prevent concurrent overlaps
@@ -83,39 +83,26 @@ class ProcessMarketScrapingCategory implements ShouldQueue
                     'job_id' => $scrapingJob->id
                 ], now()->addHours(2));
 
-                $command = [
-                    'scrapy', 'crawl', 'linkedin', 
-                    '-a', 'query=' . $this->category,
-                    '-a', 'limit=' . $this->maxResultsPerCategory,
-                    '-a', 'source_id=' . $sourceId
-                ];
+                try {
+                    $scraperClient->scrape(
+                        query: $this->category,
+                        limit: $this->maxResultsPerCategory,
+                        scrapingJobId: $scrapingJob->id,
+                        sourceId: $sourceId,
+                    );
 
-                Log::info("Executing Scrapy process", ['command' => implode(' ', $command)]);
-
-                $process = Process::path($scrapyPath)
-                    ->env([
-                        'LARAVEL_API_TOKEN' => config('services.scrapy.token', 'YOUR_SANCTUM_TOKEN'),
-                        'LARAVEL_API_URL' => url('/api/jobs/import'),
-                        'LARAVEL_API_CHECK_URL' => url('/api/jobs/import/check'),
-                        'LARAVEL_API_FAILED_URL' => url('/api/jobs/import/failed'),
-                        'LARAVEL_API_PROXIES_URL' => url('/api/proxies/active'),
-                    ])
-                    ->timeout($this->timeout)
-                    ->run($command);
-
-                if ($process->failed()) {
-                    Log::error("Scrapy execution failed for source {$sourceId}", [
-                        'error' => $process->errorOutput(),
-                        'output' => $process->output(),
+                    Log::info("Scraper service completed for source {$sourceId}");
+                } catch (\Throwable $e) {
+                    $failedSources++;
+                    Log::error("Scraper service failed for source {$sourceId}", [
+                        'category' => $this->category,
+                        'error' => $e->getMessage(),
                     ]);
-                } else {
-                    Log::info("Scrapy process completed for source {$sourceId}");
+                } finally {
+                    $status = Cache::get($statusKey, ['count' => 0]);
+                    $status['is_scraping'] = false;
+                    Cache::put($statusKey, $status, now()->addHours(2));
                 }
-
-                // Unlock source cache
-                $status = Cache::get($statusKey, ['count' => 0]);
-                $status['is_scraping'] = false;
-                Cache::put($statusKey, $status, now()->addHours(2));
             }
 
             // Wait a moment for async pipelines to flush results to database
@@ -129,7 +116,11 @@ class ProcessMarketScrapingCategory implements ShouldQueue
             // Deduplication is handled there, so we approximate discovered = stored.
             $discovered = $stored;
             $duplicates = 0;
-            $failed = 0;
+            $failed = $failedSources;
+
+            if ($attemptedSources > 0 && $failedSources === $attemptedSources && $stored === 0) {
+                throw new \RuntimeException("All scraper sources failed for {$this->category}.");
+            }
 
             $scrapingJob->markAsCompleted(
                 found: $discovered,
@@ -156,9 +147,11 @@ class ProcessMarketScrapingCategory implements ShouldQueue
             $scrapingJob->markAsFailed(
                 errorMessage: $e->getMessage(),
                 discoveredCount: 0,
-                failedCount: 0,
+                failedCount: $failedSources,
                 processingTimeMs: (int) round((microtime(true) - $startedAt) * 1000),
             );
+
+            throw $e;
         }
     }
 

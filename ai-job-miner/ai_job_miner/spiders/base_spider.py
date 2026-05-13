@@ -2,6 +2,7 @@ import scrapy
 from ai_job_miner.items import JobItem
 from scrapy_playwright.page import PageMethod
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -15,13 +16,17 @@ class BasePlaywrightSpider(scrapy.Spider):
     show_more_selector = None
 
     def start_requests(self):
+        request_id = os.getenv("REQUEST_ID", "")
         for url in self.start_urls:
             yield scrapy.Request(
                 url,
                 meta={
                     "playwright": True,
                     "playwright_include_page": True,
+                    "scraping_source_id": getattr(self, "source_id", None),
+                    "scraping_job_id": os.getenv("SCRAPING_JOB_ID"),
                 },
+                headers={"X-Request-ID": request_id} if request_id else None,
                 callback=self.parse,
                 errback=self.on_error
             )
@@ -33,22 +38,33 @@ class BasePlaywrightSpider(scrapy.Spider):
             await page.close()
             
         import httpx
-        import os
         from datetime import datetime
         
         api_failed_url = os.getenv('LARAVEL_API_FAILED_URL', 'http://127.0.0.1:8000/api/jobs/import/failed')
-        api_token = os.getenv('LARAVEL_API_TOKEN', 'YOUR_SANCTUM_TOKEN')
+        api_token = os.getenv('LARAVEL_API_TOKEN', '')
+        if not api_token:
+            logger.warning("LARAVEL_API_TOKEN is not configured; failed URL was not reported to Laravel")
+            return
         
         payload = {
             "url": failure.request.url,
             "error_message": repr(failure.value),
             "failed_at": datetime.now().isoformat()
         }
+
+        source_id = failure.request.meta.get("scraping_source_id")
+        if source_id:
+            payload["scraping_source_id"] = source_id
+
+        scraping_job_id = failure.request.meta.get("scraping_job_id")
+        if scraping_job_id:
+            payload["scraping_job_id"] = scraping_job_id
         
         headers = {
             "Authorization": f"Bearer {api_token}",
             "Content-Type": "application/json",
             "Accept": "application/json",
+            **({"X-Request-ID": os.getenv("REQUEST_ID", "")} if os.getenv("REQUEST_ID") else {}),
         }
         
         try:

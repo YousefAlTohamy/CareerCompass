@@ -351,7 +351,7 @@ cp .env.example .env
 | `NER_QUANTIZE` | Enable INT8 dynamic quantization for the NER model to save memory | Optional (default: false) |
 | `EMBEDDER_QUANTIZE` | Enable INT8 dynamic quantization for the Embedder to save memory | Optional (default: false) |
 | `EMBEDDER_MODEL_NAME` | Name of the SentenceTransformer to use (default: `all-MiniLM-L6-v2`) | Optional |
-| `CV_TIMEOUT_SECONDS` | Maximum processing time allowed per CV | Optional (default: 30) |
+| `CV_TIMEOUT_SECONDS` | Maximum processing time allowed per CV | Optional (default: 90) |
 
 ---
 
@@ -363,7 +363,7 @@ cp .env.example .env
 | **`core/` namespace collision** | Resolved in ai-hybrid-orchestrator via sequential sys.path swap           |
 | **Memory overhead**             | ~4GB RAM; set `NER_QUANTIZE=true` and `EMBEDDER_QUANTIZE=true` on CPU hosts |
 | **OCR resource intensity**      | PyMuPDF (fast, text-only) → EasyOCR fallback (image-based)                |
-| **Timeouts on large PDFs**      | Increase `CV_TIMEOUT_SECONDS` (default is 30s)                            |
+| **Timeouts on large PDFs**      | Increase `CV_TIMEOUT_SECONDS` (default is 90s)                            |
 
 ---
 

@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Requests\LoginRequest;
+use App\Http\Requests\RegisterRequest;
+use App\Http\Requests\UpdateProfileRequest;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Services\SkillSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -12,35 +16,15 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    public function __construct(private readonly SkillSyncService $skillSyncService)
+    {
+    }
+
     /**
      * Register a new user with strict validation.
      */
-    public function register(Request $request): JsonResponse
+    public function register(RegisterRequest $request): JsonResponse
     {
-        $request->validate(
-            [
-                'name'     => 'required|string|max:255',
-                'email'    => [
-                    'required',
-                    'string',
-                    'email:rfc,dns',
-                    'max:255',
-                    'unique:users',
-                    'regex:/^[a-zA-Z0-9._%+\-]+@(gmail\.com|yahoo\.com|outlook\.com|hotmail\.com|icloud\.com)$/i',
-                ],
-                'password' => [
-                    'required',
-                    'string',
-                    'min:8',
-                    'regex:/^(?=.*[A-Z])(?=.*\d)[A-Za-z\d@&_\-]+$/',
-                ],
-            ],
-            [
-                'email.regex'    => 'Only Gmail, Yahoo, Outlook, Hotmail, or iCloud email addresses are accepted.',
-                'password.regex' => 'Password must be at least 8 characters and contain at least one uppercase letter and one number. Only these special characters are allowed: @ & _ -',
-            ]
-        );
-
         $user = User::create([
             'name'     => $request->name,
             'email'    => $request->email,
@@ -65,27 +49,10 @@ class AuthController extends Controller
     /**
      * Update the authenticated user's profile.
      */
-    public function updateProfile(Request $request): JsonResponse
+    public function updateProfile(UpdateProfileRequest $request): JsonResponse
     {
         $user = $request->user();
-
-        $validated = $request->validate([
-            'name'         => 'required|string|max:255',
-            'email'        => [
-                'required',
-                'string',
-                'email',
-                'max:255',
-                'unique:users,email,' . $user->id,
-            ],
-            'phone'        => 'nullable|string|max:255',
-            'job_title'    => 'nullable|string|max:255',
-            'location'     => 'nullable|string|max:255',
-            'linkedin_url' => 'nullable|url|max:255',
-            'github_url'   => 'nullable|url|max:255',
-            'skills'       => 'nullable|array',
-            'skills.*'     => 'string|max:255',
-        ]);
+        $validated = $request->validated();
 
         // Update user auth fields
         $user->update([
@@ -115,15 +82,7 @@ class AuthController extends Controller
         ]);
 
         if ($request->has('skills')) {
-            $skillIds = [];
-            foreach ($request->skills as $skillName) {
-                if (trim($skillName) === '') {
-                    continue;
-                }
-                $skill = \App\Models\Skill::firstOrCreate(['name' => trim($skillName)]);
-                $skillIds[] = $skill->id;
-            }
-            $user->skills()->sync($skillIds);
+            $this->skillSyncService->syncUserSkills($user, $validated['skills'] ?? [], true);
         }
 
         $user->load(['profile', 'experiences', 'skills', 'cvAnalysis']);
@@ -138,13 +97,8 @@ class AuthController extends Controller
     /**
      * Login a user.
      */
-    public function login(Request $request): JsonResponse
+    public function login(LoginRequest $request): JsonResponse
     {
-        $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required',
-        ]);
-
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
@@ -187,5 +141,12 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'Logged out successfully',
         ]);
+    }
+
+    public function user(Request $request): UserResource
+    {
+        $user = $request->user()->load(['profile', 'experiences', 'skills', 'cvAnalysis']);
+
+        return new UserResource($user);
     }
 }

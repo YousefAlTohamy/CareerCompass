@@ -8,12 +8,16 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\CvUploadRequest;
 use App\Http\Resources\SkillResource;
 use App\Http\Resources\UserResource;
+use App\Models\CvAnalysis;
 use App\Models\User;
 use App\Services\Contracts\CvProcessingServiceInterface;
+use App\Services\CvStorageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CvController extends Controller
 {
@@ -143,5 +147,44 @@ class CvController extends Controller
             'success' => true,
             'message' => 'Skill removed successfully.',
         ]);
+    }
+
+    public function downloadUrl(CvStorageService $storageService): JsonResponse
+    {
+        $analysis = request()->user()->cvAnalysis;
+
+        if (!$analysis || !$analysis->cv_path) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No stored CV is available.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'url' => $storageService->temporaryDownloadUrl($analysis),
+                'expires_at' => now()
+                    ->addMinutes((int) config('filesystems.cv_uploads.temporary_url_minutes', 10))
+                    ->toIso8601String(),
+            ],
+        ]);
+    }
+
+    public function download(CvAnalysis $cvAnalysis): StreamedResponse
+    {
+        if (!$cvAnalysis->cv_disk || !$cvAnalysis->cv_path) {
+            abort(404);
+        }
+
+        $disk = Storage::disk($cvAnalysis->cv_disk);
+        if (!$disk->exists($cvAnalysis->cv_path)) {
+            abort(404);
+        }
+
+        return $disk->download(
+            $cvAnalysis->cv_path,
+            $cvAnalysis->cv_original_name ?: 'career-compass-cv'
+        );
     }
 }

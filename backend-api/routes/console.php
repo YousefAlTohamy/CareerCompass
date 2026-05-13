@@ -55,6 +55,17 @@ Schedule::command('skills:calculate-importance --all')
         Log::error('Skill importance calculation failed');
     });
 
+Schedule::command('cv:cleanup-uploads')
+    ->dailyAt('01:30')
+    ->name('cv-upload-cleanup')
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        Log::info('CV upload cleanup completed successfully');
+    })
+    ->onFailure(function () {
+        Log::error('CV upload cleanup failed');
+    });
+
 // Scraping Source Health Check: Daily at 05:00 AM
 // Deactivates sources that remain unhealthy across a rolling window
 Schedule::command('scraping-sources:health-check --only-active')

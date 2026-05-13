@@ -43,6 +43,8 @@ Thumbs.db
 # Custom overrides
 /backend-api/tools/
 /start_all_portable.bat
+/.env
+/.env.local
 
 # Training Data
 ai-cv-analyzer/training/train_real_tech.json

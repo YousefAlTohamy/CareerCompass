@@ -87,7 +87,8 @@ class DashboardController extends Controller
         $services = [
             'Database' => 'offline',
             'Cache & Queue' => 'offline',
-            'AI Services' => 'offline'
+            'AI Services' => 'offline',
+            'Scraper Service' => 'offline',
         ];
 
         // 1. Check Database
@@ -115,6 +116,16 @@ class DashboardController extends Controller
             // Either a 200 OK or even a 404 means the service is physically up and responding
             if ($response->successful() || $response->status() === 404) {
                 $services['AI Services'] = 'online';
+            }
+        } catch (\Exception $e) {
+            // Keep offline
+        }
+
+        // 4. Check internal scraper service
+        try {
+            $response = Http::timeout(3)->get(rtrim(config('services.scraper_service.url', 'http://127.0.0.1:8003'), '/') . '/health');
+            if ($response->successful()) {
+                $services['Scraper Service'] = 'online';
             }
         } catch (\Exception $e) {
             // Keep offline
@@ -188,8 +199,9 @@ class DashboardController extends Controller
             $job = \App\Models\ScrapingJob::findOrFail($scrapingJobId);
 
             $failedUrls = $job->failedUrls()
+                ->with('scrapingSource:id,name')
                 ->orderByDesc('created_at')
-                ->get(['id', 'url', 'reason', 'source_name', 'retried', 'created_at']);
+                ->get(['id', 'scraping_source_id', 'url', 'error_message', 'retried', 'failed_at', 'created_at']);
 
             return response()->json([
                 'success' => true,

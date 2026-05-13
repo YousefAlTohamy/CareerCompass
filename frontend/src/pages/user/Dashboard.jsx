@@ -45,7 +45,7 @@ export default function Dashboard() {
   const { user, refreshUser } = useAuth();
   const { t } = useTranslation();
   const [skills, setSkills] = useState([]);
-  const [loading, setLoading] = useState(true); // eslint-disable-line no-unused-vars
+  const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [isDiscovering, setIsDiscovering] = useState(false); // eslint-disable-line no-unused-vars
 

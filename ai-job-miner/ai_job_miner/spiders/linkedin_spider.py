@@ -4,11 +4,11 @@ from ai_job_miner.items import JobItem
 class LinkedinSpider(BasePlaywrightSpider):
     name = "linkedin"
     allowed_domains = ["linkedin.com"]
-    def __init__(self, query=None, limit=30, source_id=1, *args, **kwargs):
+    def __init__(self, query=None, limit=30, source_id=None, *args, **kwargs):
         super(LinkedinSpider, self).__init__(*args, **kwargs)
         self.query = query
         self.limit = int(limit)
-        self.source_id = int(source_id)
+        self.source_id = int(source_id) if source_id not in (None, "") else None
         
         if query:
             import urllib.parse
@@ -31,8 +31,8 @@ class LinkedinSpider(BasePlaywrightSpider):
         item['url'] = response.url
         item['source'] = 'LinkedIn'
         
-        # Placeholder for scraping_source_id (In production, this is passed via spider arguments)
-        item['scraping_source_id'] = getattr(self, 'source_id', 1) 
+        if self.source_id is not None:
+            item['scraping_source_id'] = self.source_id
         
         # Additional fields can be mapped if available in DOM,
         # otherwise our NER pipeline will extract skills & requirements from the description.

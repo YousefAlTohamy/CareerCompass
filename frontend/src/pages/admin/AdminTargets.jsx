@@ -11,12 +11,6 @@ import Swal from "sweetalert2";
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 
-const getErrorMessage = (error, defaultMessage = "An unexpected error occurred.") => {
-  if (error.response?.data?.errors) return Object.values(error.response.data.errors).flat().join("\n");
-  if (error.response?.data?.message) return error.response.data.message;
-  return defaultMessage;
-};
-
 const AdminTargets = () => {
   const { t, i18n } = useTranslation();
   const [roles, setRoles] = useState([]);

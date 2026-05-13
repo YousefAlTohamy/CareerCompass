@@ -28,14 +28,14 @@ class ExecuteDailyScraping extends Command
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(): int
     {
         $this->info('Starting daily scraping...');
         $sources = ScrapingSource::active()->get();
 
         if ($sources->isEmpty()) {
             $this->info('No active scraping sources found.');
-            return;
+            return self::SUCCESS;
         }
 
         foreach ($sources as $source) {
@@ -49,7 +49,7 @@ class ExecuteDailyScraping extends Command
             // Create tracking job
             $scrapingJob = ScrapingJob::create([
                 'job_title' => $source->name,
-                'type' => 'daily_schedule',
+                'type' => 'scheduled',
                 'status' => 'pending',
             ]);
 
@@ -59,5 +59,6 @@ class ExecuteDailyScraping extends Command
         }
 
         $this->info('Daily scraping dispatched.');
+        return self::SUCCESS;
     }
 }

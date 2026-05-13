@@ -31,6 +31,26 @@ class StoreScrapedJobRequest extends FormRequest
             }
         }
 
+        foreach (['location', 'salary_range', 'job_type', 'experience', 'requirements', 'work_type', 'source'] as $field) {
+            if ($this->has($field) && $this->input($field) === '') {
+                $sanitized[$field] = null;
+            }
+        }
+
+        if ($this->has('skills') && is_array($this->input('skills'))) {
+            $sanitized['skills'] = collect($this->input('skills'))
+                ->map(function ($skill) {
+                    if (is_array($skill)) {
+                        return $skill['name'] ?? $skill['skill'] ?? null;
+                    }
+
+                    return $skill;
+                })
+                ->filter(fn ($skill) => is_string($skill) && trim($skill) !== '')
+                ->values()
+                ->all();
+        }
+
         if (!empty($sanitized)) {
             $this->merge($sanitized);
         }
@@ -48,15 +68,15 @@ class StoreScrapedJobRequest extends FormRequest
             'description' => 'required|string|max:65535',
             'company' => 'required|string|max:255',
             'url' => 'required|url|max:2048',
-            'scraping_source_id' => 'required|integer|exists:scraping_sources,id',
+            'scraping_source_id' => 'nullable|integer|exists:scraping_sources,id',
             'location' => 'nullable|string|max:255',
             'salary_range' => 'nullable|string|max:255',
-            'job_type' => 'nullable|string|in:full-time,part-time,contract,internship,freelance,temporary',
+            'job_type' => 'nullable|string|in:full-time,part-time,contract,internship,freelance,temporary,Full-time,Part-time,Contract,Internship,Freelance,Temporary',
             'experience' => 'nullable|string|max:255',
             'requirements' => 'nullable|string|max:65535',
             'skills' => 'nullable|array|max:50',
             'skills.*' => 'string|max:100',
-            'work_type' => 'nullable|string|in:remote,hybrid,onsite,on-site',
+            'work_type' => 'nullable|string|in:remote,hybrid,onsite,on-site,Remote,Hybrid,Onsite,On-site',
             'source' => 'nullable|string|max:255',
         ];
     }

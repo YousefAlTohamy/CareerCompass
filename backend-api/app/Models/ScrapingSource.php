@@ -18,6 +18,7 @@ class ScrapingSource extends Model
     protected $fillable = [
         'name',
         'endpoint',
+        'method',
         'type',
         'mode',
         'pattern',

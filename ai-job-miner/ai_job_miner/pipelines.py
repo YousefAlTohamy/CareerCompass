@@ -20,7 +20,8 @@ class DeduplicationPipeline:
     def __init__(self):
         self.seen_urls = set()
         self.api_check_url = os.getenv('LARAVEL_API_CHECK_URL', 'http://127.0.0.1:8000/api/jobs/import/check')
-        self.api_token = os.getenv('LARAVEL_API_TOKEN', 'YOUR_SANCTUM_TOKEN')
+        self.api_token = os.getenv('LARAVEL_API_TOKEN', '')
+        self.request_id = os.getenv('REQUEST_ID', '')
         
         transport = httpx.AsyncHTTPTransport(retries=1)
         self.client = httpx.AsyncClient(transport=transport, timeout=5.0)
@@ -32,17 +33,20 @@ class DeduplicationPipeline:
         if not url:
             return item
 
-        # 1. Local Memory Check
         if url in self.seen_urls:
             raise DropItem(f"Duplicate job found in local cache: {url}")
             
         self.seen_urls.add(url)
+
+        if not self.api_token:
+            logger.warning("LARAVEL_API_TOKEN is not configured; backend deduplication check skipped")
+            return item
         
-        # 2. Persistent Backend Check
         headers = {
             "Authorization": f"Bearer {self.api_token}",
             "Content-Type": "application/json",
             "Accept": "application/json",
+            **self._correlation_headers(),
         }
         
         try:
@@ -56,6 +60,12 @@ class DeduplicationPipeline:
             # If backend check fails, we proceed rather than dropping, to not lose data
             
         return item
+
+    def _correlation_headers(self):
+        if not self.request_id:
+            return {}
+
+        return {"X-Request-ID": self.request_id}
         
     def close_spider(self, spider):
         import asyncio
@@ -138,7 +148,8 @@ class LaravelExportPipeline:
     """
     def __init__(self):
         self.api_url = os.getenv('LARAVEL_API_URL', 'http://127.0.0.1:8000/api/jobs/import')
-        self.api_token = os.getenv('LARAVEL_API_TOKEN', 'YOUR_SANCTUM_TOKEN')
+        self.api_token = os.getenv('LARAVEL_API_TOKEN', '')
+        self.request_id = os.getenv('REQUEST_ID', '')
         
         # Implement robust retries
         transport = httpx.AsyncHTTPTransport(retries=3)
@@ -146,13 +157,16 @@ class LaravelExportPipeline:
 
     async def process_item(self, item, spider):
         adapter = ItemAdapter(item)
+
+        if not self.api_token:
+            raise DropItem("LARAVEL_API_TOKEN is not configured; refusing to export scraped job")
         
         payload = {
             "title": adapter.get("title"),
             "description": adapter.get("description"),
             "company": adapter.get("company"),
             "url": adapter.get("url"),
-            "scraping_source_id": adapter.get("scraping_source_id", 1),
+            "scraping_source_id": adapter.get("scraping_source_id"),
             "location": adapter.get("location", ""),
             "requirements": adapter.get("requirements", ""),
             "skills": adapter.get("skills", []),
@@ -167,6 +181,7 @@ class LaravelExportPipeline:
             "Authorization": f"Bearer {self.api_token}",
             "Content-Type": "application/json",
             "Accept": "application/json",
+            **self._correlation_headers(),
         }
 
         try:
@@ -181,6 +196,12 @@ class LaravelExportPipeline:
             logger.error(f"HTTP Request failed while exporting job: {e}")
 
         return item
+
+    def _correlation_headers(self):
+        if not self.request_id:
+            return {}
+
+        return {"X-Request-ID": self.request_id}
         
     def close_spider(self, spider):
         import asyncio

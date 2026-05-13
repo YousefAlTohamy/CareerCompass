@@ -55,10 +55,10 @@ class GapAnalysisService implements GapAnalysisServiceInterface
     {
         // Ensure relations are loaded for payload construction
         $user->loadMissing(['profile', 'skills', 'experiences']);
-        $job->loadMissing('skills');
+        $job->loadMissing('requiredSkills');
 
         // ── Edge case: Job has no skill requirements ─────────────────────────
-        if ($job->skills->isEmpty()) {
+        if ($job->requiredSkills->isEmpty()) {
             return [
                 'job'                         => $job,
                 'match_percentage'            => 0,
@@ -163,7 +163,7 @@ class GapAnalysisService implements GapAnalysisServiceInterface
         $cvText = implode("\n\n", $cvTextParts);
 
         // job_skills: canonical skill names from job's skills relation
-        $jobSkills = $job->skills->pluck('name')->filter()->values()->toArray();
+        $jobSkills = $job->requiredSkills()->pluck('name')->filter()->values()->toArray();
 
         // job_description: raw description from Job model
         $jobDescription = trim((string) ($job->description ?? ''));
@@ -192,7 +192,9 @@ class GapAnalysisService implements GapAnalysisServiceInterface
 
         try {
             $response = Http::timeout($this->timeout)
+                ->connectTimeout(10)
                 ->acceptJson()
+                ->withHeaders($this->correlationHeaders())
                 ->post($url, [
                     'cv_skills'       => $payload['cv_skills'],
                     'cv_text'         => $payload['cv_text'],
@@ -232,7 +234,7 @@ class GapAnalysisService implements GapAnalysisServiceInterface
      */
     private function mapAiResponseToAnalysisFormat(array $aiResponse, Job $job): array
     {
-        $jobSkills = $job->skills;
+        $jobSkills = $job->requiredSkills;
 
         $matchPercentage = (float) ($aiResponse['hybrid_match_score'] ?? 0);
         $aiMissingNames  = array_map('strval', $aiResponse['missing_skills'] ?? []);
@@ -319,7 +321,7 @@ class GapAnalysisService implements GapAnalysisServiceInterface
     {
         $userSkills   = $user->skills;
         $userSkillIds = $userSkills->pluck('id');
-        $jobSkills    = $job->skills;
+        $jobSkills    = $job->requiredSkills;
 
         $totalRequired = $jobSkills->count();
         if ($totalRequired === 0) {
@@ -471,7 +473,7 @@ class GapAnalysisService implements GapAnalysisServiceInterface
                     if (is_object($skillData) && isset($skillData->type)) {
                         $type = $skillData->type;
                     } elseif (is_array($skillData) && isset($skillData['type'])) {
-                        $type = $skillData->type;
+                        $type = (string) $skillData['type'];
                     }
 
                     if (!$name) continue;
@@ -562,7 +564,7 @@ class GapAnalysisService implements GapAnalysisServiceInterface
         $words   = explode(' ', (string) $cleanTitle);
         $keyword = implode(' ', array_slice($words, 0, 2));
 
-        return Job::with('skills')->where(function ($query) use ($keyword, $cleanTitle) {
+        return Job::with('requiredSkills')->where(function ($query) use ($keyword, $cleanTitle) {
             $query->where('title', 'LIKE', '%' . $keyword . '%')
                 ->orWhere('title', 'LIKE', '%' . $cleanTitle . '%');
         })
@@ -605,7 +607,7 @@ class GapAnalysisService implements GapAnalysisServiceInterface
         $skillMap = [];
 
         foreach ($similarJobs as $job) {
-            foreach ($job->skills as $skill) {
+            foreach ($job->requiredSkills as $skill) {
                 if (!isset($skillIdToJobCount[$skill->id])) {
                     $skillIdToJobCount[$skill->id] = 0;
                     $skillMap[$skill->id] = $skill;
@@ -709,6 +711,13 @@ class GapAnalysisService implements GapAnalysisServiceInterface
         return (string) $name;
     }
 
+    private function correlationHeaders(): array
+    {
+        return app()->bound('request.id')
+            ? [(string) config('observability.request_id_header', 'X-Request-ID') => app('request.id')]
+            : [];
+    }
+
     /**
      * Generate recommendations based on analysis.
      *
@@ -788,7 +797,7 @@ class GapAnalysisService implements GapAnalysisServiceInterface
             $requiredSkills = collect($statistic->top_skills)->take(10);
         } else {
             // 2. Fallback: Aggregate dynamically from Job Skills
-            $jobs = Job::with('skills')
+            $jobs = Job::with('requiredSkills')
                 ->where('title', 'like', '%' . $targetRole->name . '%')
                 ->latest()
                 ->take(50)
@@ -796,7 +805,7 @@ class GapAnalysisService implements GapAnalysisServiceInterface
                 
             $skillCounts = [];
             foreach ($jobs as $job) {
-                foreach ($job->skills as $skill) {
+                foreach ($job->requiredSkills as $skill) {
                     if (!isset($skillCounts[$skill->name])) {
                         $skillCounts[$skill->name] = 0;
                     }

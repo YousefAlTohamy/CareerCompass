@@ -26,11 +26,6 @@ class UserAgentSpoofingMiddleware:
             request.meta['playwright_context_kwargs']['user_agent'] = ua
 
 class ProxyRotationMiddleware:
-    """
-    Middleware to rotate proxies.
-    For now, it fetches from a hardcoded list or environment variables.
-    Eventually, this can be hooked up to an API endpoint on the Laravel backend.
-    """
     def __init__(self, proxies):
         self.proxies = proxies
 
@@ -41,16 +36,26 @@ class ProxyRotationMiddleware:
         import requests
         
         api_url = os.getenv('LARAVEL_API_PROXIES_URL', 'http://127.0.0.1:8000/api/proxies/active')
-        api_token = os.getenv('LARAVEL_API_TOKEN', 'YOUR_SANCTUM_TOKEN')
+        api_token = os.getenv('LARAVEL_API_TOKEN', '')
+        request_id = os.getenv('REQUEST_ID', '')
+
+        if not api_token:
+            logger.warning("LARAVEL_API_TOKEN is not configured; proxy rotation disabled")
+            return cls(proxies)
         
         try:
             response = requests.get(
                 api_url,
-                headers={"Authorization": f"Bearer {api_token}", "Accept": "application/json"},
+                headers={
+                    "Authorization": f"Bearer {api_token}",
+                    "Accept": "application/json",
+                    **({"X-Request-ID": request_id} if request_id else {}),
+                },
                 timeout=10
             )
             if response.status_code == 200:
-                data = response.json()
+                body = response.json()
+                data = body.get("data", body) if isinstance(body, dict) else body
                 for p in data:
                     # Construct proxy URL: protocol://username:password@host:port
                     protocol = p.get('protocol', 'http')

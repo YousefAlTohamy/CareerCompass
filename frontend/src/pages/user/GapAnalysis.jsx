@@ -1,5 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
-import gsap from 'gsap';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -16,7 +15,6 @@ import RoadmapTimeline from '../../components/RoadmapTimeline';
 import { gapAnalysisAPI, targetRolesAPI } from '../../api/endpoints';
 import applicationsAPI from '../../api/applications';
 import { useScrapingStatus } from '../../hooks/useScrapingStatus';
-import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import HUDLayout from '../../components/HUDLayout';
 import HUDSkeleton from '../../components/HUDSkeleton';
@@ -37,11 +35,6 @@ export const getRecText = (rec) => {
   if (!rec) return '';
   if (typeof rec === 'string') return rec;
   return String(rec.text || rec.message || rec.recommendation || JSON.stringify(rec) || '');
-};
-
-const formatValue = (val) => {
-  if (!val) return '';
-  return val.split(/[-_]/).map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
 };
 
 // --- RECHARTS MATCH GAUGE ---
@@ -145,7 +138,7 @@ export default function GapAnalysis() {
     } finally { setLoading(false); }
   };
 
-  const { status, progress } = useScrapingStatus(scrapingJobId, {
+  const { progress } = useScrapingStatus(scrapingJobId, {
     pollInterval: 3000,
     enabled: !!scrapingJobId,
     onCompleted: () => { setScrapingJobId(null); loadAnalysis(); },

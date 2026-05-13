@@ -25,10 +25,12 @@ class StoreScrapingSourceRequest extends FormRequest
         return [
             'name'     => ['required', 'string', 'max:255'],
             'endpoint' => ['required', 'url', 'max:512'],
-            'type'     => ['required', 'in:api,html,spa'],
+            'method'   => ['sometimes', 'in:GET,POST'],
+            'type'     => ['required', 'in:api,html,json,spa'],
             'mode'     => ['sometimes', 'in:static,discovery'],
             'pattern'  => ['sometimes', 'nullable', 'string', 'max:512'],
             'status'   => ['sometimes', 'in:active,inactive'],
+            'is_active' => ['sometimes', 'boolean'],
             'headers'  => ['sometimes', 'nullable', 'array'],
             'params'   => ['sometimes', 'nullable', 'array'],
         ];
@@ -43,7 +45,7 @@ class StoreScrapingSourceRequest extends FormRequest
     {
         return [
             'endpoint.url'  => 'The endpoint must be a valid URL (including http:// or https://).',
-            'type.in'       => 'Source type must be either "api", "html", or "spa".',
+            'type.in'       => 'Source type must be either "api", "html", "json", or "spa".',
             'mode.in'       => 'Mode must be either "static" or "discovery".',
             'status.in'     => 'Status must be either "active" or "inactive".',
         ];

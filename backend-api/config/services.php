@@ -35,31 +35,43 @@ return [
         ],
     ],
 
-    // Unified AI Engine (ai-cv-analyzer on Port 8002)
-    // Handles: CV parsing, hybrid matching, health checks
+    // Unified AI Engine.
+    // Local default: http://127.0.0.1:8002
+    // Docker override: http://ai-cv-analyzer:8000
     'ai_engine' => [
-        'url'     => env('AI_ENGINE_URL', 'http://127.0.0.1:8002'),
+        'url'     => env('AI_ENGINE_URL', env('AI_CV_ANALYZER_URL', 'http://127.0.0.1:8002')),
         'timeout' => env('AI_ENGINE_TIMEOUT', 120),
     ],
 
     // Alias — GapAnalysisService references this key
     'ai_orchestrator' => [
-        'url'     => env('AI_ENGINE_URL', 'http://127.0.0.1:8002'),
+        'url'     => env('AI_ENGINE_URL', env('AI_CV_ANALYZER_URL', 'http://127.0.0.1:8002')),
         'timeout' => env('AI_ENGINE_TIMEOUT', 120),
     ],
 
     // Alias — CvController references this key
     'ai_gateway' => [
-        'url'     => env('AI_ENGINE_URL', 'http://127.0.0.1:8002'),
+        'url'     => env('AI_ENGINE_URL', env('AI_CV_ANALYZER_URL', 'http://127.0.0.1:8002')),
     ],
 
     // CV Analyzer direct reference (same service)
     'ai_cv_analyzer' => [
-        'url'     => env('AI_ENGINE_URL', 'http://127.0.0.1:8002'),
+        'url'     => env('AI_ENGINE_URL', env('AI_CV_ANALYZER_URL', 'http://127.0.0.1:8002')),
         'timeout' => env('AI_ENGINE_TIMEOUT', 120),
     ],
 
-    // Scrapy Integration (Python Scraper Token)
+    // Scraper service (Laravel -> ai-job-miner HTTP API)
+    'scraper_service' => [
+        'url'              => env('SCRAPER_SERVICE_URL', 'http://127.0.0.1:8003'),
+        'timeout'          => env('SCRAPER_SERVICE_TIMEOUT', 600),
+        'token'            => env('SCRAPER_SERVICE_TOKEN', env('SCRAPY_API_TOKEN')),
+        'callback_base_url' => env(
+            'LARAVEL_INTERNAL_API_URL',
+            rtrim(env('APP_URL', 'http://127.0.0.1:8000'), '/') . '/api'
+        ),
+    ],
+
+    // Scrapy Integration (Python scraper -> Laravel internal API)
     'scrapy' => [
         'token' => env('SCRAPY_API_TOKEN'),
     ],

@@ -3,16 +3,22 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreScrapingSourceRequest;
+use App\Http\Requests\UpdateScrapingSourceRequest;
 use App\Http\Resources\ScrapingSourceResource;
+use App\Models\ScrapingJob;
 use App\Models\ScrapingSource;
+use App\Services\ScraperClient;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Process;
 
 class ScrapingSourceController extends Controller
 {
+    public function __construct(private readonly ScraperClient $scraperClient)
+    {
+    }
+
     public function getStatus()
     {
         $sources = ScrapingSource::active()->get();
@@ -43,21 +49,9 @@ class ScrapingSourceController extends Controller
         return ScrapingSourceResource::collection($sources);
     }
 
-    public function store(Request $request)
+    public function store(StoreScrapingSourceRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'type' => 'required|in:api,html,spa',
-            'mode' => 'sometimes|in:static,discovery',
-            'pattern' => 'nullable|string|max:512',
-            'endpoint' => 'required|url',
-            'method' => 'required|in:GET,POST',
-            'headers' => 'nullable|array',
-            'params' => 'nullable|array',
-            'is_active' => 'boolean',
-        ]);
-
-        // Map boolean is_active to string status
+        $validated = $request->validated();
         $status = ($validated['is_active'] ?? true) ? 'active' : 'inactive';
 
         $source = ScrapingSource::create([
@@ -66,7 +60,7 @@ class ScrapingSourceController extends Controller
             'mode' => $validated['mode'] ?? 'static',
             'pattern' => $validated['pattern'] ?? null,
             'endpoint' => $validated['endpoint'],
-            'method' => $validated['method'],
+            'method' => $validated['method'] ?? 'GET',
             'headers' => $validated['headers'] ?? [],
             'params' => $validated['params'] ?? [],
             'status' => $status,
@@ -75,25 +69,11 @@ class ScrapingSourceController extends Controller
         return new ScrapingSourceResource($source);
     }
 
-    public function update(Request $request, ScrapingSource $scrapingSource)
+    public function update(UpdateScrapingSourceRequest $request, ScrapingSource $scrapingSource)
     {
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'type' => 'sometimes|in:api,html,spa',
-            'mode' => 'sometimes|in:static,discovery',
-            'pattern' => 'nullable|string|max:512',
-            'endpoint' => 'sometimes|url',
-            'method' => 'sometimes|in:GET,POST',
-            'headers' => 'nullable|array',
-            'params' => 'nullable|array',
-            'is_active' => 'boolean',
-        ]);
-
-        $data = $validated;
-
-        // Handle is_active -> status mapping if present
-        if (isset($validated['is_active'])) {
-            $data['status'] = $validated['is_active'] ? 'active' : 'inactive';
+        $data = $request->validated();
+        if (isset($data['is_active'])) {
+            $data['status'] = $data['is_active'] ? 'active' : 'inactive';
             unset($data['is_active']);
         }
 
@@ -155,27 +135,26 @@ class ScrapingSourceController extends Controller
 
     private function runScrapyTest(ScrapingSource $source)
     {
-        $scrapyPath = base_path('../ai-job-miner');
-        $command = [
-            'scrapy', 'crawl', 'linkedin', 
-            '-a', 'query=Software',
-            '-a', 'limit=1',
-            '-a', 'source_id=' . $source->id
-        ];
+        $scrapingJob = ScrapingJob::create([
+            'job_title' => 'Software',
+            'type' => 'on_demand',
+            'status' => 'processing',
+            'started_at' => now(),
+        ]);
 
-        $process = Process::path($scrapyPath)
-            ->env([
-                'LARAVEL_API_TOKEN' => config('services.scrapy.token', 'YOUR_SANCTUM_TOKEN'),
-                'LARAVEL_API_URL' => url('/api/jobs/import'),
-                'LARAVEL_API_CHECK_URL' => url('/api/jobs/import/check'),
-                'LARAVEL_API_FAILED_URL' => url('/api/jobs/import/failed'),
-                'LARAVEL_API_PROXIES_URL' => url('/api/proxies/active'),
-            ])
-            ->timeout(60)
-            ->run($command);
+        $result = $this->scraperClient->scrape(
+            query: 'Software',
+            limit: 1,
+            scrapingJobId: $scrapingJob->id,
+            sourceId: $source->id,
+        );
 
-        $output = $process->output() . "\n" . $process->errorOutput();
-        $success = $process->successful() && !str_contains($output, 'CRITICAL ERROR');
+        $output = trim(($result['stdout'] ?? '') . "\n" . ($result['stderr'] ?? ''));
+        $success = (bool) ($result['success'] ?? false) && !str_contains($output, 'CRITICAL ERROR');
+
+        $success
+            ? $scrapingJob->markAsCompleted(1, 0, 0, 1, 0, $result['elapsed_ms'] ?? null)
+            : $scrapingJob->markAsFailed($output ?: 'Scraper test failed');
 
         return response()->json([
             'success' => $success,

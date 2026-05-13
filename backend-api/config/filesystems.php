@@ -15,6 +15,13 @@ return [
 
     'default' => env('FILESYSTEM_DISK', 'local'),
 
+    'cv_uploads' => [
+        'disk' => env('CV_STORAGE_DISK', env('FILESYSTEM_DISK', 'local')),
+        'prefix' => trim(env('CV_STORAGE_PREFIX', 'cv-uploads'), '/'),
+        'retention_days' => (int) env('CV_UPLOAD_RETENTION_DAYS', 365),
+        'temporary_url_minutes' => (int) env('CV_TEMPORARY_URL_MINUTES', 10),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Filesystem Disks

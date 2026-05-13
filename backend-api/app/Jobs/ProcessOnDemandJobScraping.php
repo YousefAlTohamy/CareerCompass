@@ -4,16 +4,17 @@ namespace App\Jobs;
 
 use App\Models\Job;
 use App\Models\JobRoleStatistic;
+use App\Models\ScrapingFailedUrl;
 use App\Models\ScrapingJob;
-use App\Models\ScrapingSource;
+use App\Services\ScraperClient;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Process;
 
 class ProcessOnDemandJobScraping implements ShouldQueue
 {
@@ -21,7 +22,7 @@ class ProcessOnDemandJobScraping implements ShouldQueue
 
     public $timeout = 600; // 10 minutes for Scrapy execution
     public $tries = 2;
-    public $backoff = 5;
+    public $backoff = [5, 15, 45];
 
     protected string $jobTitle;
     protected int $scrapingJobId;
@@ -38,14 +39,13 @@ class ProcessOnDemandJobScraping implements ShouldQueue
         $this->maxResults = $maxResults;
         $this->sourceId = $sourceId;
 
-        // High priority queue
-        $this->onQueue('high');
+        $this->onQueue('scraping');
     }
 
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(ScraperClient $scraperClient): void
     {
         $startedAt = microtime(true);
         $scrapingJob = ScrapingJob::find($this->scrapingJobId);
@@ -63,21 +63,7 @@ class ProcessOnDemandJobScraping implements ShouldQueue
             // Count jobs before scraping to measure discovered
             $jobsBeforeCount = Job::where('title', 'like', "%{$this->jobTitle}%")->count();
 
-            // Setup Scrapy command execution
-            $scrapyPath = base_path('../ai-job-miner');
-            
-            // Build the Scrapy command
-            $command = [
-                'scrapy', 'crawl', 'linkedin', 
-                '-a', 'query=' . $this->jobTitle,
-                '-a', 'limit=' . $this->maxResults
-            ];
-            
             if ($this->sourceId) {
-                $command[] = '-a';
-                $command[] = 'source_id=' . $this->sourceId;
-                
-                // Set cache to true
                 Cache::put("scraping_source_{$this->sourceId}_status", [
                     'is_scraping' => true, 
                     'count' => 0, 
@@ -85,28 +71,12 @@ class ProcessOnDemandJobScraping implements ShouldQueue
                 ], now()->addHours(2));
             }
 
-            Log::info("Executing Scrapy", ['command' => implode(' ', $command)]);
-
-            $process = Process::path($scrapyPath)
-                ->env([
-                    'LARAVEL_API_TOKEN' => config('services.scrapy.token', 'YOUR_SANCTUM_TOKEN'),
-                    'LARAVEL_API_URL' => url('/api/jobs/import'),
-                    'LARAVEL_API_CHECK_URL' => url('/api/jobs/import/check'),
-                    'LARAVEL_API_FAILED_URL' => url('/api/jobs/import/failed'),
-                    'LARAVEL_API_PROXIES_URL' => url('/api/proxies/active'),
-                ])
-                ->timeout($this->timeout)
-                ->run($command);
-
-            if ($process->failed()) {
-                Log::error('Scrapy execution failed', [
-                    'error' => $process->errorOutput(),
-                    'output' => $process->output(),
-                ]);
-                throw new \Exception("Scrapy process failed: " . $process->errorOutput());
-            }
-
-            Log::info('Scrapy process completed', ['output' => $process->output()]);
+            $scrapeResult = $scraperClient->scrape(
+                query: $this->jobTitle,
+                limit: $this->maxResults,
+                scrapingJobId: $this->scrapingJobId,
+                sourceId: $this->sourceId,
+            );
 
             // Wait a moment for async pipelines to flush to database
             sleep(2);
@@ -119,7 +89,7 @@ class ProcessOnDemandJobScraping implements ShouldQueue
             // but for simplicity, we just mark what was stored.
             $discovered = $stored; // Approximate
             $duplicates = 0;
-            $failed = 0;
+            $failed = ScrapingFailedUrl::where('scraping_job_id', $this->scrapingJobId)->count();
 
             // Mark as completed
             $scrapingJob->markAsCompleted(
@@ -140,6 +110,7 @@ class ProcessOnDemandJobScraping implements ShouldQueue
             Log::info("Completed on-demand scraping for {$this->jobTitle}", [
                 'stored' => $stored,
                 'duplicates' => $duplicates,
+                'scraper_elapsed_ms' => $scrapeResult['elapsed_ms'] ?? null,
             ]);
 
             if ($this->sourceId) {
@@ -165,6 +136,8 @@ class ProcessOnDemandJobScraping implements ShouldQueue
                 $status['is_scraping'] = false;
                 Cache::put("scraping_source_{$this->sourceId}_status", $status, now()->addHours(2));
             }
+
+            throw $e;
         }
     }
 

@@ -49,7 +49,6 @@ export default function AdminUserDetails() {
 
   const handleToggleBan = async () => {
     const isBanned = user.is_banned;
-    const actionText = isBanned ? t('admin.actions.unban_user') : t('admin.actions.ban_user');
     const result = await Swal.fire({
       title: `${isBanned ? t('admin.authorize') : t('admin.restrict')} ${t('admin.stats.users')}?`,
       text: `${t('sources.swal_run_confirm')} "${user.name}"`,

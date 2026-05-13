@@ -14,6 +14,13 @@ class CvAnalysis extends Model
      */
     protected $fillable = [
         'user_id',
+        'cv_disk',
+        'cv_path',
+        'cv_original_name',
+        'cv_mime',
+        'cv_size',
+        'cv_sha256',
+        'cv_uploaded_at',
         'parsing_status',
         'seniority',
         'predicted_role',
@@ -35,6 +42,8 @@ class CvAnalysis extends Model
      */
     protected $casts = [
         'confidence_score' => 'float',
+        'cv_size' => 'integer',
+        'cv_uploaded_at' => 'datetime',
         'completeness_score' => 'integer',
         'strengths' => 'array',
         'gaps' => 'array',
@@ -70,7 +79,9 @@ class CvAnalysis extends Model
      */
     public function getSkillDurations(): array
     {
-        return $this->metadata['experience']['skill_durations'] ?? [];
+        return $this->metadata['skill_durations']
+            ?? $this->metadata['experience']['skill_durations']
+            ?? [];
     }
 
     /**
@@ -80,7 +91,9 @@ class CvAnalysis extends Model
      */
     public function getTopSkillsByYears(): array
     {
-        return $this->metadata['experience']['top_skills_by_years'] ?? [];
+        return $this->metadata['top_skills_by_years']
+            ?? $this->metadata['experience']['top_skills_by_years']
+            ?? [];
     }
 
     /**
@@ -88,7 +101,11 @@ class CvAnalysis extends Model
      */
     public function getActionVerbScore(): float
     {
-        return (float) ($this->metadata['experience']['action_verb_score'] ?? 0.0);
+        return (float) (
+            $this->metadata['action_verb_score']
+            ?? $this->metadata['experience']['action_verb_score']
+            ?? 0.0
+        );
     }
 
     /**

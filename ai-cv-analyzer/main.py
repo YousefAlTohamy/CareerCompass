@@ -4,7 +4,7 @@ CareerCompass AI CV Analyzer — Sub-Service (Port 8002)
 The master API gateway runs at ai-hybrid-orchestrator/main_api.py (port 8001).
 This module is the sub-service entry point with Phase 5 production hardening:
 
-- 30-second timeout per CV (returns partial result on timeout)
+- configurable timeout per CV (defaults to 90s and returns partial result on timeout)
 - Graceful error handling — always returns structured JSON
 - Comprehensive structured logging (phase latency, memory, extraction source)
 - Thread-safe orchestrator for multi-worker (Celery) environments
@@ -20,11 +20,12 @@ import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from pathlib import Path
 from typing import Any, Dict, Optional
+from uuid import uuid4
 
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from core.layer1_understanding.orchestrator import CVOrchestrator, OrchestratorConfig
@@ -47,7 +48,10 @@ logger = logging.getLogger("careercompass.main")
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-_CV_TIMEOUT_SECONDS = int(os.getenv("CV_TIMEOUT_SECONDS", "30"))
+_CV_TIMEOUT_SECONDS = int(os.getenv("CV_TIMEOUT_SECONDS", "90"))
+_REQUESTS_TOTAL = 0
+_REQUEST_ERRORS_TOTAL = 0
+_REQUEST_DURATION_MS_TOTAL = 0
 
 # ---------------------------------------------------------------------------
 # FastAPI App
@@ -65,6 +69,28 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def request_context_middleware(request: Request, call_next):
+    global _REQUESTS_TOTAL, _REQUEST_DURATION_MS_TOTAL, _REQUEST_ERRORS_TOTAL
+
+    request_id = request.headers.get("X-Request-ID") or uuid4().hex
+    request.state.request_id = request_id
+    started = time.perf_counter()
+    _REQUESTS_TOTAL += 1
+
+    try:
+        response = await call_next(request)
+    except Exception:
+        _REQUEST_ERRORS_TOTAL += 1
+        raise
+
+    elapsed_ms = int((time.perf_counter() - started) * 1000)
+    _REQUEST_DURATION_MS_TOTAL += elapsed_ms
+    response.headers["X-Request-ID"] = request_id
+    response.headers["X-Process-Time-Ms"] = str(elapsed_ms)
+    return response
 
 # ---------------------------------------------------------------------------
 # Singleton orchestrator (loaded once, shared across requests)
@@ -111,8 +137,30 @@ async def startup_event():
 # Health check
 # ---------------------------------------------------------------------------
 @app.get("/")
-def health_check():
-    return {"status": "operational", "version": "v2.0 (Phase 5)", "service": "Career Compass AI Engine"}
+def health_check(request: Request):
+    return {
+        "status": "operational",
+        "version": "v2.0 (Phase 5)",
+        "service": "Career Compass AI Engine",
+        "request_id": request.state.request_id,
+    }
+
+
+@app.get("/metrics")
+def metrics() -> Response:
+    lines = [
+        "# HELP career_compass_ai_requests_total Total AI service requests.",
+        "# TYPE career_compass_ai_requests_total counter",
+        f"career_compass_ai_requests_total {_REQUESTS_TOTAL}",
+        "# HELP career_compass_ai_request_errors_total Failed AI service requests.",
+        "# TYPE career_compass_ai_request_errors_total counter",
+        f"career_compass_ai_request_errors_total {_REQUEST_ERRORS_TOTAL}",
+        "# HELP career_compass_ai_request_duration_ms_total Total processing time in milliseconds.",
+        "# TYPE career_compass_ai_request_duration_ms_total counter",
+        f"career_compass_ai_request_duration_ms_total {_REQUEST_DURATION_MS_TOTAL}",
+    ]
+
+    return Response("\n".join(lines) + "\n", media_type="text/plain; version=0.0.4")
 
 
 # ---------------------------------------------------------------------------
@@ -144,7 +192,7 @@ class HybridMatchRequest(BaseModel):
 
 
 @app.post("/api/hybrid-match", tags=["Matching"])
-async def hybrid_match(body: HybridMatchRequest):
+async def hybrid_match(request: Request, body: HybridMatchRequest):
     """
     Compute a weighted hybrid match score between a CV and a job description.
 
@@ -187,6 +235,7 @@ async def hybrid_match(body: HybridMatchRequest):
             "tfidf_score_pct": tfidf_score_pct,
             "missing_skills": missing_skills,
             "formula": "Final = (Adaptive Layer 3 × 60%) + (TF-IDF × 40%)",
+            "request_id": request.state.request_id,
         }
 
     except Exception as exc:
@@ -198,11 +247,11 @@ async def hybrid_match(body: HybridMatchRequest):
 # Main CV analysis endpoint (with timeout & graceful error handling)
 # ---------------------------------------------------------------------------
 @app.post("/api/parse-cv")
-async def analyze_cv(file: UploadFile = File(...)) -> Dict[str, Any]:
+async def analyze_cv(request: Request, file: UploadFile = File(...)) -> Dict[str, Any]:
     """
     Analyze a CV PDF.
 
-    - **Timeout**: If processing exceeds ``CV_TIMEOUT_SECONDS`` (default 30s),
+    - **Timeout**: If processing exceeds ``CV_TIMEOUT_SECONDS`` (default 90s),
       returns a partial/empty result with ``parsing_status="timeout"``.
     - **Crash-safe**: Any unhandled exception returns a structured JSON
       response with ``parsing_status="error"``.
@@ -255,6 +304,7 @@ async def analyze_cv(file: UploadFile = File(...)) -> Dict[str, Any]:
         status, role, elapsed_ms, filename,
     )
 
+    result_dict["request_id"] = request.state.request_id
     return result_dict
 
 
@@ -329,7 +379,7 @@ def process_file(file_path: str, timeout_seconds: int = 30) -> Dict[str, Any]:
 def _timeout_result() -> Dict[str, Any]:
     """Return a structured timeout response matching CVParseResult shape."""
     return {
-        "parsing_status": "error",
+        "parsing_status": "timeout",
         "profile": {
             "full_name": None,
             "current_title": None,
