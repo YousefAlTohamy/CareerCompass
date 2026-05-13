@@ -10,6 +10,14 @@ git checkout setup-docker
 
 Do not push directly to `main` for Docker handoff work.
 
+## Stable Checkpoint
+
+Final Docker handoff checkpoint:
+
+```text
+setup-docker-stable-final-handoff-20260513-2059
+```
+
 ## Current Docker Startup
 
 ```bash
@@ -75,4 +83,4 @@ git reset --hard <stable-checkpoint-tag>
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
-The final checkpoint tag for this handoff pass is created after validation and push.
+Use the stable checkpoint tag above for rollback after this handoff pass.
