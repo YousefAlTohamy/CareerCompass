@@ -1,0 +1,33 @@
+name: Full Docker Smoke
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: full-docker-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    name: Full Stack Docker Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Runner requirements
+        run: |
+          echo "::notice title=Full Docker Smoke::This manual workflow builds the AI CV analyzer image and boots the full stack. It requires enough CPU, memory, disk, and network bandwidth for model startup; use a larger or self-hosted runner if GitHub-hosted runners are resource constrained."
+
+      - name: Validate compose config
+        run: docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet
+
+      - name: Build all runtime images
+        run: docker compose build backend-api frontend ai-cv-analyzer ai-job-miner
+
+      - name: Smoke boot full stack
+        run: bash scripts/smoke/docker-smoke.sh
+        env:
+          SMOKE_STOP_ON_EXIT: "1"

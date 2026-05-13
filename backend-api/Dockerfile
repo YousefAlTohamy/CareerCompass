@@ -39,6 +39,13 @@ RUN composer install \
     --no-scripts
 
 COPY . /app
+RUN mkdir -p \
+    /app/bootstrap/cache \
+    /app/storage/framework/cache/data \
+    /app/storage/framework/sessions \
+    /app/storage/framework/testing \
+    /app/storage/framework/views \
+    /app/storage/logs
 RUN composer dump-autoload --optimize
 
 # Set proper permissions for Laravel
