@@ -25,12 +25,6 @@ class ScrapingSourceSeeder extends Seeder
      */
     public function run(): void
     {
-        Schema::disableForeignKeyConstraints();
-        DB::table('scraping_sources')->truncate();
-        Schema::enableForeignKeyConstraints();
-
-        $now = now();
-
         $sources = [
             // ── 1. LinkedIn — Global job search (SPA, requires JS rendering) ──
             [
@@ -40,12 +34,10 @@ class ScrapingSourceSeeder extends Seeder
                 'status'     => 'active',
                 'mode'       => 'discovery',
                 'pattern'    => '/jobs/view/\\d+',
-                'headers'    => json_encode([
+                'headers'    => [
                     'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                ]),
+                ],
                 'params'     => null,
-                'created_at' => $now,
-                'updated_at' => $now,
             ],
 
             // ── 2. Indeed — Remote job search (SPA, JS-heavy results page) ────
@@ -56,12 +48,10 @@ class ScrapingSourceSeeder extends Seeder
                 'status'     => 'active',
                 'mode'       => 'discovery',
                 'pattern'    => '/viewjob\\?',
-                'headers'    => json_encode([
+                'headers'    => [
                     'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                ]),
+                ],
                 'params'     => null,
-                'created_at' => $now,
-                'updated_at' => $now,
             ],
 
             // ── 3. Upwork — Freelance / contract job search (SPA) ─────────────
@@ -72,12 +62,10 @@ class ScrapingSourceSeeder extends Seeder
                 'status'     => 'active',
                 'mode'       => 'discovery',
                 'pattern'    => '/jobs/~',
-                'headers'    => json_encode([
+                'headers'    => [
                     'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                ]),
+                ],
                 'params'     => null,
-                'created_at' => $now,
-                'updated_at' => $now,
             ],
 
             // ── 4. Remotive — Remote-first API (no auth required) ─────────────
@@ -90,8 +78,6 @@ class ScrapingSourceSeeder extends Seeder
                 'pattern'    => null,
                 'headers'    => null,
                 'params'     => null,
-                'created_at' => $now,
-                'updated_at' => $now,
             ],
 
             // ── 5. Adzuna US — Public API (credentials via .env) ──────────────
@@ -104,8 +90,6 @@ class ScrapingSourceSeeder extends Seeder
                 'pattern'    => null,
                 'headers'    => null,
                 'params'     => null,
-                'created_at' => $now,
-                'updated_at' => $now,
             ],
 
             // ── 6. Wuzzuf — Egyptian job board (HTML scraping) ────────────────
@@ -118,12 +102,15 @@ class ScrapingSourceSeeder extends Seeder
                 'pattern'    => '/jobs/p/',
                 'headers'    => null,
                 'params'     => null,
-                'created_at' => $now,
-                'updated_at' => $now,
             ],
         ];
 
-        DB::table('scraping_sources')->insert($sources);
+        foreach ($sources as $source) {
+            \App\Models\ScrapingSource::updateOrCreate(
+                ['name' => $source['name']],
+                $source
+            );
+        }
 
         $this->command->info('✓ Seeded ' . count($sources) . ' global scraping source templates (with {query} placeholders).');
     }

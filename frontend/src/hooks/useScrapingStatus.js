@@ -105,14 +105,16 @@ export function useScrapingStatus(scrapingJobId, options = {}) {
         mountedRef.current = true;
 
         if (enabled && scrapingJobId && !intervalRef.current) {
-            setIsPolling(true);
-            setPollCount(0);
+            queueMicrotask(() => {
+                if (!mountedRef.current || intervalRef.current) {
+                    return;
+                }
 
-            // Poll immediately
-            pollStatus();
-
-            // Then poll at intervals
-            intervalRef.current = setInterval(pollStatus, pollInterval);
+                setIsPolling(true);
+                setPollCount(0);
+                pollStatus();
+                intervalRef.current = setInterval(pollStatus, pollInterval);
+            });
         }
 
         return () => {

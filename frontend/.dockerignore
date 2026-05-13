@@ -1,0 +1,13 @@
+node_modules/
+.env
+.git/
+.dockerignore
+Dockerfile
+dist/
+build/
+.vite/
+coverage/
+.eslintcache
+*.log
+npm-debug.log
+yarn-error.log

@@ -3,45 +3,41 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\JobIndexRequest;
+use App\Http\Requests\ScrapeJobTitleIfMissingRequest;
+use App\Http\Requests\ScrapeJobsRequest;
 use App\Http\Resources\JobResource;
 use App\Jobs\ProcessOnDemandJobScraping;
 use App\Models\Job;
 use App\Models\ScrapingJob;
-use App\Models\Skill;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
 
 class JobController extends Controller
 {
     /**
      * Get all jobs (paginated and filterable).
      */
-    public function index(Request $request): JsonResponse
+    public function index(JobIndexRequest $request): JsonResponse
     {
-        $query = Job::with('skills');
+        $validated = $request->validated();
+        $query = Job::with('requiredSkills');
 
-        // Filter by search term (SQL injection safe)
-        if ($request->has('search')) {
-            $search = $request->search;
+        if (!empty($validated['search'] ?? null)) {
+            $search = $validated['search'];
             $query->where(function ($q) use ($search) {
-                // Using parameter binding to prevent SQL injection
-                $q->where('title', 'like', '%' . addslashes($search) . '%')
-                    ->orWhere('company', 'like', '%' . addslashes($search) . '%')
-                    ->orWhere('description', 'like', '%' . addslashes($search) . '%');
+                $q->where('title', 'like', '%' . $search . '%')
+                    ->orWhere('company', 'like', '%' . $search . '%')
+                    ->orWhere('description', 'like', '%' . $search . '%');
             });
         }
 
-        // Filter by source
-        if ($request->has('source')) {
-            $query->where('source', $request->source);
+        if (!empty($validated['source'] ?? null)) {
+            $query->where('source', $validated['source']);
         }
 
-        // Pagination
-        $perPage = $request->get('per_page', 15);
+        $perPage = (int) ($validated['per_page'] ?? 15);
         $jobs = $query->latest()->paginate($perPage);
 
         return response()->json([
@@ -61,7 +57,7 @@ class JobController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $job = Job::with('skills')->find($id);
+        $job = Job::with('requiredSkills')->find($id);
 
         if (!$job) {
             return response()->json([
@@ -88,9 +84,9 @@ class JobController extends Controller
             
             $cvAnalysis = $user->cvAnalysis;
             // Primary: use predicted_role from CV analysis, fallback to user->job_title
-            $baseTitle = $cvAnalysis->predicted_role ?? $user->job_title;
+            $baseTitle = $cvAnalysis?->predicted_role ?? $user->job_title;
             // Tertiary: extract seniority from CV analysis
-            $userSeniority = strtolower($cvAnalysis->seniority ?? '');
+            $userSeniority = strtolower($cvAnalysis?->seniority ?? '');
 
             if ($baseTitle) {
                 // Strip seniority prefix to broaden the search
@@ -105,7 +101,7 @@ class JobController extends Controller
                 $keyword = implode(' ', array_slice($words, 0, 2));
 
                 // Eager load skills to prevent N+1 during matching
-                $jobs = Job::with('skills')
+                $jobs = Job::with('requiredSkills')
                     ->where(function ($q) use ($keyword, $cleanTitle) {
                         $q->where('title', 'LIKE', '%' . $keyword . '%')
                             ->orWhere('title', 'LIKE', '%' . $cleanTitle . '%');
@@ -129,7 +125,7 @@ class JobController extends Controller
                     }
 
                     // 2. Secondary: Skill Match Score (Max 50)
-                    $jobSkills = $job->skills;
+                    $jobSkills = $job->requiredSkills;
                     if ($jobSkills->isNotEmpty() && !empty($userSkillsLower)) {
                         $jobSkillNamesLower = $jobSkills->pluck('name')->map(fn($s) => mb_strtolower($s))->toArray();
                         $matchingSkillsCount = count(array_intersect($userSkillsLower, $jobSkillNamesLower));
@@ -165,7 +161,7 @@ class JobController extends Controller
                 ]);
             } else {
                 // No job_title or CV analysis yet — return latest 50 jobs as default
-                $jobs = Job::with('skills')->latest()->take(50)->get();
+                $jobs = Job::with('requiredSkills')->latest()->take(50)->get();
 
                 Log::info('No job_title for user, returning latest jobs', [
                     'user_id' => $user->id,
@@ -195,277 +191,70 @@ class JobController extends Controller
     }
 
     /**
-     * Trigger job scraping via AI Engine and store results.
+     * Trigger job scraping via Scrapy and return immediately.
      */
-    public function scrapeAndStore(Request $request): JsonResponse
+    public function scrapeAndStore(ScrapeJobsRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'query' => 'required|string|max:255',
-            'max_results' => 'nullable|integer|min:1|max:50',
-            'use_samples' => 'nullable|boolean',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
         try {
-            $query = $request->input('query');
-            $maxResults = $request->input('max_results', 50);
-            $useSamples = $request->input('use_samples', false);
+            $validated = $request->validated();
+            $query = $validated['query'];
+            $maxResults = (int) ($validated['max_results'] ?? 50);
 
-            Log::info('Initiating job scraping', [
+            Log::info('Initiating job scraping via Scrapy', [
                 'query' => $query,
                 'max_results' => $maxResults,
-                'use_samples' => $useSamples,
                 'user_id' => auth()->id(),
             ]);
 
-            // Call AI Engine to scrape jobs
-            $aiResponse = $this->scrapeJobsFromAI($query, $maxResults, $useSamples);
-
-            if (!$aiResponse || !isset($aiResponse['jobs'])) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Failed to scrape jobs from AI Engine',
-                ], 500);
-            }
-
-            $scrapedJobs = $aiResponse['jobs'];
-            $storedCount = 0;
-            $duplicateCount = 0;
-
-            // Store each job
-            foreach ($scrapedJobs as $jobData) {
-                $result = $this->storeJob($jobData);
-                if ($result['stored']) {
-                    $storedCount++;
-                } else {
-                    $duplicateCount++;
-                }
-            }
-
-            Log::info('Job scraping completed', [
-                'total_scraped' => count($scrapedJobs),
-                'stored' => $storedCount,
-                'duplicates' => $duplicateCount,
+            // Create scraping job tracking record
+            $scrapingJob = ScrapingJob::create([
+                'job_title' => $query,
+                'type' => 'on_demand',
+                'status' => 'pending',
             ]);
+
+            // Dispatch to high-priority queue
+            ProcessOnDemandJobScraping::dispatch($query, $scrapingJob->id, $maxResults);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Jobs scraped and stored successfully',
+                'message' => 'Jobs scraping dispatched to background process',
                 'data' => [
-                    'total_scraped' => count($scrapedJobs),
-                    'stored' => $storedCount,
-                    'duplicates_skipped' => $duplicateCount,
                     'query' => $query,
-                    'source' => $aiResponse['source'] ?? 'unknown',
+                    'scraping_job_id' => $scrapingJob->id,
                 ],
             ]);
         } catch (\Exception $e) {
-            Log::error('Job scraping failed', [
+            Log::error('Job scraping dispatch failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'An error occurred while scraping jobs',
+                'message' => 'An error occurred while initiating scraping',
                 'error' => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
     }
 
-    /**
-     * Call AI Engine to scrape jobs.
-     */
-    private function scrapeJobsFromAI(string $query, int $maxResults, bool $useSamples): ?array
-    {
-        try {
-            $aiEngineUrl = config('services.ai_engine.url', 'http://127.0.0.1:8001');
-            $timeout = config('services.ai_engine.timeout', 30);
 
-            $response = Http::timeout($timeout)->post("{$aiEngineUrl}/scrape-jobs", [
-                'query' => $query,
-                'max_results' => $maxResults,
-                'use_samples' => $useSamples,
-            ]);
-
-            if ($response->successful()) {
-                return $response->json();
-            }
-
-            Log::error('AI Engine scraping failed', [
-                'status' => $response->status(),
-                'body' => $response->body(),
-            ]);
-
-            return null;
-        } catch (\Exception $e) {
-            Log::error('Failed to connect to AI Engine for scraping', [
-                'error' => $e->getMessage(),
-            ]);
-            return null;
-        }
-    }
-
-    /**
-     * Store a single job with its skills.
-     *
-     * @return array ['stored' => bool, 'job' => Job|null]
-     */
-    private function storeJob(array $jobData): array
-    {
-        // Normalize URL to prevent duplicates from tracking parameters
-        $normalizedUrl = null;
-        if (isset($jobData['url']) && $jobData['url']) {
-            $normalizedUrl = $this->normalizeUrl($jobData['url']);
-        }
-
-        // Check for duplicate (by normalized URL or title+company)
-        $existingJob = null;
-
-        if ($normalizedUrl) {
-            $existingJob = Job::where('url', $normalizedUrl)->first();
-        }
-
-        if (!$existingJob) {
-            $existingJob = Job::where('title', $jobData['title'])
-                ->where('company', $jobData['company'])
-                ->first();
-        }
-
-        if ($existingJob) {
-            Log::info('Duplicate job found, skipping', [
-                'title' => $jobData['title'],
-                'company' => $jobData['company'],
-            ]);
-            return ['stored' => false, 'job' => $existingJob];
-        }
-
-        // Create new job with race condition protection
-        try {
-            $job = Job::create([
-                'title' => $jobData['title'],
-                'company' => $jobData['company'],
-                'description' => $jobData['description'] ?? '',
-                'url' => $normalizedUrl ?? $jobData['url'] ?? null,
-                'source' => $jobData['source'] ?? 'unknown',
-            ]);
-        } catch (QueryException $e) {
-            // Handle duplicate entry error (race condition)
-            if ($e->getCode() == 23000 || str_contains($e->getMessage(), 'Duplicate entry')) {
-                Log::info('Duplicate job prevented by database constraint (race condition)', [
-                    'title' => $jobData['title'],
-                    'company' => $jobData['company'],
-                    'error_code' => $e->getCode(),
-                ]);
-
-                // Fetch the existing job that was just created
-                $existingJob = Job::where('url', $normalizedUrl ?? $jobData['url'])
-                    ->orWhere(function ($q) use ($jobData) {
-                        $q->where('title', $jobData['title'])
-                            ->where('company', $jobData['company']);
-                    })
-                    ->first();
-
-                return ['stored' => false, 'job' => $existingJob];
-            }
-
-            // Re-throw if it's a different database error
-            throw $e;
-        }
-
-        // Attach skills
-        if (isset($jobData['skills']) && is_array($jobData['skills'])) {
-            $skillNames = collect($jobData['skills'])->pluck('name')->toArray();
-            $skills = Skill::whereIn('name', $skillNames)->get();
-
-            if ($skills->isNotEmpty()) {
-                $job->skills()->sync($skills->pluck('id'));
-            }
-        }
-
-        Log::info('New job stored', [
-            'job_id' => $job->id,
-            'title' => $job->title,
-            'skills_count' => $job->skills()->count(),
-        ]);
-
-        return ['stored' => true, 'job' => $job];
-    }
-
-    /**
-     * Normalize URL by removing query parameters and fragments.
-     * Prevents duplicates from tracking parameters (e.g., utm_source).
-     *
-     * @param string $url
-     * @return string|null
-     */
-    private function normalizeUrl(string $url): ?string
-    {
-        if (empty($url)) {
-            return null;
-        }
-
-        // Parse URL and rebuild without query string and fragment
-        $parsed = parse_url($url);
-
-        if (!$parsed || !isset($parsed['host'])) {
-            return $url; // Return as-is if parsing fails
-        }
-
-        $normalized = '';
-
-        // Rebuild URL: scheme://host/path
-        if (isset($parsed['scheme'])) {
-            $normalized .= $parsed['scheme'] . '://';
-        }
-
-        if (isset($parsed['host'])) {
-            $normalized .= $parsed['host'];
-        }
-
-        if (isset($parsed['path'])) {
-            $normalized .= $parsed['path'];
-        }
-
-        // Ignore query (?...) and fragment (#...)
-
-        return $normalized;
-    }
 
     /**
      * Check if job title exists and scrape if missing (on-demand).
      */
-    public function scrapeJobTitleIfMissing(Request $request): JsonResponse
+    public function scrapeJobTitleIfMissing(ScrapeJobTitleIfMissingRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'job_title' => 'required|string|max:255',
-            'max_results' => 'nullable|integer|min:1|max:50',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
         try {
-            $jobTitle = $request->input('job_title');
-            $maxResults = $request->input('max_results', 30);
+            $validated = $request->validated();
+            $jobTitle = $validated['job_title'];
+            $maxResults = (int) ($validated['max_results'] ?? 30);
 
             Log::info('Checking if job title exists', ['job_title' => $jobTitle]);
 
             // Check if we have jobs for this title
             $existingJobs = Job::where('title', 'like', "%{$jobTitle}%")
-                ->with('skills')
+                ->with('requiredSkills')
                 ->count();
 
             if ($existingJobs > 0) {
@@ -557,7 +346,7 @@ class JobController extends Controller
 
                 // Get actual jobs
                 $jobs = Job::where('title', 'like', "%{$scrapingJob->job_title}%")
-                    ->with('skills')
+                    ->with('requiredSkills')
                     ->latest()
                     ->take(50)
                     ->get();

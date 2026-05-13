@@ -18,6 +18,7 @@ class ScrapingSource extends Model
     protected $fillable = [
         'name',
         'endpoint',
+        'method',
         'type',
         'mode',
         'pattern',
@@ -66,6 +67,14 @@ class ScrapingSource extends Model
     public function jobs(): HasMany
     {
         return $this->hasMany(Job::class, 'scraping_source_id');
+    }
+
+    /**
+     * Failed URLs originating from this source.
+     */
+    public function failedUrls(): HasMany
+    {
+        return $this->hasMany(ScrapingFailedUrl::class, 'scraping_source_id');
     }
 
     /**

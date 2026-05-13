@@ -1,0 +1,404 @@
+services:
+  # Infrastructure: MySQL Database
+  db:
+    image: mysql:8.0
+    container_name: cc-db
+    restart: always
+    environment:
+      MYSQL_DATABASE: career_compass
+      MYSQL_USER: cc_user
+      MYSQL_PASSWORD: cc_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - cc-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cc-network
+
+  # Backend: Laravel API
+  backend-api:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile
+    container_name: cc-backend
+    volumes:
+      - ./backend-api:/app
+      - backend-vendor:/app/vendor
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost
+      DB_HOST: db
+      DB_DATABASE: career_compass
+      DB_USERNAME: cc_user
+      DB_PASSWORD: cc_password
+      QUEUE_CONNECTION: database
+      DB_QUEUE_RETRY_AFTER: 720
+      CACHE_STORE: database
+      SESSION_DRIVER: database
+      FRONTEND_URL: http://localhost:5173
+      AI_ENGINE_URL: http://ai-cv-analyzer:8000
+      AI_ENGINE_TIMEOUT: 120
+      SCRAPER_SERVICE_URL: http://ai-job-miner:8000
+      SCRAPER_SERVICE_TIMEOUT: 600
+      SCRAPER_SERVICE_TOKEN: ${SCRAPER_SERVICE_TOKEN:-local-scraper-service-token}
+      LARAVEL_INTERNAL_API_URL: http://nginx/api/v1
+      SCRAPY_API_TOKEN: ${SCRAPY_API_TOKEN:-local-laravel-internal-token}
+      FILESYSTEM_DISK: ${FILESYSTEM_DISK:-local}
+      CV_STORAGE_DISK: ${CV_STORAGE_DISK:-local}
+      MONITORING_TOKEN: ${MONITORING_TOKEN:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - cc-network
+    healthcheck:
+      test: ["CMD", "php", "-v"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backend Worker: database queue for default jobs
+  backend-worker:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile
+    container_name: cc-backend-worker
+    command: php artisan queue:work database --queue=default --tries=3 --timeout=650 --sleep=3 --backoff=5 --max-time=3600
+    restart: unless-stopped
+    volumes:
+      - ./backend-api:/app
+      - backend-vendor:/app/vendor
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost
+      DB_HOST: db
+      DB_DATABASE: career_compass
+      DB_USERNAME: cc_user
+      DB_PASSWORD: cc_password
+      QUEUE_CONNECTION: database
+      DB_QUEUE_RETRY_AFTER: 720
+      CACHE_STORE: database
+      SESSION_DRIVER: database
+      FRONTEND_URL: http://localhost:5173
+      AI_ENGINE_URL: http://ai-cv-analyzer:8000
+      AI_ENGINE_TIMEOUT: 120
+      SCRAPER_SERVICE_URL: http://ai-job-miner:8000
+      SCRAPER_SERVICE_TIMEOUT: 600
+      SCRAPER_SERVICE_TOKEN: ${SCRAPER_SERVICE_TOKEN:-local-scraper-service-token}
+      LARAVEL_INTERNAL_API_URL: http://nginx/api/v1
+      SCRAPY_API_TOKEN: ${SCRAPY_API_TOKEN:-local-laravel-internal-token}
+      FILESYSTEM_DISK: ${FILESYSTEM_DISK:-local}
+      CV_STORAGE_DISK: ${CV_STORAGE_DISK:-local}
+      MONITORING_TOKEN: ${MONITORING_TOKEN:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      ai-job-miner:
+        condition: service_healthy
+    networks:
+      - cc-network
+
+  # Backend Worker: high-priority queue
+  backend-worker-high:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile
+    container_name: cc-backend-worker-high
+    command: php artisan queue:work database --queue=high --tries=3 --timeout=650 --sleep=3 --backoff=5 --max-time=3600
+    restart: unless-stopped
+    volumes:
+      - ./backend-api:/app
+      - backend-vendor:/app/vendor
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost
+      DB_HOST: db
+      DB_DATABASE: career_compass
+      DB_USERNAME: cc_user
+      DB_PASSWORD: cc_password
+      QUEUE_CONNECTION: database
+      DB_QUEUE_RETRY_AFTER: 720
+      CACHE_STORE: database
+      SESSION_DRIVER: database
+      FRONTEND_URL: http://localhost:5173
+      AI_ENGINE_URL: http://ai-cv-analyzer:8000
+      AI_ENGINE_TIMEOUT: 120
+      SCRAPER_SERVICE_URL: http://ai-job-miner:8000
+      SCRAPER_SERVICE_TIMEOUT: 600
+      SCRAPER_SERVICE_TOKEN: ${SCRAPER_SERVICE_TOKEN:-local-scraper-service-token}
+      LARAVEL_INTERNAL_API_URL: http://nginx/api/v1
+      SCRAPY_API_TOKEN: ${SCRAPY_API_TOKEN:-local-laravel-internal-token}
+      FILESYSTEM_DISK: ${FILESYSTEM_DISK:-local}
+      CV_STORAGE_DISK: ${CV_STORAGE_DISK:-local}
+      MONITORING_TOKEN: ${MONITORING_TOKEN:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      ai-job-miner:
+        condition: service_healthy
+    networks:
+      - cc-network
+
+  # Backend Worker: scraping queue
+  backend-worker-scraping:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile
+    container_name: cc-backend-worker-scraping
+    command: php artisan queue:work database --queue=scraping --tries=3 --timeout=1200 --sleep=3 --backoff=10 --max-time=3600
+    restart: unless-stopped
+    volumes:
+      - ./backend-api:/app
+      - backend-vendor:/app/vendor
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost
+      DB_HOST: db
+      DB_DATABASE: career_compass
+      DB_USERNAME: cc_user
+      DB_PASSWORD: cc_password
+      QUEUE_CONNECTION: database
+      DB_QUEUE_RETRY_AFTER: 1200
+      CACHE_STORE: database
+      SESSION_DRIVER: database
+      FRONTEND_URL: http://localhost:5173
+      AI_ENGINE_URL: http://ai-cv-analyzer:8000
+      AI_ENGINE_TIMEOUT: 120
+      SCRAPER_SERVICE_URL: http://ai-job-miner:8000
+      SCRAPER_SERVICE_TIMEOUT: 600
+      SCRAPER_SERVICE_TOKEN: ${SCRAPER_SERVICE_TOKEN:-local-scraper-service-token}
+      LARAVEL_INTERNAL_API_URL: http://nginx/api/v1
+      SCRAPY_API_TOKEN: ${SCRAPY_API_TOKEN:-local-laravel-internal-token}
+      FILESYSTEM_DISK: ${FILESYSTEM_DISK:-local}
+      CV_STORAGE_DISK: ${CV_STORAGE_DISK:-local}
+      MONITORING_TOKEN: ${MONITORING_TOKEN:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      ai-job-miner:
+        condition: service_healthy
+    networks:
+      - cc-network
+
+  # Backend Worker: AI queue
+  backend-worker-ai:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile
+    container_name: cc-backend-worker-ai
+    command: php artisan queue:work database --queue=ai --tries=3 --timeout=900 --sleep=3 --backoff=10 --max-time=3600
+    restart: unless-stopped
+    volumes:
+      - ./backend-api:/app
+      - backend-vendor:/app/vendor
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost
+      DB_HOST: db
+      DB_DATABASE: career_compass
+      DB_USERNAME: cc_user
+      DB_PASSWORD: cc_password
+      QUEUE_CONNECTION: database
+      DB_QUEUE_RETRY_AFTER: 900
+      CACHE_STORE: database
+      SESSION_DRIVER: database
+      FRONTEND_URL: http://localhost:5173
+      AI_ENGINE_URL: http://ai-cv-analyzer:8000
+      AI_ENGINE_TIMEOUT: 120
+      SCRAPER_SERVICE_URL: http://ai-job-miner:8000
+      SCRAPER_SERVICE_TIMEOUT: 600
+      SCRAPER_SERVICE_TOKEN: ${SCRAPER_SERVICE_TOKEN:-local-scraper-service-token}
+      LARAVEL_INTERNAL_API_URL: http://nginx/api/v1
+      SCRAPY_API_TOKEN: ${SCRAPY_API_TOKEN:-local-laravel-internal-token}
+      FILESYSTEM_DISK: ${FILESYSTEM_DISK:-local}
+      CV_STORAGE_DISK: ${CV_STORAGE_DISK:-local}
+      MONITORING_TOKEN: ${MONITORING_TOKEN:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      ai-cv-analyzer:
+        condition: service_started
+    networks:
+      - cc-network
+
+  # Backend Worker: emails queue
+  backend-worker-emails:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile
+    container_name: cc-backend-worker-emails
+    command: php artisan queue:work database --queue=emails --tries=3 --timeout=600 --sleep=3 --backoff=10 --max-time=3600
+    restart: unless-stopped
+    volumes:
+      - ./backend-api:/app
+      - backend-vendor:/app/vendor
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost
+      DB_HOST: db
+      DB_DATABASE: career_compass
+      DB_USERNAME: cc_user
+      DB_PASSWORD: cc_password
+      QUEUE_CONNECTION: database
+      DB_QUEUE_RETRY_AFTER: 600
+      CACHE_STORE: database
+      SESSION_DRIVER: database
+      FRONTEND_URL: http://localhost:5173
+      AI_ENGINE_URL: http://ai-cv-analyzer:8000
+      AI_ENGINE_TIMEOUT: 120
+      SCRAPER_SERVICE_URL: http://ai-job-miner:8000
+      SCRAPER_SERVICE_TIMEOUT: 600
+      SCRAPER_SERVICE_TOKEN: ${SCRAPER_SERVICE_TOKEN:-local-scraper-service-token}
+      LARAVEL_INTERNAL_API_URL: http://nginx/api/v1
+      SCRAPY_API_TOKEN: ${SCRAPY_API_TOKEN:-local-laravel-internal-token}
+      FILESYSTEM_DISK: ${FILESYSTEM_DISK:-local}
+      CV_STORAGE_DISK: ${CV_STORAGE_DISK:-local}
+      MONITORING_TOKEN: ${MONITORING_TOKEN:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - cc-network
+
+  # Backend Scheduler
+  backend-scheduler:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile
+    container_name: cc-backend-scheduler
+    command: php artisan schedule:work
+    restart: unless-stopped
+    volumes:
+      - ./backend-api:/app
+      - backend-vendor:/app/vendor
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost
+      DB_HOST: db
+      DB_DATABASE: career_compass
+      DB_USERNAME: cc_user
+      DB_PASSWORD: cc_password
+      QUEUE_CONNECTION: database
+      DB_QUEUE_RETRY_AFTER: 720
+      CACHE_STORE: database
+      SESSION_DRIVER: database
+      FRONTEND_URL: http://localhost:5173
+      AI_ENGINE_URL: http://ai-cv-analyzer:8000
+      AI_ENGINE_TIMEOUT: 120
+      SCRAPER_SERVICE_URL: http://ai-job-miner:8000
+      SCRAPER_SERVICE_TIMEOUT: 600
+      SCRAPER_SERVICE_TOKEN: ${SCRAPER_SERVICE_TOKEN:-local-scraper-service-token}
+      LARAVEL_INTERNAL_API_URL: http://nginx/api/v1
+      SCRAPY_API_TOKEN: ${SCRAPY_API_TOKEN:-local-laravel-internal-token}
+      FILESYSTEM_DISK: ${FILESYSTEM_DISK:-local}
+      CV_STORAGE_DISK: ${CV_STORAGE_DISK:-local}
+      MONITORING_TOKEN: ${MONITORING_TOKEN:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - cc-network
+
+  # Frontend: React + Vite
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cc-frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: /api/v1
+      VITE_API_PROXY_TARGET: ${VITE_API_PROXY_TARGET:-http://nginx}
+    networks:
+      - cc-network
+
+  # AI CV Analyzer: FastAPI
+  ai-cv-analyzer:
+    build:
+      context: ./ai-cv-analyzer
+      dockerfile: Dockerfile
+    container_name: cc-cv-analyzer
+    volumes:
+      - ./ai-cv-analyzer:/app
+    environment:
+      CV_TIMEOUT_SECONDS: ${CV_TIMEOUT_SECONDS:-90}
+    ports:
+      - "8000:8000"
+    networks:
+      - cc-network
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 600s
+
+  # AI Job Miner: Scrapy HTTP worker service
+  ai-job-miner:
+    build:
+      context: ./ai-job-miner
+      dockerfile: Dockerfile
+    container_name: cc-job-miner
+    volumes:
+      - ./ai-job-miner:/app
+    environment:
+      SCRAPER_SERVICE_TOKEN: ${SCRAPER_SERVICE_TOKEN:-local-scraper-service-token}
+      LARAVEL_API_BASE_URL: http://nginx/api/v1
+      LARAVEL_API_TOKEN: ${SCRAPY_API_TOKEN:-local-laravel-internal-token}
+      SCRAPER_DEFAULT_TIMEOUT: 600
+    ports:
+      - "8003:8000"
+    depends_on:
+      - nginx
+    networks:
+      - cc-network
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Nginx: Reverse Proxy
+  nginx:
+    image: nginx:stable-alpine
+    container_name: cc-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+      - ./backend-api:/app # Needed for PHP-FPM static file serving and path mapping
+    depends_on:
+      - backend-api
+      - frontend
+    networks:
+      - cc-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+networks:
+  cc-network:
+    driver: bridge
+
+volumes:
+  cc-db-data:
+  backend-vendor:

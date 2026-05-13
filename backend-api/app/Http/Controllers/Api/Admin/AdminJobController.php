@@ -19,7 +19,7 @@ class AdminJobController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Job::with('skills');
+            $query = Job::with('requiredSkills');
 
             // Handle search
             if ($request->filled('search')) {
@@ -81,7 +81,7 @@ class AdminJobController extends Controller
     public function show($id): JsonResponse
     {
         try {
-            $job = Job::with('skills')->findOrFail($id);
+            $job = Job::with('requiredSkills')->findOrFail($id);
             return response()->json([
                 'success' => true,
                 'data' => $job

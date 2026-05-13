@@ -2,51 +2,44 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Requests\StoreApplicationRequest;
+use App\Http\Requests\UpdateApplicationRequest;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Http\Resources\ApplicationResource;
 
-use App\Models\Application;
 use Illuminate\Http\JsonResponse;
+use App\Services\ApplicationTrackerService;
 
 class ApplicationController extends Controller
 {
+    public function __construct(private readonly ApplicationTrackerService $trackerService)
+    {
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index(): JsonResponse
     {
-        $applications = auth()->user()->applications()->with('job')->latest()->get();
+        $applications = $this->trackerService->listForUser(auth()->user());
 
         return response()->json([
             'success' => true,
-            'data' => $applications,
+            'data' => ApplicationResource::collection($applications),
         ]);
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreApplicationRequest $request): JsonResponse
     {
-        $request->validate([
-            'job_id' => 'required|exists:job_postings,id',
-            'status' => 'nullable|in:saved,applied,interviewing,offered,rejected,archived',
-            'notes' => 'nullable|string',
-        ]);
-
-        $application = auth()->user()->applications()->updateOrCreate(
-            ['job_id' => $request->job_id],
-            [
-                'status' => $request->status ?? 'saved',
-                'notes' => $request->notes,
-                'applied_at' => $request->status === 'applied' ? now() : null,
-            ]
-        );
+        $application = $this->trackerService->createOrUpdate(auth()->user(), $request->validated());
 
         return response()->json([
             'success' => true,
             'message' => 'Job saved to your tracker',
-            'data' => $application,
+            'data' => new ApplicationResource($application),
         ]);
     }
 
@@ -59,32 +52,22 @@ class ApplicationController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $application,
+            'data' => new ApplicationResource($application),
         ]);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id): JsonResponse
+    public function update(UpdateApplicationRequest $request, string $id): JsonResponse
     {
         $application = auth()->user()->applications()->findOrFail($id);
-
-        $request->validate([
-            'status' => 'nullable|in:saved,applied,interviewing,offered,rejected,archived',
-            'notes' => 'nullable|string',
-        ]);
-
-        $application->update($request->only(['status', 'notes']));
-
-        if ($request->status === 'applied' && !$application->applied_at) {
-            $application->update(['applied_at' => now()]);
-        }
+        $application = $this->trackerService->update($application, $request->validated());
 
         return response()->json([
             'success' => true,
             'message' => 'Application updated',
-            'data' => $application,
+            'data' => new ApplicationResource($application),
         ]);
     }
 

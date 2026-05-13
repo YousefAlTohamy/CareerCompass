@@ -13,7 +13,7 @@ class ExportSkillsToJson extends Command
      *
      * @var string
      */
-    protected $signature = 'app:export-skills';
+    protected $signature = 'app:export-skills-to-json';
 
     /**
      * The console command description.

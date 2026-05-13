@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Requests\BatchGapAnalysisRequest;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CvAnalysisResource;
 use App\Http\Resources\GapAnalysisResource;
@@ -11,9 +12,8 @@ use App\Models\Job;
 use App\Models\User;
 use App\Services\Contracts\GapAnalysisServiceInterface;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
+use RuntimeException;
 
 class GapAnalysisController extends Controller
 {
@@ -36,7 +36,7 @@ class GapAnalysisController extends Controller
             $user = auth()->user();
 
             // Get job with skills
-            $job = Job::with('skills')->find($jobId);
+            $job = Job::with('requiredSkills')->find($jobId);
 
             if (!$job) {
                 return response()->json([
@@ -80,6 +80,22 @@ class GapAnalysisController extends Controller
                 'success' => true,
                 'data'    => new GapAnalysisResource($analysis),
             ]);
+        } catch (RuntimeException $e) {
+            $message = $e->getMessage();
+            $status = str_contains($message, 'No profile or skills found') ? 422 : 500;
+
+            Log::warning('Gap analysis validation/runtime issue', [
+                'job_id' => $jobId,
+                'error'  => $message,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $status === 422
+                    ? 'Upload a CV first so the system can extract skills and profile data.'
+                    : 'Failed to perform gap analysis',
+                'error'   => config('app.debug') ? $message : null,
+            ], $status);
         } catch (\Exception $e) {
             Log::error('Gap analysis failed', [
                 'job_id' => $jobId,
@@ -97,28 +113,15 @@ class GapAnalysisController extends Controller
     /**
      * Analyze skill gaps for multiple jobs.
      */
-    public function analyzeMultipleJobs(Request $request): JsonResponse
+    public function analyzeMultipleJobs(BatchGapAnalysisRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'job_ids'   => 'required|array|min:1|max:20',
-            'job_ids.*' => 'required|integer|exists:jobs,id',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors'  => $validator->errors(),
-            ], 422);
-        }
-
         try {
             /** @var User $user */
             $user = auth()->user();
-            $jobIds = $request->input('job_ids');
+            $jobIds = $request->validated('job_ids');
 
             // Get jobs with skills
-            $jobs = Job::with('skills')->whereIn('id', $jobIds)->get();
+            $jobs = Job::with('requiredSkills')->whereIn('id', $jobIds)->get();
 
             $results = [];
             $totalMatchPercentage = 0;
@@ -184,6 +187,17 @@ class GapAnalysisController extends Controller
                     'best_match'               => $bestMatch,
                 ],
             ]);
+        } catch (RuntimeException $e) {
+            $message = $e->getMessage();
+            $status = str_contains($message, 'No profile or skills found') ? 422 : 500;
+
+            return response()->json([
+                'success' => false,
+                'message' => $status === 422
+                    ? 'Upload a CV first so the system can extract skills and profile data.'
+                    : 'Failed to perform batch analysis',
+                'error'   => config('app.debug') ? $message : null,
+            ], $status);
         } catch (\Exception $e) {
             Log::error('Batch gap analysis failed', [
                 'error' => $e->getMessage(),

@@ -1,47 +1,34 @@
 @echo off
-cd /d %~dp0
-title CareerCompass Launcher (Portable Environment)
-echo ====================================================
-echo   Starting CareerCompass Graduation Project
-echo   with Market Intelligence System + AI Gateway
-echo   (Using Portable Environment)
-echo ====================================================
+setlocal
+cd /d "%~dp0"
+
+echo [CareerCompass] Starting the Docker stack with production overrides...
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+if errorlevel 1 (
+  echo [CareerCompass] Docker startup failed.
+  exit /b 1
+)
+
+echo [CareerCompass] Running Laravel migrations...
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec backend-api php artisan migrate --force --no-interaction
+if errorlevel 1 (
+  echo [CareerCompass] Migration command failed. Check backend logs.
+  exit /b 1
+)
+
+echo [CareerCompass] Current container status:
+docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
 
 echo.
-echo 1. Starting Frontend (React)...
-start "CareerCompass Frontend" cmd /k "cd frontend && npm run dev"
-
-echo 2. Starting Backend API (Laravel)...
-start "CareerCompass Backend" cmd /k "cd backend-api && php artisan serve --port 8000"
-
-echo 3. Starting AI CV Analyzer (Python / Port 8002)...
-start "AI CV Analyzer" cmd /k "cd ai-cv-analyzer && python -m uvicorn main:app --host 127.0.0.1 --port 8002 --reload"
-
-echo 4. Starting AI Gateway — Hybrid Orchestrator (Python / Port 8001)...
-start "AI Gateway" cmd /k "cd ai-hybrid-orchestrator && python -m uvicorn main_api:app --host 127.0.0.1 --port 8001 --reload"
-
-echo 5. Starting Queue Worker (Laravel)...
-start "CareerCompass Queue Worker" cmd /k "cd backend-api && php artisan queue:work --queue=high,default --tries=3 --timeout=300"
-
-echo 6. Starting Task Scheduler (Laravel)...
-start "CareerCompass Scheduler" cmd /k "cd backend-api && php artisan schedule:work"
-
+echo Frontend:   http://localhost
+echo API health: http://localhost/api/health
+echo API ready:  http://localhost/api/ready
+echo API v1:     http://localhost/api/v1/health
+echo AI health:  http://localhost:8000/
+echo Scraper:    http://localhost:8003/health
+echo Prometheus: http://localhost:9090
+echo Grafana:    http://localhost:3000
+echo MinIO:      http://localhost:9001
 echo.
-echo ====================================================
-echo   All services launched in separate windows!
-echo   - Frontend:         http://localhost:5173
-echo   - Backend API:      http://127.0.0.1:8000  (php artisan serve)
-echo   - AI CV Analyzer:   http://127.0.0.1:8002  (ai-cv-analyzer: internal parse-cv)
-echo   - AI Gateway:       http://127.0.0.1:8001  (ai-hybrid-orchestrator: scrape, process-cv, hybrid-match)
-echo   - Queue Worker:     Processing background jobs [On-Demand]
-echo   - Scheduler:        Running periodic tasks [Every 48h/Daily]
-echo ====================================================
-echo.
-echo Note: Keep all 6 windows open while using the app.
-echo Swagger UI (AI Gateway):   http://127.0.0.1:8001/docs
-echo Swagger UI (CV Analyzer):  http://127.0.0.1:8002/docs
-echo.
-pause
-
-
-
+echo Stop safely without deleting data:
+echo docker compose -f docker-compose.yml -f docker-compose.prod.yml stop

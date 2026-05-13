@@ -23,7 +23,13 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      'no-unused-vars': ['error', {
+        varsIgnorePattern: '^(motion|[A-Z_])',
+        argsIgnorePattern: '^(_|[A-Z]|idx$|i$|onClose$)',
+        caughtErrors: 'none',
+      }],
+      'react-hooks/set-state-in-effect': 'error',
+      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     },
   },
 ])

@@ -20,6 +20,9 @@ return new class extends Migration
             $table->string('salary_range')->nullable();
             $table->string('job_type')->nullable();
             $table->string('experience')->nullable();
+            $table->text('requirements')->nullable();
+            $table->json('skills')->nullable();
+            $table->string('work_type')->nullable(); // Onsite, Remote, Hybrid
             $table->string('url')->nullable();
             $table->string('source')->nullable()->comment('e.g., Wuzzuf, LinkedIn');
             $table->foreignId('scraping_source_id')

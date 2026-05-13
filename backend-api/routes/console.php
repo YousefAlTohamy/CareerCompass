@@ -28,6 +28,18 @@ Schedule::job(new ProcessMarketScraping())
         Log::error('Market scraping job failed');
     });
 
+// Execute Daily Scraping
+Schedule::command('scraping:execute-daily')
+    ->dailyAt('03:00')
+    ->name('daily-scraping-execution')
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        Log::info('Daily scraping execution completed successfully');
+    })
+    ->onFailure(function () {
+        Log::error('Daily scraping execution failed');
+    });
+
 // Skill Importance Calculation: Daily at 04:00 AM
 // Recalculates skill importance scores for all job titles after scraping
 // Uses withoutOverlapping to prevent concurrent executions
@@ -41,6 +53,17 @@ Schedule::command('skills:calculate-importance --all')
     })
     ->onFailure(function () {
         Log::error('Skill importance calculation failed');
+    });
+
+Schedule::command('cv:cleanup-uploads')
+    ->dailyAt('01:30')
+    ->name('cv-upload-cleanup')
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        Log::info('CV upload cleanup completed successfully');
+    })
+    ->onFailure(function () {
+        Log::error('CV upload cleanup failed');
     });
 
 // Scraping Source Health Check: Daily at 05:00 AM

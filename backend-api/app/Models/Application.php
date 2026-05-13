@@ -15,6 +15,10 @@ class Application extends Model
         'applied_at'
     ];
 
+    protected $casts = [
+        'applied_at' => 'datetime',
+    ];
+
     /**
      * Get the user that owns the application.
      */

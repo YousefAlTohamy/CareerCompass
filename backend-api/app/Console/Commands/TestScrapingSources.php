@@ -2,7 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Job;
+use App\Models\ScrapingJob;
 use App\Models\ScrapingSource;
+use App\Services\ScraperClient;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 
@@ -200,7 +203,7 @@ class TestScrapingSources extends Command
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // HTML Source Test  (delegates to the Python AI Engine)
+    // HTML Source Test  (delegates to the Python scraper service)
     // ────────────────────────────────────────────────────────────────────────
 
     /**
@@ -213,51 +216,42 @@ class TestScrapingSources extends Command
     private function testHtmlSource($source, string $resolvedEndpoint, $query, int $timeout): array
     {
         try {
-            $aiEngineUrl = config('services.ai_engine.url', 'http://127.0.0.1:8001');
+            $before = Job::where('scraping_source_id', $source->id)->count();
+            $scrapingJob = ScrapingJob::create([
+                'job_title' => (string) $query,
+                'type' => 'on_demand',
+                'status' => 'processing',
+                'started_at' => now(),
+            ]);
 
-            $response = Http::timeout($timeout)
-                ->withoutVerifying()
-                ->post("{$aiEngineUrl}/test-source", [
-                    'source' => [
-                        'id'       => $source->id,
-                        'name'     => $source->name,
-                        'endpoint' => $resolvedEndpoint,
-                        'type'     => $source->type,
-                        // Force object serialization so Python receives {} instead of [] for empty arrays
-                        'headers'  => (object) ($source->headers ?? []),
-                        'params'   => (object) ($source->params  ?? []),
-                    ],
-                    'query'       => $query,
-                    'max_results' => 2,
-                ]);
+            app(ScraperClient::class)->scrape(
+                query: (string) $query,
+                limit: 2,
+                scrapingJobId: $scrapingJob->id,
+                sourceId: $source->id,
+            );
 
-            if (!$response->successful()) {
-                return [
-                    'ok'    => false,
-                    'error' => "AI Engine returned HTTP {$response->status()}: " . $this->extractError($response->body()),
-                ];
+            sleep(2);
+            $jobs = Job::where('scraping_source_id', $source->id)->latest()->take(2)->get();
+            $count = max(0, Job::where('scraping_source_id', $source->id)->count() - $before);
+
+            if ($jobs->isEmpty()) {
+                $scrapingJob->markAsCompleted(0, 0, 0, 0, 0);
+                return ['ok' => false, 'error' => 'No jobs returned. The site may be blocking the scraper.'];
             }
 
-            $data  = $response->json();
-            $count = $data['total_fetched'] ?? count($data['jobs'] ?? []);
-            $jobs  = $data['jobs'] ?? [];
-
-            if (empty($jobs)) {
-                $msg = $data['message'] ?? 'No jobs returned – site may be blocking the scraper.';
-                return ['ok' => false, 'error' => $msg];
-            }
-
-            $firstTitle = $jobs[0]['title'] ?? '(no title)';
+            $scrapingJob->markAsCompleted($count, $count, 0, $count, 0);
+            $firstTitle = $jobs->first()->title ?? '(no title)';
 
             return [
                 'ok'      => true,
-                'message' => "{$count} job(s) scraped via Python engine",
+                'message' => "{$count} new job(s) imported via scraper service",
                 'sample'  => "\"{$firstTitle}\"",
             ];
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
             return [
                 'ok'    => false,
-                'error' => "Cannot reach AI Engine at " . config('services.ai_engine.url', 'http://127.0.0.1:8001') .
+                'error' => "Cannot reach scraper service at " . config('services.scraper_service.url', 'http://127.0.0.1:8003') .
                     " — is it running? ({$e->getMessage()})",
             ];
         } catch (\Exception $e) {

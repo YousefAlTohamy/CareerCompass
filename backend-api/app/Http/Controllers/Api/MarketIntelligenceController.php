@@ -21,7 +21,6 @@ class MarketIntelligenceController extends Controller
     {
         // Find statistics for the role
         $statistics = JobRoleStatistic::where('role_title', 'like', "%{$roleTitle}%")
-            ->fresh()
             ->first();
 
         if (!$statistics) {
@@ -53,7 +52,7 @@ class MarketIntelligenceController extends Controller
      */
     public function getTrendingSkills(Request $request)
     {
-        $limit = $request->input('limit', 20);
+        $limit = min(max((int) $request->integer('limit', 20), 1), 100);
         $skillType = $request->input('type'); // 'technical' or 'soft'
 
         // Aggregate skill frequency across all jobs
@@ -104,12 +103,10 @@ class MarketIntelligenceController extends Controller
      */
     public function getSkillDemand(string $roleTitle)
     {
-        // Get all jobs matching the role
-        $jobs = Job::where('title', 'like', "%{$roleTitle}%")
-            ->with('skills')
-            ->get();
+        $jobsQuery = Job::where('title', 'like', "%{$roleTitle}%");
+        $totalJobs = $jobsQuery->count();
 
-        if ($jobs->isEmpty()) {
+        if ($totalJobs === 0) {
             return response()->json([
                 'success' => false,
                 'message' => "No jobs found for '{$roleTitle}'",
@@ -117,12 +114,11 @@ class MarketIntelligenceController extends Controller
             ], 404);
         }
 
-        $totalJobs = $jobs->count();
-
         // Calculate skill demand
         $skillDemand = DB::table('job_skills')
             ->join('skills', 'job_skills.skill_id', '=', 'skills.id')
-            ->whereIn('job_skills.job_id', $jobs->pluck('id'))
+            ->join('job_postings', 'job_skills.job_id', '=', 'job_postings.id')
+            ->where('job_postings.title', 'like', "%{$roleTitle}%")
             ->select(
                 'skills.id',
                 'skills.name',
@@ -187,7 +183,7 @@ class MarketIntelligenceController extends Controller
         $topSkills = DB::table('job_skills')
             ->join('skills', 'job_skills.skill_id', '=', 'skills.id')
             ->select('skills.name', DB::raw('COUNT(*) as count'))
-            ->groupBy('skills.name')
+            ->groupBy('skills.id', 'skills.name')
             ->orderBy('count', 'DESC')
             ->limit(5)
             ->get();

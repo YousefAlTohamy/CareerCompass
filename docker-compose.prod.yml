@@ -1,0 +1,291 @@
+services:
+  backend-api:
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      LOG_CHANNEL: stack
+      LOG_STACK: structured
+      FILESYSTEM_DISK: s3
+      CV_STORAGE_DISK: s3
+      CV_STORAGE_PREFIX: cv-uploads
+      CV_UPLOAD_RETENTION_DAYS: 365
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-careercompass}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-change-me-minio-password}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      AWS_BUCKET: career-compass
+      AWS_ENDPOINT: http://minio:9000
+      AWS_URL: ${AWS_URL:-http://localhost:9000/career-compass}
+      AWS_USE_PATH_STYLE_ENDPOINT: "true"
+      MONITORING_TOKEN: ${MONITORING_TOKEN:-production-monitoring-token}
+      LARAVEL_INTERNAL_API_URL: http://nginx/api/v1
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.50'
+          memory: 1024M
+
+  backend-worker:
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      LOG_CHANNEL: stack
+      LOG_STACK: structured
+      FILESYSTEM_DISK: s3
+      CV_STORAGE_DISK: s3
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-careercompass}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-change-me-minio-password}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      AWS_BUCKET: career-compass
+      AWS_ENDPOINT: http://minio:9000
+      AWS_URL: ${AWS_URL:-http://localhost:9000/career-compass}
+      AWS_USE_PATH_STYLE_ENDPOINT: "true"
+      MONITORING_TOKEN: ${MONITORING_TOKEN:-production-monitoring-token}
+      LARAVEL_INTERNAL_API_URL: http://nginx/api/v1
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 768M
+
+  backend-worker-high:
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      LOG_CHANNEL: stack
+      LOG_STACK: structured
+      FILESYSTEM_DISK: s3
+      CV_STORAGE_DISK: s3
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-careercompass}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-change-me-minio-password}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      AWS_BUCKET: career-compass
+      AWS_ENDPOINT: http://minio:9000
+      AWS_URL: ${AWS_URL:-http://localhost:9000/career-compass}
+      AWS_USE_PATH_STYLE_ENDPOINT: "true"
+      MONITORING_TOKEN: ${MONITORING_TOKEN:-production-monitoring-token}
+      LARAVEL_INTERNAL_API_URL: http://nginx/api/v1
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 768M
+
+  backend-worker-scraping:
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      LOG_CHANNEL: stack
+      LOG_STACK: structured
+      FILESYSTEM_DISK: s3
+      CV_STORAGE_DISK: s3
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-careercompass}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-change-me-minio-password}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      AWS_BUCKET: career-compass
+      AWS_ENDPOINT: http://minio:9000
+      AWS_URL: ${AWS_URL:-http://localhost:9000/career-compass}
+      AWS_USE_PATH_STYLE_ENDPOINT: "true"
+      MONITORING_TOKEN: ${MONITORING_TOKEN:-production-monitoring-token}
+      LARAVEL_INTERNAL_API_URL: http://nginx/api/v1
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 1024M
+
+  backend-worker-ai:
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      LOG_CHANNEL: stack
+      LOG_STACK: structured
+      FILESYSTEM_DISK: s3
+      CV_STORAGE_DISK: s3
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-careercompass}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-change-me-minio-password}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      AWS_BUCKET: career-compass
+      AWS_ENDPOINT: http://minio:9000
+      AWS_URL: ${AWS_URL:-http://localhost:9000/career-compass}
+      AWS_USE_PATH_STYLE_ENDPOINT: "true"
+      MONITORING_TOKEN: ${MONITORING_TOKEN:-production-monitoring-token}
+      LARAVEL_INTERNAL_API_URL: http://nginx/api/v1
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 768M
+
+  backend-worker-emails:
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      LOG_CHANNEL: stack
+      LOG_STACK: structured
+      FILESYSTEM_DISK: s3
+      CV_STORAGE_DISK: s3
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-careercompass}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-change-me-minio-password}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      AWS_BUCKET: career-compass
+      AWS_ENDPOINT: http://minio:9000
+      AWS_URL: ${AWS_URL:-http://localhost:9000/career-compass}
+      AWS_USE_PATH_STYLE_ENDPOINT: "true"
+      MONITORING_TOKEN: ${MONITORING_TOKEN:-production-monitoring-token}
+      LARAVEL_INTERNAL_API_URL: http://nginx/api/v1
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+
+  backend-scheduler:
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      LOG_CHANNEL: stack
+      LOG_STACK: structured
+      FILESYSTEM_DISK: s3
+      CV_STORAGE_DISK: s3
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-careercompass}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-change-me-minio-password}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      AWS_BUCKET: career-compass
+      AWS_ENDPOINT: http://minio:9000
+      AWS_URL: ${AWS_URL:-http://localhost:9000/career-compass}
+      AWS_USE_PATH_STYLE_ENDPOINT: "true"
+      MONITORING_TOKEN: ${MONITORING_TOKEN:-production-monitoring-token}
+      LARAVEL_INTERNAL_API_URL: http://nginx/api/v1
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    environment:
+      VITE_API_URL: /api/v1
+      VITE_API_PROXY_TARGET: http://nginx
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 256M
+
+  ai-cv-analyzer:
+    environment:
+      CV_TIMEOUT_SECONDS: ${CV_TIMEOUT_SECONDS:-90}
+    restart: unless-stopped
+    mem_limit: 2g
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 2048M
+
+  ai-job-miner:
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1.00'
+          memory: 768M
+
+  nginx:
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-careercompass}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-careercompass-secret}
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    restart: unless-stopped
+    networks:
+      - cc-network
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD}; do sleep 2; done &&
+      mc mb --ignore-existing local/career-compass &&
+      mc anonymous set none local/career-compass &&
+      exit 0"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-careercompass}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-careercompass-secret}
+    restart: "no"
+    networks:
+      - cc-network
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+    volumes:
+      - ./docker/prometheus/prometheus.yml.tpl:/etc/prometheus/prometheus.yml.tpl:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    environment:
+      MONITORING_TOKEN: ${MONITORING_TOKEN:-production-monitoring-token}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >
+        sed "s/__MONITORING_TOKEN__/$${MONITORING_TOKEN}/g" /etc/prometheus/prometheus.yml.tpl > /etc/prometheus/prometheus.yml &&
+        exec /bin/prometheus --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/prometheus
+    restart: unless-stopped
+    networks:
+      - cc-network
+
+  grafana:
+    image: grafana/grafana-oss:11.4.0
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-careercompass}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change-me-grafana-password}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - cc-network
+
+volumes:
+  minio-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  cc-network:
+    driver: bridge

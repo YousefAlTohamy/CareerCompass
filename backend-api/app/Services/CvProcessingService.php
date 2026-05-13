@@ -13,11 +13,11 @@ use App\Models\User;
 use App\Models\UserExperience;
 use App\Services\Contracts\CvProcessingServiceInterface;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -26,9 +26,12 @@ class CvProcessingService implements CvProcessingServiceInterface
     private string $gatewayUrl;
     private int $timeout;
 
-    public function __construct()
-    {
-        $this->gatewayUrl = env('CV_AI_SERVICE_URL', 'http://127.0.0.1:8001/api/parse-cv');
+    public function __construct(
+        private readonly SkillSyncService $skillSyncService,
+        private readonly CvStorageService $cvStorageService,
+    ) {
+        $baseUrl = rtrim(config('services.ai_cv_analyzer.url', 'http://127.0.0.1:8002'), '/');
+        $this->gatewayUrl = "{$baseUrl}/api/parse-cv";
         $this->timeout    = (int) config('services.ai_cv_analyzer.timeout', 120);
     }
 
@@ -45,10 +48,8 @@ class CvProcessingService implements CvProcessingServiceInterface
      */
     public function processCv(UploadedFile $file, User $user): array
     {
-        // ── Step 1: Call V3 AI Gateway ─────────────────────────────────────
         $v3Response = $this->callV3Gateway($file);
 
-        // Validate parsing status — reject empty/unparseable CVs
         $parsingStatus = $v3Response['parsing_status'] ?? 'success';
         if ($parsingStatus === 'empty_file' || $parsingStatus === 'no_text') {
             throw new RuntimeException(
@@ -63,16 +64,32 @@ class CvProcessingService implements CvProcessingServiceInterface
             ]);
         }
 
-        // ── Step 2: Persist all data within a single DB transaction ─────────
+        $storedCv = $this->cvStorageService->store($file, $user);
         $syncedSkills = new Collection();
-        DB::transaction(function () use ($user, $v3Response, &$syncedSkills): void {
-            $this->persistUserProfile($user, $v3Response);
-            $this->persistUserExperiences($user, $v3Response);
-            $syncedSkills = $this->persistUserSkills($user, $v3Response);
-            $this->persistCvAnalysis($user, $v3Response);
-        });
+        $shouldPersistStructuredData = !in_array($parsingStatus, ['timeout', 'error'], true);
 
-        // ── Step 3: Self-expanding role discovery ───────────────────────────
+        try {
+            DB::transaction(function () use ($user, $v3Response, $storedCv, $shouldPersistStructuredData, &$syncedSkills): void {
+                if ($shouldPersistStructuredData) {
+                    $this->persistUserProfile($user, $v3Response);
+                    $this->persistUserExperiences($user, $v3Response);
+                    $syncedSkills = $this->persistUserSkills($user, $v3Response);
+                }
+
+                $this->persistCvAnalysis($user, $v3Response, $storedCv);
+            });
+        } catch (\Throwable $e) {
+            $this->cvStorageService->delete($storedCv['disk'] ?? null, $storedCv['path'] ?? null);
+            throw $e;
+        }
+
+        if (!$shouldPersistStructuredData) {
+            Log::warning('CV parsed with timeout/error; structured profile data was not refreshed', [
+                'user_id' => $user->id,
+                'parsing_status' => $parsingStatus,
+            ]);
+        }
+
         $domain    = $v3Response['analysis']['primary_domain'] ?? null;
         $isNewRole = false;
         if ($domain !== null && $domain !== '') {
@@ -113,11 +130,19 @@ class CvProcessingService implements CvProcessingServiceInterface
             'file_size' => $file->getSize(),
         ]);
 
+        $handle = fopen($file->getPathname(), 'rb');
+        if ($handle === false) {
+            throw new RuntimeException('Unable to read uploaded CV.');
+        }
+
         try {
             $response = Http::timeout($this->timeout)
+                ->connectTimeout(10)
+                ->acceptJson()
+                ->withHeaders($this->correlationHeaders())
                 ->attach(
                     'file',
-                    fopen($file->getPathname(), 'r'),
+                    $handle,
                     (string) $fileName
                 )
                 ->post($url);
@@ -156,17 +181,17 @@ class CvProcessingService implements CvProcessingServiceInterface
                 'timeout' => $this->timeout,
                 'error'   => $e->getMessage(),
             ]);
-            throw new RuntimeException(
-                'AI CV parser is currently unavailable. Please try again later.',
-                0,
-                $e
-            );
+            throw $e;
         } catch (\Throwable $e) {
             Log::error('V3 AI Gateway request failed', [
                 'url'   => $url,
                 'error' => $e->getMessage(),
             ]);
             throw new RuntimeException('Failed to communicate with the AI CV parser.', 0, $e);
+        } finally {
+            if (is_resource($handle)) {
+                fclose($handle);
+            }
         }
     }
 
@@ -227,12 +252,21 @@ class CvProcessingService implements CvProcessingServiceInterface
      */
     private function persistUserExperiences(User $user, array $v3Response): Collection
     {
-        $user->experiences()->delete();
+        $parsingStatus = strtolower((string) ($v3Response['parsing_status'] ?? 'success'));
+        if (in_array($parsingStatus, ['timeout', 'error'], true)) {
+            Log::warning('Skipping experience refresh because CV parsing did not complete', [
+                'user_id' => $user->id,
+                'parsing_status' => $parsingStatus,
+            ]);
+            return new Collection();
+        }
 
         $items = $v3Response['experience']['items'] ?? [];
         if (!is_array($items)) {
             return new Collection();
         }
+
+        $user->experiences()->delete();
 
         $created = new Collection();
         foreach ($items as $item) {
@@ -324,6 +358,15 @@ class CvProcessingService implements CvProcessingServiceInterface
      */
     private function persistUserSkills(User $user, array $v3Response): Collection
     {
+        $parsingStatus = strtolower((string) ($v3Response['parsing_status'] ?? 'success'));
+        if (in_array($parsingStatus, ['timeout', 'error'], true)) {
+            Log::warning('Skipping skill refresh because CV parsing did not complete', [
+                'user_id' => $user->id,
+                'parsing_status' => $parsingStatus,
+            ]);
+            return new Collection();
+        }
+
         $items = $v3Response['skills']['items'] ?? [];
         if (!is_array($items) || empty($items)) {
             Log::warning('No skills returned by V3 AI Gateway', ['user_id' => $user->id]);
@@ -331,24 +374,21 @@ class CvProcessingService implements CvProcessingServiceInterface
             return new Collection();
         }
 
+        $skillPayloads = [];
         $syncData = [];
         foreach ($items as $item) {
             if (!is_array($item)) {
                 continue;
             }
 
-            $name = trim((string) ($item['name'] ?? ''));
-            if ($name === '') {
+            $name = $this->skillSyncService->normalizeName((string) ($item['name'] ?? ''));
+            if ($name === null) {
                 continue;
             }
 
             $category = (string) ($item['category'] ?? 'other');
             $type     = $this->mapSkillCategoryToType($category);
-
-            $skill = Skill::firstOrCreate(
-                ['name' => $name],
-                ['type' => $type]
-            );
+            $skillPayloads[] = ['name' => $name, 'type' => $type];
 
             $confidenceScore = isset($item['confidence_score'])
                 ? (float) $item['confidence_score']
@@ -363,15 +403,23 @@ class CvProcessingService implements CvProcessingServiceInterface
             }
 
             // Pivot: confidence_score and evidence (nullable)
-            $syncData[$skill->id] = [
+            $syncData[$name] = [
                 'confidence_score' => $confidenceScore,
                 'evidence'         => $evidence ?: null,
             ];
         }
 
-        $user->skills()->sync($syncData);
+        $skills = $this->skillSyncService->findOrCreateMany($skillPayloads);
+        $syncById = [];
+        foreach ($skills as $skill) {
+            if (!isset($syncData[$skill->name])) {
+                continue;
+            }
 
-        $skills = Skill::whereIn('id', array_keys($syncData))->get();
+            $syncById[$skill->id] = $syncData[$skill->name];
+        }
+
+        $user->skills()->sync($syncById);
 
         Log::info('User skills synced from V3 CV', [
             'user_id'      => $user->id,
@@ -398,7 +446,7 @@ class CvProcessingService implements CvProcessingServiceInterface
      *
      * The metadata JSON column stores career health details for frontend consumption.
      */
-    private function persistCvAnalysis(User $user, array $v3Response): void
+    private function persistCvAnalysis(User $user, array $v3Response, array $storedCv): void
     {
         $analysis = $v3Response['analysis'] ?? [];
         $expMeta  = $analysis['metadata']['experience'] ?? [];
@@ -414,6 +462,13 @@ class CvProcessingService implements CvProcessingServiceInterface
         CvAnalysis::updateOrCreate(
             ['user_id' => $user->id],
             [
+                'cv_disk'            => $storedCv['disk'],
+                'cv_path'            => $storedCv['path'],
+                'cv_original_name'   => $storedCv['original_name'],
+                'cv_mime'            => $storedCv['mime'],
+                'cv_size'            => $storedCv['size'],
+                'cv_sha256'          => $storedCv['sha256'],
+                'cv_uploaded_at'     => $storedCv['uploaded_at'],
                 'parsing_status'     => (string) ($v3Response['parsing_status'] ?? 'success'),
                 'seniority'          => $this->sanitizeString($analysis['seniority'] ?? null, CvAnalysis::SENIORITY_LEVELS),
                 'predicted_role'     => $this->sanitizeStringValue($analysis['predicted_role'] ?? null, 200),
@@ -509,6 +564,13 @@ class CvProcessingService implements CvProcessingServiceInterface
             'experience'         => $v3Response['experience'] ?? [],
             'analysis'           => $analysis,
         ];
+    }
+
+    private function correlationHeaders(): array
+    {
+        return app()->bound('request.id')
+            ? [(string) config('observability.request_id_header', 'X-Request-ID') => app('request.id')]
+            : [];
     }
 
     /**

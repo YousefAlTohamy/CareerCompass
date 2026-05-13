@@ -31,6 +31,16 @@ export const testSources = async () => {
     return response.data;
 };
 
+export const testSingleSource = async (id) => {
+    const response = await apiClient.post(`${BASE_URL}/${id}/test`, {}, { timeout: 60000 });
+    return response.data;
+};
+
+export const getScrapingStatuses = async () => {
+    const response = await apiClient.get(`${BASE_URL}/status`);
+    return response.data;
+};
+
 // Target Job Roles
 const ROLES_URL = '/admin/target-roles';
 

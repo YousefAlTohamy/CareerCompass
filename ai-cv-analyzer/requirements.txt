@@ -6,7 +6,6 @@ pydantic>=2.6.1
 # Layer 1: Understanding & OCR
 PyMuPDF>=1.25.3
 easyocr>=1.7.1
-python-docx>=1.1.0
 pdfplumber>=0.11.9
 opencv-python-headless>=4.9.0.80
 transformers>=4.37.2
@@ -15,13 +14,13 @@ sentencepiece>=0.2.0
 
 # Layer 2 & 3: Classification & Matching
 sentence-transformers>=2.3.1
-scikit-learn>=1.5.0
 
 # Utilities
 python-dotenv>=1.0.1
 numpy>=1.26.4
-pandas>=2.2.0
 datasets>=4.7.0
 google-genai>=1.67.0
 python-dateutil>=2.9.0   # experience_engine (date parsing)
 rapidfuzz>=3.12.2       # canonicalizer (skill deduplication)
+psutil>=5.9.8           # orchestrator (memory monitoring)
+requests>=2.31.0        # tests

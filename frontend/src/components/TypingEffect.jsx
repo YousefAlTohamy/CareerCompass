@@ -7,20 +7,22 @@ import { useState, useEffect } from 'react';
  * @param {string} className - Additional CSS classes.
  */
 export default function TypingEffect({ text, speed = 30, className = "" }) {
-  const [displayedText, setDisplayedText] = useState('');
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [typingState, setTypingState] = useState({ text, index: 0 });
 
-  useEffect(() => {
-    // Reset if text changes
-    setDisplayedText('');
-    setCurrentIndex(0);
-  }, [text]);
+  const currentIndex = typingState.text === text ? typingState.index : 0;
+  const displayedText = text.slice(0, currentIndex);
 
   useEffect(() => {
     if (currentIndex < text.length) {
       const timeout = setTimeout(() => {
-        setDisplayedText((prev) => prev + text[currentIndex]);
-        setCurrentIndex((prev) => prev + 1);
+        setTypingState((previous) => {
+          const previousIndex = previous.text === text ? previous.index : 0;
+
+          return {
+            text,
+            index: Math.min(previousIndex + 1, text.length),
+          };
+        });
       }, speed);
 
       return () => clearTimeout(timeout);

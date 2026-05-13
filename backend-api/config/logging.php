@@ -1,5 +1,6 @@
 <?php
 
+use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
@@ -102,6 +103,21 @@ return [
                 'stream' => 'php://stderr',
             ],
             'formatter' => env('LOG_STDERR_FORMATTER'),
+            'processors' => [PsrLogMessageProcessor::class],
+        ],
+
+        'structured' => [
+            'driver' => 'monolog',
+            'level' => env('LOG_LEVEL', 'info'),
+            'handler' => StreamHandler::class,
+            'handler_with' => [
+                'stream' => 'php://stderr',
+            ],
+            'formatter' => JsonFormatter::class,
+            'formatter_with' => [
+                'batchMode' => JsonFormatter::BATCH_MODE_JSON,
+                'appendNewline' => true,
+            ],
             'processors' => [PsrLogMessageProcessor::class],
         ],
 

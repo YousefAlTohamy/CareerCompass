@@ -3,14 +3,35 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreScrapingSourceRequest;
+use App\Http\Requests\UpdateScrapingSourceRequest;
 use App\Http\Resources\ScrapingSourceResource;
+use App\Models\ScrapingJob;
 use App\Models\ScrapingSource;
+use App\Services\ScraperClient;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
 class ScrapingSourceController extends Controller
 {
+    public function __construct(private readonly ScraperClient $scraperClient)
+    {
+    }
+
+    public function getStatus()
+    {
+        $sources = ScrapingSource::active()->get();
+        $statuses = [];
+        foreach ($sources as $source) {
+            $status = Cache::get("scraping_source_{$source->id}_status", [
+                'is_scraping' => false,
+                'count' => 0
+            ]);
+            $statuses[$source->id] = $status;
+        }
+        return response()->json(['success' => true, 'data' => $statuses]);
+    }
     public function index(Request $request)
     {
         $query = ScrapingSource::query();
@@ -28,21 +49,9 @@ class ScrapingSourceController extends Controller
         return ScrapingSourceResource::collection($sources);
     }
 
-    public function store(Request $request)
+    public function store(StoreScrapingSourceRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'type' => 'required|in:api,html,spa',
-            'mode' => 'sometimes|in:static,discovery',
-            'pattern' => 'nullable|string|max:512',
-            'endpoint' => 'required|url',
-            'method' => 'required|in:GET,POST',
-            'headers' => 'nullable|array',
-            'params' => 'nullable|array',
-            'is_active' => 'boolean',
-        ]);
-
-        // Map boolean is_active to string status
+        $validated = $request->validated();
         $status = ($validated['is_active'] ?? true) ? 'active' : 'inactive';
 
         $source = ScrapingSource::create([
@@ -51,7 +60,7 @@ class ScrapingSourceController extends Controller
             'mode' => $validated['mode'] ?? 'static',
             'pattern' => $validated['pattern'] ?? null,
             'endpoint' => $validated['endpoint'],
-            'method' => $validated['method'],
+            'method' => $validated['method'] ?? 'GET',
             'headers' => $validated['headers'] ?? [],
             'params' => $validated['params'] ?? [],
             'status' => $status,
@@ -60,25 +69,11 @@ class ScrapingSourceController extends Controller
         return new ScrapingSourceResource($source);
     }
 
-    public function update(Request $request, ScrapingSource $scrapingSource)
+    public function update(UpdateScrapingSourceRequest $request, ScrapingSource $scrapingSource)
     {
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'type' => 'sometimes|in:api,html,spa',
-            'mode' => 'sometimes|in:static,discovery',
-            'pattern' => 'nullable|string|max:512',
-            'endpoint' => 'sometimes|url',
-            'method' => 'sometimes|in:GET,POST',
-            'headers' => 'nullable|array',
-            'params' => 'nullable|array',
-            'is_active' => 'boolean',
-        ]);
-
-        $data = $validated;
-
-        // Handle is_active -> status mapping if present
-        if (isset($validated['is_active'])) {
-            $data['status'] = $validated['is_active'] ? 'active' : 'inactive';
+        $data = $request->validated();
+        if (isset($data['is_active'])) {
+            $data['status'] = $data['is_active'] ? 'active' : 'inactive';
             unset($data['is_active']);
         }
 
@@ -101,29 +96,69 @@ class ScrapingSourceController extends Controller
 
     public function test()
     {
-        set_time_limit(300); // Allow up to 5 minutes for the test command
+        set_time_limit(300);
 
         try {
-            // Run the command and capture output
-            Artisan::call('scrape:test-sources', [
-                '--timeout' => 45,
-                '--query'   => 'Software Engineer',
-            ]);
-            $output = Artisan::output();
-
-            // Basic heuristic to determine success
-            $success = !str_contains($output, 'CRITICAL ERROR') && str_contains($output, 'Results:');
-
-            return response()->json([
-                'success' => $success,
-                'output' => $output
-            ]);
+            // Run global diagnostics: just testing the first active source as a sample
+            $source = ScrapingSource::active()->first();
+            if (!$source) {
+                return response()->json([
+                    'success' => false,
+                    'output' => "No active sources found for testing."
+                ]);
+            }
+            
+            return $this->runScrapyTest($source);
         } catch (\Exception $e) {
-            Log::error("Error running scrape test: " . $e->getMessage());
+            Log::error("Error running global scrape test: " . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'output' => "Error running command: " . $e->getMessage()
             ], 500);
         }
+    }
+
+    public function testSingle($id)
+    {
+        set_time_limit(300);
+        try {
+            $source = ScrapingSource::findOrFail($id);
+            return $this->runScrapyTest($source);
+        } catch (\Exception $e) {
+            Log::error("Error testing single source: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'output' => "Error running command: " . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function runScrapyTest(ScrapingSource $source)
+    {
+        $scrapingJob = ScrapingJob::create([
+            'job_title' => 'Software',
+            'type' => 'on_demand',
+            'status' => 'processing',
+            'started_at' => now(),
+        ]);
+
+        $result = $this->scraperClient->scrape(
+            query: 'Software',
+            limit: 1,
+            scrapingJobId: $scrapingJob->id,
+            sourceId: $source->id,
+        );
+
+        $output = trim(($result['stdout'] ?? '') . "\n" . ($result['stderr'] ?? ''));
+        $success = (bool) ($result['success'] ?? false) && !str_contains($output, 'CRITICAL ERROR');
+
+        $success
+            ? $scrapingJob->markAsCompleted(1, 0, 0, 1, 0, $result['elapsed_ms'] ?? null)
+            : $scrapingJob->markAsFailed($output ?: 'Scraper test failed');
+
+        return response()->json([
+            'success' => $success,
+            'output' => $output
+        ]);
     }
 }

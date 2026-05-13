@@ -25,9 +25,21 @@ class Job extends Model
         'salary_range',
         'job_type',
         'experience',
+        'requirements',
+        'skills',
+        'work_type',
         'url',
         'source',
         'scraping_source_id',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'skills' => 'array',
     ];
 
     // -----------------------------------------------------------------
@@ -37,11 +49,22 @@ class Job extends Model
     /**
      * Get the skills required for this job.
      */
-    public function skills(): BelongsToMany
+    public function requiredSkills(): BelongsToMany
     {
         return $this->belongsToMany(Skill::class, 'job_skills')
             ->withPivot('required', 'importance_score', 'importance_category')
             ->withTimestamps();
+    }
+
+    /**
+     * Backward-compatible alias for older code paths.
+     *
+     * Do not use property access ($job->skills) for the pivot relation because
+     * the job_postings table also has a raw JSON `skills` column.
+     */
+    public function skills(): BelongsToMany
+    {
+        return $this->requiredSkills();
     }
 
     /**

@@ -23,7 +23,7 @@ const getInitials = (name) => {
 };
 
 export default function Profile() {
-  const { user, logout, refreshUser } = useAuth();
+  const { user, logout } = useAuth();
   const { t, i18n } = useTranslation();
   const isRtl = i18n.dir() === 'rtl';
   const navigate = useNavigate();

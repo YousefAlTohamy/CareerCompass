@@ -21,7 +21,13 @@
 **/*$py.class
 **/venv/
 **/env/
+**/.venv/
 **/.pytest_cache/
+**/.mypy_cache/
+**/.cache/
+**/.coverage
+**/coverage/
+**/htmlcov/
 ai-*/models/
 
 # Frontend Caches
@@ -29,6 +35,11 @@ frontend/node_modules/
 frontend/.vite/
 frontend/dist/
 frontend/.eslintcache
+frontend/build/
+
+# Logs and local run output
+*.log
+run*_output.txt
 
 # IDEs
 .vscode/
@@ -43,6 +54,8 @@ Thumbs.db
 # Custom overrides
 /backend-api/tools/
 /start_all_portable.bat
+/.env
+/.env.local
 
 # Training Data
 ai-cv-analyzer/training/train_real_tech.json

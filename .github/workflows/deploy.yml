@@ -1,0 +1,65 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment environment"
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+          - production
+
+concurrency:
+  group: deploy-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    name: Branch and Environment Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce production branch
+        if: inputs.environment == 'production' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/master'
+        run: |
+          echo "Production deployments are only allowed from main/master."
+          exit 1
+
+  deploy:
+    name: Deploy Compose Stack
+    runs-on: ubuntu-latest
+    needs: gate
+    environment: ${{ inputs.environment }}
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload release bundle
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: "."
+          target: "${{ secrets.DEPLOY_PATH }}/release-${{ github.sha }}"
+
+      - name: Activate release
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.DEPLOY_PATH }}"
+            ln -sfn "release-${{ github.sha }}" current
+            cd current
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml pull || true
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build --remove-orphans
+            docker compose exec -T backend-api php artisan migrate --force
+            docker compose exec -T backend-api php artisan config:cache
+            docker compose exec -T backend-api php artisan route:cache
+            bash scripts/smoke/http-smoke.sh "${{ secrets.DEPLOY_BASE_URL }}"

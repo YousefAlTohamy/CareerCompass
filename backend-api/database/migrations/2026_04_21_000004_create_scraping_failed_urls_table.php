@@ -14,14 +14,14 @@ return new class extends Migration
     {
         Schema::create('scraping_failed_urls', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('scraping_job_id')->constrained('scraping_jobs')->cascadeOnDelete();
+            $table->foreignId('scraping_source_id')->constrained('scraping_sources')->cascadeOnDelete();
             $table->text('url');
-            $table->string('reason', 255)->default('unknown');
-            $table->string('source_name', 255)->nullable();
+            $table->text('error_message')->nullable();
             $table->boolean('retried')->default(false);
+            $table->timestamp('failed_at')->useCurrent();
             $table->timestamps();
 
-            $table->index('scraping_job_id');
+            $table->index('scraping_source_id');
         });
     }
 

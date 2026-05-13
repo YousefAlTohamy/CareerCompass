@@ -1,0 +1,121 @@
+name: Backend
+
+on:
+  pull_request:
+    paths:
+      - "backend-api/**"
+      - ".github/workflows/backend.yml"
+  push:
+    branches: ["main", "master", "develop"]
+    paths:
+      - "backend-api/**"
+      - ".github/workflows/backend.yml"
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Laravel Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: career_compass_test
+          MYSQL_USER: cc_user
+          MYSQL_PASSWORD: cc_password
+          MYSQL_ROOT_PASSWORD: root_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot_password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    defaults:
+      run:
+        working-directory: backend-api
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, dom, fileinfo, mysql, pdo_mysql, sqlite, pdo_sqlite, gd, zip, intl, pcntl, bcmath
+          coverage: none
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: composer-${{ runner.os }}-${{ hashFiles('backend-api/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare app
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          php artisan config:clear
+        env:
+          APP_ENV: testing
+          APP_DEBUG: false
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: career_compass_test
+          DB_USERNAME: cc_user
+          DB_PASSWORD: cc_password
+          QUEUE_CONNECTION: database
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          AI_ENGINE_URL: http://127.0.0.1:8002
+          SCRAPER_SERVICE_URL: http://127.0.0.1:8003
+          SCRAPER_SERVICE_TOKEN: ci-scraper-service-token
+          SCRAPY_API_TOKEN: ci-laravel-internal-token
+
+      - name: Migration status
+        run: php artisan migrate --force --no-interaction
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: career_compass_test
+          DB_USERNAME: cc_user
+          DB_PASSWORD: cc_password
+
+      - name: Run tests
+        run: php artisan test --parallel --recreate-databases
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: career_compass_test
+          DB_USERNAME: cc_user
+          DB_PASSWORD: cc_password
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
+          AI_ENGINE_URL: http://127.0.0.1:8002
+          SCRAPER_SERVICE_URL: http://127.0.0.1:8003
+          SCRAPER_SERVICE_TOKEN: ci-scraper-service-token
+          SCRAPY_API_TOKEN: ci-laravel-internal-token
+
+      - name: Upload Laravel logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-logs
+          path: backend-api/storage/logs

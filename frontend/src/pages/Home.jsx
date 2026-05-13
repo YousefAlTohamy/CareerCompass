@@ -213,13 +213,12 @@ const CompassNav = () => {
    ════════════════════════════════════════════════════════════════════════════ */
 export default function Home() {
   const { user } = useAuth();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [loaded, setLoaded] = useState(false);
   const heroRef = useRef(null);
   const splineRef = useRef(null);
   const roadmapRef = useRef(null);
   const skillsRef = useRef(null);
-  const isRtl = i18n.language === 'ar';
 
   const SKILLS = React.useMemo(() => [
     { icon: 'ph-thin ph-brain', label: t('home.skills.s1_label'), sub: t('home.skills.s1_sub') },

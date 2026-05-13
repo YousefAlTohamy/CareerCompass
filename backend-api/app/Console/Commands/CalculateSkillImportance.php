@@ -74,8 +74,8 @@ class CalculateSkillImportance extends Command
         // Use SQL aggregation to count skill frequencies directly in database
         // This is MUCH more efficient than loading models into PHP
         $skillStats = DB::table('job_skills')
-            ->join('jobs', 'job_skills.job_id', '=', 'jobs.id')
-            ->where('jobs.title', 'like', "%{$jobTitle}%")
+            ->join('job_postings', 'job_skills.job_id', '=', 'job_postings.id')
+            ->where('job_postings.title', 'like', "%{$jobTitle}%")
             ->select(
                 'job_skills.skill_id',
                 DB::raw('COUNT(*) as skill_count'),
@@ -105,8 +105,8 @@ class CalculateSkillImportance extends Command
 
             // Update all records for this skill in this role using a single UPDATE query
             $updated = DB::table('job_skills')
-                ->join('jobs', 'job_skills.job_id', '=', 'jobs.id')
-                ->where('jobs.title', 'like', "%{$jobTitle}%")
+                ->join('job_postings', 'job_skills.job_id', '=', 'job_postings.id')
+                ->where('job_postings.title', 'like', "%{$jobTitle}%")
                 ->where('job_skills.skill_id', $stat->skill_id)
                 ->update([
                     'job_skills.importance_score' => round($percentage, 2),

@@ -1,133 +1,126 @@
 <?php
 
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\CvController;
-use App\Http\Resources\UserResource;
-use App\Http\Controllers\Api\GapAnalysisController;
-use App\Http\Controllers\Api\JobController;
-use App\Http\Controllers\Api\MarketIntelligenceController;
-use App\Http\Controllers\Api\ApplicationController;
-use App\Http\Controllers\Api\Admin\ScrapingSourceController;
-use App\Http\Controllers\Api\Admin\DashboardController;
+declare(strict_types=1);
+
 use App\Http\Controllers\Api\Admin\AdminJobController;
 use App\Http\Controllers\Api\Admin\AdminUserController;
+use App\Http\Controllers\Api\Admin\DashboardController;
+use App\Http\Controllers\Api\Admin\ScrapingSourceController;
 use App\Http\Controllers\Api\Admin\TargetJobRoleController;
-use Illuminate\Http\Request;
+use App\Http\Controllers\Api\ApplicationController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CvController;
+use App\Http\Controllers\Api\GapAnalysisController;
+use App\Http\Controllers\Api\HealthController;
+use App\Http\Controllers\Api\InternalProxyController;
+use App\Http\Controllers\Api\JobController;
+use App\Http\Controllers\Api\MarketIntelligenceController;
+use App\Http\Controllers\Api\MetricsController;
+use App\Http\Controllers\Api\ScrapedJobController;
+use App\Http\Controllers\Api\TargetRoleController;
 use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
-|
-*/
+$registerCareerCompassRoutes = static function (string $namePrefix = 'api.'): void {
+    Route::get('/health', [HealthController::class, 'live'])->middleware('throttle:api');
+    Route::get('/ready', [HealthController::class, 'ready'])->middleware('throttle:api');
+    Route::get('/metrics', [MetricsController::class, 'prometheus'])
+        ->middleware(['monitoring.token', 'throttle:monitoring']);
+    Route::get('/cv-files/{cvAnalysis}', [CvController::class, 'download'])
+        ->middleware('signed')
+        ->whereNumber('cvAnalysis')
+        ->name($namePrefix . 'cv.download');
 
-// Authentication routes (require user to be a guest)
-Route::middleware('guest:sanctum')->group(function () {
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login', [AuthController::class, 'login']);
-});
-
-// Public routes (no authentication required)
-Route::get('/health', function () {
-    return response()->json([
-        'status' => 'ok',
-        'service' => 'CareerCompass API',
-        'version' => '1.0.0',
-    ]);
-});
-
-// Job browsing (public)
-Route::get('/jobs', [JobController::class, 'index']);
-// ⚠️ whereNumber ensures /jobs/recommended is NOT caught by this wildcard
-Route::get('/jobs/{id}', [JobController::class, 'show'])->whereNumber('id');
-
-// Protected routes (require authentication)
-Route::middleware('auth:sanctum')->group(function () {
-    // Get authenticated user (comprehensive data via UserResource)
-    Route::get('/user', function (Request $request) {
-        $user = $request->user()->load(['profile', 'experiences', 'skills', 'cvAnalysis']);
-        return new UserResource($user);
+    Route::middleware(['guest:sanctum', 'throttle:login'])->group(function (): void {
+        Route::post('/register', [AuthController::class, 'register']);
+        Route::post('/login', [AuthController::class, 'login']);
     });
 
-    // Profile Management
-    Route::put('/user/profile', [AuthController::class, 'updateProfile']);
-
-    // Logout
-    Route::post('/logout', [AuthController::class, 'logout']);
-
-    // CV Upload and Skill Management
-    Route::post('/upload-cv', [CvController::class, 'upload']);
-    Route::get('/user/skills', [CvController::class, 'getUserSkills']);
-    Route::delete('/user/skills/{skillId}', [CvController::class, 'removeSkill']);
-    Route::get('/user/cv-analysis', [GapAnalysisController::class, 'getCvAnalysis']);
-
-    // Recommended jobs for authenticated user
-    // ⚠️ Must be inside this group (auth:sanctum) and BEFORE the public /jobs/{id} wildcard
-    // Laravel evaluates routes in registration order — specific routes must precede wildcards
-    Route::get('/jobs/recommended', [JobController::class, 'getRecommended']);
-
-    // Job Scraping
-    Route::post('/jobs/scrape', [JobController::class, 'scrapeAndStore']);
-    Route::post('/jobs/scrape-if-missing', [JobController::class, 'scrapeJobTitleIfMissing']);
-    Route::get('/scraping-status/{jobId}', [JobController::class, 'checkScrapingStatus'])->name('api.scraping.status');
-
-    // Gap Analysis
-    Route::get('/gap-analysis/job/{jobId}', [GapAnalysisController::class, 'analyzeJob']);
-    Route::get('/gap-analysis/role/{roleId}', [GapAnalysisController::class, 'analyzeRole']);
-    Route::post('/gap-analysis/batch', [GapAnalysisController::class, 'analyzeMultipleJobs']);
-    Route::get('/gap-analysis/recommendations', [GapAnalysisController::class, 'getRecommendations']);
-
-    // Market Intelligence & Target Roles
-    Route::get('/target-roles', function() {
-        return \App\Models\TargetJobRole::where('is_active', true)->get();
+    Route::middleware('throttle:api')->group(function (): void {
+        Route::get('/jobs', [JobController::class, 'index']);
+        Route::get('/jobs/{id}', [JobController::class, 'show'])->whereNumber('id');
     });
-    Route::get('/market/overview', [MarketIntelligenceController::class, 'getMarketOverview']);
-    Route::get('/market/role-statistics/{roleTitle}', [MarketIntelligenceController::class, 'getRoleStatistics']);
-    Route::get('/market/trending-skills', [MarketIntelligenceController::class, 'getTrendingSkills']);
-    Route::get('/market/skill-demand/{roleTitle}', [MarketIntelligenceController::class, 'getSkillDemand']);
 
-    // Job Application Tracker
-    Route::apiResource('applications', ApplicationController::class);
-
-    // ─── Admin: Scraping Sources Management ───────────────────────────────────
-    // Requires both authentication AND admin role
-    Route::middleware('admin')->prefix('admin')->group(function () {
-        // Admin Dashboard Stats & Health
-        Route::get('/dashboard/stats', [DashboardController::class, 'getStats']);
-        Route::get('/dashboard/health', [DashboardController::class, 'getSystemHealth']);
-        Route::get('/dashboard/batch-progress', [DashboardController::class, 'getBatchProgress']);
-        Route::get('/dashboard/failed-urls/{scrapingJobId}', [DashboardController::class, 'getFailedUrls']);
-        Route::post('/dashboard/retry-failures', [DashboardController::class, 'retryFailedUrls']);
-
-        // Admin Jobs Management
-        Route::get('/jobs', [AdminJobController::class, 'index']);
-        Route::get('/jobs/{id}', [AdminJobController::class, 'show']);
-        Route::delete('/jobs/{id}', [AdminJobController::class, 'destroy']);
-
-        // Admin Users Management
-        Route::get('/users', [AdminUserController::class, 'index']);
-        Route::get('/users/{id}', [AdminUserController::class, 'show']);
-        Route::post('/users/{id}/toggle-ban', [AdminUserController::class, 'toggleBan']);
-
-        // Specific routes MUST come before apiResource (wildcards)
-        Route::patch('scraping-sources/{scrapingSource}/toggle', [ScrapingSourceController::class, 'toggleStatus']);
-        Route::post('scraping-sources/test', [ScrapingSourceController::class, 'test']);
-
-        // Full CRUD for scraping sources
-        Route::apiResource('scraping-sources', ScrapingSourceController::class);
-
-        // Target Job Roles
-        Route::get('target-roles', [TargetJobRoleController::class, 'index']);
-        Route::post('target-roles', [TargetJobRoleController::class, 'store']);
-        Route::patch('target-roles/{id}/toggle', [TargetJobRoleController::class, 'toggleActive']);
-        Route::delete('target-roles/{id}', [TargetJobRoleController::class, 'destroy']);
-
-        // Quick Execute Scraper
-        Route::post('scraping/run-full', [TargetJobRoleController::class, 'runFullScraping']);
+    Route::middleware(['scraper.token', 'throttle:scraper'])->group(function (): void {
+        Route::post('/jobs/import/check', [ScrapedJobController::class, 'checkExistence']);
+        Route::post('/jobs/import', [ScrapedJobController::class, 'import']);
+        Route::post('/jobs/import/failed', [ScrapedJobController::class, 'reportFailure']);
+        Route::get('/proxies/active', [InternalProxyController::class, 'active']);
     });
+
+    Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () use ($namePrefix): void {
+        Route::get('/user', [AuthController::class, 'user']);
+        Route::put('/user/profile', [AuthController::class, 'updateProfile']);
+        Route::post('/logout', [AuthController::class, 'logout']);
+
+        Route::post('/upload-cv', [CvController::class, 'upload'])->middleware('throttle:uploads');
+        Route::get('/user/skills', [CvController::class, 'getUserSkills']);
+        Route::delete('/user/skills/{skillId}', [CvController::class, 'removeSkill'])->whereNumber('skillId');
+        Route::get('/user/cv-analysis', [GapAnalysisController::class, 'getCvAnalysis']);
+        Route::get('/user/cv-analysis/download-url', [CvController::class, 'downloadUrl']);
+
+        Route::get('/jobs/recommended', [JobController::class, 'getRecommended']);
+        Route::post('/jobs/scrape', [JobController::class, 'scrapeAndStore']);
+        Route::post('/jobs/scrape-if-missing', [JobController::class, 'scrapeJobTitleIfMissing']);
+        Route::get('/scraping-status/{jobId}', [JobController::class, 'checkScrapingStatus'])
+            ->whereNumber('jobId')
+            ->name($namePrefix . 'scraping.status');
+
+        Route::get('/gap-analysis/job/{jobId}', [GapAnalysisController::class, 'analyzeJob'])->whereNumber('jobId');
+        Route::get('/gap-analysis/role/{roleId}', [GapAnalysisController::class, 'analyzeRole'])->whereNumber('roleId');
+        Route::post('/gap-analysis/batch', [GapAnalysisController::class, 'analyzeMultipleJobs']);
+        Route::get('/gap-analysis/recommendations', [GapAnalysisController::class, 'getRecommendations']);
+
+        Route::get('/target-roles', [TargetRoleController::class, 'index']);
+        Route::get('/market/overview', [MarketIntelligenceController::class, 'getMarketOverview']);
+        Route::get('/market/role-statistics/{roleTitle}', [MarketIntelligenceController::class, 'getRoleStatistics']);
+        Route::get('/market/trending-skills', [MarketIntelligenceController::class, 'getTrendingSkills']);
+        Route::get('/market/skill-demand/{roleTitle}', [MarketIntelligenceController::class, 'getSkillDemand']);
+
+        $applicationRoutes = Route::apiResource('applications', ApplicationController::class);
+        if ($namePrefix !== 'api.') {
+            $applicationRoutes->names($namePrefix . 'applications');
+        }
+
+        Route::middleware('admin')->prefix('admin')->group(function () use ($namePrefix): void {
+            Route::get('/dashboard/stats', [DashboardController::class, 'getStats']);
+            Route::get('/dashboard/health', [DashboardController::class, 'getSystemHealth']);
+            Route::get('/dashboard/batch-progress', [DashboardController::class, 'getBatchProgress']);
+            Route::get('/dashboard/failed-urls/{scrapingJobId}', [DashboardController::class, 'getFailedUrls'])
+                ->whereNumber('scrapingJobId');
+            Route::post('/dashboard/retry-failures', [DashboardController::class, 'retryFailedUrls']);
+
+            Route::get('/jobs', [AdminJobController::class, 'index']);
+            Route::get('/jobs/{id}', [AdminJobController::class, 'show'])->whereNumber('id');
+            Route::delete('/jobs/{id}', [AdminJobController::class, 'destroy'])->whereNumber('id');
+
+            Route::get('/users', [AdminUserController::class, 'index']);
+            Route::get('/users/{id}', [AdminUserController::class, 'show'])->whereNumber('id');
+            Route::post('/users/{id}/toggle-ban', [AdminUserController::class, 'toggleBan'])->whereNumber('id');
+
+            Route::get('scraping-sources/status', [ScrapingSourceController::class, 'getStatus']);
+            Route::patch('scraping-sources/{scrapingSource}/toggle', [ScrapingSourceController::class, 'toggleStatus'])
+                ->whereNumber('scrapingSource');
+            Route::post('scraping-sources/test', [ScrapingSourceController::class, 'test']);
+            Route::post('scraping-sources/{id}/test', [ScrapingSourceController::class, 'testSingle'])
+                ->whereNumber('id');
+
+            $sourceRoutes = Route::apiResource('scraping-sources', ScrapingSourceController::class);
+            if ($namePrefix !== 'api.') {
+                $sourceRoutes->names($namePrefix . 'admin.scraping-sources');
+            }
+
+            Route::get('target-roles', [TargetJobRoleController::class, 'index']);
+            Route::post('target-roles', [TargetJobRoleController::class, 'store']);
+            Route::patch('target-roles/{id}/toggle', [TargetJobRoleController::class, 'toggleActive'])->whereNumber('id');
+            Route::delete('target-roles/{id}', [TargetJobRoleController::class, 'destroy'])->whereNumber('id');
+
+            Route::post('scraping/run-full', [TargetJobRoleController::class, 'runFullScraping']);
+        });
+    });
+};
+
+$registerCareerCompassRoutes('api.');
+
+Route::prefix('v1')->group(function () use ($registerCareerCompassRoutes): void {
+    $registerCareerCompassRoutes('api.v1.');
 });

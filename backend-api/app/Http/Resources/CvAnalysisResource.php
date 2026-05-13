@@ -27,6 +27,13 @@ class CvAnalysisResource extends JsonResource
             'gaps'               => $this->gaps ?? [],
             'red_flags'          => $this->red_flags ?? [],
             'metadata'           => $this->metadata ?? [],
+            'cv_file'            => $this->when($this->cv_path !== null, fn () => [
+                'original_name' => $this->cv_original_name,
+                'mime'          => $this->cv_mime,
+                'size'          => $this->cv_size,
+                'sha256'        => $this->cv_sha256,
+                'uploaded_at'   => $this->cv_uploaded_at?->toIso8601String(),
+            ]),
             'created_at'         => $this->created_at?->toIso8601String(),
             'updated_at'         => $this->updated_at?->toIso8601String(),
         ];

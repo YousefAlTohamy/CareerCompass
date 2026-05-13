@@ -1,23 +1,84 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Activity, CheckCircle2, Server, Database, Globe, Zap, Cpu, RefreshCw, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import apiClient from '../api/client';
 
 export default function SystemStatus() {
     const { t } = useTranslation();
+    const [health, setHealth] = useState({
+        loading: true,
+        ready: false,
+        checks: {},
+        requestId: null,
+        error: null,
+    });
 
     useEffect(() => {
         document.dir = t('dir', 'ltr');
     }, [t]);
 
-    const systems = [
-        { name: t('status_page.systems.api'), status: t('status_page.states.operational'), uptime: '99.98%', icon: Server, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-        { name: t('status_page.systems.ai'), status: t('status_page.states.operational'), uptime: '99.95%', icon: Cpu, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-        { name: t('status_page.systems.scraping'), status: t('status_page.states.operational'), uptime: '98.2%', icon: Globe, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-        { name: t('status_page.systems.db'), status: t('status_page.states.operational'), uptime: '100%', icon: Database, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-        { name: t('status_page.systems.analytics'), status: t('status_page.states.operational'), uptime: '99.9%', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-        { name: t('status_page.systems.websockets'), status: t('status_page.states.maintenance'), uptime: '99.8%', icon: Zap, color: 'text-amber-500', bg: 'bg-amber-500/10' }
-    ];
+    useEffect(() => {
+        let mounted = true;
+
+        const loadHealth = async () => {
+            try {
+                const response = await apiClient.get('/ready');
+                if (!mounted) {
+                    return;
+                }
+
+                setHealth({
+                    loading: false,
+                    ready: Boolean(response.data?.success),
+                    checks: response.data?.checks ?? {},
+                    requestId: response.data?.request_id ?? null,
+                    error: null,
+                });
+            } catch (error) {
+                if (!mounted) {
+                    return;
+                }
+
+                setHealth({
+                    loading: false,
+                    ready: false,
+                    checks: error?.response?.data?.checks ?? {},
+                    requestId: error?.response?.data?.request_id ?? null,
+                    error: error?.response?.data?.message ?? error.message ?? 'Unable to load status.',
+                });
+            }
+        };
+
+        loadHealth();
+        const timer = window.setInterval(loadHealth, 30000);
+
+        return () => {
+            mounted = false;
+            window.clearInterval(timer);
+        };
+    }, []);
+
+    const systems = useMemo(() => {
+        const statusLabel = (check, fallback = 'operational') => {
+            if (health.loading) {
+                return t('status_page.states.maintenance', 'checking');
+            }
+
+            return check?.ok
+                ? t('status_page.states.operational', 'operational')
+                : t('status_page.states.degraded', fallback);
+        };
+
+        return [
+            { name: t('status_page.systems.api'), status: health.ready ? t('status_page.states.operational', 'operational') : statusLabel(health.checks.database, 'degraded'), uptime: health.checks.database?.ok ? '100%' : 'degraded', icon: Server, color: health.checks.database?.ok ? 'text-emerald-500' : 'text-amber-500', bg: health.checks.database?.ok ? 'bg-emerald-500/10' : 'bg-amber-500/10' },
+            { name: t('status_page.systems.ai'), status: statusLabel(health.checks.ai, 'degraded'), uptime: health.checks.ai?.ok ? '100%' : 'degraded', icon: Cpu, color: health.checks.ai?.ok ? 'text-emerald-500' : 'text-amber-500', bg: health.checks.ai?.ok ? 'bg-emerald-500/10' : 'bg-amber-500/10' },
+            { name: t('status_page.systems.scraping'), status: statusLabel(health.checks.scraper, 'degraded'), uptime: health.checks.scraper?.ok ? '100%' : 'degraded', icon: Globe, color: health.checks.scraper?.ok ? 'text-emerald-500' : 'text-amber-500', bg: health.checks.scraper?.ok ? 'bg-emerald-500/10' : 'bg-amber-500/10' },
+            { name: t('status_page.systems.db'), status: statusLabel(health.checks.database, 'degraded'), uptime: health.checks.database?.ok ? '100%' : 'degraded', icon: Database, color: health.checks.database?.ok ? 'text-emerald-500' : 'text-amber-500', bg: health.checks.database?.ok ? 'bg-emerald-500/10' : 'bg-amber-500/10' },
+            { name: t('status_page.systems.analytics'), status: statusLabel(health.checks.cache, 'degraded'), uptime: health.checks.cache?.ok ? '100%' : 'degraded', icon: Activity, color: health.checks.cache?.ok ? 'text-emerald-500' : 'text-amber-500', bg: health.checks.cache?.ok ? 'bg-emerald-500/10' : 'bg-amber-500/10' },
+            { name: t('status_page.systems.websockets'), status: t('status_page.states.maintenance', 'maintenance'), uptime: 'planned', icon: Zap, color: 'text-amber-500', bg: 'bg-amber-500/10' }
+        ];
+    }, [health, t]);
 
     const incidents = [
         { date: t('status_page.incidents.i1_date'), title: t('status_page.incidents.i1_title'), status: t('status_page.states.completed'), type: 'maintenance' },
@@ -62,7 +123,7 @@ export default function SystemStatus() {
                                 {t('status_page.title')}
                             </h1>
                             <p className="text-slate-500 dark:text-slate-400 font-medium">
-                                {t('status_page.as_of')}
+                                {health.loading ? t('status_page.loading', 'Checking live status...') : (health.error || t('status_page.as_of'))}
                             </p>
                         </div>
                         
@@ -153,9 +214,9 @@ export default function SystemStatus() {
                 </div>
 
                 <div className="text-center pt-20">
-                     <div className="inline-flex items-center gap-3 px-6 py-3 glass-card !rounded-2xl border-white/10 dark:border-white/5 bg-white/5 text-slate-500 dark:text-slate-400 text-xs font-bold">
+                        <div className="inline-flex items-center gap-3 px-6 py-3 glass-card !rounded-2xl border-white/10 dark:border-white/5 bg-white/5 text-slate-500 dark:text-slate-400 text-xs font-bold">
                         <AlertCircle size={14} className="text-indigo-500" />
-                        Automated infrastructure monitoring powered by Career Compass AI
+                        {health.requestId ? `Request ${health.requestId}` : 'Automated infrastructure monitoring powered by Career Compass AI'}
                      </div>
                 </div>
 

@@ -9,6 +9,8 @@ import {
   toggleSourceStatus,
   testSources,
   runFullScraping,
+  getScrapingStatuses,
+  testSingleSource
 } from "../../api/scrapingSources";
 import HUDLayout from "../../components/HUDLayout";
 import {
@@ -49,6 +51,7 @@ const AdminSources = () => {
   
   const [testResult, setTestResult] = useState(null);
   const [isTestModalOpen, setIsTestModalOpen] = useState(false);
+  const [statuses, setStatuses] = useState({});
 
   const [searchParams, setSearchParams] = useSearchParams();
   const initialPage = parseInt(searchParams.get('page')) || 1;
@@ -129,6 +132,25 @@ const AdminSources = () => {
     fetchAllData();
   }, [currentPage, activeSearch, fetchAllData]);
 
+  useEffect(() => {
+    let interval;
+    const fetchStatuses = async () => {
+      try {
+        const res = await getScrapingStatuses();
+        if (res.data) {
+           setStatuses(res.data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch statuses:", err);
+      }
+    };
+
+    fetchStatuses();
+    interval = setInterval(fetchStatuses, 5000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
   const handleTestAll = async () => {
     setTesting(true);
     setTestResult(null);
@@ -136,6 +158,27 @@ const AdminSources = () => {
     
     try {
       const result = await testSources();
+      setTestResult(result.data || result);
+    } catch (error) {
+      setTestResult({
+        success: false,
+        output:
+          error.response?.data?.output ||
+          error.message ||
+          t('sources.test_unknown_error'),
+      });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const handleTestSingle = async (id) => {
+    setTesting(true);
+    setTestResult(null);
+    setIsTestModalOpen(true);
+    
+    try {
+      const result = await testSingleSource(id);
       setTestResult(result.data || result);
     } catch (error) {
       setTestResult({
@@ -446,11 +489,27 @@ const AdminSources = () => {
                       >
                         <td className="p-6">
                           <div className="flex items-center gap-4">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${source.is_active ? 'bg-fuchsia-500/10 border-fuchsia-500/20 text-fuchsia-600 dark:text-fuchsia-500' : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-400'}`}>
-                               <Activity size={24} />
-                            </div>
+                            {statuses[source.id]?.is_scraping ? (
+                              <div className="relative flex items-center justify-center w-10 h-10">
+                                 <div className="absolute inset-0 rounded-xl bg-fuchsia-500/20 animate-ping" />
+                                 <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-fuchsia-500 text-white shadow-[0_0_15px_rgba(217,70,239,0.5)] z-10">
+                                    <Activity size={20} className="animate-pulse" />
+                                 </div>
+                              </div>
+                            ) : (
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${source.is_active ? 'bg-fuchsia-500/10 border-fuchsia-500/20 text-fuchsia-600 dark:text-fuchsia-500' : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-400'}`}>
+                                 <Activity size={24} />
+                              </div>
+                            )}
                             <div>
-                              <div className="font-black text-slate-900 dark:text-white text-sm">{source.name}</div>
+                              <div className="font-black text-slate-900 dark:text-white text-sm flex items-center gap-2">
+                                {source.name}
+                                {statuses[source.id]?.is_scraping && (
+                                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-fuchsia-500 text-white animate-pulse">
+                                    {statuses[source.id]?.count || 0} JOBS
+                                  </span>
+                                )}
+                              </div>
                               <div className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1">{source.type}_PROTOCOL</div>
                             </div>
                           </div>
@@ -514,6 +573,13 @@ const AdminSources = () => {
 
                         <td className="p-6 text-right">
                           <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                            <button
+                              onClick={() => handleTestSingle(source.id)}
+                              className="p-3 rounded-xl bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:text-emerald-500 transition-all"
+                              title="Test Source"
+                            >
+                              <Terminal size={18} />
+                            </button>
                             <button
                               onClick={() => handleOpenModal(source)}
                               className="p-3 rounded-xl bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400 hover:text-fuchsia-500 transition-all"

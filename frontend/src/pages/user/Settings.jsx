@@ -6,7 +6,7 @@ import {
   Save, ArrowLeft, Plus, Trash2, Globe, Database,
   Settings as SettingsIcon, Layers, Target, Info, CheckCircle2, AlertCircle
 } from 'lucide-react';
-import { authAPI, cvAPI } from '../../api/endpoints';
+import { authAPI } from '../../api/endpoints';
 import { useAuth } from '../../context/AuthContext';
 import { useTranslation } from 'react-i18next';
 import HUDLayout from '../../components/HUDLayout';
