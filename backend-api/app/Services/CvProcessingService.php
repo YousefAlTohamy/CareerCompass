@@ -90,10 +90,20 @@ class CvProcessingService implements CvProcessingServiceInterface
             ]);
         }
 
-        $domain    = $v3Response['analysis']['primary_domain'] ?? null;
+        $analysis = is_array($v3Response['analysis'] ?? null) ? $v3Response['analysis'] : [];
+        $domain = $analysis['primary_domain'] ?? null;
+        $roleSeed = $this->resolveRoleDiscoverySeed($v3Response);
         $isNewRole = false;
-        if ($domain !== null && $domain !== '') {
-            $isNewRole = $this->discoverNewRole((string) $domain);
+        if ($roleSeed !== null) {
+            $isNewRole = $this->discoverNewRole($roleSeed['value']);
+
+            Log::info('Role discovery evaluated from CV analysis', [
+                'user_id' => $user->id,
+                'role_seed' => $roleSeed['value'],
+                'role_seed_source' => $roleSeed['source'],
+                'primary_domain' => $domain,
+                'is_new_role' => $isNewRole,
+            ]);
         }
 
         // Build aiData for backward-compatible controller response
@@ -369,8 +379,9 @@ class CvProcessingService implements CvProcessingServiceInterface
 
         $items = $v3Response['skills']['items'] ?? [];
         if (!is_array($items) || empty($items)) {
-            Log::warning('No skills returned by V3 AI Gateway', ['user_id' => $user->id]);
-            $user->skills()->sync([]);
+            Log::warning('No skills returned by V3 AI Gateway; preserving existing user skills', [
+                'user_id' => $user->id,
+            ]);
             return new Collection();
         }
 
@@ -409,6 +420,14 @@ class CvProcessingService implements CvProcessingServiceInterface
             ];
         }
 
+        if (empty($skillPayloads)) {
+            Log::warning('No valid skills extracted from V3 AI Gateway response; preserving existing user skills', [
+                'user_id' => $user->id,
+                'items_count' => count($items),
+            ]);
+            return new Collection();
+        }
+
         $skills = $this->skillSyncService->findOrCreateMany($skillPayloads);
         $syncById = [];
         foreach ($skills as $skill) {
@@ -417,6 +436,14 @@ class CvProcessingService implements CvProcessingServiceInterface
             }
 
             $syncById[$skill->id] = $syncData[$skill->name];
+        }
+
+        if (empty($syncById)) {
+            Log::warning('Extracted skills could not be mapped to skill records; preserving existing user skills', [
+                'user_id' => $user->id,
+                'items_count' => count($items),
+            ]);
+            return new Collection();
         }
 
         $user->skills()->sync($syncById);
@@ -571,6 +598,31 @@ class CvProcessingService implements CvProcessingServiceInterface
         return app()->bound('request.id')
             ? [(string) config('observability.request_id_header', 'X-Request-ID') => app('request.id')]
             : [];
+    }
+
+    /**
+     * @return array{value: string, source: string}|null
+     */
+    private function resolveRoleDiscoverySeed(array $v3Response): ?array
+    {
+        $analysis = is_array($v3Response['analysis'] ?? null) ? $v3Response['analysis'] : [];
+        $profile = is_array($v3Response['profile'] ?? null) ? $v3Response['profile'] : [];
+
+        $candidates = [
+            'analysis.predicted_role' => $analysis['predicted_role'] ?? null,
+            'profile.current_title' => $profile['current_title'] ?? null,
+            'profile.headline' => $profile['headline'] ?? null,
+            'analysis.primary_domain' => $analysis['primary_domain'] ?? null,
+        ];
+
+        foreach ($candidates as $source => $value) {
+            $normalized = $this->sanitizeStringValue(is_string($value) ? $value : null, 200);
+            if ($normalized !== null) {
+                return ['value' => $normalized, 'source' => $source];
+            }
+        }
+
+        return null;
     }
 
     /**

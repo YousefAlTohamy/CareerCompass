@@ -14,7 +14,8 @@ This project is Docker-first. Teammates do not need host PHP, Composer, Node, np
 ```bash
 git clone https://github.com/YousefAlTohamy/CareerCompass.git
 cd CareerCompass
-git checkout setup-docker
+git checkout main
+git pull origin main
 ```
 
 ## Copy Environment Templates

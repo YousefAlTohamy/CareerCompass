@@ -18,6 +18,7 @@ import os
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Optional
 from uuid import uuid4
@@ -28,12 +29,14 @@ load_dotenv()
 from fastapi import FastAPI, UploadFile, File, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from core.layer1_understanding.orchestrator import CVOrchestrator, OrchestratorConfig
+from core.layer1_understanding.orchestrator import CVOrchestrator
 from core.layer1_understanding.schema import CVParseResult
 
 # Layer 2 & 3 (warm singletons during startup)
 from core.layer2_classification.classifier import CVDomainClassifier
+from core.layer2_classification.domain_engine import DomainEngine
 from core.layer3_matching.similarity import IntelligentMatcher
+from core.layer3_matching.tfidf import match_score as _tfidf_match_score
 
 # ---------------------------------------------------------------------------
 # Logging configuration
@@ -121,7 +124,7 @@ async def startup_event():
         logger.warning("CVDomainClassifier prewarm failed: %s", e)
 
     try:
-        IntelligentMatcher()
+        _get_intelligent_matcher()
     except Exception as e:
         logger.warning("IntelligentMatcher prewarm failed: %s", e)
 
@@ -169,19 +172,13 @@ def metrics() -> Response:
 from pydantic import BaseModel
 from typing import List
 
-# Import TF-IDF matcher from ai-job-miner
-import sys as _sys
-_JOB_MINER_ROOT = Path(__file__).resolve().parent.parent / "ai-job-miner"
-if str(_JOB_MINER_ROOT) not in _sys.path:
-    _sys.path.append(str(_JOB_MINER_ROOT))
+_HAS_TFIDF = True
 
-try:
-    from ai.matcher import match_score as _tfidf_match_score
-    _HAS_TFIDF = True
-    logger.info("TF-IDF matcher loaded from ai-job-miner")
-except ImportError:
-    _HAS_TFIDF = False
-    logger.warning("ai-job-miner not found — TF-IDF scoring disabled, semantic-only mode")
+
+@lru_cache(maxsize=1)
+def _get_intelligent_matcher() -> IntelligentMatcher:
+    classifier = CVDomainClassifier()
+    return IntelligentMatcher(classifier.embedder, DomainEngine(classifier))
 
 
 class HybridMatchRequest(BaseModel):
@@ -211,30 +208,43 @@ async def hybrid_match(request: Request, body: HybridMatchRequest):
 
     try:
         # Semantic/Adaptive Match score — deep learning embeddings & rules (60% weight)
-        matcher = IntelligentMatcher()
+        matcher = _get_intelligent_matcher()
         semantic_result = matcher.calculate_match(
-            cv_data={"raw_text": body.cv_text, "skills": body.cv_skills},
-            job_data={"description": body.job_description, "skills": body.job_skills},
+            cv_data={
+                "profile": {"summary": body.cv_text},
+                "skills": {"items": [{"name": skill} for skill in body.cv_skills]},
+                "analysis": {"seniority": "mid", "primary_domain": None},
+            },
+            parsed_jd={
+                "raw_text": body.job_description,
+                "mandatory_skills": body.job_skills,
+                "bonus_skills": [],
+                "primary_domain": None,
+            },
         )
         semantic_match_pct = semantic_result.get("match_score", 0.0)
-        missing_skills = semantic_result.get("missing_skills", [])
+        missing_skills = semantic_result.get("missing_skills") or semantic_result.get("missing_mandatory_skills", [])
 
         # TF-IDF score — pure math keyword verification (40% weight)
         if _HAS_TFIDF:
             tfidf_raw = _tfidf_match_score(body.cv_text, body.job_description)
             tfidf_score_pct = round(tfidf_raw * 100, 2)
+            final_score = round((semantic_match_pct * 0.60) + (tfidf_score_pct * 0.40), 2)
+            matching_mode = "hybrid"
+            formula = "Final = (Adaptive Layer 3 x 60%) + (TF-IDF x 40%)"
         else:
             tfidf_score_pct = 0.0
-
-        # Weighted final score
-        final_score = round((semantic_match_pct * 0.60) + (tfidf_score_pct * 0.40), 2)
+            final_score = round(float(semantic_match_pct), 2)
+            matching_mode = "semantic_only_fallback"
+            formula = "Final = Adaptive Layer 3 semantic score only; TF-IDF unavailable"
 
         return {
             "hybrid_match_score": final_score,
             "semantic_match_pct": semantic_match_pct,
             "tfidf_score_pct": tfidf_score_pct,
             "missing_skills": missing_skills,
-            "formula": "Final = (Adaptive Layer 3 × 60%) + (TF-IDF × 40%)",
+            "formula": formula,
+            "matching_mode": matching_mode,
             "request_id": request.state.request_id,
         }
 
@@ -419,6 +429,7 @@ def _timeout_result() -> Dict[str, Any]:
 def _error_result(error_detail: str) -> Dict[str, Any]:
     """Return a structured error response matching CVParseResult shape."""
     result = _timeout_result()
+    result["parsing_status"] = "error"
     result["analysis"]["metadata"] = {"error": error_detail}  # type: ignore[index]
     return result
 

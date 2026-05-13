@@ -2,21 +2,24 @@
 
 ## Branch
 
-Use:
+The Docker-first platform is now merged into `main`. Use:
 
 ```bash
-git checkout setup-docker
+git checkout main
+git pull origin main
 ```
 
-Do not push directly to `main` for Docker handoff work.
+Do not push directly to `main`; use feature branches and pull requests for handoff or hardening work.
 
-## Stable Checkpoint
+## Historical Stable Checkpoint
 
-Final Docker handoff checkpoint:
+Final pre-merge Docker handoff checkpoint:
 
 ```text
 setup-docker-stable-final-handoff-20260513-2059
 ```
+
+The `setup-docker` branch is now historical stabilization context, not the default branch teammates should start from.
 
 ## Current Docker Startup
 
@@ -78,9 +81,9 @@ Windows PowerShell:
 
 ```bash
 git fetch origin --tags
-git checkout setup-docker
+git checkout main
 git reset --hard <stable-checkpoint-tag>
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
-Use the stable checkpoint tag above for rollback after this handoff pass.
+Use the stable checkpoint tag above only when intentionally rolling back to the pre-merge Docker handoff state.

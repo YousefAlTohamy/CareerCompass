@@ -86,4 +86,28 @@ class GapAnalysisTest extends TestCase
         $this->assertDatabaseHas('skills', ['name' => 'Docker', 'type' => 'technical']);
         $this->assertDatabaseHas('skills', ['name' => 'Communication', 'type' => 'soft']);
     }
+
+    public function test_gap_analysis_rejects_user_without_cv_profile_or_skills(): void
+    {
+        $user = User::factory()->create();
+        $skill = Skill::create(['name' => 'Laravel', 'type' => 'technical']);
+        $job = Job::create([
+            'title' => 'Laravel Developer',
+            'description' => 'Build Laravel APIs.',
+            'company' => 'Career Compass',
+            'url' => 'https://example.test/jobs/laravel',
+        ]);
+        $job->requiredSkills()->attach($skill->id, [
+            'required' => true,
+            'importance_score' => 80,
+            'importance_category' => 'essential',
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson("/api/gap-analysis/job/{$job->id}")
+            ->assertStatus(422)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'Upload a CV first so the system can extract skills and profile data.');
+    }
 }
