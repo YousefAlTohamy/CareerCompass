@@ -48,7 +48,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.2"
+          php-version: "8.4"
           extensions: mbstring, dom, fileinfo, mysql, pdo_mysql, sqlite, pdo_sqlite, gd, zip, intl, pcntl, bcmath
           coverage: none
 
@@ -58,6 +58,12 @@ jobs:
           path: ~/.composer/cache/files
           key: composer-${{ runner.os }}-${{ hashFiles('backend-api/composer.lock') }}
           restore-keys: composer-${{ runner.os }}-
+
+      - name: Prepare Laravel writable directories
+        run: |
+          mkdir -p bootstrap/cache storage/logs storage/framework/cache/data storage/framework/sessions storage/framework/testing storage/framework/views
+          mkdir -p tests/Unit
+          chmod -R ug+rw bootstrap/cache storage
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
@@ -96,7 +102,7 @@ jobs:
           DB_PASSWORD: cc_password
 
       - name: Run tests
-        run: php artisan test --parallel --recreate-databases
+        run: php artisan test
         env:
           APP_ENV: testing
           DB_CONNECTION: mysql

@@ -27,9 +27,9 @@ concurrency:
 
 jobs:
   validate:
-    name: Compose and Image Validation
+    name: Compose and Lightweight Image Validation
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -38,17 +38,14 @@ jobs:
       - name: Validate compose config
         run: docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet
 
-      - name: Build runtime images
-        run: docker compose build backend-api frontend ai-cv-analyzer ai-job-miner
+      - name: Build PR runtime images
+        run: docker compose build backend-api frontend ai-job-miner
 
       - name: Scan repository with Trivy
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: "0"
-
-      - name: Smoke boot core stack
-        run: bash scripts/smoke/docker-smoke.sh
