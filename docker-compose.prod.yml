@@ -187,11 +187,12 @@ services:
     environment:
       CV_TIMEOUT_SECONDS: ${CV_TIMEOUT_SECONDS:-90}
     restart: unless-stopped
+    mem_limit: 2g
     deploy:
       resources:
         limits:
           cpus: '1.00'
-          memory: 768M
+          memory: 2048M
 
   ai-job-miner:
     restart: unless-stopped
@@ -266,8 +267,8 @@ services:
   grafana:
     image: grafana/grafana-oss:11.4.0
     environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-careercompass}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-change-me-grafana-password}
       GF_USERS_ALLOW_SIGN_UP: "false"
     volumes:
       - grafana-data:/var/lib/grafana

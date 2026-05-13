@@ -1,4 +1,4 @@
-# Career Compass Production Readiness
+# CareerCompass Production Readiness
 
 ## Architecture
 
@@ -29,11 +29,11 @@ flowchart LR
 5. Queue workers process default, high, scraping, ai, and emails lanes separately.
 6. Readiness and metrics endpoints feed smoke tests, Prometheus, and the status page.
 
-## Local Development
+## Docker-First Local Development
 
-1. Copy the env files in `backend-api/.env.example` and `frontend/.env.example`.
-2. Start the stack with `docker compose up -d`.
-3. Run migrations with `docker compose exec backend-api php artisan migrate --force`.
+1. Copy `.env.example` files in the repository root and each service folder.
+2. Start the stack with `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build`.
+3. Run migrations with `docker compose -f docker-compose.yml -f docker-compose.prod.yml exec backend-api php artisan migrate --force --no-interaction`.
 4. Open the app through nginx on `http://localhost`.
 
 ## Production Deployment
@@ -42,6 +42,7 @@ flowchart LR
 2. Build and deploy with `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build`.
 3. Run migrations before promoting traffic.
 4. Verify `http://<host>/api/v1/ready` and `http://<host>/api/v1/metrics`.
+5. Do not use the example credentials in production.
 
 ## Queue Layout
 
