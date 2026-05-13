@@ -2,6 +2,7 @@ import os
 import sys
 
 # Add custom labels to bert-base-NER and save
+# pyrefly: ignore [missing-import]
 from transformers import AutoTokenizer, AutoModelForTokenClassification
 
 def deploy_mock_weights():

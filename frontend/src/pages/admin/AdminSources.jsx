@@ -74,12 +74,26 @@ const AdminSources = () => {
     pattern: "",
   });
 
+  useEffect(() => {
+    const isAnyModalOpen = isModalOpen || isTestModalOpen;
+    if (isAnyModalOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.paddingRight = '8px';
+    } else {
+      document.body.style.overflow = 'unset';
+      document.body.style.paddingRight = '0px';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+      document.body.style.paddingRight = '0px';
+    };
+  }, [isModalOpen, isTestModalOpen]);
+
   const fetchAllData = useCallback(async () => {
     try {
       setLoading(true);
       const sourcesRes = await getAllSources(currentPage, activeSearch);
       if (sourcesRes.data) {
-          // Response structure normalization
           const data = sourcesRes.data.data || sourcesRes.data || [];
           const meta = sourcesRes.data.meta || sourcesRes.meta || {};
           
@@ -184,8 +198,6 @@ const AdminSources = () => {
       title: t('sources.swal_run_title'),
       text: t('sources.swal_run_text'),
       icon: "question",
-      background: 'rgba(15, 23, 42, 0.95)',
-      color: '#fff',
       showCancelButton: true,
       confirmButtonColor: "#6366f1",
       cancelButtonColor: "#334155",
@@ -238,8 +250,6 @@ const AdminSources = () => {
       title: t('sources.swal_delete_title'),
       text: t('sources.swal_delete_text'),
       icon: "warning",
-      background: 'rgba(15, 23, 42, 0.95)',
-      color: '#fff',
       showCancelButton: true,
       confirmButtonColor: "#f43f5e",
       cancelButtonColor: "#334155",
@@ -309,7 +319,6 @@ const AdminSources = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Validate JSON fields
       let parsedHeaders = {};
       let parsedParams = {};
       try {
@@ -320,7 +329,6 @@ const AdminSources = () => {
         return;
       }
 
-      // Validate regex pattern if in discovery mode
       if (formData.mode === "discovery" && formData.pattern) {
         try {
           new RegExp(formData.pattern);
@@ -379,8 +387,6 @@ const AdminSources = () => {
   return (
     <HUDLayout loading={loading}>
       <div className="p-6 max-w-7xl mx-auto pb-20 space-y-10 pt-28">
-        
-        {/* Header Section */}
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -424,7 +430,6 @@ const AdminSources = () => {
           </div>
         </motion.div>
 
-        {/* Toolbar & Search */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -432,29 +437,28 @@ const AdminSources = () => {
           className="relative group max-w-2xl"
         >
           <div className="absolute inset-0 bg-fuchsia-500/10 blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
-          <div className="relative flex items-center bg-white/40 dark:bg-slate-950/40 backdrop-blur-xl border border-white/40 dark:border-white/10 rounded-2xl px-5 py-3">
+          <div className="relative flex items-center bg-white dark:bg-slate-950/40 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl px-6 py-4 shadow-sm">
             <Search className="text-slate-400 mr-3" size={20} />
             <input
               type="text"
               placeholder="Filter ingestion sources by name, URL, or type..."
-              className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-slate-700 dark:text-white font-medium placeholder-slate-400 text-sm"
+              className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-slate-800 dark:text-white font-medium placeholder-slate-400 text-sm"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
             />
           </div>
         </motion.div>
 
-        {/* Table Container */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-white/40 dark:bg-slate-950/40 backdrop-blur-xl border border-white/40 dark:border-white/5 rounded-[32px] shadow-premium overflow-hidden"
+          className="bg-white dark:bg-slate-950/40 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-[32px] shadow-xl overflow-hidden"
         >
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[900px]">
               <thead>
-                <tr className="bg-slate-100/50 dark:bg-white/5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 border-b border-white/10">
+                <tr className="bg-slate-50 dark:bg-white/5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 border-b border-slate-200 dark:border-white/10">
                   <th className="p-6">{t('admin.node_config', 'Node Config')}</th>
                   <th className="p-6">{t('admin.protocols', 'Protocols')}</th>
                   <th className="p-6">{t('admin.endpoint_access', 'Endpoint Access')}</th>
@@ -493,7 +497,7 @@ const AdminSources = () => {
                                  </div>
                               </div>
                             ) : (
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${source.is_active ? 'bg-fuchsia-500/10 border-fuchsia-500/20 text-fuchsia-500' : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-400'}`}>
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${source.is_active ? 'bg-fuchsia-500/10 border-fuchsia-500/20 text-fuchsia-600 dark:text-fuchsia-500' : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/5 text-slate-400'}`}>
                                  <Activity size={24} />
                               </div>
                             )}
@@ -506,7 +510,7 @@ const AdminSources = () => {
                                   </span>
                                 )}
                               </div>
-                              <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">{source.type}_PROTOCOL</div>
+                              <div className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1">{source.type}_PROTOCOL</div>
                             </div>
                           </div>
                         </td>
@@ -554,17 +558,17 @@ const AdminSources = () => {
 
                         <td className="p-6 text-center">
                            <button
-                               onClick={() => handleToggleStatus(source.id)}
-                               className={`relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                                 source.is_active ? 'bg-fuchsia-600 shadow-[0_0_10px_rgba(192,38,211,0.4)]' : 'bg-slate-300 dark:bg-slate-800'
-                               }`}
-                             >
-                               <span
-                                 className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
-                                   source.is_active ? (i18n.dir() === 'rtl' ? '-translate-x-5' : 'translate-x-5') : 'translate-x-0'
-                                 }`}
-                               />
-                             </button>
+                                onClick={() => handleToggleStatus(source.id)}
+                                className={`relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                  source.is_active ? 'bg-fuchsia-600 shadow-[0_0_10px_rgba(192,38,211,0.4)]' : 'bg-slate-300 dark:bg-slate-800'
+                                }`}
+                              >
+                                <span
+                                  className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                                    source.is_active ? (i18n.dir() === 'rtl' ? '-translate-x-5' : 'translate-x-5') : 'translate-x-0'
+                                  }`}
+                                />
+                              </button>
                         </td>
 
                         <td className="p-6 text-right">
@@ -598,7 +602,6 @@ const AdminSources = () => {
             </table>
           </div>
 
-          {/* Pagination */}
           <div className="p-6 border-t border-white/5 flex items-center justify-between bg-slate-100/30 dark:bg-white/5 backdrop-blur-xl">
              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                {t('common.page')} {currentPage} of {totalPages}
@@ -623,7 +626,6 @@ const AdminSources = () => {
         </motion.div>
       </div>
 
-      {/* Node Configuration Modal */}
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 flex items-center justify-center p-4 z-[100]">
@@ -776,77 +778,84 @@ const AdminSources = () => {
         )}
       </AnimatePresence>
 
-      {/* 🚀 Diagnostic Terminal Modal */}
       <AnimatePresence>
         {isTestModalOpen && (
-          <div className="fixed inset-0 flex items-center justify-center p-4 z-[110]">
-             <motion.div 
-               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-               className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl"
-               onClick={() => !testing && setIsTestModalOpen(false)}
-             />
-             <motion.div 
-               initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-               className="relative w-full max-w-4xl bg-[#030712] rounded-[32px] shadow-2xl border border-white/10 flex flex-col overflow-hidden"
-             >
-                {/* Terminal Header */}
-                <div className="bg-slate-900/50 px-6 py-4 border-b border-white/10 flex items-center justify-between">
+          <div className="fixed inset-0 z-[110] overflow-y-auto custom-scrollbar">
+            <div className="min-h-screen px-4 pt-32 pb-20 flex items-start justify-center">
+              <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-slate-200/60 dark:bg-slate-950/80 backdrop-blur-xl"
+                onClick={() => !testing && setIsTestModalOpen(false)}
+              />
+              <motion.div 
+                initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                className="relative w-full max-w-4xl bg-white dark:bg-[#030712] rounded-[32px] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] border border-slate-200 dark:border-white/10 flex flex-col overflow-hidden"
+              >
+                <div className="bg-slate-50 dark:bg-slate-900/80 px-6 py-4 border-b border-slate-200 dark:border-white/10 flex items-center justify-between backdrop-blur-md shrink-0">
                    <div className="flex items-center gap-4">
-                      <div className="flex gap-1.5">
-                        <div className="w-3 h-3 rounded-full bg-rose-500" />
-                        <div className="w-3 h-3 rounded-full bg-amber-500" />
-                        <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                      <div className="flex gap-2">
+                        <div className="w-3.5 h-3.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]" />
+                        <div className="w-3.5 h-3.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+                        <div className="w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
                       </div>
-                      <div className="h-4 w-px bg-white/10 mx-2" />
-                      <div className="flex items-center gap-2 text-slate-400 font-mono text-[10px] uppercase tracking-widest">
-                         <Terminal size={14} /> diagnostics_protocol.log
+                      <div className="h-5 w-px bg-slate-300 dark:bg-white/10 mx-2" />
+                      <div className="flex items-center gap-2.5 text-slate-600 dark:text-slate-400 font-mono text-[10px] font-black uppercase tracking-widest">
+                         <Terminal size={14} className="text-indigo-600 dark:text-indigo-400" /> 
+                         <span>diagnostics_engine_v1.0.sh</span>
                       </div>
                    </div>
                    {!testing && (
-                     <button onClick={() => setIsTestModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
+                     <button onClick={() => setIsTestModalOpen(false)} className="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
                         <X size={20} />
                      </button>
                    )}
                 </div>
 
-                {/* Terminal Content */}
-                <div className="p-8 h-[500px] overflow-y-auto font-mono text-xs leading-relaxed custom-scrollbar bg-slate-950/50">
+                <div className="p-8 md:p-10 min-h-[300px] overflow-y-auto font-mono text-[13px] leading-relaxed custom-scrollbar bg-slate-50 dark:bg-[#020617]">
+                   <div className="mb-4 text-slate-400 dark:text-slate-500 select-none"># CC-DIAG-PROTOCOL-INITIATED</div>
                    {testing ? (
-                     <div className="flex flex-col items-center justify-center h-full space-y-6">
+                     <div className="flex flex-col items-center justify-center py-20 space-y-6">
                         <div className="relative">
                            <div className="absolute inset-0 bg-emerald-500/20 blur-2xl animate-pulse" />
                            <Radar size={64} className="text-emerald-500 animate-pulse" />
                         </div>
-                        <div className="flex flex-col items-center gap-2">
-                           <div className="text-emerald-500 font-black tracking-widest uppercase">SCANNING_ACTIVE_NODES...</div>
-                           <div className="text-slate-500 text-[10px]">Pinging endpoints and verifying extraction layers</div>
+                        <div className="flex flex-col items-center gap-2 text-center">
+                           <div className="text-emerald-600 dark:text-emerald-500 font-black tracking-widest uppercase">SCANNING_ACTIVE_NODES...</div>
+                           <div className="text-slate-500 dark:text-slate-400 text-[10px]">Pinging endpoints and verifying extraction layers</div>
                         </div>
                      </div>
                    ) : testResult ? (
-                     <pre className={`whitespace-pre-wrap ${testResult.success ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {testResult.output}
+                     <pre className={`whitespace-pre-wrap font-mono ${testResult.success ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                        <span className="block mb-4 p-4 rounded-xl bg-slate-200/50 dark:bg-white/5 border border-slate-200 dark:border-white/5">
+                           {testResult.output}
+                        </span>
                      </pre>
                    ) : null}
-                  </div>
+                </div>
 
-                  {/* Terminal Footer */}
-                  {!testing && testResult && (
-                     <div className="px-8 py-4 bg-slate-900/50 border-t border-white/10 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                           <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">DIAGNOSTIC_STATE:</span>
-                           <span className={`px-2 py-0.5 rounded text-[10px] font-black ${testResult.success ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                             {testResult.success ? 'PASS' : 'CRITICAL_ERROR'}
-                           </span>
-                        </div>
-                        <button 
-                          onClick={() => setIsTestModalOpen(false)}
-                          className="px-6 py-2 rounded-xl bg-white/5 dark:bg-white/10 text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/20 transition-all border border-white/10"
-                        >
-                          Exit Diagnostic
-                        </button>
-                     </div>
-                  )}
-                </motion.div>
+                {!testing && testResult && (
+                   <div className="px-8 py-6 bg-slate-50 dark:bg-slate-900/80 border-t border-slate-200 dark:border-white/10 flex items-center justify-between backdrop-blur-md shrink-0">
+                      <div className="flex items-center gap-6">
+                         <div className="flex flex-col">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Diagnostic Report</span>
+                            <div className="flex items-center gap-3">
+                              <div className={`w-3 h-3 rounded-full ${testResult.success ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.6)]' : 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.6)]'}`} />
+                              <span className={`text-base font-black tracking-widest ${testResult.success ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                                {testResult.success ? 'SYSTEMS_OPTIMAL' : 'INTEGRITY_COMPROMISED'}
+                              </span>
+                            </div>
+                         </div>
+                      </div>
+                      <button 
+                        onClick={() => setIsTestModalOpen(false)}
+                        className="px-10 py-3.5 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[11px] font-black uppercase tracking-[0.2em] hover:scale-105 active:scale-95 transition-all shadow-xl"
+                      >
+                        Terminate Session
+                      </button>
+                   </div>
+                )}
+              </motion.div>
+            </div>
           </div>
         )}
       </AnimatePresence>
@@ -854,8 +863,10 @@ const AdminSources = () => {
       <style dangerouslySetInnerHTML={{ __html: `
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
       `}} />
     </HUDLayout>
   );

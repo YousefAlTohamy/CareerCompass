@@ -1,0 +1,60 @@
+{
+  "domain_taxonomy": {
+    "General": {
+      "Technology & Software": "Software engineering, computer science, programming, system architecture, algorithms, data structures, software development, git, cloud computing, devops, mobile development, web development, databases, APIs, microservices.",
+      "Healthcare & Medicine": "Medical treatment, clinical care, nursing, diagnosis, pharmacology, patient health, surgery, biology, anatomy, healthcare administration.",
+      "Finance & Accounting": "Financial analysis, accounting principles, taxation, auditing, investment management, banking, risk assessment, budget planning, financial reporting.",
+      "Education & Training": "Teaching, curriculum development, pedagogy, classroom management, academic research, e-learning, training coordination, educational leadership.",
+      "Legal & Law": "Legal research, litigation, corporate law, contract negotiation, judicial proceedings, legal documentation, compliance, intellectual property.",
+      "Marketing & Sales": "Digital marketing, brand management, market research, sales strategy, advertising, consumer behavior, SEO, content marketing, public relations.",
+      "Creative Arts & Design": "Graphic design, visual arts, creative direction, illustration, multimedia, UX/UI, fine arts, photography, digital content creation.",
+      "Manufacturing & Engineering": "Mechanical engineering, electrical systems, industrial production, civil engineering, supply chain, quality control, CAD design, manufacturing processes.",
+      "Human Resources": "Recruitment, talent management, employee relations, organizational development, payroll, HR policy, benefits administration, onboarding.",
+      "Customer Service & Support": "Client relations, technical support, problem solving, help desk, satisfaction management, call center operations, customer experience.",
+      "Science & Research": "Scientific method, laboratory analysis, physics, chemistry, biotechnology, data interpretation, peer review, experimental design, academic publishing.",
+      "Construction & Trades": "Building, plumbing, electrical work, carpentry, project management, safety regulations, blueprints, heavy equipment, site inspection."
+    },
+    "Technology": {
+      "Backend Development": "Server-side, databases, SQL, NoSQL, API development, Node.js, Python, Java, Ruby, Golang, microservices, system scalability.",
+      "Frontend Development": "Client-side, React, Vue, Angular, JavaScript, HTML5, CSS3, responsive web design, browser performance, accessibility.",
+      "Full Stack Development": "Frontend and backend, database management, full web application lifecycle, integration, DevOps basics.",
+      "Mobile App Development": "iOS, Android, Flutter, React Native, Swift, Kotlin, mobile performance, app store deployment, mobile UI/UX.",
+      "Data Science & AI": "Machine learning, data analysis, statistics, Python, R, TensorFlow, PyTorch, deep learning, data visualization, predictive modeling.",
+      "DevOps & Cloud": "CI/CD, Docker, Kubernetes, AWS, Azure, GCP, infrastructure as code, Terraform, Linux, monitoring, site reliability engineering.",
+      "UI/UX Design": "User interface design, user experience research, Figma, Adobe XD, wireframing, prototyping, user-centered design, interaction design.",
+      "Quality Assurance & Testing": "Software testing, automation testing, Selenium, Jest, unit testing, integration testing, bug tracking, QA methodologies.",
+      "Cybersecurity": "Network security, ethical hacking, penetration testing, cryptography, threat detection, security compliance, SOC, incident response."
+    }
+  },
+  "seniority_config": {
+    "labels": ["Intern", "Junior", "Mid-Level", "Senior", "Lead / Manager"],
+    "action_verbs": {
+      "architected": 1.0,
+      "spearheaded": 1.0,
+      "designed": 0.8,
+      "managed": 0.9,
+      "led": 0.9,
+      "developed": 0.6,
+      "implemented": 0.7,
+      "built": 0.6,
+      "collaborated": 0.5,
+      "assisted": 0.3,
+      "supported": 0.3,
+      "learned": 0.2
+    },
+    "thresholds": {
+      "senior_years": 7,
+      "intern_max_years": 0.5,
+      "high_verb_score": 0.8
+    }
+  },
+  "skill_config": {
+    "soft_skills": [
+      "communication", "leadership", "teamwork", "problem solving", "adaptability",
+      "time management", "creativity", "work ethic", "interpersonal", "critical thinking",
+      "presentation", "negotiation", "conflict resolution", "mentoring"
+    ],
+    "management_keywords": ["management", "lead", "strategy", "planning"],
+    "management_exclusions": ["database", "state"]
+  }
+}

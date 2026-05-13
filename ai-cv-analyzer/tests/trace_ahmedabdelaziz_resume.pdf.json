@@ -1,0 +1,502 @@
+{
+  "parsing_status": "success",
+  "profile": {
+    "full_name": "Ahmed Mohammed Ahmed",
+    "current_title": "App Development Trainee",
+    "alternative_titles": [
+      "AI Prompt Engineer",
+      "Development Trainee"
+    ],
+    "headline": "OBJECTIVE",
+    "contact": {
+      "email": "ahmedabdulazizz203@gmail.com",
+      "phone": "+201278576046",
+      "location": "Alexandria,Egypt",
+      "linkedin_url": "https://www.linkedin.com/in/ahmedabdulaziz10",
+      "github_url": "https://github.com/interesta22",
+      "portfolio_url": null
+    },
+    "summary": "Ahmed Mohammed Ahmed\nAlexandria,Egypt ahmedabdulazizz203@gmail.com +201278576046 in/ahmedabdulaziz10 github.com/interesta22\n\nJunior Flutter Developer skilled in Flutter, Dart, Firebase, RESTful APIs, and state management with Cubit. Strong in OOP, data structures, and clean\narchitecture. Writes scalable, maintainable code in agile teams.",
+    "confidence_score": 0.93
+  },
+  "stats": {
+    "page_count": 2,
+    "char_count": 4419,
+    "word_count": 567,
+    "language_hint": null
+  },
+  "skills": {
+    "items": [
+      {
+        "confidence_score": 0.65,
+        "name": "AI-powered",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Algorithms",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Android",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Authentication",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Bloc, Clean Architecture, and MVVM.",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "C#",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "C++",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "chatbot",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Cubit",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Cubit.",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Dart",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Data Structures",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Design Patterns",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "DIO",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Figma",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Firebase",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Firestore.",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Flutter",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Git",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "GitHub",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Hive",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Hive.",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Kaliha-3alina-App",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "MemoMate",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "natural language processing",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "NLP",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "OOP",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "OpenStreetMap",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Python",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "RESTful APIs",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "SOLID Principles",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Tawseela Faculty of Computers",
+        "category": "hard",
+        "evidence": "ner"
+      }
+    ],
+    "confidence_score": 0.6499999999999998
+  },
+  "experience": {
+    "items": [
+      {
+        "confidence_score": 0.85,
+        "title": "App Development Trainee",
+        "company": "Unknown Company",
+        "location": null,
+        "start_date": "2025-06-01",
+        "end_date": "2026-05-09",
+        "is_current": true,
+        "description": [
+          "Mobile",
+          "Digital Egypt Pioneers Initiative - DEPI | June 2025 - Present, Alex and ria",
+          "•Gained practical experience in Flutter, Dart, Firebase, Git/Git Hub, and mobile deployment for And roid and i OS.",
+          "•Completed a capstone project applying prompt engineering, unit testing, and real-world app development practices.",
+          "•Developed strong teamwork, communication, and presentation skills through collaborative projects and freelance coaching experiences.",
+          "Mobile",
+          "In for mation Technology Institute (ITI) |"
+        ],
+        "technologies": [
+          "Android",
+          "Dart",
+          "Firebase",
+          "Flutter",
+          "Git",
+          "GitHub"
+        ]
+      },
+      {
+        "confidence_score": 0.85,
+        "title": "Development Trainee",
+        "company": "Unknown Company",
+        "location": null,
+        "start_date": "2025-07-01",
+        "end_date": "2025-08-01",
+        "is_current": false,
+        "description": [
+          ", Alex and ria",
+          "•Gained practical experience in Flutter, Dart, Firebase, Git/Git Hub, and mobile deployment for And roid and i OS.",
+          "•Completed a capstone project applying prompt engineering, unit testing, and real-world app development practices.",
+          "•Developed strong teamwork, communication, and presentation skills through collaborative projects and freelance coaching experiences.",
+          "Mobile App",
+          "In for mation Technology Institute (ITI) | July 2025 - August 2025, Tanta",
+          "•Built Flutter applications using Dart, with state management via Cubit and local data persistence using Hive.",
+          "•Integrated REST ful API s using DIO and implemented Firebase services including Au the ntication and Fi rest ore.",
+          "•Applied OOP principles and developed pixel-perfect UIs based on Figma designs.",
+          "AI Prompt Engineer",
+          "Outlier AI |"
+        ],
+        "technologies": [
+          "Android",
+          "Authentication",
+          "Cubit",
+          "Dart",
+          "Figma",
+          "Firebase",
+          "Firestore.",
+          "Flutter",
+          "Git",
+          "GitHub",
+          "Hive. •Integrated RESTful",
+          "iOS.",
+          "OOP"
+        ]
+      },
+      {
+        "confidence_score": 0.85,
+        "title": "AI Prompt Engineer",
+        "company": "Unknown Company",
+        "location": null,
+        "start_date": "2025-01-01",
+        "end_date": "2025-05-01",
+        "is_current": false,
+        "description": [
+          ", Tanta",
+          "•Built Flutter applications using Dart, with state management via Cubit and local data persistence using Hive.",
+          "•Integrated REST ful API s using DIO and implemented Firebase services including Au the ntication and Fi rest ore.",
+          "•Applied OOP principles and developed pixel-perfect UIs based on Figma designs.",
+          "Outlier AI | January 2025 - May 2025, Remote",
+          "•Collaborated with the Outlier AI team to train and evaluate AI language models.",
+          "•Analyzed model responses to identify errors and enhance overall per for mance.",
+          "•Syn the sized per for mance data to recommend prompt adjustments, driving measurable improvements in language model accuracy and user engagement."
+        ],
+        "technologies": [
+          "AI language",
+          "Authentication",
+          "Cubit",
+          "Dart",
+          "DIO",
+          "Figma",
+          "Firebase",
+          "Firestore.",
+          "Flutter",
+          "Hive.",
+          "OOP",
+          "RESTful APIs"
+        ]
+      }
+    ],
+    "confidence_score": 0.85
+  },
+  "analysis": {
+    "summary": null,
+    "predicted_role": "App Development Trainee",
+    "seniority": "Intern",
+    "primary_domain": "Mobile App Development",
+    "strengths": [
+      "Diverse technical portfolio with 17 technologies used across roles."
+    ],
+    "gaps": [
+      "Currently unemployed for ~9 months since 'Development Trainee' ended on 2025-08-01."
+    ],
+    "red_flags": [
+      "Potential job hopping: 3 roles lasted less than 1 year within the last 5 years. Consider explaining short tenures in a cover letter."
+    ],
+    "confidence_score": 0.7499999999999999,
+    "metadata": {
+      "segmentation": {
+        "found_sections": [
+          "education",
+          "experience",
+          "profile_summary",
+          "projects",
+          "skills"
+        ],
+        "sections_missing": [],
+        "anomalies": [],
+        "sections_text": {
+          "profile_summary": "Ahmed Mohammed Ahmed\nAlexandria,Egypt ahmedabdulazizz203@gmail.com +201278576046 in/ahmedabdulaziz10 github.com/interesta22\n\nJunior Flutter Developer skilled in Flutter, Dart, Firebase, RESTful APIs, and state management with Cubit. Strong in OOP, data structures, and clean\narchitecture. Writes scalable, maintainable code in agile teams.",
+          "education": "Bachelor of Computer Science\nKafr El-Shiekh University • Egypt • 2026\n\nFlutter Advanced Course Bloc and MVVM Pattern\nUdemy • 2025\nFlutter & Dart Development Course\nUdemy • 2024",
+          "experience": "Mobile App Development Trainee\nDigital Egypt Pioneers Initiative - DEPI | June 2025 - Present, Alexandria\n•Gained practical experience in Flutter, Dart, Firebase, Git/GitHub, and mobile deployment for Android and iOS.\n•Completed a capstone project applying prompt engineering, unit testing, and real-world app development practices.\n•Developed strong teamwork, communication, and presentation skills through collaborative projects and freelance coaching experiences.\nMobile App Development Trainee\nInformation Technology Institute (ITI) | July 2025 - August 2025, Tanta\n•Built Flutter applications using Dart, with state management via Cubit and local data persistence using Hive.\n•Integrated RESTful APIs using DIO and implemented Firebase services including Authentication and Firestore.\n•Applied OOP principles and developed pixel-perfect UIs based on Figma designs.\nAI Prompt Engineer\nOutlier AI | January 2025 - May 2025, Remote\n•Collaborated with the Outlier AI team to train and evaluate AI language models.\n•Analyzed model responses to identify errors and enhance overall performance.\n•Synthesized performance data to recommend prompt adjustments, driving measurable improvements in language model accuracy and user engagement.",
+          "skills": "Soft Skills: Teamwork, Communication Skills, Presentation, Time Management, Remote Collaboration, Adaptability, Team Leadership, Problem Solving,\nCritical Thinking, Self-Learning.\nTechnical Skills: Proficient in Dart, Flutter, Firebase, C++, C#, Python, OOP, Data Structures, Algorithms, SOLID Principles, Design Patterns, Cubit, Bloc,\nClean Architecture, and MVVM.",
+          "projects": "Quality Assurance Unit App\nFaculty of Computers and Information, Kafr El-Sheikh University • github.com/Malak308/Quality_Management • March 2025 - Present\n•Developing a mobile app for the Faculty’s Quality Assurance Unit to streamline internal operations.\n\n•Displaying evaluation criteria and essential documentation in an organized, user-friendly interface.\n•Supporting multilingual access to ensure broader usability across faculty members.\nMovista\nITI • github.com/interesta22/Movista • July 2025 - August 2025\n•Developed a movie discovery app using the TMDB API with secure user authentication via Firebase.\n•Implemented personalized bookmarking and robust offline caching for improved user experience.\n•Managed app state efficiently using Cubit architecture for scalability and maintainability.\nKhaliha 3alina\nSelf-initiated Project • github.com/interesta22/Kaliha-3alina-App • May 2025 - July 2025\n•Mobile application to splitting shared expenses and suggest transportation routes between locations.\n•Used Cubit, Hive, and Firebase to build a smooth, offline-ready experience with fair cost calculation and route guidance.\n•Published on the Amazon App Store.\nTawseela\nFaculty of Computers and Information, Kafr El-Sheikh University • github.com/interesta22/Tawseela-App.git • October 2024 - December 2024\n•Built a ride-booking app for intercity and short trips, targeting university students.\n•Developed using Flutter with Firebase for authentication and data handling.\n•Integrated OpenStreetMap API to display routes and enhance location-based services.\nMemoMate\nSelf-initiated Project • github.com/interesta22/MemoMate.git • August 2024 - September 2024\n•A simple and efficient note-taking app with categorization and search features.\n•Enables users to quickly organize and retrieve notes for improved productivity.\n•Designed with an intuitive and user-friendly UI.\nDeadBot\nSelf-initiated Project • github.com/interesta22/Deadbot.git • July 2024 - August 2024\n•AI-powered chatbot for automated responses and smart task execution.\n•Supports a variety of commands and customizable interactions.\n•Built with a focus on natural language processing (NLP) capabilities."
+        }
+      },
+      "experience": {
+        "total_experience_years": 1.26,
+        "skill_durations": {
+          "Android": 0.94,
+          "Dart": 1.26,
+          "Firebase": 1.26,
+          "Flutter": 1.26,
+          "Git": 0.94,
+          "GitHub": 0.94,
+          "Authentication": 0.41,
+          "Cubit": 0.41,
+          "Figma": 0.41,
+          "Firestore.": 0.41,
+          "Hive. •Integrated RESTful": 0.08,
+          "iOS.": 0.08,
+          "OOP": 0.41,
+          "AI language": 0.33,
+          "DIO": 0.33,
+          "Hive.": 0.33,
+          "RESTful APIs": 0.33
+        },
+        "top_skills_by_years": [
+          {
+            "skill": "Dart",
+            "years": 1.26
+          },
+          {
+            "skill": "Firebase",
+            "years": 1.26
+          },
+          {
+            "skill": "Flutter",
+            "years": 1.26
+          }
+        ],
+        "action_verb_score": 0.2,
+        "gap_details": [
+          "Currently unemployed for ~9 months since 'Development Trainee' ended on 2025-08-01."
+        ]
+      },
+      "extraction": {
+        "source": "spatial",
+        "spatial_status": "ok",
+        "word_count_spatial": 564,
+        "raw_text": "Ahmed Mohammed Ahmed\nAlexandria,Egypt ahmedabdulazizz203@gmail.com +201278576046 in/ahmedabdulaziz10 github.com/interesta22\nOBJECTIVE\nJunior Flutter Developer skilled in Flutter, Dart, Firebase, RESTful APIs, and state management with Cubit. Strong in OOP, data structures, and clean\narchitecture. Writes scalable, maintainable code in agile teams.\nEDUCATION\nBachelor of Computer Science\nKafr El-Shiekh University • Egypt • 2026\n•Transferred from Luxor University after completing the first academic year.\nEXPERIENCE\nMobile App Development Trainee\nDigital Egypt Pioneers Initiative - DEPI | June 2025 - Present, Alexandria\n•Gained practical experience in Flutter, Dart, Firebase, Git/GitHub, and mobile deployment for Android and iOS.\n•Completed a capstone project applying prompt engineering, unit testing, and real-world app development practices.\n•Developed strong teamwork, communication, and presentation skills through collaborative projects and freelance coaching experiences.\nMobile App Development Trainee\nInformation Technology Institute (ITI) | July 2025 - August 2025, Tanta\n•Built Flutter applications using Dart, with state management via Cubit and local data persistence using Hive.\n•Integrated RESTful APIs using DIO and implemented Firebase services including Authentication and Firestore.\n•Applied OOP principles and developed pixel-perfect UIs based on Figma designs.\nAI Prompt Engineer\nOutlier AI | January 2025 - May 2025, Remote\n•Collaborated with the Outlier AI team to train and evaluate AI language models.\n•Analyzed model responses to identify errors and enhance overall performance.\n•Synthesized performance data to recommend prompt adjustments, driving measurable improvements in language model accuracy and user engagement.\nCOURSES\nFlutter Advanced Course Bloc and MVVM Pattern\nUdemy • 2025\nFlutter & Dart Development Course\nUdemy • 2024\nSKILLS\nSoft Skills: Teamwork, Communication Skills, Presentation, Time Management, Remote Collaboration, Adaptability, Team Leadership, Problem Solving,\nCritical Thinking, Self-Learning.\nTechnical Skills: Proficient in Dart, Flutter, Firebase, C++, C#, Python, OOP, Data Structures, Algorithms, SOLID Principles, Design Patterns, Cubit, Bloc,\nClean Architecture, and MVVM.\nPROJECT\nQuality Assurance Unit App\nFaculty of Computers and Information, Kafr El-Sheikh University • github.com/Malak308/Quality_Management • March 2025 - Present\n•Developing a mobile app for the Faculty’s Quality Assurance Unit to streamline internal operations.\n\n•Displaying evaluation criteria and essential documentation in an organized, user-friendly interface.\n•Supporting multilingual access to ensure broader usability across faculty members.\nMovista\nITI • github.com/interesta22/Movista • July 2025 - August 2025\n•Developed a movie discovery app using the TMDB API with secure user authentication via Firebase.\n•Implemented personalized bookmarking and robust offline caching for improved user experience.\n•Managed app state efficiently using Cubit architecture for scalability and maintainability.\nKhaliha 3alina\nSelf-initiated Project • github.com/interesta22/Kaliha-3alina-App • May 2025 - July 2025\n•Mobile application to splitting shared expenses and suggest transportation routes between locations.\n•Used Cubit, Hive, and Firebase to build a smooth, offline-ready experience with fair cost calculation and route guidance.\n•Published on the Amazon App Store.\nTawseela\nFaculty of Computers and Information, Kafr El-Sheikh University • github.com/interesta22/Tawseela-App.git • October 2024 - December 2024\n•Built a ride-booking app for intercity and short trips, targeting university students.\n•Developed using Flutter with Firebase for authentication and data handling.\n•Integrated OpenStreetMap API to display routes and enhance location-based services.\nMemoMate\nSelf-initiated Project • github.com/interesta22/MemoMate.git • August 2024 - September 2024\n•A simple and efficient note-taking app with categorization and search features.\n•Enables users to quickly organize and retrieve notes for improved productivity.\n•Designed with an intuitive and user-friendly UI.\nDeadBot\nSelf-initiated Project • github.com/interesta22/Deadbot.git • July 2024 - August 2024\n•AI-powered chatbot for automated responses and smart task execution.\n•Supports a variety of commands and customizable interactions.\n•Built with a focus on natural language processing (NLP) capabilities."
+      },
+      "layer2": {
+        "experience": {
+          "total_experience_years": 1.26
+        },
+        "seniority_details": {
+          "level": "Intern",
+          "verb_score": 0.67,
+          "semantic_match": "Intern"
+        },
+        "categorized_skills": {
+          "hard_skills": [
+            "AI-powered",
+            "Algorithms",
+            "Android",
+            "Authentication",
+            "Bloc, Clean Architecture, and MVVM.",
+            "C#",
+            "C++",
+            "chatbot",
+            "Cubit",
+            "Cubit.",
+            "Dart",
+            "Data Structures",
+            "Design Patterns",
+            "DIO",
+            "Figma",
+            "Firebase",
+            "Firestore.",
+            "Flutter",
+            "Git",
+            "GitHub",
+            "Hive",
+            "Hive.",
+            "Kaliha-3alina-App",
+            "MemoMate",
+            "natural language processing",
+            "NLP",
+            "OOP",
+            "OpenStreetMap",
+            "Python",
+            "RESTful APIs",
+            "SOLID Principles",
+            "Tawseela Faculty of Computers"
+          ],
+          "soft_skills": [],
+          "management_skills": []
+        },
+        "domain_scores": {
+          "Technology & Software": 0.2685084640979767,
+          "Healthcare & Medicine": 0.14193503558635712,
+          "Finance & Accounting": 0.140038400888443,
+          "Education & Training": 0.22612664103507996,
+          "Legal & Law": 0.11186768859624863,
+          "Marketing & Sales": 0.06698865443468094,
+          "Creative Arts & Design": 0.22963163256645203,
+          "Manufacturing & Engineering": 0.12944374978542328,
+          "Human Resources": 0.23245079815387726,
+          "Customer Service & Support": 0.26442214846611023,
+          "Science & Research": 0.13065840303897858,
+          "Construction & Trades": 0.14419090747833252,
+          "Backend Development": 0.24155160784721375,
+          "Frontend Development": 0.25258371233940125,
+          "Full Stack Development": 0.2780904769897461,
+          "Mobile App Development": 0.4996214807033539,
+          "Data Science & AI": 0.17897236347198486,
+          "DevOps & Cloud": 0.18235453963279724,
+          "UI/UX Design": 0.3104235529899597,
+          "Quality Assurance & Testing": 0.21281138062477112,
+          "Cybersecurity": 0.0939503088593483
+        }
+      }
+    },
+    "domain_scores": {
+      "Technology & Software": 0.2685084640979767,
+      "Healthcare & Medicine": 0.14193503558635712,
+      "Finance & Accounting": 0.140038400888443,
+      "Education & Training": 0.22612664103507996,
+      "Legal & Law": 0.11186768859624863,
+      "Marketing & Sales": 0.06698865443468094,
+      "Creative Arts & Design": 0.22963163256645203,
+      "Manufacturing & Engineering": 0.12944374978542328,
+      "Human Resources": 0.23245079815387726,
+      "Customer Service & Support": 0.26442214846611023,
+      "Science & Research": 0.13065840303897858,
+      "Construction & Trades": 0.14419090747833252,
+      "Backend Development": 0.24155160784721375,
+      "Frontend Development": 0.25258371233940125,
+      "Full Stack Development": 0.2780904769897461,
+      "Mobile App Development": 0.4996214807033539,
+      "Data Science & AI": 0.17897236347198486,
+      "DevOps & Cloud": 0.18235453963279724,
+      "UI/UX Design": 0.3104235529899597,
+      "Quality Assurance & Testing": 0.21281138062477112,
+      "Cybersecurity": 0.0939503088593483
+    }
+  }
+}

@@ -1,0 +1,502 @@
+{
+  "parsing_status": "success",
+  "profile": {
+    "full_name": "Yousef ALTohamy Ahmed",
+    "current_title": "Laravel Backend Developer",
+    "alternative_titles": [
+      "Backend Developer"
+    ],
+    "headline": "PROFESSIONAL SUMMARY",
+    "contact": {
+      "email": "youseftohtoh46@gmail.com",
+      "phone": "+201069806862",
+      "location": "Giza, Egypt",
+      "linkedin_url": "https://www.linkedin.com/in/yousefaltohamy",
+      "github_url": "https://github.com/YousefAlTohamy",
+      "portfolio_url": null
+    },
+    "summary": "Yousef ALTohamy Ahmed\nLaravel Backend Developer\nyouseftohtoh46@gmail.com | +201069806862 | Giza, Egypt\nlinkedin.com/in/yousefaltohamy | github.com/YousefAlTohamy\n\nBackend Developer specializing in PHP and Laravel, Final-year Computer Science student\n(Graduating2026)availableforfull-timecommitment. Ibringaproduct-firstmindset,focusing\nonthe”why”todeliversolutionsthatsolverealuserproblems. PassionateaboutCleanCode\nand SOLID principles, I have delivered 15+ scalable web apps and 20+ secure RESTful\nAPIs, backed by practical internship experience at Huma-Volve and intensive training at ITI.",
+    "confidence_score": 0.93
+  },
+  "stats": {
+    "page_count": 2,
+    "char_count": 4110,
+    "word_count": 498,
+    "language_hint": null
+  },
+  "skills": {
+    "items": [
+      {
+        "confidence_score": 0.65,
+        "name": "Agile Mindset",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "API Development",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Bilingual",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "bookingplatform",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Bootstrap",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Bootstrap • Testing & QA",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Brevo Mailer",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "CSS3",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Database Design",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Design Patterns",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Design Patterns, SOLID",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "ERD",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Feature & Unit Testing",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "filtering",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Git",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "GitHub",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "HTML5",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Huma-Volve",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "JavaScript",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "JSON",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Laravel",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Laravel Ecosystem: Eloquent ORM",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Laravel Framework",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Laravel Sanctum, Policies",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Management System",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "MVC Architecture",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "MySQL",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Native",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "OAuth",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Object-Oriented Programming",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "PHP",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "PHPUnit",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Postman",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "PROJECTS",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Queues & Jobs",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Repository",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "RESTful APIs",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Safarni",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Service Patterns",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "SMTP",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "SOLID",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "SQL",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "Stripe Payment Gateway",
+        "category": "hard",
+        "evidence": "ner"
+      },
+      {
+        "confidence_score": 0.65,
+        "name": "TDD",
+        "category": "hard",
+        "evidence": "ner"
+      }
+    ],
+    "confidence_score": 0.6499999999999995
+  },
+  "experience": {
+    "items": [
+      {
+        "confidence_score": 0.85,
+        "title": "Backend Developer",
+        "company": "Unknown Company",
+        "location": null,
+        "start_date": "2025-12-01",
+        "end_date": "2026-01-01",
+        "is_current": false,
+        "description": [
+          "Laravel  | 12/2025 – 01/2026",
+          "Huma-Volve | Remote",
+          "Collaborated with in a cross-functional team to develop and maintain two large-scale Laravel/My SQL applications (Safarni & Medical Management System).",
+          "Architected and delivered 20+secure REST API s for the”Safarni”bookingplat for m,adding",
+          "complex filtering that boosted data retrieval speed by 30%.",
+          "Integrated Stripe API,processing 100+simulatedtransactions with zerobreaches,demonstrating secure payment h and ling.",
+          "Managed backend logic for doctoravailability,processingover 500+mockrecordstoensure",
+          "system stability be for e launch."
+        ],
+        "technologies": [
+          "Huma-Volve",
+          "Laravel",
+          "Medical Management System",
+          "MySQL",
+          "Safarni"
+        ]
+      }
+    ],
+    "confidence_score": 0.85
+  },
+  "analysis": {
+    "summary": null,
+    "predicted_role": "Laravel Backend Developer",
+    "seniority": "Intern",
+    "primary_domain": "Full Stack Development",
+    "strengths": [
+      "Diverse technical portfolio with 5 technologies used across roles."
+    ],
+    "gaps": [],
+    "red_flags": [],
+    "confidence_score": 0.7499999999999998,
+    "metadata": {
+      "segmentation": {
+        "found_sections": [
+          "certificates",
+          "education",
+          "experience",
+          "languages",
+          "profile_summary",
+          "projects",
+          "skills"
+        ],
+        "sections_missing": [],
+        "anomalies": [],
+        "sections_text": {
+          "profile_summary": "Yousef ALTohamy Ahmed\nLaravel Backend Developer\nyouseftohtoh46@gmail.com | +201069806862 | Giza, Egypt\nlinkedin.com/in/yousefaltohamy | github.com/YousefAlTohamy\n\nBackend Developer specializing in PHP and Laravel, Final-year Computer Science student\n(Graduating2026)availableforfull-timecommitment. Ibringaproduct-firstmindset,focusing\nonthe”why”todeliversolutionsthatsolverealuserproblems. PassionateaboutCleanCode\nand SOLID principles, I have delivered 15+ scalable web apps and 20+ secure RESTful\nAPIs, backed by practical internship experience at Huma-Volve and intensive training at ITI.",
+          "experience": "Laravel Backend Developer | 12/2025 – 01/2026\nHuma-Volve | Remote\n• Collaborated within a cross-functional team to develop and maintain two large-scale Laravel/MySQL applications (Safarni & Medical Management System).\n• Architectedanddelivered20+secureRESTAPIsforthe”Safarni”bookingplatform,adding\ncomplex filtering that boosted data retrieval speed by 30%.\n• IntegratedStripeAPI,processing100+simulatedtransactionswithzerobreaches,demonstrating secure payment handling.\n• Managedbackendlogicfordoctoravailability,processingover500+mockrecordstoensure\nsystem stability before launch.",
+          "projects": "Backend Developer | Laravel, MySQL, AI Integration\n• Collaborating on the backend development of an AI-driven platform aimed at enhancing\nstudent career readiness and guidance.\n• Structuring complex database relationships and developing robust API endpoints to process user assessments and handle AI recommendation data efficiently.\n\nBackend Developer | Laravel, MySQL, Stripe, PHPUnit\n• Engineered a secure Stripe Payment system for seamless bookings and Saved Cards\nlogic.\n• Developed 15+ RESTful endpoints and built Admin/Doctor dashboards using Laravel\nBlade.\n• Applied Repository & Service Patterns and achieved high stability via PHPUnit testing.\n\nBackend Developer | Laravel, MySQL, Sanctum, OAuth\n• Built a secure Auth System (OTP, Password Resets, Google OAuth) using Laravel Sanctum.\n• Achieved 92% code coverage via TDD utilizing PHPUnit to eliminate system bugs before\ndeployment.\n\n• Designed complex database schemas and populated 500+ records using Migrations &\nSeeders.\nIdeas (Social Media Platform) | 10/2025 – 11/2025\nBackend Developer | Laravel, MySQL, Brevo Mailer\n• Developed a robust system for User Following, Likes, and threaded Comments utilizing\ncomplex Eloquent ORM relationships.\n• Optimized application performance by implementing Laravel Queues & Jobs, which reduced API response time by 40% during high-traffic simulations.\n• Utilized Laravel Policies to enforce granular authorization rules, and built a dedicated Admin Dashboard for content moderation and user management.",
+          "skills": "• Core & Frameworks: PHP, Object-Oriented Programming, Laravel Framework, MVC Architecture, API Development, MySQL, SQL\n• Concepts & Architecture: Database Design (ERD), Repository & Service Patterns, Design Patterns, SOLID Principles\n• Laravel Ecosystem: Eloquent ORM, Queues & Jobs, Laravel Sanctum, Policies & Authorization, Migrations & Seeders\n• Tools & Integrations: Git, GitHub, Stripe Payment Gateway, OAuth, JSON, Brevo Mailer\n(SMTP)\n• Web Fundamentals: HTML5, CSS3, JavaScript, Bootstrap\n• Testing & QA: PHPUnit, TDD, Feature & Unit Testing, Postman\n• Soft Skills: Problem Solving, Effective Communication, Team Collaboration, Time Management, Adaptability, Agile Mindset",
+          "education": "Kafr El Sheikh University | 2022 – 2026\nPursuing B.Sc. in Computer Science\n• Grade: Very Good.\n• KeyCoursework: SoftwareEngineering,DataStructures&Algorithms,DatabaseSystems,\nArtificial Intelligence.",
+          "certificates": "• FullStackWebDevelopmentTraining(PHP&Laravel)|InformationTechnologyInstitute\n(ITI) | 08/2025\n• Back-end Training Program | Huma-Volve | 01/2026\nSuccessfully completed an intensive 176-hour back-end training program.",
+          "languages": "• Arabic: Native/Bilingual\n• English: Proficient"
+        }
+      },
+      "experience": {
+        "total_experience_years": 0.08,
+        "skill_durations": {
+          "Huma-Volve": 0.08,
+          "Laravel": 0.08,
+          "Medical Management System": 0.08,
+          "MySQL": 0.08,
+          "Safarni": 0.08
+        },
+        "top_skills_by_years": [
+          {
+            "skill": "Huma-Volve",
+            "years": 0.08
+          },
+          {
+            "skill": "Laravel",
+            "years": 0.08
+          },
+          {
+            "skill": "Medical Management System",
+            "years": 0.08
+          }
+        ],
+        "action_verb_score": 0.3,
+        "gap_details": []
+      },
+      "extraction": {
+        "source": "spatial",
+        "spatial_status": "ok",
+        "word_count_spatial": 499,
+        "raw_text": "Yousef ALTohamy Ahmed\nLaravel Backend Developer\nyouseftohtoh46@gmail.com | +201069806862 | Giza, Egypt\nlinkedin.com/in/yousefaltohamy | github.com/YousefAlTohamy\nPROFESSIONAL SUMMARY\nBackend Developer specializing in PHP and Laravel, Final-year Computer Science student\n(Graduating2026)availableforfull-timecommitment. Ibringaproduct-firstmindset,focusing\nonthe”why”todeliversolutionsthatsolverealuserproblems. PassionateaboutCleanCode\nand SOLID principles, I have delivered 15+ scalable web apps and 20+ secure RESTful\nAPIs, backed by practical internship experience at Huma-Volve and intensive training at ITI.\nWORK EXPERIENCE\nLaravel Backend Developer | 12/2025 – 01/2026\nHuma-Volve | Remote\n• Collaborated within a cross-functional team to develop and maintain two large-scale Laravel/MySQL applications (Safarni & Medical Management System).\n• Architectedanddelivered20+secureRESTAPIsforthe”Safarni”bookingplatform,adding\ncomplex filtering that boosted data retrieval speed by 30%.\n• IntegratedStripeAPI,processing100+simulatedtransactionswithzerobreaches,demonstrating secure payment handling.\n• Managedbackendlogicfordoctoravailability,processingover500+mockrecordstoensure\nsystem stability before launch.\nPROJECTS\nCareer Compass (Graduation Project) | 01/2026 – Present\nBackend Developer | Laravel, MySQL, AI Integration\n• Collaborating on the backend development of an AI-driven platform aimed at enhancing\nstudent career readiness and guidance.\n• Structuring complex database relationships and developing robust API endpoints to process user assessments and handle AI recommendation data efficiently.\nHuma-Volve Medical Platform (Internship Project) | 12/2025 – 01/2026\nBackend Developer | Laravel, MySQL, Stripe, PHPUnit\n• Engineered a secure Stripe Payment system for seamless bookings and Saved Cards\nlogic.\n• Developed 15+ RESTful endpoints and built Admin/Doctor dashboards using Laravel\nBlade.\n• Applied Repository & Service Patterns and achieved high stability via PHPUnit testing.\nSafarni (Travel Booking System) (Internship Project) | 12/2025 – 01/2026\nBackend Developer | Laravel, MySQL, Sanctum, OAuth\n• Built a secure Auth System (OTP, Password Resets, Google OAuth) using Laravel Sanctum.\n• Achieved 92% code coverage via TDD utilizing PHPUnit to eliminate system bugs before\ndeployment.\n\n• Designed complex database schemas and populated 500+ records using Migrations &\nSeeders.\nIdeas (Social Media Platform) | 10/2025 – 11/2025\nBackend Developer | Laravel, MySQL, Brevo Mailer\n• Developed a robust system for User Following, Likes, and threaded Comments utilizing\ncomplex Eloquent ORM relationships.\n• Optimized application performance by implementing Laravel Queues & Jobs, which reduced API response time by 40% during high-traffic simulations.\n• Utilized Laravel Policies to enforce granular authorization rules, and built a dedicated Admin Dashboard for content moderation and user management.\nSKILLS\n• Core & Frameworks: PHP, Object-Oriented Programming, Laravel Framework, MVC Architecture, API Development, MySQL, SQL\n• Concepts & Architecture: Database Design (ERD), Repository & Service Patterns, Design Patterns, SOLID Principles\n• Laravel Ecosystem: Eloquent ORM, Queues & Jobs, Laravel Sanctum, Policies & Authorization, Migrations & Seeders\n• Tools & Integrations: Git, GitHub, Stripe Payment Gateway, OAuth, JSON, Brevo Mailer\n(SMTP)\n• Web Fundamentals: HTML5, CSS3, JavaScript, Bootstrap\n• Testing & QA: PHPUnit, TDD, Feature & Unit Testing, Postman\n• Soft Skills: Problem Solving, Effective Communication, Team Collaboration, Time Management, Adaptability, Agile Mindset\nEDUCATION\nKafr El Sheikh University | 2022 – 2026\nPursuing B.Sc. in Computer Science\n• Grade: Very Good.\n• KeyCoursework: SoftwareEngineering,DataStructures&Algorithms,DatabaseSystems,\nArtificial Intelligence.\nCERTIFICATES\n• FullStackWebDevelopmentTraining(PHP&Laravel)|InformationTechnologyInstitute\n(ITI) | 08/2025\n• Back-end Training Program | Huma-Volve | 01/2026\nSuccessfully completed an intensive 176-hour back-end training program.\nLANGUAGES\n• Arabic: Native/Bilingual\n• English: Proficient"
+      },
+      "layer2": {
+        "experience": {
+          "total_experience_years": 0.08
+        },
+        "seniority_details": {
+          "level": "Intern",
+          "verb_score": 1.0,
+          "semantic_match": "Intern"
+        },
+        "categorized_skills": {
+          "hard_skills": [
+            "Agile Mindset",
+            "API Development",
+            "Bilingual",
+            "bookingplatform",
+            "Bootstrap",
+            "Bootstrap • Testing & QA",
+            "Brevo Mailer",
+            "CSS3",
+            "Database Design",
+            "Design Patterns",
+            "Design Patterns, SOLID",
+            "ERD",
+            "Feature & Unit Testing",
+            "filtering",
+            "Git",
+            "GitHub",
+            "HTML5",
+            "Huma-Volve",
+            "JavaScript",
+            "JSON",
+            "Laravel",
+            "Laravel Ecosystem: Eloquent ORM",
+            "Laravel Framework",
+            "Laravel Sanctum, Policies",
+            "MVC Architecture",
+            "MySQL",
+            "Native",
+            "OAuth",
+            "Object-Oriented Programming",
+            "PHP",
+            "PHPUnit",
+            "Postman",
+            "PROJECTS",
+            "Queues & Jobs",
+            "Repository",
+            "RESTful APIs",
+            "Safarni",
+            "Service Patterns",
+            "SMTP",
+            "SOLID",
+            "SQL",
+            "Stripe Payment Gateway",
+            "TDD"
+          ],
+          "soft_skills": [],
+          "management_skills": [
+            "Management System"
+          ]
+        },
+        "domain_scores": {
+          "Technology & Software": 0.28887930512428284,
+          "Healthcare & Medicine": 0.02522510476410389,
+          "Finance & Accounting": 0.11140401661396027,
+          "Education & Training": 0.17316864430904388,
+          "Legal & Law": 0.08906594663858414,
+          "Marketing & Sales": 0.10736212879419327,
+          "Creative Arts & Design": 0.18357181549072266,
+          "Manufacturing & Engineering": 0.12281486392021179,
+          "Human Resources": 0.1898501068353653,
+          "Customer Service & Support": 0.25677528977394104,
+          "Science & Research": 0.13535277545452118,
+          "Construction & Trades": 0.1444993019104004,
+          "Backend Development": 0.33384019136428833,
+          "Frontend Development": 0.3274288773536682,
+          "Full Stack Development": 0.4616401493549347,
+          "Mobile App Development": 0.2715732157230377,
+          "Data Science & AI": 0.13745161890983582,
+          "DevOps & Cloud": 0.26788130402565,
+          "UI/UX Design": 0.2003357708454132,
+          "Quality Assurance & Testing": 0.21630863845348358,
+          "Cybersecurity": 0.19833163917064667
+        }
+      }
+    },
+    "domain_scores": {
+      "Technology & Software": 0.28887930512428284,
+      "Healthcare & Medicine": 0.02522510476410389,
+      "Finance & Accounting": 0.11140401661396027,
+      "Education & Training": 0.17316864430904388,
+      "Legal & Law": 0.08906594663858414,
+      "Marketing & Sales": 0.10736212879419327,
+      "Creative Arts & Design": 0.18357181549072266,
+      "Manufacturing & Engineering": 0.12281486392021179,
+      "Human Resources": 0.1898501068353653,
+      "Customer Service & Support": 0.25677528977394104,
+      "Science & Research": 0.13535277545452118,
+      "Construction & Trades": 0.1444993019104004,
+      "Backend Development": 0.33384019136428833,
+      "Frontend Development": 0.3274288773536682,
+      "Full Stack Development": 0.4616401493549347,
+      "Mobile App Development": 0.2715732157230377,
+      "Data Science & AI": 0.13745161890983582,
+      "DevOps & Cloud": 0.26788130402565,
+      "UI/UX Design": 0.2003357708454132,
+      "Quality Assurance & Testing": 0.21630863845348358,
+      "Cybersecurity": 0.19833163917064667
+    }
+  }
+}

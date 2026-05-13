@@ -107,29 +107,29 @@ export default function AdminDashboard() {
       title: t('admin.stats.users'),
       value: stats?.total_students?.toLocaleString() || '0',
       icon: 'ph-users',
-      color: 'from-blue-500/20 to-indigo-500/20',
-      accent: 'text-blue-400',
+      color: 'from-indigo-500/10 to-violet-500/10 dark:from-indigo-500/20 dark:to-violet-500/20',
+      accent: 'text-indigo-600 dark:text-indigo-400',
     },
     {
       title: t('admin.stats.jobs'),
       value: stats?.total_jobs?.toLocaleString() || '0',
       icon: 'ph-briefcase',
-      color: 'from-emerald-500/20 to-teal-500/20',
-      accent: 'text-emerald-400',
+      color: 'from-cyan-500/10 to-blue-500/10 dark:from-cyan-500/20 dark:to-blue-500/20',
+      accent: 'text-cyan-600 dark:text-cyan-400',
     },
     {
       title: t('admin.stats.sources'),
       value: stats?.total_sources?.toLocaleString() || '0',
       icon: 'ph-database',
-      color: 'from-purple-500/20 to-fuchsia-500/20',
-      accent: 'text-purple-400',
+      color: 'from-emerald-500/10 to-teal-500/10 dark:from-emerald-500/20 dark:to-teal-500/20',
+      accent: 'text-emerald-600 dark:text-emerald-400',
     },
     {
       title: t('admin.stats.targets'),
       value: stats?.total_targets?.toLocaleString() || '0',
       icon: 'ph-target',
-      color: 'from-orange-500/20 to-amber-500/20',
-      accent: 'text-orange-400',
+      color: 'from-rose-500/10 to-pink-500/10 dark:from-rose-500/20 dark:to-pink-500/20',
+      accent: 'text-rose-600 dark:text-rose-400',
     },
   ];
 
@@ -143,21 +143,21 @@ export default function AdminDashboard() {
       <div className="p-6 max-w-7xl mx-auto pb-20 space-y-8 pt-28">
         
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-black tracking-tight text-white flex items-center gap-3">
-              <LayoutDashboard className="text-[var(--cc-primary)]" />
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-3">
+              <LayoutDashboard className="text-indigo-600 dark:text-[var(--cc-primary)]" size={32} />
               {t('admin.title')}
             </h1>
-            <p className="text-slate-500 font-mono text-sm mt-1">
+            <p className="text-slate-500 font-mono text-sm tracking-widest uppercase">
               // UNIT_ID: CC-ADMIN-ALPHA-01 // STATUS: {healthData.status.toUpperCase()}
             </p>
           </div>
           <button 
             onClick={fetchDashboardStats}
-            className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all text-xs font-bold uppercase tracking-widest text-[var(--cc-primary)]"
+            className="flex items-center gap-3 px-6 py-3 bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm transition-all text-xs font-black uppercase tracking-widest text-indigo-600 dark:text-[var(--cc-primary)]"
           >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
             {t('common.refresh')}
           </button>
         </div>
@@ -176,17 +176,17 @@ export default function AdminDashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.1 }}
-              className={`relative overflow-hidden p-6 rounded-3xl border border-white/5 bg-gradient-to-br ${card.color} group hover:border-[var(--cc-primary)]/30 transition-all`}
+              className={`relative overflow-hidden p-8 rounded-[2rem] border border-slate-200/60 dark:border-white/5 bg-gradient-to-br ${card.color} group hover:border-indigo-500/30 dark:hover:border-[var(--cc-primary)]/30 transition-all shadow-md`}
             >
               <div className="relative z-10">
-                <div className={`p-3 rounded-2xl bg-black/20 w-fit mb-4 ${card.accent}`}>
+                <div className={`p-3 rounded-2xl bg-white/50 dark:bg-black/20 w-fit mb-4 ${card.accent} shadow-sm`}>
                   <i className={`${card.icon} text-2xl`} />
                 </div>
-                <div className="text-slate-400 text-xs font-black uppercase tracking-widest mb-1">{card.title}</div>
-                <div className="text-3xl font-black text-white tracking-tight">{card.value}</div>
+                <div className="text-slate-500 dark:text-slate-400 text-xs font-black uppercase tracking-widest mb-1">{card.title}</div>
+                <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{card.value}</div>
               </div>
               <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-20 transition-opacity">
-                <i className={`${card.icon} text-8xl -mr-4 -mt-4`} />
+                <i className={`${card.icon} text-[10rem] -mr-8 -mt-8`} />
               </div>
             </motion.div>
           ))}
@@ -198,73 +198,98 @@ export default function AdminDashboard() {
           <div className="lg:col-span-2 glass-card p-8 border-white/5 rounded-3xl space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                   <TrendingUp size={20} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">{t('admin.neural_performance')}</h3>
-                  <p className="text-xs text-slate-500 font-mono">SIGNAL_STRENGTH: OPTIMAL</p>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('admin.neural_performance')}</h3>
+                  <p className="text-xs text-slate-500 font-mono tracking-widest">SIGNAL_STRENGTH: OPTIMAL</p>
                 </div>
               </div>
             </div>
 
-            <div className="h-[300px] w-full mt-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                  <XAxis 
-                    dataKey="name" 
-                    stroke="rgba(255,255,255,0.3)" 
-                    fontSize={10} 
-                    tickLine={false} 
-                    axisLine={false}
-                    tick={{ fontFamily: 'var(--cc-mono)' }}
-                  />
-                  <YAxis 
-                    stroke="rgba(255,255,255,0.3)" 
-                    fontSize={10} 
-                    tickLine={false} 
-                    axisLine={false}
-                    tick={{ fontFamily: 'var(--cc-mono)' }}
-                  />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
-                    itemStyle={{ color: '#00D2FF' }}
-                    cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                  />
-                  <Bar dataKey="count" fill="url(#barGradient)" radius={[6, 6, 0, 0]} />
-                  <defs>
-                    <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#00D2FF" />
-                      <stop offset="100%" stopColor="#9D50BB" />
-                    </linearGradient>
-                  </defs>
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="h-[300px] w-full mt-4 flex items-center justify-center">
+              {chartData && chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <CartesianGrid 
+                      strokeDasharray="3 3" 
+                      stroke="currentColor" 
+                      className="text-slate-200 dark:text-white/5" 
+                      vertical={false} 
+                    />
+                    <XAxis 
+                      dataKey="name" 
+                      stroke="currentColor" 
+                      className="text-slate-400 dark:text-slate-500"
+                      fontSize={10} 
+                      tickLine={false} 
+                      axisLine={false}
+                      tick={{ fontFamily: 'var(--cc-mono)' }}
+                    />
+                    <YAxis 
+                      stroke="currentColor" 
+                      className="text-slate-400 dark:text-slate-500"
+                      fontSize={10} 
+                      tickLine={false} 
+                      axisLine={false}
+                      tick={{ fontFamily: 'var(--cc-mono)' }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'var(--cc-bg-card)', 
+                        border: '1px solid var(--cc-border)', 
+                        borderRadius: '12px', 
+                        fontSize: '12px',
+                        color: 'var(--cc-text-primary)'
+                      }}
+                      itemStyle={{ color: '#6366f1' }}
+                      cursor={{ fill: 'currentColor', opacity: 0.05 }}
+                    />
+                    <Bar dataKey="count" fill="url(#barGradient)" radius={[6, 6, 0, 0]} />
+                    <defs>
+                      <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#6366f1" />
+                        <stop offset="100%" stopColor="#a855f7" />
+                      </linearGradient>
+                    </defs>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex flex-col items-center justify-center space-y-4 opacity-40">
+                   <div className="p-4 rounded-full bg-slate-100 dark:bg-white/5">
+                      <TrendingUp size={32} className="text-slate-400" />
+                   </div>
+                   <div className="text-center">
+                      <p className="text-xs font-black uppercase tracking-widest text-slate-500">{t('admin.no_performance_data', 'No Performance Data Available')}</p>
+                      <p className="text-[10px] text-slate-400 mt-1">System is currently in idle state or AI services are offline</p>
+                   </div>
+                </div>
+              )}
             </div>
           </div>
 
           {/* System Health Sidebar */}
           <div className="space-y-6">
             
-            <div className="glass-card p-6 border-white/5 rounded-3xl space-y-6">
+            <div className="glass-card p-8 border-slate-200/60 dark:border-white/5 rounded-3xl space-y-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                   <Activity size={20} />
                 </div>
-                <h3 className="text-lg font-bold text-white">{t('admin.health.status')}</h3>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('admin.health.status')}</h3>
               </div>
 
               <div className="space-y-4">
                 {Object.entries(healthData.services).map(([service, status]) => (
-                  <div key={service} className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/5">
-                    <div className="flex items-center gap-3">
-                      <Server size={14} className="text-slate-500" />
-                      <span className="text-sm font-medium text-slate-300">{service}</span>
+                  <div key={service} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 shadow-sm">
+                    <div className="flex items-center gap-4">
+                      <Server size={18} className="text-slate-400" />
+                      <span className="text-base font-bold text-slate-700 dark:text-slate-300">{service}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${status === 'online' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : status === 'checking' ? 'bg-amber-500 animate-pulse' : 'bg-rose-500'}`} />
-                      <span className={`text-[10px] font-black uppercase tracking-widest ${status === 'online' ? 'text-emerald-400' : status === 'checking' ? 'text-amber-400' : 'text-rose-400'}`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2.5 h-2.5 rounded-full ${status === 'online' ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : status === 'checking' ? 'bg-amber-500 animate-pulse' : 'bg-rose-500'}`} />
+                      <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${status === 'online' ? 'text-emerald-600 dark:text-emerald-400' : status === 'checking' ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400'}`}>
                         {status === 'online' ? t('admin.system.online') : status === 'checking' ? t('admin.system.checking') : t('admin.system.offline')}
                       </span>
                     </div>

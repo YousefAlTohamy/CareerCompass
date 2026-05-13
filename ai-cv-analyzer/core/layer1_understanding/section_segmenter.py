@@ -16,6 +16,7 @@ from typing import (
     Union,
 )
 
+# pyrefly: ignore [missing-import]
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -71,64 +72,10 @@ HeaderResolver = Callable[[str], Optional[Tuple[SectionType, float]]]
 # embed once during __init__.  At detection time, the candidate line's
 # embedding is compared against these references via cosine similarity.
 
-_SECTION_REFERENCE_PHRASES: Dict[SectionType, List[str]] = {
-    "profile_summary": [
-        "Professional Summary",
-        "About Me",
-        "Career Summary",
-        "Career Objective",
-        "Profile Overview",
-        "Personal Statement",
-        "Executive Summary",
-    ],
-    "experience": [
-        "Work Experience",
-        "Professional Experience",
-        "Employment History",
-        "Career History",
-        "Work History",
-        "Relevant Experience",
-    ],
-    "education": [
-        "Education",
-        "Academic Background",
-        "Academic Qualifications",
-        "Educational Background",
-        "Degrees and Certifications",
-    ],
-    "skills": [
-        "Technical Skills",
-        "Core Competencies",
-        "Skills and Technologies",
-        "Areas of Expertise",
-        "Key Skills",
-        "Professional Skills",
-        "Tools and Technologies",
-    ],
-    "projects": [
-        "Projects",
-        "Selected Projects",
-        "Project Experience",
-        "Portfolio",
-        "Academic Projects",
-        "Personal Projects",
-    ],
-    "certificates": [
-        "Certificates",
-        "Certifications",
-        "Licenses",
-        "Professional Training",
-        "Awards",
-        "Honors",
-        "Achievements",
-    ],
-    "languages": [
-        "Languages",
-        "Linguistic Skills",
-        "Language Proficiency",
-        "Spoken Languages",
-    ],
-}
+from .utils import load_layer1_config
+_L1_CONFIG = load_layer1_config()["section_config"]
+
+_SECTION_REFERENCE_PHRASES: Dict[SectionType, List[str]] = _L1_CONFIG["reference_phrases"]
 
 
 class SemanticSegmenter:
@@ -312,6 +259,10 @@ class SemanticSegmenter:
     # ------------------------------------------------------------------
 
     def _detect_header(self, line: str) -> Optional[Tuple[SectionType, float]]:
+        is_font_header = line.startswith("[H] ")
+        if is_font_header:
+            line = line[4:]
+
         if len(line) > self._max_header_len:
             return None
 
@@ -338,15 +289,16 @@ class SemanticSegmenter:
         # Regex / fuzzy header detection.
         for section, rx in self._compiled.regex_order:
             if rx.fullmatch(normalized):
-                return section, 0.95
+                return section, 0.99 if is_font_header else 0.95
             if rx.search(normalized):
-                return section, 0.85
+                return section, 0.95 if is_font_header else 0.85
 
         # Phase 3: Semantic fallback — only if embedder and references exist.
         if self._embedder is not None and self._ref_embeddings:
             semantic_result = self._semantic_header_match(line)
             if semantic_result is not None:
-                return semantic_result
+                sec, conf = semantic_result
+                return sec, min(0.99, conf + 0.15) if is_font_header else conf
 
         return None
 
@@ -433,30 +385,7 @@ class _HeaderPatterns:
     @staticmethod
     def compile() -> "_HeaderPatterns":
         # All keys must be already normalized via `_normalize_header_candidate`.
-        exact: Dict[str, SectionType] = {
-            "summary": "profile_summary",
-            "profile": "profile_summary",
-            "about": "profile_summary",
-            "about me": "profile_summary",
-            "professional summary": "profile_summary",
-            "career summary": "profile_summary",
-            "work experience": "experience",
-            "experience": "experience",
-            "employment history": "experience",
-            "professional experience": "experience",
-            "education": "education",
-            "academic background": "education",
-            "technical skills": "skills",
-            "skills": "skills",
-            "core skills": "skills",
-            "key skills": "skills",
-            "projects": "projects",
-            "project experience": "projects",
-            "selected projects": "projects",
-            "certificates": "certificates",
-            "certifications": "certificates",
-            "languages": "languages",
-        }
+        exact: Dict[str, SectionType] = _L1_CONFIG["exact_matches"]
 
         def rx(*alts: str) -> re.Pattern[str]:
             joined = "|".join(alts)
@@ -481,6 +410,7 @@ class _HeaderPatterns:
                     r"\bacademic\b",
                     r"\bacademic background\b",
                     r"\bqualifications\b",
+                    r"\bcourses\b",
                 ),
             ),
             (
@@ -497,10 +427,11 @@ class _HeaderPatterns:
             (
                 "projects",
                 rx(
-                    r"\bprojects\b",
+                    r"\bprojects?\b",
                     r"\bproject experience\b",
                     r"\bselected projects\b",
                     r"\bportfolio\b",
+                    r"\bnotable projects\b",
                 ),
             ),
             (

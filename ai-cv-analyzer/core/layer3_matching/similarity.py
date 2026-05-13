@@ -1,180 +1,120 @@
 import logging
-from typing import Dict, List
+import json
+import os
+from typing import Dict, List, Any
+# pyrefly: ignore [missing-import]
 import numpy as np
-try:
-    from rapidfuzz import fuzz
-    RAPIDFUZZ_AVAILABLE = True
-except ImportError:
-    RAPIDFUZZ_AVAILABLE = False
 
-from ..layer3_matching.embedder import SemanticEmbedder
-from ..layer2_classification.classifier import CVDomainClassifier
+from core.layer3_matching.embedder import SemanticEmbedder
+from core.layer2_classification.domain_engine import DomainEngine
+from core.layer3_matching.constraint_validator import ConstraintValidator
+from core.layer3_matching.fit_analysis_generator import FitAnalysisGenerator
 
 logger = logging.getLogger(__name__)
 
 class IntelligentMatcher:
     """
-    Layer 3: Intelligent Matching Engine
-    Calculates the semantic match between a CV and a Job Description.
+    Layer 3: The Unified Matchmaking Engine.
+    Coordinates semantic scoring, hard constraints, and explainable reporting.
     """
-    # Adaptive weights based on candidate seniority
-    # This makes matching fairer for juniors and stricter for seniors.
-    ADAPTIVE_WEIGHTS = {
-        "intern": {"semantic": 0.30, "skills_structured": 0.60, "domain": 0.10},
-        "junior": {"semantic": 0.40, "skills_structured": 0.40, "domain": 0.20},
-        "senior": {"semantic": 0.30, "skills_structured": 0.20, "domain": 0.50}, # Domain expertise is key
-        "lead":   {"semantic": 0.20, "skills_structured": 0.20, "domain": 0.60},
-        "default": {"semantic": 0.40, "skills_structured": 0.40, "domain": 0.20}
-    }
 
-    def __init__(self):
-        self.embedder = SemanticEmbedder()
-        self._classifier = CVDomainClassifier()
+    def __init__(self, embedder: SemanticEmbedder, domain_engine: DomainEngine):
+        self._embedder = embedder
+        self._domain_engine = domain_engine
+        self._validator = ConstraintValidator()
+        self._analysis_gen = FitAnalysisGenerator()
+        self._config = self._load_config()
 
-    def _cosine_similarity(self, vec_a: np.ndarray, vec_b: np.ndarray) -> float:
-        """Calculate cosine similarity between two vectors."""
-        if np.all(vec_a == 0) or np.all(vec_b == 0):
-            return 0.0
-            
-        dot_product = np.dot(vec_a, vec_b)
-        norm_a = np.linalg.norm(vec_a)
-        norm_b = np.linalg.norm(vec_b)
-        
-        return float(dot_product / (norm_a * norm_b))
+    def _load_config(self) -> Dict[str, Any]:
+        config_path = os.path.join(os.path.dirname(__file__), "matching_config.json")
+        with open(config_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
 
-    def _calculate_skill_overlap(self, cv_skills: List[str], job_skills: List[str]) -> float:
-        """Calculate the exact/fuzzy overlap ratio of skills."""
-        if not job_skills:
-            return 1.0  # No skills required
-        if not cv_skills:
-            return 0.0
-
-        cv_skills_lower = [s.lower() for s in cv_skills]
-        matched_count = 0
-
-        for job_skill in job_skills:
-            js_lower = job_skill.lower()
-            
-            # Level 1: Exact Match
-            if js_lower in cv_skills_lower:
-                matched_count += 1
-                continue
-            
-            # Level 2: Fuzzy Match (RapidFuzz)
-            if RAPIDFUZZ_AVAILABLE:
-                best_ratio = 0
-                for cs_lower in cv_skills_lower:
-                    ratio = fuzz.ratio(js_lower, cs_lower)
-                    if ratio > best_ratio:
-                        best_ratio = ratio
-                
-                if best_ratio >= 80: # Threshold for considering it a match
-                    matched_count += 1
-                    continue
-        
-        return matched_count / len(job_skills)
-
-    def calculate_match(self, cv_data: Dict, job_data: Dict) -> Dict:
+    def calculate_match(self, cv_data: Dict, parsed_jd: Dict) -> Dict[str, Any]:
         """
-        Calculates a holistic match score based on semantics and hard skills.
-        
-        cv_data format: {"raw_text": "...", "skills": ["Python", ...]}
-        job_data format: {"description": "...", "skills": ["Python", ...]}
+        Calculates a multi-factor match score between CV and JD.
         """
-        logger.info(f"Calculating match for job: {job_data.get('title', 'Unknown')}")
+        logger.info("⚡ Calculating intelligent match score...")
         
-        # Extract core data from structured CV output
-        cv_raw_text = cv_data.get("raw_text")
-        if not cv_raw_text:
-            cv_raw_text = cv_data.get("analysis", {}).get("metadata", {}).get("extraction", {}).get("raw_text", "")
+        # 1. Component Scoring
+        cv_summary = cv_data.get("profile", {}).get("summary", "")
+        jd_summary = parsed_jd.get("raw_text", "")
+        semantic_score = self._embedder.compute_similarity(cv_summary[:1000], jd_summary[:1000])
+
+        cv_skills_source = cv_data.get("skills", {}).get("items", [])
+        cv_skills_list = [s.get("name", "") for s in cv_skills_source]
+        jd_mandatory = parsed_jd.get("mandatory_skills", [])
+        jd_bonus = parsed_jd.get("bonus_skills", [])
         
-        cv_skills_source = cv_data.get("skills", [])
-        if isinstance(cv_skills_source, dict) and "items" in cv_skills_source:
-             cv_skills = [s.get("name", "") for s in cv_skills_source.get("items", []) if s.get("name")]
-        else:
-             cv_skills = cv_skills_source if isinstance(cv_skills_source, list) else []
+        skills_cv_text = ", ".join(cv_skills_list)
+        skills_jd_text = ", ".join(jd_mandatory + jd_bonus)
+        skills_score = self._embedder.compute_similarity(skills_cv_text, skills_jd_text)
 
-        job_skills = job_data.get("skills", [])
-
-        # 1. Structured Comparison: Skills ↔ Job Skills (Crucial Addition)
-        # We match the CV's canonical skills directly against the Job's required skills
-        cv_skills_text = ", ".join(cv_skills)
-        job_skills_text = ", ".join(job_skills)
-        
-        skills_vec_cv = self.embedder.get_embedding(cv_skills_text)
-        skills_vec_job = self.embedder.get_embedding(job_skills_text)
-        skills_semantic_score = self._cosine_similarity(skills_vec_cv, skills_vec_job)
-
-        # 2. Contextual Comparison: Summary/Experience ↔ Job Description
-        # Fix: Look for experience/summary to avoid full-text dilution
-        cv_context_text = cv_data.get("profile", {}).get("summary", "")
-        if not cv_context_text:
-             cv_context_text = cv_raw_text[:2000] # Fallback to first 2000 chars
-
-        cv_context_vec = self.embedder.get_embedding(cv_context_text)
-        job_desc_vec = self.embedder.get_embedding(job_data.get("description", ""))
-        contextual_score = self._cosine_similarity(cv_context_vec, job_desc_vec)
-
-        # 3. Domain Match Score (Layer 2 Integration)
         cv_domain = cv_data.get("analysis", {}).get("primary_domain")
-        if not cv_domain and "primary_domain" in cv_data:
-            cv_domain = cv_data["primary_domain"]
+        jd_domain = parsed_jd.get("primary_domain")
         
-        job_domain = job_data.get("primary_domain")
-        if not job_domain and job_data.get("description"):
-            job_domain_results = self._classifier.predict_domain(job_data["description"][:1500])
-            if job_domain_results:
-                job_domain = max(job_domain_results, key=job_domain_results.get)
-        
-        domain_match_score = 0.0
-        if cv_domain and job_domain:
-            if cv_domain == job_domain:
-                domain_match_score = 1.0
-            else:
-                cv_domain_vec = self.embedder.get_embedding(cv_domain)
-                job_domain_vec = self.embedder.get_embedding(job_domain)
-                domain_match_score = self._cosine_similarity(cv_domain_vec, job_domain_vec)
-                if domain_match_score < 0.65: # Threshold for unrelated domains
-                    domain_match_score = 0.0
-        else:
-            domain_match_score = 0.5 
+        domain_score = 1.0 if cv_domain == jd_domain else self._embedder.compute_similarity(cv_domain or "", jd_domain or "")
+        if domain_score < self._config["thresholds"]["domain_cutoff"]:
+            domain_score = 0.0
 
-        # 4. Adaptive Weighting Logic
-        # Select weights based on detected seniority from Layer 1
+        # 2. Adaptive Weighted Base Score
         seniority = cv_data.get("analysis", {}).get("seniority", "junior").lower()
-        weights = self.ADAPTIVE_WEIGHTS.get(seniority, self.ADAPTIVE_WEIGHTS["default"])
+        weights = self._config["adaptive_weights"].get(seniority, self._config["adaptive_weights"]["default"])
         
-        # Combine segmented scores
-        final_score = (
-            (contextual_score * weights["semantic"]) +
-            (skills_semantic_score * weights["skills_structured"]) +
-            (domain_match_score * weights["domain"])
+        base_score = (
+            (semantic_score * weights["semantic"]) +
+            (skills_score * weights["skills"]) +
+            (domain_score * weights["domain"])
         )
+
+        # 3. Apply Hard Constraints (Score Collapse Logic)
+        validation = self._validator.validate_constraints(cv_data, parsed_jd)
         
-        # Calculate missing essential skills (Fuzzy)
-        missing_skills = []
-        cv_skills_lower = [s.lower() for s in cv_skills]
-        for js in job_skills:
-            js_lower = js.lower()
-            found = False
-            if js_lower in cv_skills_lower:
-                found = True
-            elif RAPIDFUZZ_AVAILABLE:
-                for cs_lower in cv_skills_lower:
-                    if fuzz.ratio(js_lower, cs_lower) >= 80:
-                        found = True
-                        break
-            if not found:
-                missing_skills.append(js)
+        # 4. Bonus Skill Boost
+        bonus_boost = self._calculate_bonus_boost(cv_skills_list, jd_bonus)
         
+        # Penalty reduction + Bonus boost
+        final_score_raw = base_score - validation["total_penalty"] + bonus_boost
+        final_score = max(0.0, min(1.0, final_score_raw))
+        
+        # 5. Fit Analysis (Professional Report)
+        match_metadata = {
+            "match_score": final_score * 100,
+            "breakdown": {
+                "base_ai_score": base_score * 100,
+                "semantic_vibe": semantic_score * 100,
+                "domain_alignment": domain_score * 100
+            }
+        }
+        fit_report = self._analysis_gen.generate_report(match_metadata, validation, parsed_jd)
+
         return {
             "match_score": round(final_score * 100, 2),
+            "is_qualified": final_score * 100 >= self._config["thresholds"]["min_pass_score"],
             "breakdown": {
-                "contextual_similarity": round(contextual_score * 100, 2),
-                "structured_skills_similarity": round(skills_semantic_score * 100, 2),
-                "domain_alignment": round(domain_match_score * 100, 2)
+                "base_ai_score": round(base_score * 100, 2),
+                "semantic_vibe": round(semantic_score * 100, 2),
+                "skills_similarity": round(skills_score * 100, 2),
+                "domain_alignment": round(domain_score * 100, 2),
+                "penalty_deduction": round(validation["total_penalty"] * 100, 2),
+                "bonus_boost": round(bonus_boost * 100, 2)
             },
-            "weights_used": weights,
-            "missing_skills": missing_skills,
-            "detected_domains": {"cv": cv_domain, "job": job_domain}
+            "fit_analysis": fit_report,
+            "missing_mandatory_skills": validation["missing_mandatory"]
         }
+
+    def _calculate_bonus_boost(self, cv_skills: List[str], bonus_skills: List[str]) -> float:
+        """
+        Gives extra points for having bonus skills.
+        Each bonus skill = +2%, Max boost = +10%.
+        """
+        if not bonus_skills:
+            return 0.0
+            
+        cv_skills_lower = [s.lower() for s in cv_skills]
+        matched_bonus = 0
+        for bs in bonus_skills:
+            if any(bs.lower() in cs or cs in bs.lower() for cs in cv_skills_lower):
+                matched_bonus += 1
+                
+        return min(0.10, matched_bonus * 0.02)

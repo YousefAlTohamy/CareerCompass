@@ -47,9 +47,9 @@ _PHONE_RE = re.compile(
     re.VERBOSE,
 )
 
-# LinkedIn — matches profile URLs with optional trailing path
+# LinkedIn — matches full URLs or common short handles like "in/username"
 _LINKEDIN_RE = re.compile(
-    r"(?:https?://)?(?:www\.)?linkedin\.com/in/[A-Za-z0-9\-_%]+/?",
+    r"(?:(?:https?://)?(?:www\.)?linkedin\.com/in/|in/)([A-Za-z0-9\-_%]+)/?",
     re.IGNORECASE,
 )
 
@@ -83,10 +83,25 @@ def _clean_phone(raw: str) -> Optional[str]:
     return cleaned if len(digits) >= _MIN_PHONE_LEN else None
 
 
+# Descriptive verbs that appear in project/body text — a real location won't start with these
+from .utils import load_layer1_config
+_config = load_layer1_config()["contact_config"]
+_REJECT_LIST = "|".join(_config["location_reject_words"])
+_LOCATION_REJECT_WORDS = re.compile(rf"\b({_REJECT_LIST})\b", re.IGNORECASE)
+
+
 def _clean_location(raw: str) -> Optional[str]:
-    """Trim and reject location candidates that are clearly too long (a full paragraph)."""
+    """Trim, reject locations that are clearly too long or contain descriptive verbs."""
     cleaned = raw.strip().rstrip(".,;")
-    return cleaned if 2 <= len(cleaned) <= 120 else None
+    if not (2 <= len(cleaned) <= 60):
+        return None
+    # Reject if it reads like a sentence (contains descriptive/action words)
+    if _LOCATION_REJECT_WORDS.search(cleaned):
+        return None
+    # Reject if too many words (a real location is 1-4 words)
+    if len(cleaned.split()) > 5:
+        return None
+    return cleaned
 
 
 # ── Public API ─────────────────────────────────────────────────────────────────
@@ -124,9 +139,8 @@ def extract_contacts(text: str) -> dict:
 
     # ── LinkedIn ───────────────────────────────────────────────────────────────
     linkedin_matches = _LINKEDIN_RE.findall(text)
-    linkedin_url = linkedin_matches[0] if linkedin_matches else None
-    if linkedin_url and not linkedin_url.startswith("http"):
-        linkedin_url = "https://" + linkedin_url
+    linkedin_username = linkedin_matches[0] if linkedin_matches else None
+    linkedin_url = f"https://www.linkedin.com/in/{linkedin_username}" if linkedin_username else None
 
     # ── GitHub ─────────────────────────────────────────────────────────────────
     github_matches = _GITHUB_RE.findall(text)
@@ -135,8 +149,25 @@ def extract_contacts(text: str) -> dict:
         github_url = "https://" + github_url
 
     # ── Location ───────────────────────────────────────────────────────────────
-    location_match = _LOCATION_RE.search(text)
+    # Scope to first 20 lines only — contact info is always in the header area
+    header_lines = text.splitlines()[:20]
+    header_text = "\n".join(header_lines)
+    location_match = _LOCATION_RE.search(header_text)
     location = _clean_location(location_match.group(1)) if location_match else None
+
+    # Fallback: look for "City, Country" pattern in header lines
+    if not location:
+        for ln in header_lines:
+            ln = ln.strip()
+            # Pattern: "Word, Word" where each part is short (e.g. "Cairo, Egypt")
+            # Pattern: "Word, Word" where each part is short (e.g. "Cairo, Egypt")
+            # Using search but stopping at word boundary to avoid trailing noise
+            m = re.search(r'([A-Z][\w\s]{1,20}),\s*([A-Z][\w\s]{2,20})\b', ln)
+            if m:
+                potential = m.group(0).strip()
+                if not _LOCATION_REJECT_WORDS.search(potential):
+                    location = potential
+                    break
 
     # ── Portfolio / Website ──────────────────────────────────────────────────
     website_matches = _WEBSITE_RE.findall(text)

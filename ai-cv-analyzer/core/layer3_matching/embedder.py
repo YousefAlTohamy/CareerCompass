@@ -1,14 +1,17 @@
 import logging
 import os
+# pyrefly: ignore [missing-import]
 import numpy as np
 
 try:
+    # pyrefly: ignore [missing-import]
     from sentence_transformers import SentenceTransformer
     SENTENCE_TRANSFORMERS_AVAILABLE = True
 except ImportError:
     SENTENCE_TRANSFORMERS_AVAILABLE = False
 
 try:
+    # pyrefly: ignore [missing-import]
     import torch
     TORCH_AVAILABLE = True
 except ImportError:
@@ -40,6 +43,8 @@ class SemanticEmbedder:
 
     _instance = None
     _model = None
+    _cache = {}  # In-memory cache
+    _max_cache_size = 2000
 
     def __new__(cls):
         if cls._instance is None:
@@ -83,14 +88,24 @@ class SemanticEmbedder:
     def get_embedding(self, text: str) -> np.ndarray:
         """
         Generates a vector embedding for the given text.
-
-        Returns a zero-vector if the model is unavailable or input is empty.
+        Returns a cached vector if available.
         """
         if self._model is None or not text:
-            return np.zeros((384,))  # Default size for MiniLM
+            return np.zeros((384,))
 
+        # 1. Check Cache
+        text_hash = hash(text)
+        if text_hash in self._cache:
+            return self._cache[text_hash]
+
+        # 2. Generate new embedding
         try:
             embedding = self._model.encode(text, convert_to_numpy=True)
+            
+            # 3. Save to Cache
+            if len(self._cache) < self._max_cache_size:
+                self._cache[text_hash] = embedding
+                
             return embedding
         except Exception as e:
             logger.error("Embedding generation failed: %s", e)
@@ -98,15 +113,57 @@ class SemanticEmbedder:
 
     def get_embeddings_batch(self, texts: list[str]) -> np.ndarray:
         """
-        Batch-encode multiple texts at once (more efficient than single calls).
-
-        Returns a 2-D numpy array of shape (len(texts), 384).
+        Batch-encode multiple texts at once. Uses cache for known texts.
         """
         if self._model is None or not texts:
             return np.zeros((max(1, len(texts)), 384))
 
-        try:
-            return self._model.encode(texts, convert_to_numpy=True, batch_size=32)
-        except Exception as e:
-            logger.error("Batch embedding failed: %s", e)
-            return np.zeros((len(texts), 384))
+        results = [None] * len(texts)
+        to_encode = []
+        to_encode_indices = []
+
+        # 1. Check cache for each text
+        for i, text in enumerate(texts):
+            text_hash = hash(text)
+            if text_hash in self._cache:
+                results[i] = self._cache[text_hash]
+            else:
+                to_encode.append(text)
+                to_encode_indices.append(i)
+
+        # 2. Encode only those not in cache
+        if to_encode:
+            try:
+                new_embeddings = self._model.encode(to_encode, convert_to_numpy=True, batch_size=32)
+                for i, emb in enumerate(new_embeddings):
+                    original_idx = to_encode_indices[i]
+                    results[original_idx] = emb
+                    # Save to cache
+                    if len(self._cache) < self._max_cache_size:
+                        self._cache[hash(to_encode[i])] = emb
+            except Exception as e:
+                logger.error("Batch embedding failed: %s", e)
+                # Fallback: fill None with zeros
+                for i in to_encode_indices:
+                    results[i] = np.zeros((384,))
+
+        return np.array(results)
+    def compute_similarity(self, text1: str, text2: str) -> float:
+        """
+        Calculates cosine similarity between two strings.
+        Returns a float between -1.0 and 1.0 (usually 0.0 to 1.0 for BERT).
+        """
+        if not text1 or not text2:
+            return 0.0
+            
+        emb1 = self.get_embedding(text1)
+        emb2 = self.get_embedding(text2)
+        
+        # Cosine similarity formula
+        norm1 = np.linalg.norm(emb1)
+        norm2 = np.linalg.norm(emb2)
+        
+        if norm1 == 0 or norm2 == 0:
+            return 0.0
+            
+        return float(np.dot(emb1, emb2) / (norm1 * norm2))
