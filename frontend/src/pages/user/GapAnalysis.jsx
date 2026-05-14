@@ -112,7 +112,10 @@ export default function GapAnalysis() {
   const [selectedRole, setSelectedRole] = useState('');
 
   useEffect(() => {
-    targetRolesAPI.getTargetRoles().then(res => setTargetRoles(res.data)).catch(console.error);
+    targetRolesAPI.getTargetRoles().then(res => {
+      const payload = res?.data?.data ?? res?.data ?? [];
+      setTargetRoles(Array.isArray(payload) ? payload : []);
+    }).catch(console.error);
     document.dir = isRtl ? 'rtl' : 'ltr';
   }, [t, isRtl]);
 

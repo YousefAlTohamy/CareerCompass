@@ -12,6 +12,17 @@ import { useTranslation } from 'react-i18next';
 import HUDLayout from '../../components/HUDLayout';
 import Swal from 'sweetalert2';
 
+const skillName = (skill) => {
+  if (typeof skill === 'string') return skill;
+  return skill?.name || skill?.title || skill?.skill || '';
+};
+
+const normalizeSkillPayload = (skills) => (
+  Array.isArray(skills)
+    ? skills.map(skillName).filter(Boolean)
+    : []
+);
+
 export default function Settings() {
   const { user, refreshUser } = useAuth();
   const { t, i18n } = useTranslation();
@@ -48,7 +59,11 @@ export default function Settings() {
     e.preventDefault();
     try {
       setLoading(true);
-      await authAPI.updateProfile(profileData);
+      await authAPI.updateProfile({
+        ...profileData,
+        email: user?.email,
+        job_title: profileData.headline,
+      });
       await refreshUser();
       Swal.fire({
         icon: 'success',
@@ -68,7 +83,7 @@ export default function Settings() {
   const handleAddSkill = (e) => {
     if (e.key === 'Enter' && newSkill.trim()) {
       e.preventDefault();
-      if (!skills.includes(newSkill.trim())) {
+      if (!normalizeSkillPayload(skills).includes(newSkill.trim())) {
         const updatedSkills = [...skills, newSkill.trim()];
         setSkills(updatedSkills);
         updateProfileSkills(updatedSkills);
@@ -78,14 +93,20 @@ export default function Settings() {
   };
 
   const removeSkill = (skillToRemove) => {
-    const updatedSkills = skills.filter(s => s !== skillToRemove);
+    const skillToRemoveName = skillName(skillToRemove);
+    const updatedSkills = skills.filter(s => skillName(s) !== skillToRemoveName);
     setSkills(updatedSkills);
     updateProfileSkills(updatedSkills);
   };
 
   const updateProfileSkills = async (updatedSkills) => {
     try {
-      await authAPI.updateProfile({ skills: updatedSkills });
+      await authAPI.updateProfile({
+        ...profileData,
+        email: user?.email,
+        job_title: profileData.headline,
+        skills: normalizeSkillPayload(updatedSkills),
+      });
       await refreshUser();
     } catch (err) { console.error(err); }
   };
@@ -109,7 +130,9 @@ export default function Settings() {
       setLoading(true);
       await authAPI.updateProfile({
         ...profileData,
-        skills,
+        email: user?.email,
+        job_title: profileData.headline,
+        skills: normalizeSkillPayload(skills),
         experiences
       });
       await refreshUser();
@@ -342,15 +365,15 @@ export default function Settings() {
                               <div className="flex flex-wrap gap-3">
                                  <AnimatePresence>
                                     {skills.map((skill, i) => (
-                                       <motion.span 
-                                          key={skill}
-                                          initial={{ opacity: 0, scale: 0.8 }}
+                                        <motion.span
+                                           key={`${skillName(skill)}-${i}`}
+                                           initial={{ opacity: 0, scale: 0.8 }}
                                           animate={{ opacity: 1, scale: 1 }}
                                           exit={{ opacity: 0, scale: 0.8 }}
                                           className="flex items-center gap-2 px-4 py-2.5 bg-indigo-500/5 dark:bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-xl font-black text-[10px] uppercase tracking-widest group shadow-sm"
-                                       >
-                                          {skill}
-                                          <button onClick={() => removeSkill(skill)} className="opacity-40 hover:opacity-100 hover:text-rose-500 transition-all">
+                                        >
+                                           {skillName(skill)}
+                                           <button onClick={() => removeSkill(skill)} className="opacity-40 hover:opacity-100 hover:text-rose-500 transition-all">
                                              <X size={14} />
                                           </button>
                                        </motion.span>

@@ -4,6 +4,18 @@ import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, ArrowRight, AlertCircle, Compass, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+const getApiErrorMessage = (error, fallback) => {
+  const errors = error.response?.data?.errors;
+  if (errors && typeof errors === 'object') {
+    const firstField = Object.values(errors)[0];
+    if (Array.isArray(firstField) && firstField[0]) {
+      return firstField[0];
+    }
+  }
+
+  return error.response?.data?.message || fallback;
+};
+
 export default function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
@@ -29,7 +41,7 @@ export default function Login() {
       await login(formData.email, formData.password);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || t('auth.login_failed'));
+      setError(getApiErrorMessage(err, t('auth.login_failed')));
     } finally {
       setLoading(false);
     }

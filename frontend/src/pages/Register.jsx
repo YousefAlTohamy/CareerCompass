@@ -4,6 +4,18 @@ import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, User, ArrowRight, ArrowLeft, AlertCircle, Compass, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+const getApiErrorMessage = (error, fallback) => {
+  const errors = error.response?.data?.errors;
+  if (errors && typeof errors === 'object') {
+    const firstField = Object.values(errors)[0];
+    if (Array.isArray(firstField) && firstField[0]) {
+      return firstField[0];
+    }
+  }
+
+  return error.response?.data?.message || fallback;
+};
+
 export default function Register() {
   const [step, setStep] = useState(1);
   const totalSteps = 2;
@@ -56,7 +68,7 @@ export default function Register() {
       await register(formData);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || t('auth.registration_failed'));
+      setError(getApiErrorMessage(err, t('auth.registration_failed')));
     } finally {
       setLoading(false);
     }

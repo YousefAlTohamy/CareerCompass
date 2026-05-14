@@ -75,6 +75,7 @@ export const adminAPI = {
   toggleUserBan: (id) => apiClient.post(`/admin/users/${id}/toggle-ban`),
   // Batch Progress & DLQ
   getBatchProgress: () => apiClient.get('/admin/dashboard/batch-progress'),
+  getAdminBatchProgress: () => apiClient.get('/admin/dashboard/batch-progress'),
   getFailedUrls: (scrapingJobId) => apiClient.get(`/admin/dashboard/failed-urls/${scrapingJobId}`),
   retryFailedUrls: (ids) => apiClient.post('/admin/dashboard/retry-failures', { ids }),
 };
