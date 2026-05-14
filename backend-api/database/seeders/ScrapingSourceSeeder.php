@@ -26,6 +26,18 @@ class ScrapingSourceSeeder extends Seeder
     public function run(): void
     {
         $sources = [
+            // ── 0. CareerCompass Demo Jobs — deterministic local/demo source ─
+            [
+                'name'       => 'CareerCompass Demo Jobs',
+                'endpoint'   => 'demo://careercompass/jobs',
+                'type'       => 'demo',
+                'status'     => 'active',
+                'mode'       => 'static',
+                'pattern'    => null,
+                'headers'    => null,
+                'params'     => null,
+            ],
+
             // ── 1. LinkedIn — Global job search (SPA, requires JS rendering) ──
             [
                 'name'       => 'LinkedIn Global',

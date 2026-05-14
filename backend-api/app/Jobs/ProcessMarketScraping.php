@@ -71,6 +71,7 @@ class ProcessMarketScraping implements ShouldQueue
 
         Bus::batch($jobs)
             ->name('market-scraping:' . now()->toDateTimeString())
+            ->onQueue('scraping')
             ->then(function (Batch $batch) use ($categoriesToProcess) {
                 Log::info('Market scraping batch completed', [
                     'batch_id' => $batch->id,
@@ -112,14 +113,17 @@ class ProcessMarketScraping implements ShouldQueue
     {
         try {
             return ScrapingSource::where('status', 'active')
-                ->get(['id', 'name', 'endpoint', 'type', 'headers', 'params'])
+                ->get(['id', 'name', 'endpoint', 'method', 'type', 'headers', 'params', 'mode', 'pattern'])
                 ->map(fn($s) => [
                     'id'       => $s->id,
                     'name'     => $s->name,
                     'endpoint' => $s->endpoint,
+                    'method'   => $s->method ?? 'GET',
                     'type'     => $s->type,
                     'headers'  => $s->headers ?? [],
                     'params'   => $s->params  ?? [],
+                    'mode'     => $s->mode ?? 'static',
+                    'pattern'  => $s->pattern,
                 ])
                 ->toArray();
         } catch (\Exception $e) {

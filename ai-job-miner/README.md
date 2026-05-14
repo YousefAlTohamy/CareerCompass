@@ -63,7 +63,18 @@ SCRAPER_SERVICE_URL=http://ai-job-miner:8000
   "limit": 10,
   "source_id": 1,
   "scraping_job_id": 123,
-  "callback_base_url": "http://nginx/api/v1"
+  "callback_base_url": "http://nginx/api/v1",
+  "source": {
+    "id": 1,
+    "name": "CareerCompass Demo Jobs",
+    "type": "demo",
+    "endpoint": "demo://careercompass/jobs",
+    "method": "GET",
+    "headers": {},
+    "params": {},
+    "mode": "static",
+    "pattern": null
+  }
 }
 ```
 
@@ -74,6 +85,7 @@ Rules:
 - `source_id`: optional positive integer.
 - `scraping_job_id`: required positive integer.
 - `callback_base_url`: optional; defaults to `LARAVEL_API_BASE_URL`.
+- `source`: optional source config. Laravel sends this for admin diagnostics and source-target extraction runs.
 
 Headers:
 
@@ -89,13 +101,25 @@ X-Request-ID: <optional correlation id>
 3. Laravel dispatches work to the `scraping` database queue.
 4. `backend-worker-scraping` calls `POST /scrape` on `ai-job-miner`.
 5. The FastAPI wrapper validates the internal token and payload.
-6. The wrapper runs Scrapy with `scrapy crawl linkedin`.
-7. Scrapy exports jobs to Laravel internal import endpoints.
-8. Scrapy reports failed URLs to Laravel.
+6. The wrapper routes by source type/config.
+7. Demo/API/spider-backed handlers export jobs to Laravel internal import endpoints.
+8. Spider-backed handlers report failed URLs to Laravel.
 9. Laravel normalizes imported data, creates missing skills, syncs job-skill pivots, and updates the scraping job.
 10. Failed URLs and zero-job failure cases are visible in admin dashboards and status endpoints.
 
 After PR #79, Laravel marks a scraping job failed when the scraper reports failed URLs and stores zero jobs. That prevents "completed successfully" messaging for external-source failures.
+
+## Source Routing
+
+The service no longer assumes every request should run LinkedIn.
+
+- `demo`, `local`, or `demo://...`: creates deterministic local jobs and imports them through Laravel.
+- `api`: fetches the configured API endpoint, normalizes common external `job_type` / `work_type` vocabulary, and imports parsed job-like records.
+- `html`: returns `UNSUPPORTED` until a source-specific parser exists.
+- non-LinkedIn `spa`: returns `UNSUPPORTED` instead of pretending to run LinkedIn.
+- LinkedIn-backed `spa`: runs the LinkedIn spider intentionally and passes the configured endpoint.
+
+This routing keeps Diagnostics honest: unsupported sources fail clearly, demo/local sources prove the pipeline, and LinkedIn/proxy failures are reported as external/runtime failures.
 
 ## Laravel Callback URLs
 
@@ -270,7 +294,7 @@ Scraping depends on third-party sites. A run may return zero jobs or failed URLs
 
 The platform should not fake success in these cases. Laravel now surfaces failed URL/no-job outcomes more honestly in admin diagnostics and scrape status.
 
-Current limitation: source diagnostics may still route through the current spider implementation even when a specific source is selected. Future work should map each source type to the exact source-specific spider/API behavior.
+Current limitation: generic HTML and non-LinkedIn SPA extraction are intentionally unsupported until source-specific adapters/spiders are implemented.
 
 ## Troubleshooting
 

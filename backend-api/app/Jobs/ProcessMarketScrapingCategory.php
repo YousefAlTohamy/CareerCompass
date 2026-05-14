@@ -28,16 +28,17 @@ class ProcessMarketScrapingCategory implements ShouldQueue
         protected string $category,
         protected int $maxResultsPerCategory = 30,
         protected array $sources = [],
+        protected string $runType = 'scheduled',
     ) {
         $this->onQueue('scraping');
     }
 
     public function handle(ScraperClient $scraperClient): void
     {
-        $startedAt = microtime(true);
-
         Log::info("Scraping category (batched): {$this->category}", [
             'max_per_category' => $this->maxResultsPerCategory,
+            'run_type' => $this->runType,
+            'sources' => collect($this->sources)->pluck('id')->values()->all(),
         ]);
 
         if (empty($this->sources)) {
@@ -45,101 +46,163 @@ class ProcessMarketScrapingCategory implements ShouldQueue
             return;
         }
 
+        foreach ($this->sources as $sourceData) {
+            if (empty($sourceData['id'])) {
+                continue;
+            }
+
+            $this->scrapeSourceTarget($scraperClient, $sourceData);
+        }
+    }
+
+    protected function scrapeSourceTarget(ScraperClient $scraperClient, array $sourceData): void
+    {
+        $startedAt = microtime(true);
+        $sourceId = (int) $sourceData['id'];
+        $sourceName = (string) ($sourceData['name'] ?? "Source {$sourceId}");
+        $statusKey = "scraping_source_{$sourceId}_status";
+        $status = Cache::get($statusKey, ['is_scraping' => false]);
+
+        if ((bool) ($status['is_scraping'] ?? false)) {
+            Log::info("Skipping source {$sourceId} for {$this->category} (already being scraped).");
+            return;
+        }
+
         $scrapingJob = ScrapingJob::create([
             'job_title' => $this->category,
-            'type' => 'scheduled',
+            'type' => $this->runType === 'manual' ? 'on_demand' : 'scheduled',
             'status' => 'pending',
         ]);
 
-        $scrapingJob->markAsStarted();
-        $failedSources = 0;
+        $this->putSourceStatus($sourceId, [
+            'source_name' => $sourceName,
+            'is_scraping' => true,
+            'status' => 'queued',
+            'progress_percent' => 5,
+            'target' => $this->category,
+            'query' => $this->category,
+            'scraping_job_id' => $scrapingJob->id,
+            'jobs_found' => 0,
+            'jobs_stored' => 0,
+            'failed_count' => 0,
+            'count' => 0,
+            'elapsed_seconds' => 0,
+            'message' => "Queued {$sourceName} for {$this->category}",
+            'last_error' => null,
+        ]);
 
         try {
-            // Count jobs before scraping to measure discovered amount
+            $scrapingJob->markAsStarted();
             $jobsBeforeCount = Job::where('title', 'like', "%{$this->category}%")->count();
-            $attemptedSources = 0;
 
-            foreach ($this->sources as $sourceData) {
-                if (empty($sourceData['id'])) {
-                    continue;
-                }
-
-                $attemptedSources++;
-                $sourceId = $sourceData['id'];
-
-                // Deduplication check: Respect the Cache system to prevent concurrent overlaps
-                $statusKey = "scraping_source_{$sourceId}_status";
-                $status = Cache::get($statusKey, ['is_scraping' => false]);
-
-                if ($status['is_scraping']) {
-                    Log::info("Skipping source {$sourceId} for {$this->category} (already being scraped).");
-                    continue;
-                }
-
-                // Lock source via cache
-                Cache::put($statusKey, [
-                    'is_scraping' => true, 
-                    'count' => 0, 
-                    'job_id' => $scrapingJob->id
-                ], now()->addHours(2));
-
-                try {
-                    $scraperClient->scrape(
-                        query: $this->category,
-                        limit: $this->maxResultsPerCategory,
-                        scrapingJobId: $scrapingJob->id,
-                        sourceId: $sourceId,
-                    );
-
-                    Log::info("Scraper service completed for source {$sourceId}");
-                } catch (\Throwable $e) {
-                    $failedSources++;
-                    Log::error("Scraper service failed for source {$sourceId}", [
-                        'category' => $this->category,
-                        'error' => $e->getMessage(),
-                    ]);
-                } finally {
-                    $status = Cache::get($statusKey, ['count' => 0]);
-                    $status['is_scraping'] = false;
-                    Cache::put($statusKey, $status, now()->addHours(2));
-                }
-            }
-
-            // Wait a moment for async pipelines to flush results to database
-            sleep(2);
-
-            // Count jobs after scraping to determine total stored for this category
-            $jobsAfterCount = Job::where('title', 'like', "%{$this->category}%")->count();
-            $stored = max(0, $jobsAfterCount - $jobsBeforeCount);
-            
-            // Note: Data is saved via Laravel API by the Scrapy pipeline.
-            // Deduplication is handled there, so we approximate discovered = stored.
-            $discovered = $stored;
-            $duplicates = 0;
-            $failed = $failedSources;
-
-            if ($attemptedSources > 0 && $failedSources === $attemptedSources && $stored === 0) {
-                throw new \RuntimeException("All scraper sources failed for {$this->category}.");
-            }
-
-            $scrapingJob->markAsCompleted(
-                found: $discovered,
-                stored: $stored,
-                duplicated: $duplicates,
-                discoveredCount: $discovered,
-                failedCount: $failed,
-                processingTimeMs: (int) round((microtime(true) - $startedAt) * 1000),
-            );
-
-            $this->calculateSkillImportance($this->category);
-            $this->updateRoleStatistics($this->category);
-
-            Log::info("Completed scraping for {$this->category} (batched)", [
-                'stored' => $stored,
+            $this->putSourceStatus($sourceId, [
+                'status' => 'running',
+                'progress_percent' => 40,
+                'message' => "Running {$sourceName} for {$this->category}",
             ]);
 
+            $scrapeResult = $scraperClient->scrape(
+                query: $this->category,
+                limit: $this->maxResultsPerCategory,
+                scrapingJobId: $scrapingJob->id,
+                sourceId: $sourceId,
+                allowFailure: true,
+            );
+
+            $this->putSourceStatus($sourceId, [
+                'status' => 'importing',
+                'progress_percent' => 75,
+                'jobs_found' => (int) ($scrapeResult['jobs_preview_count'] ?? 0),
+                'jobs_stored' => (int) ($scrapeResult['jobs_stored'] ?? 0),
+                'failed_count' => (int) ($scrapeResult['failed_urls_count'] ?? 0),
+                'message' => "Importing {$sourceName} results for {$this->category}",
+                'last_error' => $scrapeResult['error_summary'] ?? null,
+            ]);
+
+            sleep(1);
+
+            $jobsAfterCount = Job::where('title', 'like', "%{$this->category}%")->count();
+            $stored = max((int) ($scrapeResult['jobs_stored'] ?? 0), max(0, $jobsAfterCount - $jobsBeforeCount));
+            $found = max((int) ($scrapeResult['jobs_preview_count'] ?? 0), $stored);
+            $failed = max(
+                (int) ($scrapeResult['failed_urls_count'] ?? 0),
+                $scrapingJob->failedUrls()->count(),
+            );
+            $classification = (string) ($scrapeResult['classification'] ?? $this->classificationFromCounts($stored, $failed, (bool) ($scrapeResult['success'] ?? false)));
+            $elapsedMs = (int) round((microtime(true) - $startedAt) * 1000);
+
+            if ($this->classificationIsAcceptable($classification)) {
+                $scrapingJob->markAsCompleted(
+                    found: $found,
+                    stored: $stored,
+                    duplicated: 0,
+                    discoveredCount: $found,
+                    failedCount: $failed,
+                    processingTimeMs: $elapsedMs,
+                );
+
+                if ($stored > 0) {
+                    $this->calculateSkillImportance($this->category);
+                    $this->updateRoleStatistics($this->category);
+                }
+
+                $this->putSourceStatus($sourceId, [
+                    'is_scraping' => false,
+                    'status' => $this->statusForClassification($classification),
+                    'progress_percent' => 100,
+                    'jobs_found' => $found,
+                    'jobs_stored' => $stored,
+                    'failed_count' => $failed,
+                    'count' => $stored,
+                    'elapsed_seconds' => (int) round($elapsedMs / 1000),
+                    'message' => $this->messageForClassification($classification, $sourceName, $stored, $failed),
+                    'last_error' => $scrapeResult['error_summary'] ?? null,
+                ]);
+
+                Log::info("Completed scraping source-target run", [
+                    'category' => $this->category,
+                    'source_id' => $sourceId,
+                    'classification' => $classification,
+                    'stored' => $stored,
+                    'failed' => $failed,
+                ]);
+
+                return;
+            }
+
+            $error = $scrapeResult['error_summary']
+                ?? "Source {$sourceName} returned {$classification} and stored no usable jobs.";
+
+            $scrapingJob->markAsFailed(
+                errorMessage: $error,
+                discoveredCount: $found,
+                failedCount: $failed,
+                processingTimeMs: $elapsedMs,
+            );
+
+            $this->putSourceStatus($sourceId, [
+                'is_scraping' => false,
+                'status' => $this->statusForClassification($classification),
+                'progress_percent' => 100,
+                'jobs_found' => $found,
+                'jobs_stored' => $stored,
+                'failed_count' => $failed,
+                'count' => $stored,
+                'elapsed_seconds' => (int) round($elapsedMs / 1000),
+                'message' => $this->messageForClassification($classification, $sourceName, $stored, $failed),
+                'last_error' => $error,
+            ]);
+
+            Log::warning("Scraping source-target run finished without usable imports", [
+                'category' => $this->category,
+                'source_id' => $sourceId,
+                'classification' => $classification,
+                'error' => $error,
+            ]);
         } catch (\Throwable $e) {
-            Log::error("Error scraping category {$this->category} (batched)", [
+            $elapsedMs = (int) round((microtime(true) - $startedAt) * 1000);
+
+            Log::error("Error scraping {$this->category} with source {$sourceId}", [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -147,12 +210,95 @@ class ProcessMarketScrapingCategory implements ShouldQueue
             $scrapingJob->markAsFailed(
                 errorMessage: $e->getMessage(),
                 discoveredCount: 0,
-                failedCount: $failedSources,
-                processingTimeMs: (int) round((microtime(true) - $startedAt) * 1000),
+                failedCount: 1,
+                processingTimeMs: $elapsedMs,
             );
+
+            $this->putSourceStatus($sourceId, [
+                'is_scraping' => false,
+                'status' => 'failed',
+                'progress_percent' => 100,
+                'jobs_found' => 0,
+                'jobs_stored' => 0,
+                'failed_count' => 1,
+                'elapsed_seconds' => (int) round($elapsedMs / 1000),
+                'message' => "{$sourceName} failed for {$this->category}",
+                'last_error' => $e->getMessage(),
+            ]);
 
             throw $e;
         }
+    }
+
+    protected function putSourceStatus(int $sourceId, array $payload): void
+    {
+        $existing = Cache::get("scraping_source_{$sourceId}_status", []);
+
+        Cache::put("scraping_source_{$sourceId}_status", array_merge([
+            'source_id' => $sourceId,
+            'is_scraping' => false,
+            'status' => 'idle',
+            'progress_percent' => 0,
+            'target' => null,
+            'query' => null,
+            'scraping_job_id' => null,
+            'jobs_found' => 0,
+            'jobs_stored' => 0,
+            'failed_count' => 0,
+            'count' => 0,
+            'elapsed_seconds' => 0,
+            'message' => 'Idle',
+            'last_error' => null,
+        ], $existing, $payload, [
+            'last_updated_at' => now()->toIso8601String(),
+        ]), now()->addHours(2));
+    }
+
+    protected function classificationFromCounts(int $stored, int $failed, bool $success): string
+    {
+        if ($stored > 0 && $failed > 0) {
+            return 'PARTIAL_SUCCESS';
+        }
+
+        if ($stored > 0) {
+            return 'SUCCESS';
+        }
+
+        if ($success && $failed === 0) {
+            return 'EMPTY_SUCCESS';
+        }
+
+        return $failed > 0 ? 'EXTERNAL_FAILED' : 'UNSUPPORTED';
+    }
+
+    protected function classificationIsAcceptable(string $classification): bool
+    {
+        return in_array($classification, ['SUCCESS', 'PARTIAL_SUCCESS', 'EMPTY_SUCCESS'], true);
+    }
+
+    protected function statusForClassification(string $classification): string
+    {
+        return match ($classification) {
+            'SUCCESS', 'EMPTY_SUCCESS' => 'completed',
+            'PARTIAL_SUCCESS' => 'compromised',
+            'UNSUPPORTED' => 'unsupported',
+            'CONFIG_INVALID' => 'config_invalid',
+            'INTEGRITY_COMPROMISED' => 'compromised',
+            default => 'failed',
+        };
+    }
+
+    protected function messageForClassification(string $classification, string $sourceName, int $stored, int $failed): string
+    {
+        return match ($classification) {
+            'SUCCESS' => "{$sourceName} completed and stored {$stored} jobs.",
+            'PARTIAL_SUCCESS' => "{$sourceName} stored {$stored} jobs with {$failed} failed URLs.",
+            'EMPTY_SUCCESS' => "{$sourceName} responded normally but found no jobs.",
+            'UNSUPPORTED' => "{$sourceName} source type is not implemented by the scraper service.",
+            'CONFIG_INVALID' => "{$sourceName} configuration is invalid.",
+            'INTEGRITY_COMPROMISED' => "{$sourceName} finished with runtime or DLQ errors.",
+            default => "{$sourceName} failed; no jobs were imported.",
+        };
     }
 
     protected function calculateSkillImportance(string $jobTitle): void

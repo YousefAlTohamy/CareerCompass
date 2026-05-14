@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\ScrapingSource;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -11,7 +12,13 @@ use RuntimeException;
 
 class ScraperClient
 {
-    public function scrape(string $query, int $limit, int $scrapingJobId, ?int $sourceId = null): array
+    public function scrape(
+        string $query,
+        int $limit,
+        int $scrapingJobId,
+        ?int $sourceId = null,
+        bool $allowFailure = false
+    ): array
     {
         $baseUrl = rtrim((string) config('services.scraper_service.url'), '/');
         $token = (string) config('services.scraper_service.token', '');
@@ -30,6 +37,7 @@ class ScraperClient
 
         if ($sourceId !== null) {
             $payload['source_id'] = $sourceId;
+            $payload['source'] = $this->sourcePayload($sourceId);
         }
 
         try {
@@ -52,7 +60,7 @@ class ScraperClient
         }
 
         $data = $response->json();
-        if (!$response->successful() || !is_array($data) || ($data['success'] ?? false) !== true) {
+        if (!$response->successful() || !is_array($data) || (!$allowFailure && ($data['success'] ?? false) !== true)) {
             Log::error('Scraper service returned a failed response', [
                 'status' => $response->status(),
                 'body' => $response->body(),
@@ -64,6 +72,46 @@ class ScraperClient
         }
 
         return $data;
+    }
+
+    private function sourcePayload(int $sourceId): ?array
+    {
+        $source = ScrapingSource::find($sourceId);
+
+        if (!$source) {
+            return null;
+        }
+
+        return [
+            'id' => $source->id,
+            'name' => $source->name,
+            'source_name' => $source->name,
+            'type' => $source->type,
+            'source_type' => $source->type,
+            'endpoint' => $source->endpoint,
+            'method' => $source->method ?? 'GET',
+            'headers' => $this->normalizeSourceMap($source->headers ?? []),
+            'params' => $this->normalizeSourceMap($source->params ?? []),
+            'mode' => $source->mode ?? 'static',
+            'pattern' => $source->pattern,
+        ];
+    }
+
+    private function normalizeSourceMap(mixed $value): object|array
+    {
+        if (empty($value)) {
+            return (object) [];
+        }
+
+        if (is_object($value)) {
+            return $value;
+        }
+
+        if (!is_array($value) || array_is_list($value)) {
+            return (object) [];
+        }
+
+        return $value;
     }
 
     private function correlationHeaders(): array
