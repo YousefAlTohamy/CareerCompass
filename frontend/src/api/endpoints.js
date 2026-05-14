@@ -26,6 +26,7 @@ export const jobsAPI = {
 
 export const cvAPI = {
   uploadCV: (formData) => apiClient.post('/upload-cv', formData, {
+    timeout: 240000,
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
   getUserSkills: () => apiClient.get('/user/skills'),

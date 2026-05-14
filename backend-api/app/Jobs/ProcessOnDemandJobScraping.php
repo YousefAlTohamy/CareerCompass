@@ -91,6 +91,28 @@ class ProcessOnDemandJobScraping implements ShouldQueue
             $duplicates = 0;
             $failed = ScrapingFailedUrl::where('scraping_job_id', $this->scrapingJobId)->count();
 
+            if ($stored === 0 && $failed > 0) {
+                $scrapingJob->markAsFailed(
+                    errorMessage: 'Scraper completed without storing jobs and reported failed URLs. External source may be blocked or unavailable.',
+                    discoveredCount: 0,
+                    failedCount: $failed,
+                    processingTimeMs: (int) round((microtime(true) - $startedAt) * 1000),
+                );
+
+                Log::warning("On-demand scraping finished with only failed URLs for {$this->jobTitle}", [
+                    'failed_count' => $failed,
+                    'scraper_elapsed_ms' => $scrapeResult['elapsed_ms'] ?? null,
+                ]);
+
+                if ($this->sourceId) {
+                    $status = Cache::get("scraping_source_{$this->sourceId}_status", ['count' => 0]);
+                    $status['is_scraping'] = false;
+                    Cache::put("scraping_source_{$this->sourceId}_status", $status, now()->addHours(2));
+                }
+
+                return;
+            }
+
             // Mark as completed
             $scrapingJob->markAsCompleted(
                 found: $discovered,

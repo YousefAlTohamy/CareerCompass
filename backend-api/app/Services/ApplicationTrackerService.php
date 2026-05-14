@@ -14,7 +14,7 @@ class ApplicationTrackerService
     public function listForUser(User $user): Collection
     {
         return $user->applications()
-            ->with('job.skills')
+            ->with('job.requiredSkills')
             ->latest()
             ->get();
     }
@@ -31,7 +31,7 @@ class ApplicationTrackerService
                 ]
             );
 
-            return $application->load('job.skills');
+            return $application->load('job.requiredSkills');
         });
     }
 
@@ -43,6 +43,6 @@ class ApplicationTrackerService
             $application->forceFill(['applied_at' => now()])->save();
         }
 
-        return $application->fresh('job.skills');
+        return $application->fresh('job.requiredSkills');
     }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
@@ -23,6 +23,16 @@ const formatValue = (val) => {
 const skillLabel = (skill) => {
   if (typeof skill === 'string') return skill;
   return skill?.name || skill?.title || skill?.skill || '';
+};
+
+const getJobMatchScore = (job) => {
+  const rawScore = Number(job?.match_percentage ?? job?.match_score ?? 0);
+  return Math.min(100, Math.max(0, Number.isFinite(rawScore) ? Math.round(rawScore) : 0));
+};
+
+const extractApplications = (response) => {
+  const payload = response?.data?.data ?? response?.data ?? [];
+  return Array.isArray(payload) ? payload : [];
 };
 
 // --- COMPONENT: SCAN LINE ---
@@ -87,7 +97,10 @@ export default function Jobs() {
   const [analyzing, setAnalyzing] = useState(false);
   const [gapData, setGapData] = useState(null);
   const [trackedIds, setTrackedIds] = useState(new Set());
+  const [recommendationMeta, setRecommendationMeta] = useState(null);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const gapRequestRef = useRef(0);
+  const lastAnalyzedJobIdRef = useRef(null);
 
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
@@ -99,18 +112,38 @@ export default function Jobs() {
     document.dir = isRtl ? 'rtl' : 'ltr';
   }, [searchQuery, isRtl]);
 
+  useEffect(() => {
+    loadTrackedApplications();
+  }, []);
+
+  const loadTrackedApplications = async () => {
+    try {
+      const response = await applicationsAPI.getApplications();
+      const applications = extractApplications(response);
+      const ids = applications
+        .map((application) => application?.job_id ?? application?.job?.id)
+        .filter(Boolean);
+      setTrackedIds(new Set(ids));
+    } catch (err) {
+      console.error('Failed to load saved opportunities:', err);
+    }
+  };
+
   const fetchJobs = async () => {
     try {
       setLoading(true);
-      const params = searchQuery ? { search: searchQuery } : { recommended: 1 };
-      const response = await jobsAPI.getJobs(params);
+      const response = searchQuery
+        ? await jobsAPI.getJobs({ search: searchQuery })
+        : await jobsAPI.getRecommendedJobs();
       const data = response.data?.data || response.data || [];
       const normalizedJobs = Array.isArray(data) ? data : [];
+      setRecommendationMeta(searchQuery ? null : (response.data?.meta ?? null));
       setJobs(normalizedJobs);
 
       if (normalizedJobs.length === 0) {
         setSelectedJob(null);
         setGapData(null);
+        lastAnalyzedJobIdRef.current = null;
         return;
       }
 
@@ -120,21 +153,39 @@ export default function Jobs() {
     } catch (err) {
       console.error(err);
       setJobs([]);
+      setSelectedJob(null);
+      setGapData(null);
+      setRecommendationMeta(null);
     } finally {
       setLoading(false);
     }
   };
 
   const analyzeJobGap = async (jobId) => {
+    if (lastAnalyzedJobIdRef.current === jobId && (analyzing || gapData)) {
+      return;
+    }
+
+    const requestId = gapRequestRef.current + 1;
+    gapRequestRef.current = requestId;
+    lastAnalyzedJobIdRef.current = jobId;
+
     try {
       setAnalyzing(true);
       setGapData(null);
       const response = await gapAnalysisAPI.analyzeJob(jobId);
-      setGapData(response.data?.data || response.data || response);
+      if (gapRequestRef.current === requestId) {
+        setGapData(response.data?.data || response.data || response);
+      }
     } catch (err) {
       console.error(err);
+      if (gapRequestRef.current === requestId) {
+        setGapData(null);
+      }
     } finally { 
-      setAnalyzing(false); 
+      if (gapRequestRef.current === requestId) {
+        setAnalyzing(false);
+      }
     }
   };
 
@@ -145,11 +196,19 @@ export default function Jobs() {
 
   const handleTrackJob = async (e, job) => {
     e.stopPropagation();
-    if (trackedIds.has(job.id)) return;
+    if (trackedIds.has(job.id)) {
+      showToast('This opportunity is already in your tracker.');
+      return;
+    }
+
     try {
-      await applicationsAPI.trackApplication(job.id);
+      const response = await applicationsAPI.trackApplication(job.id);
+      const savedJobId = response?.data?.data?.job_id ?? job.id;
       setTrackedIds((prev) => new Set(prev).add(job.id));
-      showToast(`${t('jobs.already_tracked')} 📌`);
+      if (savedJobId !== job.id) {
+        await loadTrackedApplications();
+      }
+      showToast('Opportunity saved to your tracker.');
     } catch (err) { 
       showToast(t('jobs.error_save'), 'error'); 
     }
@@ -185,6 +244,18 @@ export default function Jobs() {
                 <p className="text-slate-500 dark:text-slate-400 text-base font-medium max-w-lg leading-relaxed">
                    {t('jobs.subtitle', 'Scanning global job market with advanced neural matching algorithms.')}
                 </p>
+                {!searchQuery && recommendationMeta && (
+                  <p className="text-xs font-bold text-indigo-600 dark:text-indigo-300 max-w-xl">
+                    {recommendationMeta.based_on
+                      ? recommendationMeta.based_on
+                      : 'Showing latest opportunities. Upload a CV for personalized recommendations.'}
+                  </p>
+                )}
+                {searchQuery && (
+                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400 max-w-xl">
+                    Manual search results for "{searchQuery}".
+                  </p>
+                )}
 
                 <form onSubmit={(e) => { e.preventDefault(); setSearchQuery(inputValue); }} className="relative group max-w-xl">
                    <div className="absolute inset-y-0 start-6 flex items-center pointer-events-none">
@@ -255,7 +326,7 @@ export default function Jobs() {
                             <span className="flex items-center gap-1"><Clock size={10} className="text-fuchsia-500" /> {job.job_type ? formatValue(job.job_type).slice(0,4) : 'SYNC'}</span>
                          </div>
                          <div className="pt-2 border-t border-slate-100 dark:border-white/5">
-                            <MatchGauge score={job.match_score || 0} />
+                            <MatchGauge score={getJobMatchScore(job)} />
                          </div>
                       </motion.div>
                     ))}
@@ -323,13 +394,13 @@ export default function Jobs() {
                                       <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="12" className="text-slate-100 dark:text-white/5" />
                                       <motion.circle 
                                         initial={{ strokeDashoffset: 283 }}
-                                        animate={{ strokeDashoffset: 283 - (selectedJob.match_score / 100) * 283 }}
+                                        animate={{ strokeDashoffset: 283 - (getJobMatchScore(selectedJob) / 100) * 283 }}
                                         cx="50" cy="50" r="45" fill="none" strokeWidth="12" strokeLinecap="round" 
                                         strokeDasharray="283" className="stroke-indigo-500"
                                       />
                                    </svg>
                                    <div className="absolute inset-0 flex items-center justify-center text-lg font-black text-slate-900 dark:text-white">
-                                      {selectedJob.match_score}%
+                                      {getJobMatchScore(selectedJob)}%
                                    </div>
                                 </div>
                                 <div className="space-y-1">

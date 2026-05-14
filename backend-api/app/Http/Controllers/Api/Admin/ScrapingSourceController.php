@@ -12,6 +12,7 @@ use App\Services\ScraperClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 class ScrapingSourceController extends Controller
 {
@@ -150,7 +151,19 @@ class ScrapingSourceController extends Controller
         );
 
         $output = trim(($result['stdout'] ?? '') . "\n" . ($result['stderr'] ?? ''));
-        $success = (bool) ($result['success'] ?? false) && !str_contains($output, 'CRITICAL ERROR');
+        $failureSignals = [
+            'CRITICAL ERROR',
+            'Successfully reported failure to DLQ',
+            'downloader/exception_count',
+            'log_count/ERROR',
+            'Traceback (most recent call last)',
+        ];
+        $reportedFailure = Str::contains($output, $failureSignals, false);
+        $success = (bool) ($result['success'] ?? false) && !$reportedFailure;
+
+        if (!$success && (bool) ($result['success'] ?? false) && $reportedFailure) {
+            $output = "Scraper finished, but diagnostics detected failed URLs or runtime errors.\n\n{$output}";
+        }
 
         $success
             ? $scrapingJob->markAsCompleted(1, 0, 0, 1, 0, $result['elapsed_ms'] ?? null)

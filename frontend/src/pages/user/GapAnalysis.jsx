@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  RadialBarChart, RadialBar, ResponsiveContainer, Cell
+  RadialBarChart, RadialBar, Cell
 } from 'recharts';
 import {
   CheckCircle2, AlertCircle, ChevronRight, Sparkles, Zap,
@@ -44,17 +44,17 @@ const PremiumMatchGauge = ({ percentage, t }) => {
   const color = safePercentage >= 75 ? '#10b981' : safePercentage >= 50 ? '#f59e0b' : '#f43f5e';
 
   return (
-    <div className="relative w-40 h-40 flex items-center justify-center shrink-0">
-      <ResponsiveContainer width="100%" height="100%">
-        <RadialBarChart
-          cx="50%" cy="50%" innerRadius="70%" outerRadius="100%"
-          barSize={10} data={data} startAngle={90} endAngle={90 - (3.6 * safePercentage)}
-        >
-          <RadialBar background dataKey="value" cornerRadius={10}>
-            <Cell fill={color} />
-          </RadialBar>
-        </RadialBarChart>
-      </ResponsiveContainer>
+    <div className="relative w-40 h-40 min-w-40 min-h-40 flex items-center justify-center shrink-0">
+      <RadialBarChart
+        width={160}
+        height={160}
+        cx="50%" cy="50%" innerRadius="70%" outerRadius="100%"
+        barSize={10} data={data} startAngle={90} endAngle={90 - (3.6 * safePercentage)}
+      >
+        <RadialBar background dataKey="value" cornerRadius={10}>
+          <Cell fill={color} />
+        </RadialBar>
+      </RadialBarChart>
       <div className="absolute inset-0 flex flex-col items-center justify-center ltr">
         <span className="text-4xl font-black text-slate-800 dark:text-white tracking-tighter">{Math.round(safePercentage)}%</span>
         <span className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-400 mt-0.5">{t('gap_analysis.match_score')}</span>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Compass, Github, Twitter, Linkedin, Mail } from 'lucide-react';
+import { Compass, Github, Mail } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export default function Footer() {
@@ -34,10 +34,13 @@ export default function Footer() {
             </p>
 
             <div className="flex items-center gap-4">
-              {[Twitter, Linkedin, Github].map((Icon, i) => (
+              {[{ Icon: Github, href: 'https://github.com/YousefAlTohamy/CareerCompass', label: 'CareerCompass GitHub' }].map(({ Icon, href, label }) => (
                 <a 
-                  key={i} 
-                  href="#" 
+                  key={href}
+                  href={href}
+                  aria-label={label}
+                  target="_blank"
+                  rel="noreferrer"
                   className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 hover:border-[var(--cc-primary)] hover:bg-cyan-500/10 transition-all text-slate-400 hover:text-[var(--cc-primary)] shadow-sm"
                 >
                   <Icon size={18} />

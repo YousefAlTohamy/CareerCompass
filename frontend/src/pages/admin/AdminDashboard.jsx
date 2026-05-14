@@ -195,7 +195,7 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
           {/* Main Chart */}
-          <div className="lg:col-span-2 glass-card p-8 border-white/5 rounded-3xl space-y-6">
+          <div className="lg:col-span-2 min-w-0 glass-card p-8 border-white/5 rounded-3xl space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
@@ -208,7 +208,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            <div className="h-[300px] w-full mt-4 flex items-center justify-center">
+            <div className="h-[300px] min-h-[300px] min-w-0 w-full mt-4 flex items-center justify-center">
               {chartData && chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData}>

@@ -37,7 +37,7 @@ class CvController extends Controller
     public function upload(CvUploadRequest $request): JsonResponse
     {
         // Prevent PHP from killing the script during heavy ML processing (OCR, NER)
-        set_time_limit(180);
+        set_time_limit(240);
 
         /** @var User $user */
         $user = $request->user();
@@ -85,7 +85,7 @@ class CvController extends Controller
         } catch (ConnectionException $e) {
             Log::error('AI Gateway unreachable', [
                 'user_id' => $user->id,
-                'url'     => config('services.ai_gateway.url', 'http://127.0.0.1:8002'),
+                'url'     => config('services.ai_cv_analyzer.url', 'http://127.0.0.1:8002'),
                 'error'   => $e->getMessage(),
             ]);
 
