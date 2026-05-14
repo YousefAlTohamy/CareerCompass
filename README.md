@@ -2,7 +2,7 @@
 
 CareerCompass is a Docker-first career guidance platform for CV analysis, skill extraction, job scraping, job recommendations, and market intelligence.
 
-The repository is maintained on the `setup-docker` branch for the production-style Docker stack. The current rollback checkpoint is documented in `docs/TEAM_HANDOFF.md`.
+The production-style Docker stack is now merged into `main`. Historical Docker stabilization checkpoints are documented in `docs/TEAM_HANDOFF.md`.
 
 ## Architecture
 
@@ -49,7 +49,8 @@ Prerequisites:
 ```bash
 git clone https://github.com/YousefAlTohamy/CareerCompass.git
 cd CareerCompass
-git checkout setup-docker
+git checkout main
+git pull origin main
 
 cp .env.example .env
 cp backend-api/.env.example backend-api/.env
@@ -140,9 +141,9 @@ Before any real deployment:
 
 ```bash
 git fetch origin --tags
-git checkout setup-docker
+git checkout main
 git reset --hard <stable-checkpoint-tag>
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
-See `docs/TEAM_HANDOFF.md` for the latest handoff tag after each stabilization pass.
+See `docs/TEAM_HANDOFF.md` for historical Docker handoff tags. Use a tag only when you intentionally need to roll back to that checkpoint.

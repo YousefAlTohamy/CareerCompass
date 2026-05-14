@@ -54,17 +54,28 @@ class CvController extends Controller
             $userData = (new UserResource($user))->toArray($request);
             $userData['domain_confidence'] = $result['aiData']['domain_confidence'] ?? null;
             $userData['extraction_method'] = $result['aiData']['extraction_method'] ?? null;
+            $parsingStatus = (string) ($result['aiData']['parsing_status'] ?? 'success');
+            $warnings = $this->buildUploadWarnings($parsingStatus, $result['aiData']);
+            $message = match ($parsingStatus) {
+                'timeout' => 'CV uploaded, but AI analysis timed out. Existing profile details were preserved.',
+                'error' => 'CV uploaded, but AI analysis returned an error. Existing profile details were preserved.',
+                'ocr_fallback' => 'CV parsed using OCR fallback. Please review the extracted profile details.',
+                default => 'CV parsed successfully.',
+            };
 
             Log::info('CV parsed and profile updated via AI Gateway', [
                 'user_id'     => $user->id,
                 'domain'      => $result['domain'],
                 'skills'      => count($result['syncedSkills']),
                 'is_new_role' => $result['isNewRole'],
+                'parsing_status' => $parsingStatus,
             ]);
 
             return response()->json([
                 'success'     => true,
-                'message'     => 'CV parsed successfully.',
+                'message'     => $message,
+                'parsing_status' => $parsingStatus,
+                'warnings'    => $warnings,
                 'is_new_role' => $result['isNewRole'],
                 'user'        => $userData,
                 'skills'      => SkillResource::collection(
@@ -95,6 +106,42 @@ class CvController extends Controller
                 'error'   => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
+    }
+
+    /**
+     * @param array<string, mixed> $aiData
+     * @return array<int, array{code: string, message: string}>
+     */
+    private function buildUploadWarnings(string $parsingStatus, array $aiData): array
+    {
+        $warnings = [];
+
+        if ($parsingStatus === 'timeout') {
+            $warnings[] = [
+                'code' => 'ai_timeout',
+                'message' => 'The AI engine timed out before completing analysis.',
+            ];
+        } elseif ($parsingStatus === 'error') {
+            $warnings[] = [
+                'code' => 'ai_error',
+                'message' => 'The AI engine returned an error during analysis.',
+            ];
+        } elseif ($parsingStatus === 'ocr_fallback') {
+            $warnings[] = [
+                'code' => 'ocr_fallback',
+                'message' => 'The CV was analyzed using OCR fallback and may need manual review.',
+            ];
+        }
+
+        $skills = $aiData['skills'] ?? [];
+        if (!in_array($parsingStatus, ['timeout', 'error'], true) && is_array($skills) && count(array_filter($skills)) === 0) {
+            $warnings[] = [
+                'code' => 'no_skills_extracted',
+                'message' => 'No skills were extracted, so existing skills were preserved.',
+            ];
+        }
+
+        return $warnings;
     }
 
     /**

@@ -4,10 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\CvAnalysis;
 use App\Models\Skill;
+use App\Models\TargetJobRole;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -20,6 +22,7 @@ class CvUploadTest extends TestCase
     {
         config(['services.ai_cv_analyzer.url' => 'http://ai-cv-analyzer:8000']);
         Storage::fake('local');
+        Queue::fake();
 
         Http::fake([
             'http://ai-cv-analyzer:8000/api/parse-cv' => Http::response([
@@ -114,5 +117,107 @@ class CvUploadTest extends TestCase
             ->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonStructure(['data' => ['url', 'expires_at']]);
+    }
+
+    public function test_cv_upload_preserves_existing_skills_when_ai_returns_empty_skills(): void
+    {
+        config(['services.ai_cv_analyzer.url' => 'http://ai-cv-analyzer:8000']);
+        Storage::fake('local');
+        Queue::fake();
+
+        Http::fake([
+            'http://ai-cv-analyzer:8000/api/parse-cv' => Http::response([
+                'parsing_status' => 'success',
+                'profile' => [
+                    'current_title' => 'Backend Developer',
+                    'summary' => 'Builds APIs.',
+                    'contact' => [],
+                ],
+                'analysis' => [
+                    'seniority' => 'mid',
+                    'predicted_role' => 'Backend Developer',
+                    'primary_domain' => 'Software Engineering',
+                    'confidence_score' => 0.8,
+                    'summary' => 'Parsed but no skills extracted.',
+                    'strengths' => [],
+                    'gaps' => [],
+                    'red_flags' => [],
+                    'metadata' => [],
+                ],
+                'skills' => ['items' => []],
+                'experience' => ['items' => []],
+            ], 200),
+        ]);
+
+        $user = User::factory()->create();
+        $existingSkill = Skill::create(['name' => 'Docker', 'type' => 'technical']);
+        $user->skills()->attach($existingSkill->id, [
+            'confidence_score' => 0.9,
+            'evidence' => 'manual profile',
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->post('/api/upload-cv', [
+            'cv' => UploadedFile::fake()->create('resume.pdf', 80, 'application/pdf'),
+        ])->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('parsing_status', 'success')
+            ->assertJsonPath('warnings.0.code', 'no_skills_extracted');
+
+        $user->refresh()->load('skills');
+
+        $this->assertEqualsCanonicalizing(['Docker'], $user->skills->pluck('name')->all());
+        $this->assertDatabaseHas('cv_analyses', [
+            'user_id' => $user->id,
+            'parsing_status' => 'success',
+        ]);
+    }
+
+    public function test_cv_upload_discovers_predicted_role_before_primary_domain(): void
+    {
+        config(['services.ai_cv_analyzer.url' => 'http://ai-cv-analyzer:8000']);
+        Storage::fake('local');
+        Queue::fake();
+
+        Http::fake([
+            'http://ai-cv-analyzer:8000/api/parse-cv' => Http::response([
+                'parsing_status' => 'success',
+                'profile' => [
+                    'current_title' => 'React Developer',
+                    'summary' => 'Builds frontend applications.',
+                    'contact' => [],
+                ],
+                'analysis' => [
+                    'seniority' => 'mid',
+                    'predicted_role' => 'Frontend React Developer',
+                    'primary_domain' => 'Software Engineering',
+                    'confidence_score' => 0.88,
+                    'summary' => 'Frontend specialist.',
+                    'strengths' => [],
+                    'gaps' => [],
+                    'red_flags' => [],
+                    'metadata' => [],
+                ],
+                'skills' => [
+                    'items' => [
+                        ['name' => 'React', 'category' => 'technical', 'confidence_score' => 0.9],
+                    ],
+                ],
+                'experience' => ['items' => []],
+            ], 200),
+        ]);
+
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $this->post('/api/upload-cv', [
+            'cv' => UploadedFile::fake()->create('frontend.pdf', 80, 'application/pdf'),
+        ])->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('is_new_role', true);
+
+        $this->assertTrue(TargetJobRole::where('name', 'Frontend React Developer')->exists());
+        $this->assertFalse(TargetJobRole::where('name', 'Software Engineering')->exists());
     }
 }

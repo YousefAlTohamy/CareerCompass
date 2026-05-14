@@ -48,6 +48,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [isDiscovering, setIsDiscovering] = useState(false); // eslint-disable-line no-unused-vars
+  const [uploadFeedback, setUploadFeedback] = useState(null);
 
   useEffect(() => { 
     refreshUser().catch(() => {}); 
@@ -77,15 +78,49 @@ export default function Dashboard() {
     formData.append("cv", file);
     try {
       setUploading(true);
+      setUploadFeedback({
+        type: "info",
+        message: "Your CV is being analyzed. The first AI run may take longer; do not refresh this page.",
+      });
       const response = await cvAPI.uploadCV(formData);
+      const payload = response?.data ?? {};
+      const parsingStatus = payload.parsing_status || payload.user?.cv_analysis?.parsing_status || "success";
+      const warnings = Array.isArray(payload.warnings) ? payload.warnings : [];
       await refreshUser();
-      if (response?.data?.data?.is_new_role) {
+      if (["timeout", "error"].includes(parsingStatus)) {
+        setUploadFeedback({
+          type: "warning",
+          message: payload.message || "Your CV was uploaded, but AI parsing did not fully complete. Existing profile details were preserved.",
+        });
+      } else if (warnings.some((warning) => warning.code === "no_skills_extracted")) {
+        setUploadFeedback({
+          type: "warning",
+          message: "CV uploaded, but no skills were extracted. Existing skills were preserved.",
+        });
+      } else if (parsingStatus === "ocr_fallback") {
+        setUploadFeedback({
+          type: "warning",
+          message: "CV parsed using OCR fallback. Please review your extracted profile details.",
+        });
+      } else {
+        setUploadFeedback({
+          type: "success",
+          message: "CV parsed successfully. Your profile and skills were refreshed.",
+        });
+      }
+      if (payload.is_new_role) {
         setUploading(false); setIsDiscovering(true);
         setTimeout(() => { setIsDiscovering(false); navigate("/jobs"); }, 5000);
         return;
       }
       loadSkills();
-    } catch (error) { console.error(error); } finally { setUploading(false); }
+    } catch (error) {
+      console.error(error);
+      setUploadFeedback({
+        type: "error",
+        message: error.response?.data?.message || "CV upload failed. Please try again.",
+      });
+    } finally { setUploading(false); }
   };
 
   const hasCvAnalysis = user?.cv_analysis != null;
@@ -119,7 +154,7 @@ export default function Dashboard() {
                </a>
              )}
              <label className="glass-card !rounded-2xl px-6 py-3 flex items-center gap-3 border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 backdrop-blur-md cursor-pointer transition-all hover:scale-105 active:scale-95 group shadow-xl shadow-indigo-500/10">
-                <input type="file" className="hidden" onChange={handleCVUpload} />
+                <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={handleCVUpload} />
                 <RefreshCw size={18} className="text-indigo-600 dark:text-indigo-400 group-hover:rotate-180 transition-transform duration-500" />
                 <div className="flex flex-col items-start">
                    <span className="micro-typography text-indigo-600 dark:text-indigo-400 font-black">{t('cv_analyzer.update', 'UPDATE_CV')}</span>
@@ -133,6 +168,20 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {uploadFeedback && (
+          <div className={`rounded-3xl border px-6 py-4 text-sm font-bold ${
+            uploadFeedback.type === "error"
+              ? "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+              : uploadFeedback.type === "warning"
+                ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                : uploadFeedback.type === "success"
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                  : "border-indigo-500/30 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"
+          }`}>
+            {uploadFeedback.message}
+          </div>
+        )}
+
         {!hasCvAnalysis ? (
            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="glass-card p-12 md:p-20 text-center border-indigo-500/20 bg-white/80 dark:bg-white/5 backdrop-blur-xl">
               <div className="max-w-2xl mx-auto space-y-8">
@@ -142,7 +191,7 @@ export default function Dashboard() {
                   <h2 className="text-4xl md:text-5xl font-black leading-none">{t('cv_analyzer.title')}</h2>
                   <p className="text-slate-500 dark:text-slate-400 text-xl font-medium">{t('cv_analyzer.upload')}</p>
                   <label className="inline-block cursor-pointer">
-                    <input type="file" className="hidden" onChange={handleCVUpload} />
+                    <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={handleCVUpload} />
                     <div className="px-12 py-6 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xl rounded-3xl transition-all shadow-2xl">
                         {t('cv_analyzer.analyze')}
                     </div>

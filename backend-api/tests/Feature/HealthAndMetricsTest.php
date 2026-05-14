@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class HealthAndMetricsTest extends TestCase
@@ -13,6 +14,16 @@ class HealthAndMetricsTest extends TestCase
 
     public function test_health_endpoints_return_request_id_and_ready_state(): void
     {
+        config([
+            'services.ai_engine.url' => 'http://ai.test',
+            'services.scraper_service.url' => 'http://scraper.test',
+        ]);
+
+        Http::fake([
+            'http://ai.test' => Http::response(['ok' => true], 200),
+            'http://scraper.test/health' => Http::response(['ok' => true], 200),
+        ]);
+
         $this->withHeader('X-Request-ID', 'req-health-001')
             ->getJson('/api/v1/health')
             ->assertOk()
@@ -20,8 +31,28 @@ class HealthAndMetricsTest extends TestCase
             ->assertJsonPath('request_id', 'req-health-001');
 
         $this->getJson('/api/v1/ready')
-            ->assertStatus(503)
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('status', 'ready')
             ->assertJsonStructure(['success', 'status', 'checks', 'request_id']);
+    }
+
+    public function test_ready_endpoint_reports_degraded_when_dependencies_fail(): void
+    {
+        config([
+            'services.ai_engine.url' => 'http://ai.test',
+            'services.scraper_service.url' => 'http://scraper.test',
+        ]);
+
+        Http::fake([
+            'http://ai.test' => Http::response(['ok' => true], 200),
+            'http://scraper.test/health' => Http::response(['ok' => false], 503),
+        ]);
+
+        $this->getJson('/api/v1/ready')
+            ->assertStatus(503)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('status', 'degraded');
     }
 
     public function test_metrics_endpoint_requires_machine_token(): void
