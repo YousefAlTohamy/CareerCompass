@@ -241,6 +241,10 @@ export default function Home() {
     { title: t('home.projects.p6_title'), desc: t('home.projects.p6_desc'), tags: ['GPT-4', 'WebRTC', 'React'] },
   ], [t]);
 
+  const SOCIAL_LINKS = React.useMemo(() => [
+    { icon: 'ph-thin ph-github-logo', href: 'https://github.com/YousefAlTohamy/CareerCompass', label: 'CareerCompass GitHub' },
+  ], []);
+
   /* ── After preloader, set loaded flag ────────────────────────────────── */
   const handlePreloaderComplete = useCallback(() => {
     setLoaded(true);
@@ -401,7 +405,7 @@ export default function Home() {
             return (
               <div 
                 key={i} 
-                className={`cc-bento-card ${bentoClass}`}
+                className={`cc-bento-card cc-skill-chip ${bentoClass}`}
                 onMouseMove={handleBentoMouseMove}
               >
                 <i className={`${skill.icon} cc-bento-card__icon`} />
@@ -542,13 +546,8 @@ export default function Home() {
 
         {/* Social Icons with Glitch */}
         <div className="cc-socials">
-          {[
-            { icon: 'ph-thin ph-github-logo', href: '#' },
-            { icon: 'ph-thin ph-linkedin-logo', href: '#' },
-            { icon: 'ph-thin ph-twitter-logo', href: '#' },
-            { icon: 'ph-thin ph-envelope-simple', href: '#' },
-          ].map((s, i) => (
-            <a key={i} href={s.href} className="cc-social-icon" target="_blank" rel="noreferrer">
+          {SOCIAL_LINKS.map((s, i) => (
+            <a key={i} href={s.href} aria-label={s.label} className="cc-social-icon" target="_blank" rel="noreferrer">
               <i className={s.icon} />
             </a>
           ))}

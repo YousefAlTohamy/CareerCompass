@@ -56,6 +56,17 @@ export default function Profile() {
   const data = profile ?? user;
   const experiences = Array.isArray(data?.experiences) ? data.experiences : [];
   const skills = Array.isArray(data?.skills) ? data.skills : (Array.isArray(data?.profile?.skills) ? data.profile.skills : []);
+  const cvAnalysis = data?.cv_analysis ?? null;
+  const contactInfo = data?.profile?.contact_info ?? {};
+  const headline = data?.headline || data?.profile?.headline || cvAnalysis?.predicted_role || t('profile.headline');
+  const location = data?.location || data?.profile?.location || contactInfo.location || null;
+  const totalExperienceYears = data?.total_experience_years ?? data?.profile?.total_experience_years ?? cvAnalysis?.metadata?.total_experience_years ?? null;
+  const seniority = data?.seniority ?? data?.profile?.seniority ?? cvAnalysis?.seniority ?? null;
+  const primaryDomain = data?.primary_domain ?? data?.profile?.primary_domain ?? cvAnalysis?.primary_domain ?? null;
+  const completenessScore = Number(cvAnalysis?.completeness_score ?? 0);
+  const linkedinUrl = data?.linkedin_url ?? contactInfo.linkedin_url ?? null;
+  const githubUrl = data?.github_url ?? contactInfo.github_url ?? null;
+  const phone = data?.phone ?? contactInfo.phone ?? null;
 
   return (
     <HUDLayout loading={loading} loadingType="standard">
@@ -88,15 +99,25 @@ export default function Profile() {
                        {data?.name}
                     </h1>
                     <p className="text-base md:text-lg font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
-                       {data?.headline || t('profile.headline')}
+                       {headline}
                     </p>
                  </div>
 
                  <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-[9px] font-black text-slate-500 uppercase tracking-widest">
                     <span className="flex items-center gap-1.5 bg-white/50 dark:bg-white/5 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-white/5 shadow-sm"><Mail size={12} className="text-indigo-500" /> {data?.email}</span>
-                    <span className="flex items-center gap-1.5 bg-white/50 dark:bg-white/5 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-white/5 shadow-sm"><MapPin size={12} className="text-emerald-500" /> {data?.location || 'NEURAL_NODE_01'}</span>
-                    <span className="flex items-center gap-1.5 bg-white/50 dark:bg-white/5 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-white/5 shadow-sm"><Activity size={12} className="text-fuchsia-500" /> STATUS: ACTIVE</span>
+                    <span className="flex items-center gap-1.5 bg-white/50 dark:bg-white/5 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-white/5 shadow-sm"><MapPin size={12} className="text-emerald-500" /> {location || 'No location yet'}</span>
+                    {cvAnalysis?.parsing_status && (
+                      <span className="flex items-center gap-1.5 bg-white/50 dark:bg-white/5 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-white/5 shadow-sm"><Activity size={12} className="text-fuchsia-500" /> CV: {cvAnalysis.parsing_status}</span>
+                    )}
                  </div>
+
+                 {cvAnalysis && (
+                   <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 text-[9px] font-black uppercase tracking-widest">
+                      {cvAnalysis.predicted_role && <span className="px-3 py-1.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 border border-indigo-500/20">Role: {cvAnalysis.predicted_role}</span>}
+                      {primaryDomain && <span className="px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border border-emerald-500/20">Domain: {primaryDomain}</span>}
+                      {seniority && <span className="px-3 py-1.5 rounded-xl bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-300 border border-fuchsia-500/20">Seniority: {seniority}</span>}
+                   </div>
+                 )}
               </div>
 
               {/* Action Buttons */}
@@ -114,10 +135,10 @@ export default function Profile() {
         {/* --- COMPACT STATS ROW --- */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
            {[
-              { label: t('hud_labels.exp_units', 'EXPERIENCE'), val: data?.total_experience_years || 0, unit: 'YEARS', icon: Calendar, color: 'indigo' },
-              { label: t('hud_labels.seniority', 'SENIORITY'), val: data?.seniority || 'MID', unit: 'SYNC', icon: Target, color: 'fuchsia' },
+              { label: t('hud_labels.exp_units', 'EXPERIENCE'), val: totalExperienceYears ?? '—', unit: 'YEARS', icon: Calendar, color: 'indigo' },
+              { label: t('hud_labels.seniority', 'SENIORITY'), val: seniority || '—', unit: 'CV', icon: Target, color: 'fuchsia' },
               { label: t('dashboard.skills', 'SKILLS'), val: skills.length, unit: 'NODES', icon: Cpu, color: 'emerald' },
-              { label: t('hud_labels.market_pulse', 'MATCH'), val: '94.2%', unit: 'INDEX', icon: TrendingUp, color: 'amber' }
+              { label: t('dashboard.profile_completeness', 'PROFILE'), val: `${Math.round(completenessScore)}%`, unit: 'SCORE', icon: TrendingUp, color: 'amber' }
            ].map((stat, i) => (
               <div key={i} className="bg-white/50 dark:bg-slate-900/50 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 backdrop-blur-md flex flex-col items-center justify-center text-center group hover:border-indigo-500/20 transition-all">
                  <div className={`p-3 rounded-xl bg-${stat.color}-500/10 text-${stat.color}-600 dark:text-${stat.color}-400 mb-3 group-hover:scale-110 transition-transform`}><stat.icon size={20} /></div>
@@ -141,16 +162,23 @@ export default function Profile() {
                  <div className="space-y-4">
                     {[
                        { icon: Mail, label: 'Mail', val: data?.email, color: 'indigo' },
-                       { icon: Linkedin, label: 'LinkedIn', val: data?.profile?.linkedin_url || 'UNDEFINED', color: 'blue' },
-                       { icon: Github, label: 'GitHub', val: data?.profile?.github_url || 'UNDEFINED', color: 'slate' }
+                       { icon: Phone, label: 'Phone', val: phone || 'Not provided', color: 'emerald' },
+                       { icon: Linkedin, label: 'LinkedIn', val: linkedinUrl || 'Not provided', href: linkedinUrl, color: 'blue' },
+                       { icon: Github, label: 'GitHub', val: githubUrl || 'Not provided', href: githubUrl, color: 'slate' }
                     ].map((item, i) => (
-                       <div key={i} className="flex items-center gap-3 group">
+                       <a
+                         key={i}
+                         href={item.href || undefined}
+                         target={item.href ? "_blank" : undefined}
+                         rel={item.href ? "noopener noreferrer" : undefined}
+                         className={`flex items-center gap-3 group ${item.href ? "hover:text-indigo-500" : "pointer-events-none"}`}
+                       >
                           <div className="p-2.5 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/5 text-slate-400 group-hover:text-indigo-500 transition-colors"><item.icon size={14} /></div>
                           <div className="overflow-hidden text-start">
                              <p className="text-[7px] text-slate-400 font-black uppercase tracking-widest">{item.label}</p>
                              <p className="font-bold text-xs truncate uppercase text-slate-900 dark:text-slate-200">{item.val}</p>
                           </div>
-                       </div>
+                       </a>
                     ))}
                  </div>
               </div>

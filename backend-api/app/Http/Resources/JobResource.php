@@ -29,6 +29,7 @@ class JobResource extends JsonResource
             'work_type' => $this->work_type,
             'created_at' => $this->created_at,
             'match_percentage' => $this->when(isset($this->match_percentage), $this->match_percentage),
+            'match_score' => $this->when(isset($this->match_percentage), $this->match_percentage),
             'skills' => SkillResource::collection($this->whenLoaded('requiredSkills')),
             'skills_count' => $this->when(
                 $this->relationLoaded('requiredSkills'),

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   RefreshCw, Target, Award, Zap, Compass, Activity, Globe, Eye
@@ -15,6 +15,60 @@ const formatExperienceYears = (years, t) => {
   if (years == null) return null;
   const n = Number(years);
   return `${n} ${n === 1 ? t('dashboard.year') : t('dashboard.years')}`;
+};
+
+const CV_UPLOAD_RECOVERY_ATTEMPTS = 8;
+const CV_UPLOAD_RECOVERY_DELAY_MS = 3000;
+
+const delay = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+const cvAnalysisFingerprint = (candidate) => {
+  const analysis = candidate?.cv_analysis;
+  if (!analysis) return null;
+
+  return [
+    analysis.updated_at,
+    analysis.created_at,
+    analysis.cv_file?.uploaded_at,
+    analysis.cv_file?.path,
+    analysis.cv_file?.sha256,
+    analysis.parsing_status,
+  ].filter(Boolean).join('|') || 'analysis-present';
+};
+
+const isRecoverableUploadError = (error) => {
+  if (!error?.response) return true;
+  return [408, 502, 504].includes(Number(error.response.status));
+};
+
+const feedbackForParsingStatus = (payload, parsingStatus) => {
+  const warnings = Array.isArray(payload?.warnings) ? payload.warnings : [];
+
+  if (["timeout", "error"].includes(parsingStatus)) {
+    return {
+      type: "warning",
+      message: payload?.message || "Your CV was uploaded, but AI parsing did not fully complete. Existing profile details were preserved.",
+    };
+  }
+
+  if (warnings.some((warning) => warning.code === "no_skills_extracted")) {
+    return {
+      type: "warning",
+      message: "CV uploaded, but no skills were extracted. Existing skills were preserved.",
+    };
+  }
+
+  if (parsingStatus === "ocr_fallback") {
+    return {
+      type: "warning",
+      message: "CV parsed using OCR fallback. Please review your extracted profile details.",
+    };
+  }
+
+  return {
+    type: "success",
+    message: "CV parsed successfully. Your profile and skills were refreshed.",
+  };
 };
 
 const ProfileCompletenessRing = ({ score }) => {
@@ -41,13 +95,12 @@ const ProfileCompletenessRing = ({ score }) => {
 };
 
 export default function Dashboard() {
-  const navigate = useNavigate();
   const { user, refreshUser } = useAuth();
   const { t } = useTranslation();
   const [skills, setSkills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [isDiscovering, setIsDiscovering] = useState(false); // eslint-disable-line no-unused-vars
+  const [isDiscovering, setIsDiscovering] = useState(false);
   const [uploadFeedback, setUploadFeedback] = useState(null);
 
   useEffect(() => { 
@@ -72,61 +125,99 @@ export default function Dashboard() {
     }
   };
 
+  const recoverPersistedCvAnalysis = async (previousFingerprint) => {
+    for (let attempt = 0; attempt < CV_UPLOAD_RECOVERY_ATTEMPTS; attempt += 1) {
+      await delay(CV_UPLOAD_RECOVERY_DELAY_MS);
+
+      const freshUser = await refreshUser();
+      await loadSkills();
+      const nextFingerprint = cvAnalysisFingerprint(freshUser);
+
+      if (nextFingerprint && nextFingerprint !== previousFingerprint) {
+        return freshUser;
+      }
+    }
+
+    return null;
+  };
+
   const handleCVUpload = async (e) => {
-    const file = e.target.files[0];
+    if (uploading || isDiscovering) return;
+
+    const input = e.target;
+    const file = input.files[0];
     if (!file) return;
     const formData = new FormData();
     formData.append("cv", file);
+    const previousFingerprint = cvAnalysisFingerprint(user);
+
     try {
       setUploading(true);
+      setIsDiscovering(false);
       setUploadFeedback({
         type: "info",
         message: "Your CV is being analyzed. The first AI run may take longer; do not refresh this page.",
       });
+
       const response = await cvAPI.uploadCV(formData);
       const payload = response?.data ?? {};
       const parsingStatus = payload.parsing_status || payload.user?.cv_analysis?.parsing_status || "success";
-      const warnings = Array.isArray(payload.warnings) ? payload.warnings : [];
+
       await refreshUser();
-      if (["timeout", "error"].includes(parsingStatus)) {
-        setUploadFeedback({
-          type: "warning",
-          message: payload.message || "Your CV was uploaded, but AI parsing did not fully complete. Existing profile details were preserved.",
-        });
-      } else if (warnings.some((warning) => warning.code === "no_skills_extracted")) {
-        setUploadFeedback({
-          type: "warning",
-          message: "CV uploaded, but no skills were extracted. Existing skills were preserved.",
-        });
-      } else if (parsingStatus === "ocr_fallback") {
-        setUploadFeedback({
-          type: "warning",
-          message: "CV parsed using OCR fallback. Please review your extracted profile details.",
-        });
-      } else {
-        setUploadFeedback({
-          type: "success",
-          message: "CV parsed successfully. Your profile and skills were refreshed.",
-        });
-      }
+      setUploadFeedback(feedbackForParsingStatus(payload, parsingStatus));
+
       if (payload.is_new_role) {
-        setUploading(false); setIsDiscovering(true);
-        setTimeout(() => { setIsDiscovering(false); navigate("/jobs"); }, 5000);
-        return;
+        setIsDiscovering(true);
+        setUploadFeedback({
+          type: "info",
+          message: "CV saved. Market discovery has started for your role; jobs may appear in a few moments.",
+        });
+        window.setTimeout(() => setIsDiscovering(false), 10000);
       }
+
       loadSkills();
     } catch (error) {
       console.error(error);
+
+      if (isRecoverableUploadError(error)) {
+        setUploadFeedback({
+          type: "info",
+          message: "Analysis is still being checked. Please wait while we verify whether your CV was saved.",
+        });
+
+        const recoveredUser = await recoverPersistedCvAnalysis(previousFingerprint);
+        if (recoveredUser?.cv_analysis) {
+          const parsingStatus = recoveredUser.cv_analysis.parsing_status || "success";
+          const recoveredFeedback = feedbackForParsingStatus({ user: recoveredUser }, parsingStatus);
+
+          setUploadFeedback({
+            ...recoveredFeedback,
+            message: `${recoveredFeedback.message} The upload recovered successfully after the browser request timed out.`,
+          });
+          return;
+        }
+
+        setUploadFeedback({
+          type: "warning",
+          message: "The upload request timed out while analysis may still be running. Check this dashboard again shortly before retrying.",
+        });
+        return;
+      }
+
       setUploadFeedback({
         type: "error",
         message: error.response?.data?.message || "CV upload failed. Please try again.",
       });
-    } finally { setUploading(false); }
+    } finally {
+      setUploading(false);
+      if (input) input.value = "";
+    }
   };
 
   const hasCvAnalysis = user?.cv_analysis != null;
   const completenessScore = Number(user?.cv_analysis?.completeness_score) || 0;
   const totalExperience = user?.profile?.total_experience_years ?? user?.total_experience_years;
+  const uploadDisabled = uploading || isDiscovering;
 
   return (
     <HUDLayout loading={loading || uploading} loadingType={uploading ? "scanning" : "standard"}>
@@ -154,17 +245,17 @@ export default function Dashboard() {
                  </div>
                </a>
              )}
-             <label className="glass-card !rounded-2xl px-6 py-3 flex items-center gap-3 border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 backdrop-blur-md cursor-pointer transition-all hover:scale-105 active:scale-95 group shadow-xl shadow-indigo-500/10">
-                <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={handleCVUpload} />
+             <label className={`glass-card !rounded-2xl px-6 py-3 flex items-center gap-3 border-indigo-500/30 bg-indigo-500/5 backdrop-blur-md transition-all group shadow-xl shadow-indigo-500/10 ${uploadDisabled ? "opacity-60 cursor-not-allowed" : "hover:bg-indigo-500/10 cursor-pointer hover:scale-105 active:scale-95"}`}>
+                <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={handleCVUpload} disabled={uploadDisabled} />
                 <RefreshCw size={18} className="text-indigo-600 dark:text-indigo-400 group-hover:rotate-180 transition-transform duration-500" />
                 <div className="flex flex-col items-start">
-                   <span className="micro-typography text-indigo-600 dark:text-indigo-400 font-black">{t('cv_analyzer.update', 'UPDATE_CV')}</span>
+                   <span className="micro-typography text-indigo-600 dark:text-indigo-400 font-black">{uploadDisabled ? t('cv_analyzer.processing', 'PROCESSING') : t('cv_analyzer.update', 'UPDATE_CV')}</span>
                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{t('hud_labels.sync_core', 'SYNC_CORE')}</span>
                 </div>
              </label>
              <div className="glass-card !rounded-2xl px-6 py-3 flex flex-col items-center border-slate-200 dark:border-white/5 bg-white/50 dark:bg-white/5 backdrop-blur-md min-w-[100px]">
-                <span className="micro-typography text-slate-500 mb-1">{t('hud_labels.market_pulse')}</span>
-                <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">98.2</span>
+                <span className="micro-typography text-slate-500 mb-1">PROFILE SCORE</span>
+                <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">{Math.round(completenessScore)}%</span>
              </div>
           </div>
         </div>
@@ -191,10 +282,10 @@ export default function Dashboard() {
                   </div>
                   <h2 className="text-4xl md:text-5xl font-black leading-none">{t('cv_analyzer.title')}</h2>
                   <p className="text-slate-500 dark:text-slate-400 text-xl font-medium">{t('cv_analyzer.upload')}</p>
-                  <label className="inline-block cursor-pointer">
-                    <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={handleCVUpload} />
-                    <div className="px-12 py-6 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xl rounded-3xl transition-all shadow-2xl">
-                        {t('cv_analyzer.analyze')}
+                  <label className={`inline-block ${uploadDisabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}>
+                    <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={handleCVUpload} disabled={uploadDisabled} />
+                    <div className={`px-12 py-6 text-white font-black text-xl rounded-3xl transition-all shadow-2xl ${uploadDisabled ? "bg-slate-400" : "bg-indigo-600 hover:bg-indigo-500"}`}>
+                        {uploadDisabled ? t('cv_analyzer.processing', 'Processing...') : t('cv_analyzer.analyze')}
                     </div>
                   </label>
               </div>

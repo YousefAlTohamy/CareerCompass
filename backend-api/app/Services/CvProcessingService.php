@@ -392,14 +392,13 @@ class CvProcessingService implements CvProcessingServiceInterface
                 continue;
             }
 
-            $name = $this->skillSyncService->normalizeName((string) ($item['name'] ?? ''));
-            if ($name === null) {
+            $names = $this->expandSkillNames($item['name'] ?? '');
+            if (empty($names)) {
                 continue;
             }
 
             $category = (string) ($item['category'] ?? 'other');
             $type     = $this->mapSkillCategoryToType($category);
-            $skillPayloads[] = ['name' => $name, 'type' => $type];
 
             $confidenceScore = isset($item['confidence_score'])
                 ? (float) $item['confidence_score']
@@ -413,11 +412,14 @@ class CvProcessingService implements CvProcessingServiceInterface
                 $evidence = (string) $evidence;
             }
 
-            // Pivot: confidence_score and evidence (nullable)
-            $syncData[$name] = [
-                'confidence_score' => $confidenceScore,
-                'evidence'         => $evidence ?: null,
-            ];
+            foreach ($names as $name) {
+                $skillPayloads[$name] = ['name' => $name, 'type' => $type];
+
+                $syncData[$name] = [
+                    'confidence_score' => $confidenceScore,
+                    'evidence'         => $evidence ?: null,
+                ];
+            }
         }
 
         if (empty($skillPayloads)) {
@@ -428,7 +430,7 @@ class CvProcessingService implements CvProcessingServiceInterface
             return new Collection();
         }
 
-        $skills = $this->skillSyncService->findOrCreateMany($skillPayloads);
+        $skills = $this->skillSyncService->findOrCreateMany(array_values($skillPayloads));
         $syncById = [];
         foreach ($skills as $skill) {
             if (!isset($syncData[$skill->name])) {
@@ -465,6 +467,33 @@ class CvProcessingService implements CvProcessingServiceInterface
             'soft' => 'soft',
             default => 'technical',
         };
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function expandSkillNames(mixed $name): array
+    {
+        if (!is_scalar($name)) {
+            return [];
+        }
+
+        $rawName = trim((string) $name);
+        if ($rawName === '') {
+            return [];
+        }
+
+        $parts = preg_split('/[,;]+/', $rawName) ?: [$rawName];
+        $normalized = [];
+
+        foreach ($parts as $part) {
+            $skillName = $this->skillSyncService->normalizeName($part);
+            if ($skillName !== null) {
+                $normalized[$skillName] = $skillName;
+            }
+        }
+
+        return array_values($normalized);
     }
 
     /**
@@ -651,6 +680,21 @@ class CvProcessingService implements CvProcessingServiceInterface
         ]);
 
         try {
+            $existingScrape = ScrapingJob::where('job_title', $domain)
+                ->whereIn('status', ['pending', 'processing', 'running'])
+                ->latest()
+                ->first();
+
+            if ($existingScrape !== null) {
+                Log::info('Background scraping already active for discovered role', [
+                    'role' => $domain,
+                    'scraping_job_id' => $existingScrape->id,
+                    'status' => $existingScrape->status,
+                ]);
+
+                return true;
+            }
+
             $scrapingJob = ScrapingJob::create([
                 'job_title' => $domain,
                 'status'    => 'pending',

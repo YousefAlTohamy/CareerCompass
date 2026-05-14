@@ -216,7 +216,7 @@ export default function MarketIntelligence() {
           {/* CHARTS ROW */}
           <div className="grid lg:grid-cols-12 gap-8">
             {/* LEFT CHART: DEMAND TREND (AREA CHART) */}
-            <div className="lg:col-span-8 bg-white dark:bg-slate-900/50 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 backdrop-blur-md">
+            <div className="lg:col-span-8 min-w-0 bg-white dark:bg-slate-900/50 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 backdrop-blur-md">
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl"><Activity size={20} /></div>
@@ -227,7 +227,7 @@ export default function MarketIntelligence() {
                 </div>
               </div>
 
-              <div className="h-[300px] w-full">
+              <div className="h-[300px] min-h-[300px] min-w-0 w-full">
                 {hasTrendData ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={trendChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -256,7 +256,7 @@ export default function MarketIntelligence() {
             </div>
 
             {/* RIGHT CHART: TOP SKILLS (BAR CHART) */}
-            <div className="lg:col-span-4 bg-white dark:bg-slate-900/50 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 backdrop-blur-md">
+            <div className="lg:col-span-4 min-w-0 bg-white dark:bg-slate-900/50 rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 dark:border-slate-800 backdrop-blur-md">
               <div className="flex items-center gap-3 mb-8">
                 <div className="p-2 bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 rounded-xl"><BarChart3 size={20} /></div>
                 <div>
@@ -265,7 +265,7 @@ export default function MarketIntelligence() {
                 </div>
               </div>
 
-              <div className="h-[300px] w-full">
+              <div className="h-[300px] min-h-[300px] min-w-0 w-full">
                 {skillsBarData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={skillsBarData} layout="vertical" margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>

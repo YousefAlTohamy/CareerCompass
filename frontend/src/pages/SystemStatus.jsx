@@ -12,6 +12,7 @@ export default function SystemStatus() {
         checks: {},
         requestId: null,
         error: null,
+        checkedAt: null,
     });
 
     useEffect(() => {
@@ -34,6 +35,7 @@ export default function SystemStatus() {
                     checks: response.data?.checks ?? {},
                     requestId: response.data?.request_id ?? null,
                     error: null,
+                    checkedAt: new Date().toISOString(),
                 });
             } catch (error) {
                 if (!mounted) {
@@ -46,6 +48,7 @@ export default function SystemStatus() {
                     checks: error?.response?.data?.checks ?? {},
                     requestId: error?.response?.data?.request_id ?? null,
                     error: error?.response?.data?.message ?? error.message ?? 'Unable to load status.',
+                    checkedAt: new Date().toISOString(),
                 });
             }
         };
@@ -58,6 +61,10 @@ export default function SystemStatus() {
             window.clearInterval(timer);
         };
     }, []);
+
+    const checkedLabel = health.checkedAt
+        ? `Live check: ${new Date(health.checkedAt).toLocaleString()}`
+        : t('status_page.loading', 'Checking live status...');
 
     const systems = useMemo(() => {
         const statusLabel = (check, fallback = 'operational') => {
@@ -123,7 +130,7 @@ export default function SystemStatus() {
                                 {t('status_page.title')}
                             </h1>
                             <p className="text-slate-500 dark:text-slate-400 font-medium">
-                                {health.loading ? t('status_page.loading', 'Checking live status...') : (health.error || t('status_page.as_of'))}
+                                {health.loading ? t('status_page.loading', 'Checking live status...') : (health.error || checkedLabel)}
                             </p>
                         </div>
                         

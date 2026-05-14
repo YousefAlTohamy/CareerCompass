@@ -174,6 +174,54 @@ class CvUploadTest extends TestCase
         ]);
     }
 
+    public function test_cv_upload_splits_comma_delimited_skill_labels(): void
+    {
+        config(['services.ai_cv_analyzer.url' => 'http://ai-cv-analyzer:8000']);
+        Storage::fake('local');
+        Queue::fake();
+
+        Http::fake([
+            'http://ai-cv-analyzer:8000/api/parse-cv' => Http::response([
+                'parsing_status' => 'success',
+                'profile' => [
+                    'current_title' => 'Full Stack Developer',
+                    'summary' => 'Builds Laravel and React applications.',
+                    'contact' => [],
+                ],
+                'analysis' => [
+                    'seniority' => 'mid',
+                    'predicted_role' => 'Full Stack Developer',
+                    'primary_domain' => 'Software Engineering',
+                    'confidence_score' => 0.86,
+                    'summary' => 'Strong full-stack profile.',
+                    'strengths' => [],
+                    'gaps' => [],
+                    'red_flags' => [],
+                    'metadata' => [],
+                ],
+                'skills' => [
+                    'items' => [
+                        ['name' => 'PHP, LARAVEL, Docker', 'category' => 'technical', 'confidence_score' => 0.92],
+                    ],
+                ],
+                'experience' => ['items' => []],
+            ], 200),
+        ]);
+
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $this->post('/api/upload-cv', [
+            'cv' => UploadedFile::fake()->create('resume.pdf', 80, 'application/pdf'),
+        ])->assertOk()
+            ->assertJsonPath('success', true);
+
+        $user->refresh()->load('skills');
+
+        $this->assertEqualsCanonicalizing(['Docker', 'Laravel', 'PHP'], $user->skills->pluck('name')->all());
+        $this->assertSame(3, Skill::count());
+    }
+
     public function test_cv_upload_discovers_predicted_role_before_primary_domain(): void
     {
         config(['services.ai_cv_analyzer.url' => 'http://ai-cv-analyzer:8000']);
