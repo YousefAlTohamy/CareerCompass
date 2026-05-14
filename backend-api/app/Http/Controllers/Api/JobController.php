@@ -292,7 +292,7 @@ class JobController extends Controller
                 'message' => 'Analyzing market data for this role. Please wait...',
                 'scraping_job_id' => $scrapingJob->id,
                 'status' => 'pending',
-                'poll_url' => route('api.scraping.status', ['jobId' => $scrapingJob->id]),
+                'poll_url' => route($request->is('api/v1/*') ? 'api.v1.scraping.status' : 'api.scraping.status', ['jobId' => $scrapingJob->id]),
             ], 202);
         } catch (\Exception $e) {
             Log::error('Error checking/scraping job title', [

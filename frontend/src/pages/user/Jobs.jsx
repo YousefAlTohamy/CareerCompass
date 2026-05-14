@@ -20,6 +20,11 @@ const formatValue = (val) => {
   return val.split(/[-_]/).map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
 };
 
+const skillLabel = (skill) => {
+  if (typeof skill === 'string') return skill;
+  return skill?.name || skill?.title || skill?.skill || '';
+};
+
 // --- COMPONENT: SCAN LINE ---
 const ScanLine = () => (
   <motion.div 
@@ -100,8 +105,18 @@ export default function Jobs() {
       const params = searchQuery ? { search: searchQuery } : { recommended: 1 };
       const response = await jobsAPI.getJobs(params);
       const data = response.data?.data || response.data || [];
-      setJobs(Array.isArray(data) ? data : []);
-      if (data.length > 0 && !selectedJob) handleJobSelect(data[0]);
+      const normalizedJobs = Array.isArray(data) ? data : [];
+      setJobs(normalizedJobs);
+
+      if (normalizedJobs.length === 0) {
+        setSelectedJob(null);
+        setGapData(null);
+        return;
+      }
+
+      if (!selectedJob || !normalizedJobs.some((job) => job.id === selectedJob.id)) {
+        handleJobSelect(normalizedJobs[0]);
+      }
     } catch (err) {
       console.error(err);
       setJobs([]);
@@ -346,17 +361,17 @@ export default function Jobs() {
                                      <div className="space-y-3">
                                         <h5 className="text-[9px] font-black text-emerald-500 uppercase flex items-center gap-1.5"><ShieldCheck size={16} /> Matched</h5>
                                         <div className="flex flex-wrap gap-1.5">
-                                           {(gapData.matched_skills || []).map((s, i) => (
-                                             <span key={i} className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[8px] font-black rounded-lg uppercase">{s}</span>
-                                           ))}
+                                            {(gapData.matched_skills || []).map((s, i) => (
+                                              <span key={i} className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[8px] font-black rounded-lg uppercase">{skillLabel(s)}</span>
+                                            ))}
                                         </div>
                                      </div>
                                      <div className="space-y-3">
                                         <h5 className="text-[9px] font-black text-rose-500 uppercase flex items-center gap-1.5"><AlertCircle size={16} /> Gaps</h5>
                                         <div className="flex flex-wrap gap-1.5">
-                                           {(gapData.critical_skills || []).map((s, i) => (
-                                             <span key={i} className="px-3 py-1 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-[8px] font-black rounded-lg uppercase">{s}</span>
-                                           ))}
+                                            {(gapData.critical_skills || []).map((s, i) => (
+                                              <span key={i} className="px-3 py-1 bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-[8px] font-black rounded-lg uppercase">{skillLabel(s)}</span>
+                                            ))}
                                         </div>
                                      </div>
                                   </div>
@@ -376,7 +391,7 @@ export default function Jobs() {
                                <div className="flex flex-wrap gap-2">
                                   {selectedJob.skills.map((skill, i) => (
                                     <span key={i} className="px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-black rounded-xl uppercase tracking-wider shadow-sm">
-                                      {skill.name}
+                                      {skillLabel(skill)}
                                     </span>
                                   ))}
                                </div>

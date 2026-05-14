@@ -61,7 +61,8 @@ export default function Dashboard() {
     try {
       setLoading(true);
       const response = await cvAPI.getUserSkills();
-      const skillData = response?.data?.data ?? response?.data ?? [];
+      const payload = response?.data?.data ?? response?.data ?? [];
+      const skillData = Array.isArray(payload) ? payload : (payload.skills ?? []);
       setSkills(Array.isArray(skillData) ? skillData : []);
     } catch (error) { 
       console.error(error); 
