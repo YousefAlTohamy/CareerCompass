@@ -30,3 +30,11 @@ The behavior of Layer 1 is governed by a central JSON file:
 - `section_config`: Define how headers are matched.
 - `contact_config`: Define filters for location extraction.
 - `title_config`: Define blacklisted words and action verbs for title detection.
+
+## Current Integration Notes
+
+- Layer 1 is called through the FastAPI service in `ai-cv-analyzer/main.py`, not directly by Laravel.
+- Laravel persists the final structured output through `CvProcessingService`.
+- Parser status values matter to the backend. Timeout/error responses preserve existing user profile and skills; successful responses with empty skills also preserve existing skills.
+- If text extraction falls back to OCR, the API can return `parsing_status="ocr_fallback"` so the frontend can present an honest warning.
+- Backend post-processing now splits comma/semicolon-delimited skill labels before syncing user skills.

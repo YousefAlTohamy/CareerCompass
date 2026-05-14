@@ -23,3 +23,10 @@ This layer transforms extracted text into professional insights. It categorizes 
 
 ## Data-Driven Architecture (`data/taxonomy.json`)
 The entire "brain" of Layer 2 is stored in a JSON taxonomy. You can add new industry domains or tech skills without touching the Python code.
+
+## Current Integration Notes
+
+- Layer 2 role/domain/seniority signals feed Laravel's `CvProcessingService`.
+- Role discovery now prefers `analysis.predicted_role`, then profile title/headline, then `analysis.primary_domain` as a broad fallback.
+- `primary_domain` should remain a domain/category signal; it should not replace a more precise predicted role in recommendation or scraping discovery flows.
+- The frontend profile page now displays predicted/current role, primary domain, seniority, total experience, parsing status, and completeness when available.

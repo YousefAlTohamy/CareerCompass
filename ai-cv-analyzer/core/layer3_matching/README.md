@@ -26,3 +26,11 @@ This is the final decision-making layer. It evaluates how well a candidate fits 
 The matchmaking weights are fully tunable:
 - Adjust the importance of "Skill Overlap" vs "Semantic Similarity".
 - Define the minimum passing scores and penalty values for seniority mismatches.
+
+## Current Integration Notes
+
+- Public matching is exposed through `POST /api/hybrid-match` in `ai-cv-analyzer/main.py`.
+- When TF-IDF scoring is available, the API combines semantic and TF-IDF scores with a 60/40 formula.
+- When TF-IDF scoring is unavailable, the API returns the semantic score directly using `matching_mode="semantic_only_fallback"` and does not penalize the user.
+- Laravel's `GapAnalysisService` calls this endpoint when available and falls back to database matching if the AI service is unavailable.
+- The frontend ignores stale gap-analysis responses when users switch jobs quickly.
