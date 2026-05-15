@@ -13,15 +13,15 @@ export default function CVBuilder() {
   const [activeTab, setActiveTab] = useState('personal');
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [cvData, setCvData] = useState({
-    personal: { name: 'Ahmed Al-Tohamy', role: 'Senior Frontend Developer', email: 'ahmed@example.com', phone: '+20 100 123 4567', location: 'Cairo, Egypt', summary: 'Passionate and futuristic frontend developer with 5+ years of experience building scalable and visually stunning web applications.' },
+    personal: { name: 'Your Name', role: 'Target Role', email: 'you@example.com', phone: '+20 000 000 0000', location: 'City, Country', summary: 'Write a concise summary that matches your uploaded CV, strongest skills, and target role.' },
     experience: [
-      { id: 1, title: 'Frontend Engineer', company: 'TechCorp', period: '2023 - Present', desc: 'Leading the UI/UX redesign using React and Tailwind CSS. Improved performance by 40%.' },
-      { id: 2, title: 'Web Developer', company: 'Creative Solutions', period: '2020 - 2023', desc: 'Developed responsive websites and dashboards. Collaborated with backend teams to integrate RESTful APIs.' }
+      { id: 1, title: 'Recent Role', company: 'Company Name', period: '2023 - Present', desc: 'Summarize one achievement with measurable impact and technologies used.' },
+      { id: 2, title: 'Previous Role', company: 'Company Name', period: '2020 - 2023', desc: 'Describe responsibilities that support your target role.' }
     ],
     education: [
-      { id: 1, degree: 'BSc Computer Science', institution: 'Cairo University', period: '2016 - 2020' }
+      { id: 1, degree: 'Degree or Certification', institution: 'Institution', period: 'Year - Year' }
     ],
-    skills: 'React, Node.js, Tailwind CSS, Framer Motion, UI/UX Design, TypeScript'
+    skills: 'PHP, Laravel, React, Docker, MySQL, REST APIs'
   });
 
   useEffect(() => {
@@ -60,7 +60,7 @@ export default function CVBuilder() {
               {t('cv_builder.title', 'Smart CV Builder')}
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">
-              {t('cv_builder.subtitle', 'Design a futuristic, ATS-friendly resume in minutes.')}
+              {t('cv_builder.subtitle', 'Preview a resume layout and export a draft. Live ATS scoring is planned for a later production pass.')}
             </p>
           </div>
           
@@ -79,6 +79,10 @@ export default function CVBuilder() {
               <Download size={16} /> {t('cv_builder.export_pdf', 'Export PDF')}
             </button>
           </div>
+        </div>
+
+        <div className="no-print rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5 text-sm font-bold text-amber-700 dark:text-amber-200">
+          Preview status: this builder edits a local draft only. It does not save to your profile yet; use Dashboard CV upload for real parsing, skills, and recommendations.
         </div>
 
         <div className="grid lg:grid-cols-12 gap-8">
@@ -143,15 +147,15 @@ export default function CVBuilder() {
                         {cvData.experience.map((exp, idx) => (
                           <div key={exp.id} className="p-4 border border-slate-200 dark:border-white/10 rounded-2xl space-y-4 bg-slate-50/50 dark:bg-black/20">
                             <div className="grid grid-cols-2 gap-4">
-                              <input type="text" value={exp.title} placeholder={t('cv_builder.job_title')} className="w-full bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm font-bold outline-none text-slate-900 dark:text-white" />
-                              <input type="text" value={exp.company} placeholder={t('cv_builder.company')} className="w-full bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm font-bold outline-none text-slate-900 dark:text-white" />
+                              <input type="text" value={exp.title} readOnly placeholder={t('cv_builder.job_title')} className="w-full bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm font-bold outline-none text-slate-900 dark:text-white" />
+                              <input type="text" value={exp.company} readOnly placeholder={t('cv_builder.company')} className="w-full bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm font-bold outline-none text-slate-900 dark:text-white" />
                             </div>
-                            <input type="text" value={exp.period} placeholder={t('cv_builder.period')} className="w-full bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm font-bold outline-none text-slate-900 dark:text-white" />
-                            <textarea rows="3" value={exp.desc} placeholder={t('cv_builder.description')} className="w-full bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm font-bold outline-none resize-none text-slate-900 dark:text-white" />
+                            <input type="text" value={exp.period} readOnly placeholder={t('cv_builder.period')} className="w-full bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm font-bold outline-none text-slate-900 dark:text-white" />
+                            <textarea rows="3" value={exp.desc} readOnly placeholder={t('cv_builder.description')} className="w-full bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm font-bold outline-none resize-none text-slate-900 dark:text-white" />
                           </div>
                         ))}
-                        <button className="w-full py-3 border-2 border-dashed border-indigo-500/30 text-indigo-600 dark:text-indigo-400 font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-indigo-500/5 transition-all">
-                          + {t('cv_builder.add_experience')}
+                        <button disabled className="w-full py-3 border-2 border-dashed border-slate-300 dark:border-white/10 text-slate-400 font-black text-xs uppercase tracking-widest rounded-2xl cursor-not-allowed">
+                          + {t('cv_builder.add_experience')} · Planned
                         </button>
                       </div>
                     )}
@@ -160,13 +164,13 @@ export default function CVBuilder() {
                       <div className="space-y-6">
                         {cvData.education.map((edu, idx) => (
                           <div key={edu.id} className="p-4 border border-slate-200 dark:border-white/10 rounded-2xl space-y-4 bg-slate-50/50 dark:bg-black/20">
-                            <input type="text" value={edu.degree} placeholder={t('cv_builder.degree')} className="w-full bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm font-bold outline-none text-slate-900 dark:text-white" />
-                            <input type="text" value={edu.institution} placeholder={t('cv_builder.institution')} className="w-full bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm font-bold outline-none text-slate-900 dark:text-white" />
-                            <input type="text" value={edu.period} placeholder={t('cv_builder.period')} className="w-full bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm font-bold outline-none text-slate-900 dark:text-white" />
+                            <input type="text" value={edu.degree} readOnly placeholder={t('cv_builder.degree')} className="w-full bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm font-bold outline-none text-slate-900 dark:text-white" />
+                            <input type="text" value={edu.institution} readOnly placeholder={t('cv_builder.institution')} className="w-full bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm font-bold outline-none text-slate-900 dark:text-white" />
+                            <input type="text" value={edu.period} readOnly placeholder={t('cv_builder.period')} className="w-full bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm font-bold outline-none text-slate-900 dark:text-white" />
                           </div>
                         ))}
-                        <button className="w-full py-3 border-2 border-dashed border-indigo-500/30 text-indigo-600 dark:text-indigo-400 font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-indigo-500/5 transition-all">
-                          + {t('cv_builder.add_education')}
+                        <button disabled className="w-full py-3 border-2 border-dashed border-slate-300 dark:border-white/10 text-slate-400 font-black text-xs uppercase tracking-widest rounded-2xl cursor-not-allowed">
+                          + {t('cv_builder.add_education')} · Planned
                         </button>
                       </div>
                     )}

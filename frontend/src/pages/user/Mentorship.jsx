@@ -11,6 +11,7 @@ export default function Mentorship() {
   const { t, i18n } = useTranslation();
   const isRtl = i18n.dir() === 'rtl';
   const [activeCategory, setActiveCategory] = useState('All');
+  const [searchTerm, setSearchTerm] = useState('');
   
   useEffect(() => {
     document.dir = isRtl ? 'rtl' : 'ltr';
@@ -25,7 +26,12 @@ export default function Mentorship() {
     { id: 4, name: 'Omar Tariq', role: 'Backend Architect', company: 'Amazon', rating: 4.9, reviews: 156, price: '$70/hr', category: 'Backend', img: 'OT' }
   ];
 
-  const filteredMentors = activeCategory === 'All' ? mentors : mentors.filter(m => m.category === activeCategory);
+  const filteredMentors = mentors.filter((mentor) => {
+    const inCategory = activeCategory === 'All' || mentor.category === activeCategory;
+    const query = searchTerm.trim().toLowerCase();
+    const matchesQuery = !query || [mentor.name, mentor.role, mentor.company, mentor.category].some((value) => value.toLowerCase().includes(query));
+    return inCategory && matchesQuery;
+  });
 
   return (
     <HUDLayout loading={false} loadingType="standard">
@@ -41,7 +47,7 @@ export default function Mentorship() {
               {t('mentorship.title', 'Career Mentorship')}
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium mt-1 max-w-xl">
-              {t('mentorship.subtitle', 'Connect 1-on-1 with industry leaders to accelerate your career growth, review your portfolio, or prepare for interviews.')}
+              {t('mentorship.subtitle', 'Preview the mentor discovery experience. Live booking and payments are planned for production.')}
             </p>
           </div>
           
@@ -52,10 +58,14 @@ export default function Mentorship() {
               </div>
               <div>
                 <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">{t('mentorship.upcoming', 'Upcoming Sessions')}</p>
-                <p className="font-bold text-slate-900 dark:text-white">None Scheduled</p>
+                <p className="font-bold text-slate-900 dark:text-white">Booking not connected</p>
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5 text-sm font-bold text-amber-700 dark:text-amber-200">
+          Preview status: mentor cards are sample data for UX validation. No real booking request is sent from this page.
         </div>
 
         {/* SEARCH & FILTERS */}
@@ -79,6 +89,8 @@ export default function Mentorship() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
               type="text" 
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
               placeholder={t('mentorship.search', 'Search mentors by name, role, or company...')}
               className="w-full bg-white dark:bg-black/50 border border-slate-200 dark:border-white/10 rounded-2xl pl-12 pr-4 py-3 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none text-slate-900 dark:text-white"
             />
@@ -117,15 +129,20 @@ export default function Mentorship() {
 
                 <div className="pt-6 border-t border-slate-100 dark:border-white/5 space-y-4">
                   <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                    <span className="text-slate-400">{t('mentorship.rate', 'Rate')}</span>
+                    <span className="text-slate-400">Sample {t('mentorship.rate', 'Rate')}</span>
                     <span className="text-emerald-500 text-sm">{mentor.price}</span>
                   </div>
-                  <button className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-black rounded-2xl font-black text-[10px] uppercase tracking-widest hover:scale-[1.02] transition-transform shadow-lg flex items-center justify-center gap-2">
-                    <Video size={16} /> {t('mentorship.book_session', 'Book Session')}
+                  <button disabled className="w-full py-4 bg-slate-200 dark:bg-white/10 text-slate-500 rounded-2xl font-black text-[10px] uppercase tracking-widest cursor-not-allowed shadow-lg flex items-center justify-center gap-2">
+                    <Video size={16} /> Booking planned
                   </button>
                 </div>
               </motion.div>
             ))}
+            {filteredMentors.length === 0 && (
+              <div className="md:col-span-2 lg:col-span-4 rounded-3xl border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/50 p-10 text-center text-slate-500 dark:text-slate-400 font-bold">
+                No sample mentors match this filter.
+              </div>
+            )}
           </AnimatePresence>
         </div>
 

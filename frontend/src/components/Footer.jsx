@@ -2,10 +2,39 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Compass, Github, Mail } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../context/AuthContext';
 
 export default function Footer() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const currentYear = new Date().getFullYear();
+  const role = user?.role || 'guest';
+
+  const roleLinks = {
+    guest: [
+      { n: 'Home', p: '/' },
+      { n: 'About', p: '/about' },
+      { n: 'Status', p: '/status' },
+      { n: 'Login', p: '/login' },
+      { n: 'Register', p: '/register' },
+    ],
+    user: [
+      { n: 'Dashboard', p: '/dashboard' },
+      { n: t('nav.jobs'), p: '/jobs' },
+      { n: t('nav.tracker'), p: '/applications' },
+      { n: t('nav.profile'), p: '/profile' },
+      { n: t('nav.market'), p: '/market' },
+    ],
+    admin: [
+      { n: 'Admin Dashboard', p: '/admin/dashboard' },
+      { n: 'Jobs', p: '/admin/jobs' },
+      { n: 'Users', p: '/admin/users' },
+      { n: 'Sources', p: '/admin/sources' },
+      { n: 'Targets', p: '/admin/targets' },
+    ],
+  };
+
+  const primaryLinks = roleLinks[role] || roleLinks.guest;
 
   return (
     <footer className="relative pt-32 pb-12 overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-500">
@@ -50,9 +79,11 @@ export default function Footer() {
           </div>
 
           <div className="space-y-8">
-            <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-[var(--cc-primary)] opacity-80">{t('nav.tracker')}</h4>
+            <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-[var(--cc-primary)] opacity-80">
+              {role === 'admin' ? 'Admin' : role === 'user' ? t('nav.tracker') : 'Start'}
+            </h4>
             <ul className="space-y-4">
-              {[ {n: t('nav.jobs'), p: '/jobs'}, {n: t('nav.market'), p: '/market'}, {n: t('nav.tracker'), p: '/applications'} ].map(l => (
+              {primaryLinks.map(l => (
                 <li key={l.p}>
                   <Link to={l.p} className="text-slate-500 dark:text-slate-400 hover:text-[var(--cc-primary)] text-sm font-semibold transition-all">
                     {l.n}
@@ -67,6 +98,8 @@ export default function Footer() {
             <ul className="space-y-4">
               <li><Link to="/about" className="text-slate-500 dark:text-slate-400 hover:text-[var(--cc-primary)] text-sm font-semibold transition-all">{t('home.footer.about')}</Link></li>
               <li><Link to="/status" className="text-slate-500 dark:text-slate-400 hover:text-[var(--cc-primary)] text-sm font-semibold transition-all">{t('home.footer.status')}</Link></li>
+              {role === 'user' && <li><Link to="/tools" className="text-slate-500 dark:text-slate-400 hover:text-[var(--cc-primary)] text-sm font-semibold transition-all">Tools</Link></li>}
+              {role === 'admin' && <li><Link to="/admin/sources" className="text-slate-500 dark:text-slate-400 hover:text-[var(--cc-primary)] text-sm font-semibold transition-all">Source Diagnostics</Link></li>}
               <li>
                 <a href="mailto:support@careercompass.ai" className="text-[var(--cc-primary)] text-sm font-black flex items-center gap-2 group">
                   <Mail size={14} className="group-hover:translate-x-1 transition-transform" /> 

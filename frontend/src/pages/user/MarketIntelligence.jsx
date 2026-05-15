@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   TrendingUp, Briefcase, DollarSign, Activity, Target, BarChart3, Sparkles, AlertCircle, RefreshCw
@@ -13,8 +14,8 @@ import HUDLayout from '../../components/HUDLayout';
 import HUDSkeleton from '../../components/HUDSkeleton';
 
 // --- BULLETPROOF HELPERS ---
-export const safeArray = (arr) => Array.isArray(arr) ? arr : [];
-export const formatNumber = (num) => (Number(num) || 0).toLocaleString();
+const safeArray = (arr) => Array.isArray(arr) ? arr : [];
+const formatNumber = (num) => (Number(num) || 0).toLocaleString();
 
 // --- BUILD TREND DATA (API may not provide time-series; fallback to empty or derived) ---
 function buildTrendData(overview, topSkillsFromOverview) {
@@ -59,7 +60,7 @@ export default function MarketIntelligence() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchMarketData(typeFilter);
@@ -130,12 +131,14 @@ export default function MarketIntelligence() {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-3">
-              <Activity size={14} className="animate-pulse" /> {t('market.live_data')}
+              <Activity size={14} className="animate-pulse" /> Imported job data
             </div>
             <h1 className="text-3xl md:text-4xl font-black text-slate-800 dark:text-white tracking-tight">
-              {t('market.title')}
+              Market Insight
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">{t('market.subtitle')}</p>
+            <p className="text-slate-500 dark:text-slate-400 font-medium mt-1 max-w-2xl">
+              What do imported jobs currently ask for, and how should that shape your next CV, skills, and gap analysis?
+            </p>
           </div>
           <button
             onClick={() => fetchMarketData(typeFilter)}
@@ -155,6 +158,10 @@ export default function MarketIntelligence() {
             </button>
           </div>
         )}
+
+        <div className="rounded-3xl border border-indigo-500/20 bg-indigo-500/5 p-5 text-sm font-medium text-indigo-800 dark:text-indigo-200">
+          These charts are derived from jobs stored in CareerCompass by active scraping sources. If the page is empty, upload a CV for personalization or ask an admin to run scraping diagnostics/extractions.
+        </div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
           {/* TYPE FILTER (all | technical | soft) */}
@@ -220,9 +227,9 @@ export default function MarketIntelligence() {
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-xl"><Activity size={20} /></div>
-                  <div>
-                    <h2 className="text-lg font-black text-slate-800 dark:text-white">{t('market.demand_trend')}</h2>
-                    <p className="text-xs font-bold text-slate-400 dark:text-slate-500">{t('market.top_skills_by_demand')}</p>
+                <div>
+                  <h2 className="text-lg font-black text-slate-800 dark:text-white">{t('market.demand_trend')}</h2>
+                    <p className="text-xs font-bold text-slate-400 dark:text-slate-500">Derived from top requested skills, not a historical time-series.</p>
                   </div>
                 </div>
               </div>
@@ -248,8 +255,12 @@ export default function MarketIntelligence() {
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-slate-400 dark:text-slate-500 font-medium text-sm">
-                    {t('market.no_trend')}
+                  <div className="h-full flex flex-col items-center justify-center text-center gap-3 text-slate-400 dark:text-slate-500 font-medium text-sm px-6">
+                    <p>{t('market.no_trend')}</p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      <Link to="/dashboard" className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-black uppercase tracking-widest">Upload CV</Link>
+                      <Link to="/jobs" className="px-4 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 text-xs font-black uppercase tracking-widest">View jobs</Link>
+                    </div>
                   </div>
                 )}
               </div>
@@ -261,7 +272,7 @@ export default function MarketIntelligence() {
                 <div className="p-2 bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400 rounded-xl"><BarChart3 size={20} /></div>
                 <div>
                   <h2 className="text-lg font-black text-slate-800 dark:text-white">{t('market.top_skills')}</h2>
-                  <p className="text-xs font-bold text-slate-400 dark:text-slate-500">{t('market.most_requested')}</p>
+                  <p className="text-xs font-bold text-slate-400 dark:text-slate-500">Most common skill labels in imported jobs.</p>
                 </div>
               </div>
 
@@ -284,8 +295,9 @@ export default function MarketIntelligence() {
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-slate-400 dark:text-slate-500 font-medium text-sm">
-                    {t('market.no_skills')}
+                  <div className="h-full flex flex-col items-center justify-center text-center gap-3 text-slate-400 dark:text-slate-500 font-medium text-sm px-6">
+                    <p>{t('market.no_skills')}</p>
+                    <Link to="/jobs" className="px-4 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 text-xs font-black uppercase tracking-widest">Browse imported jobs</Link>
                   </div>
                 )}
               </div>
@@ -298,7 +310,7 @@ export default function MarketIntelligence() {
               <Sparkles size={150} className="text-indigo-400" />
             </div>
             <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3 relative z-10">
-              <Sparkles className="text-indigo-400" size={24} /> {t('market.ai_summary')}
+              <Sparkles className="text-indigo-400" size={24} /> Market summary
             </h3>
             <div className="text-slate-300 font-medium leading-relaxed max-w-3xl relative z-10 space-y-4">
               <p>{aiSummary}</p>
