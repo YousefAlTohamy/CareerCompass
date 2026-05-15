@@ -249,8 +249,11 @@ Admin files:
 Important behaviors:
 
 - Admin routes require an admin user.
-- Sources page can test all sources or a single source.
+- Sources page Diagnostics tests all active sources with the fixed diagnostic query `Software`.
+- Single Source Test checks exactly the selected source, including inactive sources before activation.
+- Run Extractions dispatches active scraping sources x active target roles and shows global/per-source progress.
 - Source diagnostics now treat scraper failure signals as compromised, even if the lower-level process exits successfully.
+- The demo/local source gives a reliable demo path when LinkedIn/proxies or unsupported external sources fail.
 - Target roles can be created/toggled/deleted with care.
 - Do not delete non-disposable data during demos or QA.
 

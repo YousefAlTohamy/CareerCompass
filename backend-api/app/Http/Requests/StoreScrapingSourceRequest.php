@@ -24,9 +24,24 @@ class StoreScrapingSourceRequest extends FormRequest
     {
         return [
             'name'     => ['required', 'string', 'max:255'],
-            'endpoint' => ['required', 'url', 'max:512'],
+            'endpoint' => [
+                'required',
+                'string',
+                'max:512',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    $endpoint = (string) $value;
+
+                    if (str_starts_with($endpoint, 'demo://')) {
+                        return;
+                    }
+
+                    if (filter_var($endpoint, FILTER_VALIDATE_URL) === false) {
+                        $fail('The endpoint must be a valid URL or a demo:// source endpoint.');
+                    }
+                },
+            ],
             'method'   => ['sometimes', 'in:GET,POST'],
-            'type'     => ['required', 'in:api,html,json,spa'],
+            'type'     => ['required', 'in:api,html,json,spa,demo,local'],
             'mode'     => ['sometimes', 'in:static,discovery'],
             'pattern'  => ['sometimes', 'nullable', 'string', 'max:512'],
             'status'   => ['sometimes', 'in:active,inactive'],
@@ -44,8 +59,7 @@ class StoreScrapingSourceRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'endpoint.url'  => 'The endpoint must be a valid URL (including http:// or https://).',
-            'type.in'       => 'Source type must be either "api", "html", "json", or "spa".',
+            'type.in'       => 'Source type must be one of "api", "html", "json", "spa", "demo", or "local".',
             'mode.in'       => 'Mode must be either "static" or "discovery".',
             'status.in'     => 'Status must be either "active" or "inactive".',
         ];

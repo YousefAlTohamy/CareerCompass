@@ -17,9 +17,24 @@ class UpdateScrapingSourceRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'string', 'max:255'],
-            'endpoint' => ['sometimes', 'url', 'max:512'],
+            'endpoint' => [
+                'sometimes',
+                'string',
+                'max:512',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    $endpoint = (string) $value;
+
+                    if (str_starts_with($endpoint, 'demo://')) {
+                        return;
+                    }
+
+                    if (filter_var($endpoint, FILTER_VALIDATE_URL) === false) {
+                        $fail('The endpoint must be a valid URL or a demo:// source endpoint.');
+                    }
+                },
+            ],
             'method' => ['sometimes', 'in:GET,POST'],
-            'type' => ['sometimes', 'in:api,html,json,spa'],
+            'type' => ['sometimes', 'in:api,html,json,spa,demo,local'],
             'mode' => ['sometimes', 'in:static,discovery'],
             'pattern' => ['sometimes', 'nullable', 'string', 'max:512'],
             'status' => ['sometimes', 'in:active,inactive'],

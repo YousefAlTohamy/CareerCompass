@@ -27,7 +27,7 @@ export const toggleSourceStatus = async (id) => {
 };
 
 export const testSources = async () => {
-    const response = await apiClient.post(`${BASE_URL}/test`, {}, { timeout: 120000 });
+    const response = await apiClient.post(`${BASE_URL}/test`, {}, { timeout: 300000 });
     return response.data;
 };
 

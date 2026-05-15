@@ -279,10 +279,20 @@ The backend no longer shells out to local Scrapy. Scraping is service-to-service
 2. Laravel creates/updates `ScrapingJob`.
 3. A queue job is dispatched to the `scraping` queue.
 4. `backend-worker-scraping` calls the Python `ai-job-miner` service through `ScraperClient`.
-5. The Python service runs Scrapy inside its own container.
-6. Scraper callbacks import jobs to Laravel internal endpoints.
-7. Laravel creates missing skills and syncs relational `job_skills`.
-8. Failed URLs are stored for visibility and retry.
+5. `ScraperClient` sends the selected source config, not just a source id.
+6. The Python service runs the configured demo/API/spider-backed source inside its own container.
+7. Scraper callbacks import jobs to Laravel internal endpoints.
+8. Laravel creates missing skills and syncs relational `job_skills`.
+9. Failed URLs are stored for visibility and retry.
+
+Admin source diagnostics and manual extractions are intentionally different:
+
+- Diagnostics tests all active sources only, skips inactive sources, and uses the fixed health-check query `Software`.
+- Single-source testing checks exactly the selected source, even before activation.
+- Run Extractions dispatches all active sources x all active target roles immediately, independent from scheduled scraping.
+- The deterministic `CareerCompass Demo Jobs` source uses `demo://careercompass/jobs` to prove the import pipeline without relying on LinkedIn or proxies.
+
+After the scraping orchestrator hardening pass, manual and scheduled scraping batches are forced onto the `scraping` queue. This keeps long-running source-target work out of the default app queue.
 
 After PR #79, if a scrape stores zero jobs and reports failed URLs, the scraping job is marked failed with an honest external-source message. Admin source diagnostics also detect failure signals in scraper output even if the subprocess exits successfully.
 

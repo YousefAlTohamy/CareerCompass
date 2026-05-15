@@ -34,6 +34,10 @@ class ProxyRotationMiddleware:
         proxies = []
         import os
         import requests
+
+        if os.getenv('SCRAPER_USE_PROXIES', 'true').lower() in {'0', 'false', 'no', 'off'}:
+            logger.info("Proxy rotation disabled by SCRAPER_USE_PROXIES")
+            return cls(proxies)
         
         api_url = os.getenv('LARAVEL_API_PROXIES_URL', 'http://127.0.0.1:8000/api/proxies/active')
         api_token = os.getenv('LARAVEL_API_TOKEN', '')

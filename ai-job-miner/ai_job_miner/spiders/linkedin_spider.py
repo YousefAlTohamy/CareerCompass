@@ -4,13 +4,15 @@ from ai_job_miner.items import JobItem
 class LinkedinSpider(BasePlaywrightSpider):
     name = "linkedin"
     allowed_domains = ["linkedin.com"]
-    def __init__(self, query=None, limit=30, source_id=None, *args, **kwargs):
+    def __init__(self, query=None, limit=30, source_id=None, endpoint=None, *args, **kwargs):
         super(LinkedinSpider, self).__init__(*args, **kwargs)
         self.query = query
         self.limit = int(limit)
         self.source_id = int(source_id) if source_id not in (None, "") else None
         
-        if query:
+        if endpoint:
+            self.start_urls = [endpoint]
+        elif query:
             import urllib.parse
             encoded_query = urllib.parse.quote(query)
             self.start_urls = [f"https://www.linkedin.com/jobs/search/?keywords={encoded_query}"]
