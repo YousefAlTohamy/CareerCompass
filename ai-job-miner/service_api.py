@@ -170,6 +170,22 @@ def _clean_text(value: Any) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+def _sanitize_sensitive(value: Any) -> str:
+    text = _clean_text(value)
+
+    for env_name in ("ADZUNA_APP_ID", "ADZUNA_APP_KEY", "LARAVEL_API_TOKEN", "SCRAPER_SERVICE_TOKEN"):
+        secret = os.getenv(env_name, "").strip()
+        if secret:
+            text = text.replace(secret, "[redacted]")
+
+    return re.sub(
+        r"([?&](?:app_id|app_key|api_key|token)=)[^&\s]+",
+        r"\1[redacted]",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+
 def _canonical_adapter(source: SourceConfig) -> str:
     if source.adapter_name:
         return source.adapter_name.lower().strip()
@@ -440,7 +456,7 @@ def _adzuna_jobs(data: Any) -> list[dict[str, Any]]:
             "company": company.get("display_name") if isinstance(company, dict) else company,
             "location": location.get("display_name") if isinstance(location, dict) else location,
             "job_type": job.get("contract_type") or "full-time",
-            "work_type": "remote" if "remote" in _clean_text(job.get("title"), job.get("description")).lower() else "onsite",
+            "work_type": "remote" if "remote" in _clean_text(f"{job.get('title') or ''} {job.get('description') or ''}").lower() else "onsite",
             "description": _clean_text(job.get("description")),
             "requirements": _clean_text(job.get("description")),
             "skills": _skills_from_text(job.get("title"), job.get("description"), category.get("label") if isinstance(category, dict) else category),
@@ -663,8 +679,8 @@ def _run_demo_source(payload: ScrapeRequest, source: SourceConfig, callback_base
         "failed_urls_count": len(errors),
         "elapsed_ms": elapsed_ms,
         "stdout": f"Generated {len(jobs)} deterministic demo jobs and stored {stored}.",
-        "stderr": "\n".join(errors),
-        "error_summary": "; ".join(errors)[:500] if errors else None,
+            "stderr": _sanitize_sensitive("\n".join(errors)),
+            "error_summary": _sanitize_sensitive("; ".join(errors))[:500] if errors else None,
     }
 
 
@@ -714,8 +730,8 @@ def _run_api_source(payload: ScrapeRequest, source: SourceConfig, callback_base:
             "failed_urls_count": 1,
             "elapsed_ms": elapsed_ms,
             "stdout": "",
-            "stderr": str(exc),
-            "error_summary": str(exc)[:500],
+            "stderr": _sanitize_sensitive(exc),
+            "error_summary": _sanitize_sensitive(exc)[:500],
         }
 
     jobs = jobs[:payload.limit]
@@ -738,8 +754,8 @@ def _run_api_source(payload: ScrapeRequest, source: SourceConfig, callback_base:
         "failed_urls_count": len(errors),
         "elapsed_ms": elapsed_ms,
         "stdout": f"Fetched {len(jobs)} API job candidates and stored {stored}.",
-        "stderr": "\n".join(errors),
-        "error_summary": "; ".join(errors)[:500] if errors else None,
+        "stderr": _sanitize_sensitive("\n".join(errors)),
+        "error_summary": _sanitize_sensitive("; ".join(errors))[:500] if errors else None,
     }
 
 
@@ -790,8 +806,8 @@ def _run_json_adapter(
             classification="EXTERNAL_FAILED",
             endpoint_used=endpoint,
             failed_urls_count=1,
-            stderr=str(exc),
-            error_summary=str(exc)[:500],
+            stderr=_sanitize_sensitive(exc),
+            error_summary=_sanitize_sensitive(exc)[:500],
         )
 
     if parser == "remotive":
@@ -820,8 +836,8 @@ def _run_json_adapter(
         jobs_stored=stored,
         failed_urls_count=len(errors),
         stdout=f"{parser} adapter fetched {len(jobs)} candidates and stored {stored}.",
-        stderr="\n".join(errors),
-        error_summary="; ".join(errors)[:500] if errors else None,
+        stderr=_sanitize_sensitive("\n".join(errors)),
+        error_summary=_sanitize_sensitive("; ".join(errors))[:500] if errors else None,
     )
 
 
@@ -853,8 +869,8 @@ def _run_html_adapter(
             classification="EXTERNAL_FAILED",
             endpoint_used=endpoint,
             failed_urls_count=1,
-            stderr=str(exc),
-            error_summary=str(exc)[:500],
+            stderr=_sanitize_sensitive(exc),
+            error_summary=_sanitize_sensitive(exc)[:500],
         )
 
     blocked = _blocked_reason(html, source.name or parser)
@@ -895,8 +911,8 @@ def _run_html_adapter(
         jobs_stored=stored,
         failed_urls_count=len(errors),
         stdout=f"{parser} adapter parsed {len(jobs)} visible job cards and stored {stored}.",
-        stderr="\n".join(errors),
-        error_summary="; ".join(errors)[:500] if errors else None,
+        stderr=_sanitize_sensitive("\n".join(errors)),
+        error_summary=_sanitize_sensitive("; ".join(errors))[:500] if errors else None,
     )
 
 
