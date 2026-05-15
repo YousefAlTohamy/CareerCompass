@@ -329,6 +329,66 @@ def test_adzuna_missing_credentials_returns_config_required(monkeypatch):
     assert "ADZUNA_APP_ID" in payload["error_summary"]
 
 
+def test_adzuna_adapter_normalizes_configured_response(monkeypatch):
+    monkeypatch.setenv("SCRAPER_SERVICE_TOKEN", "expected-token")
+    monkeypatch.setenv("ADZUNA_APP_ID", "app-id")
+    monkeypatch.setenv("ADZUNA_APP_KEY", "app-key")
+
+    monkeypatch.setattr(
+        service_api.httpx,
+        "Client",
+        lambda *args, **kwargs: FakeClient(FakeResponse(json_data={
+            "results": [
+                {
+                    "title": "Remote Laravel Developer",
+                    "company": {"display_name": "AdzunaCo"},
+                    "location": {"display_name": "United States"},
+                    "category": {"label": "Software Jobs"},
+                    "description": "<p>Build PHP and Laravel APIs remotely.</p>",
+                    "contract_type": "permanent",
+                    "redirect_url": "https://adzuna.example/job/1",
+                    "salary_min": 100000,
+                    "salary_max": 130000,
+                }
+            ]
+        })),
+    )
+
+    exported = {}
+
+    def fake_export_jobs(jobs, source, query, callback_base):
+        exported["jobs"] = jobs
+        return len(jobs), []
+
+    monkeypatch.setattr(service_api, "_export_jobs", fake_export_jobs)
+
+    response = client.post(
+        "/scrape",
+        headers={"X-Scraper-Service-Token": "expected-token"},
+        json={
+            "query": "Laravel",
+            "limit": 5,
+            "scraping_job_id": 80,
+            "source": {
+                "id": 6,
+                "name": "Adzuna US Tech",
+                "type": "api",
+                "endpoint": "https://api.adzuna.com/v1/api/jobs/us/search/1?what={query}",
+                "method": "GET",
+                "mode": "static",
+            },
+        },
+    )
+
+    payload = response.json()
+    assert response.status_code == 200
+    assert payload["classification"] == "SUCCESS"
+    assert payload["jobs_stored"] == 1
+    assert exported["jobs"][0]["company"] == "AdzunaCo"
+    assert exported["jobs"][0]["work_type"] == "remote"
+    assert "Laravel" in exported["jobs"][0]["skills"]
+
+
 def test_remotive_adapter_normalizes_and_exports_jobs(monkeypatch):
     monkeypatch.setenv("SCRAPER_SERVICE_TOKEN", "expected-token")
     monkeypatch.setenv("LARAVEL_API_TOKEN", "laravel-callback-token")

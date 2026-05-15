@@ -80,4 +80,42 @@ class ScrapedJobImportTest extends TestCase
             ->assertOk()
             ->assertJsonPath('exists', false);
     }
+
+    public function test_scraped_job_import_is_idempotent_by_title_and_company(): void
+    {
+        config(['services.scrapy.token' => 'scraper-secret']);
+
+        $payload = [
+            'title' => 'remote laravel developer',
+            'description' => 'Build Laravel APIs.',
+            'company' => 'Duplicate Safe Co',
+            'url' => 'https://example.test/jobs/original',
+            'location' => 'Remote',
+            'skills' => ['Laravel'],
+            'work_type' => 'remote',
+            'source' => 'Adzuna',
+        ];
+
+        $this->withToken('scraper-secret')
+            ->postJson('/api/jobs/import', $payload)
+            ->assertCreated()
+            ->assertJsonPath('created', true);
+
+        $payload['url'] = 'https://example.test/jobs/updated';
+        $payload['description'] = 'Updated Laravel API role.';
+
+        $this->withToken('scraper-secret')
+            ->postJson('/api/jobs/import', $payload)
+            ->assertOk()
+            ->assertJsonPath('created', false);
+
+        $this->assertSame(1, Job::where('title', 'Remote Laravel Developer')
+            ->where('company', 'Duplicate Safe Co')
+            ->count());
+        $this->assertDatabaseHas('job_postings', [
+            'title' => 'Remote Laravel Developer',
+            'company' => 'Duplicate Safe Co',
+            'url' => 'https://example.test/jobs/updated',
+        ]);
+    }
 }

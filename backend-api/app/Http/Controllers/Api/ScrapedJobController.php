@@ -12,6 +12,7 @@ use App\Services\SkillSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class ScrapedJobController extends Controller
 {
@@ -27,20 +28,30 @@ class ScrapedJobController extends Controller
         try {
             $validated = $request->validated();
 
-            $uniqueAttributes = [];
+            $job = DB::transaction(function () use ($validated): Job {
+                $job = null;
 
-            if (!empty($validated['url'])) {
-                $uniqueAttributes['url'] = $validated['url'];
-            } else {
-                $uniqueAttributes['title'] = $validated['title'];
-                $uniqueAttributes['company'] = $validated['company'];
-            }
+                if (!empty($validated['url'])) {
+                    $job = Job::where('url', $validated['url'])->first();
+                }
 
-            $job = DB::transaction(function () use ($uniqueAttributes, $validated): Job {
-                $job = Job::updateOrCreate(
-                    $uniqueAttributes,
-                    $validated
-                );
+                if (!$job) {
+                    $titleCandidates = collect([
+                        $validated['title'],
+                        Str::of($validated['title'])->squish()->title()->toString(),
+                    ])->filter()->unique()->values()->all();
+
+                    $job = Job::whereIn('title', $titleCandidates)
+                        ->where('company', $validated['company'])
+                        ->first();
+                }
+
+                if ($job) {
+                    $job->fill($validated);
+                    $job->save();
+                } else {
+                    $job = Job::create($validated);
+                }
 
                 $this->skillSyncService->syncJobSkills(
                     job: $job,
@@ -66,7 +77,8 @@ class ScrapedJobController extends Controller
             return response()->json([
                 'message' => 'Job imported successfully',
                 'job_id' => $job->id,
-            ], 201);
+                'created' => $job->wasRecentlyCreated,
+            ], $job->wasRecentlyCreated ? 201 : 200);
             
         } catch (\Exception $e) {
             Log::error('Failed to import scraped job', [
