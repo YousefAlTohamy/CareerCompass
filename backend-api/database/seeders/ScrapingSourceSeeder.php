@@ -92,6 +92,32 @@ class ScrapingSourceSeeder extends Seeder
                 'params'     => null,
             ],
 
+            // ── 4b. RemoteOK — Remote job API (no auth required) ─────────────
+            [
+                'name'       => 'RemoteOK Remote Jobs',
+                'endpoint'   => 'https://remoteok.com/api?tags={query}',
+                'type'       => 'api',
+                'status'     => 'active',
+                'mode'       => 'static',
+                'pattern'    => null,
+                'headers'    => [
+                    'User-Agent' => 'CareerCompassBot/1.0',
+                ],
+                'params'     => null,
+            ],
+
+            // ── 4c. Arbeitnow — Public job board API (filtered locally) ──────
+            [
+                'name'       => 'Arbeitnow Job Board',
+                'endpoint'   => 'https://www.arbeitnow.com/api/job-board-api',
+                'type'       => 'api',
+                'status'     => 'active',
+                'mode'       => 'static',
+                'pattern'    => null,
+                'headers'    => null,
+                'params'     => null,
+            ],
+
             // ── 5. Adzuna US — Public API (credentials via .env) ──────────────
             [
                 'name'       => 'Adzuna US Tech',

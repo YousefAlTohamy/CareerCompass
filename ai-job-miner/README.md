@@ -114,12 +114,17 @@ After PR #79, Laravel marks a scraping job failed when the scraper reports faile
 The service no longer assumes every request should run LinkedIn.
 
 - `demo`, `local`, or `demo://...`: creates deterministic local jobs and imports them through Laravel.
-- `api`: fetches the configured API endpoint, normalizes common external `job_type` / `work_type` vocabulary, and imports parsed job-like records.
-- `html`: returns `UNSUPPORTED` until a source-specific parser exists.
-- non-LinkedIn `spa`: returns `UNSUPPORTED` instead of pretending to run LinkedIn.
+- `remotive`: fetches Remotive's public API and maps `jobs[]`, tags, company, location, job type, description, and URL.
+- `adzuna`: uses Adzuna's API when `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` are configured; otherwise returns `CONFIG_REQUIRED`.
+- `remoteok`: fetches RemoteOK's public API and filters results locally by query.
+- `arbeitnow`: fetches Arbeitnow's public API and filters results locally by query.
+- `wuzzuf`: parses Wuzzuf search HTML with a dedicated parser; live layout/blocking can still cause `EXTERNAL_FAILED`.
+- `indeed` / `upwork`: use source-specific public page parsers without login, stealth, or CAPTCHA bypass. Blocking is reported as `EXTERNAL_BLOCKED`.
+- generic `api`: fetches the configured API endpoint, normalizes common external `job_type` / `work_type` vocabulary, and imports parsed job-like records.
+- generic `html` / unmapped non-LinkedIn `spa`: returns `ADAPTER_MISSING` until a source-specific parser exists.
 - LinkedIn-backed `spa`: runs the LinkedIn spider intentionally and passes the configured endpoint.
 
-This routing keeps Diagnostics honest: unsupported sources fail clearly, demo/local sources prove the pipeline, and LinkedIn/proxy failures are reported as external/runtime failures.
+This routing keeps Diagnostics honest: config-required sources ask for credentials, adapter gaps are named explicitly, demo/local sources prove the pipeline, and LinkedIn/proxy failures are reported as external/runtime failures.
 
 ## Laravel Callback URLs
 
@@ -164,6 +169,9 @@ HTTP wrapper:
 
 - `SCRAPER_SERVICE_TOKEN`: token Laravel must send to `/scrape`.
 - `SCRAPER_DEFAULT_TIMEOUT`: subprocess timeout in seconds.
+- `SCRAPER_USE_PROXIES`: enables or disables the Laravel proxy feed for Playwright/Scrapy sources.
+- `ADZUNA_APP_ID`: Adzuna application ID. Required only for Adzuna.
+- `ADZUNA_APP_KEY`: Adzuna application key. Required only for Adzuna.
 
 Laravel callbacks:
 

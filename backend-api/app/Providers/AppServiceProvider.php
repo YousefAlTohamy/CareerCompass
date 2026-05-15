@@ -55,9 +55,10 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('scraper', function (Request $request) {
             $fingerprint = sha1((string) $request->header('X-Scraper-Token', $request->ip()));
+            $perMinute = max(60, (int) config('services.scraping_sources.rate_limit_per_minute', 600));
 
             return [
-                Limit::perMinute(60)->by('scraper:' . $fingerprint),
+                Limit::perMinute($perMinute)->by('scraper:' . $fingerprint),
             ];
         });
 

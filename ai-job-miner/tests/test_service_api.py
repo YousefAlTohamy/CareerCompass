@@ -8,6 +8,41 @@ import service_api
 client = TestClient(service_api.app)
 
 
+class FakeResponse:
+    def __init__(self, *, json_data=None, text="", status_code=200):
+        self._json_data = json_data
+        self.text = text
+        self.status_code = status_code
+
+    def json(self):
+        return self._json_data
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise service_api.httpx.HTTPStatusError(
+                f"{self.status_code} error",
+                request=service_api.httpx.Request("GET", "https://example.test"),
+                response=service_api.httpx.Response(self.status_code),
+            )
+
+
+class FakeClient:
+    def __init__(self, response):
+        self.response = response
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def get(self, *args, **kwargs):
+        return self.response
+
+    def request(self, *args, **kwargs):
+        return self.response
+
+
 def test_health_endpoint_reports_service_status():
     response = client.get("/health")
 
@@ -226,13 +261,18 @@ def test_job_payload_normalizes_external_job_and_work_types():
     assert payload["work_type"] == "remote"
 
 
-def test_scrape_returns_unsupported_for_non_linkedin_spa_sources_without_subprocess(monkeypatch):
+def test_scrape_routes_indeed_to_public_adapter_without_subprocess(monkeypatch):
     monkeypatch.setenv("SCRAPER_SERVICE_TOKEN", "expected-token")
 
     def fail_run(*args, **kwargs):
-        raise AssertionError("subprocess must not run for unsupported SPA sources")
+        raise AssertionError("subprocess must not run for Indeed public adapter")
 
     monkeypatch.setattr(service_api.subprocess, "run", fail_run)
+    monkeypatch.setattr(
+        service_api.httpx,
+        "Client",
+        lambda *args, **kwargs: FakeClient(FakeResponse(text="<html>captcha verify you are human</html>")),
+    )
 
     response = client.post(
         "/scrape",
@@ -254,9 +294,115 @@ def test_scrape_returns_unsupported_for_non_linkedin_spa_sources_without_subproc
 
     payload = response.json()
     assert response.status_code == 200
-    assert payload["classification"] == "UNSUPPORTED"
+    assert payload["classification"] == "EXTERNAL_BLOCKED"
     assert payload["success"] is False
     assert payload["endpoint_used"] == "https://www.indeed.com/jobs?q=react+developer"
+
+
+def test_adzuna_missing_credentials_returns_config_required(monkeypatch):
+    monkeypatch.setenv("SCRAPER_SERVICE_TOKEN", "expected-token")
+    monkeypatch.delenv("ADZUNA_APP_ID", raising=False)
+    monkeypatch.delenv("ADZUNA_APP_KEY", raising=False)
+
+    response = client.post(
+        "/scrape",
+        headers={"X-Scraper-Service-Token": "expected-token"},
+        json={
+            "query": "software",
+            "limit": 1,
+            "scraping_job_id": 78,
+            "source": {
+                "id": 6,
+                "name": "Adzuna US Tech",
+                "type": "api",
+                "endpoint": "https://api.adzuna.com/v1/api/jobs/us/search/1?what={query}",
+                "method": "GET",
+                "mode": "static",
+            },
+        },
+    )
+
+    payload = response.json()
+    assert response.status_code == 200
+    assert payload["classification"] == "CONFIG_REQUIRED"
+    assert payload["failed_urls_count"] == 0
+    assert "ADZUNA_APP_ID" in payload["error_summary"]
+
+
+def test_remotive_adapter_normalizes_and_exports_jobs(monkeypatch):
+    monkeypatch.setenv("SCRAPER_SERVICE_TOKEN", "expected-token")
+    monkeypatch.setenv("LARAVEL_API_TOKEN", "laravel-callback-token")
+
+    monkeypatch.setattr(
+        service_api.httpx,
+        "Client",
+        lambda *args, **kwargs: FakeClient(FakeResponse(json_data={
+            "jobs": [
+                {
+                    "title": "Remote Laravel Engineer",
+                    "company_name": "RemoteCo",
+                    "candidate_required_location": "Worldwide",
+                    "job_type": "full_time",
+                    "category": "Software Development",
+                    "tags": ["PHP", "Laravel"],
+                    "description": "<p>Build Laravel APIs.</p>",
+                    "url": "https://remotive.com/jobs/1",
+                }
+            ]
+        })),
+    )
+
+    exported = {}
+
+    def fake_export_jobs(jobs, source, query, callback_base):
+        exported["jobs"] = jobs
+        return len(jobs), []
+
+    monkeypatch.setattr(service_api, "_export_jobs", fake_export_jobs)
+
+    response = client.post(
+        "/scrape",
+        headers={"X-Scraper-Service-Token": "expected-token"},
+        json={
+            "query": "Laravel",
+            "limit": 5,
+            "scraping_job_id": 79,
+            "source": {
+                "id": 4,
+                "name": "Remotive Remote Jobs",
+                "type": "api",
+                "endpoint": "https://remotive.com/api/remote-jobs?search={query}",
+                "method": "GET",
+                "mode": "static",
+            },
+        },
+    )
+
+    payload = response.json()
+    assert response.status_code == 200
+    assert payload["classification"] == "SUCCESS"
+    assert payload["jobs_stored"] == 1
+    assert exported["jobs"][0]["company"] == "RemoteCo"
+    assert exported["jobs"][0]["skills"] == ["PHP", "Laravel"]
+
+
+def test_wuzzuf_parser_extracts_jobs_from_fixture():
+    html = """
+    <div class="css-1gatmva">
+      <h2><a href="/jobs/p/abc123">Backend Laravel Developer</a></h2>
+      <a class="css-17s97q8">Egypt Tech</a>
+      <span class="css-5wys0k">Cairo, Egypt</span>
+      <a href="/a/PHP-Jobs-in-Egypt">PHP</a>
+      <a href="/a/Laravel-Jobs-in-Egypt">Laravel</a>
+    </div>
+    """
+
+    jobs = service_api._wuzzuf_jobs(html, "Laravel")
+
+    assert len(jobs) == 1
+    assert jobs[0]["title"] == "Backend Laravel Developer"
+    assert jobs[0]["company"] == "Egypt Tech"
+    assert jobs[0]["url"] == "https://wuzzuf.net/jobs/p/abc123"
 
 
 def test_scrape_classifies_linkedin_proxy_timeouts_as_integrity_compromised(monkeypatch):

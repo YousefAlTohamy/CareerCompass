@@ -64,9 +64,12 @@ class ScrapingSourceController extends Controller
         $activeJobs = (clone $recentJobs)->whereIn('status', ['pending', 'processing'])->count();
         $completedJobs = (clone $recentJobs)->where('status', 'completed')->count();
         $failedJobs = (clone $recentJobs)->where('status', 'failed')->count();
-        $activeSources = ScrapingSource::active()->count();
+        $activeSources = ScrapingSource::active()->get();
+        $runnableSources = $activeSources
+            ->filter(fn (ScrapingSource $source): bool => (bool) ($source->supportMetadata()['is_runnable'] ?? false))
+            ->count();
         $activeTargets = TargetJobRole::where('is_active', true)->count();
-        $plannedRuns = $activeSources * $activeTargets;
+        $plannedRuns = $runnableSources * $activeTargets;
         $observedRuns = $activeJobs + $completedJobs + $failedJobs;
         $progressDenominator = max($plannedRuns, $observedRuns);
         $progressPercent = $progressDenominator > 0
@@ -78,9 +81,12 @@ class ScrapingSourceController extends Controller
             'data' => [
                 'summary' => [
                     'is_any_scraping' => $activeJobs > 0 || collect($statuses)->contains(fn ($status) => (bool) ($status['is_scraping'] ?? false)),
-                    'active_sources' => $activeSources,
+                    'active_sources' => $activeSources->count(),
+                    'runnable_sources' => $runnableSources,
+                    'skipped_sources' => max(0, $activeSources->count() - $runnableSources),
                     'active_targets' => $activeTargets,
                     'planned_runs' => $plannedRuns,
+                    'observed_recent_jobs' => $observedRuns,
                     'active_jobs' => $activeJobs,
                     'completed_jobs' => $completedJobs,
                     'failed_jobs' => $failedJobs,
@@ -178,21 +184,21 @@ class ScrapingSourceController extends Controller
                 ->values()
                 ->all();
 
-            $passed = collect($results)->where('success', true)->count();
-            $failed = count($results) - $passed;
-            $overallStatus = $failed === 0 ? 'passed' : ($passed > 0 ? 'partial_failure' : 'failed');
+            $summary = $this->summarizeDiagnosticResults($results);
 
             return response()->json([
-                'success' => $failed === 0,
-                'overall_status' => $overallStatus,
+                'success' => $summary['overall_status'] === 'HEALTHY',
+                'pipeline_working' => $summary['pipeline_working'],
+                'overall_status' => $summary['overall_status'],
                 'diagnostic_query' => 'Software',
                 'total_sources' => count($results),
-                'passed_sources' => $passed,
-                'failed_sources' => $failed,
+                'passed_sources' => $summary['passed_sources'],
+                'failed_sources' => $summary['failed_sources'],
+                'config_required_sources' => $summary['config_required_sources'],
+                'adapter_missing_sources' => $summary['adapter_missing_sources'],
+                'external_issue_sources' => $summary['external_issue_sources'],
                 'results' => $results,
-                'message' => $failed === 0
-                    ? 'All active sources passed diagnostics.'
-                    : ($passed > 0 ? 'Some active sources failed diagnostics.' : 'All active sources failed diagnostics.'),
+                'message' => $summary['message'],
                 'output' => $this->formatDiagnosticOutput($results),
             ]);
         } catch (\Exception $e) {
@@ -213,11 +219,15 @@ class ScrapingSourceController extends Controller
 
             return response()->json([
                 'success' => (bool) $result['success'],
-                'overall_status' => $result['success'] ? 'passed' : 'failed',
+                'pipeline_working' => (bool) $result['success'],
+                'overall_status' => $result['success'] ? 'HEALTHY' : (string) ($result['classification'] ?? 'FAILED'),
                 'diagnostic_query' => 'Software',
                 'total_sources' => 1,
                 'passed_sources' => $result['success'] ? 1 : 0,
                 'failed_sources' => $result['success'] ? 0 : 1,
+                'config_required_sources' => ($result['classification'] ?? null) === 'CONFIG_REQUIRED' ? 1 : 0,
+                'adapter_missing_sources' => in_array(($result['classification'] ?? null), ['ADAPTER_MISSING', 'UNSUPPORTED'], true) ? 1 : 0,
+                'external_issue_sources' => in_array(($result['classification'] ?? null), ['EXTERNAL_FAILED', 'EXTERNAL_BLOCKED', 'INTEGRITY_COMPROMISED'], true) ? 1 : 0,
                 'results' => [$result],
                 'message' => $result['success']
                     ? 'Selected source passed diagnostics.'
@@ -275,8 +285,17 @@ class ScrapingSourceController extends Controller
         $failedUrlsCount = (int) ($result['failed_urls_count']
             ?? $scrapingJob->failedUrls()->count());
         $jobsStored = (int) ($result['jobs_stored'] ?? 0);
+        $support = $source->supportMetadata();
         $success = (bool) ($result['success'] ?? false)
-            && !in_array($classification, ['EXTERNAL_FAILED', 'UNSUPPORTED', 'CONFIG_INVALID', 'INTEGRITY_COMPROMISED'], true);
+            && !in_array($classification, [
+                'EXTERNAL_FAILED',
+                'EXTERNAL_BLOCKED',
+                'UNSUPPORTED',
+                'ADAPTER_MISSING',
+                'CONFIG_INVALID',
+                'CONFIG_REQUIRED',
+                'INTEGRITY_COMPROMISED',
+            ], true);
 
         $success
             ? $scrapingJob->markAsCompleted($jobsStored, $jobsStored, 0, $jobsStored, $failedUrlsCount, $result['elapsed_ms'] ?? null)
@@ -288,6 +307,12 @@ class ScrapingSourceController extends Controller
             'source_type' => $source->type,
             'source_mode' => $source->mode ?? 'static',
             'source_status' => $source->status,
+            'support_status' => $support['support_status'] ?? 'unknown',
+            'adapter_name' => $result['adapter_name'] ?? ($support['adapter_name'] ?? $source->adapterName()),
+            'requires_credentials' => (bool) ($support['requires_credentials'] ?? false),
+            'requires_proxy' => (bool) ($support['requires_proxy'] ?? false),
+            'recommended_action' => $support['recommended_action'] ?? null,
+            'implementation_notes' => $support['implementation_notes'] ?? null,
             'endpoint_used' => (string) ($result['endpoint_used'] ?? $this->endpointForQuery($source, 'Software')),
             'diagnostic_query' => 'Software',
             'success' => $success,
@@ -337,7 +362,7 @@ class ScrapingSourceController extends Controller
             return 'EMPTY_SUCCESS';
         }
 
-        return $failed > 0 ? 'EXTERNAL_FAILED' : 'UNSUPPORTED';
+        return $failed > 0 ? 'EXTERNAL_FAILED' : 'ADAPTER_MISSING';
     }
 
     private function statusForClassification(string $classification): string
@@ -346,11 +371,67 @@ class ScrapingSourceController extends Controller
             'SUCCESS' => 'passed',
             'PARTIAL_SUCCESS' => 'partial_success',
             'EMPTY_SUCCESS' => 'empty_success',
-            'UNSUPPORTED' => 'unsupported',
+            'UNSUPPORTED', 'ADAPTER_MISSING' => 'adapter_missing',
+            'CONFIG_REQUIRED' => 'config_required',
             'CONFIG_INVALID' => 'config_invalid',
+            'EXTERNAL_BLOCKED' => 'external_blocked',
             'INTEGRITY_COMPROMISED' => 'integrity_compromised',
             default => 'external_failed',
         };
+    }
+
+    private function summarizeDiagnosticResults(array $results): array
+    {
+        $collection = collect($results);
+        $passClassifications = ['SUCCESS', 'PARTIAL_SUCCESS', 'EMPTY_SUCCESS'];
+        $configClassifications = ['CONFIG_REQUIRED', 'CONFIG_INVALID'];
+        $adapterClassifications = ['ADAPTER_MISSING', 'UNSUPPORTED'];
+        $externalClassifications = ['EXTERNAL_FAILED', 'EXTERNAL_BLOCKED', 'INTEGRITY_COMPROMISED'];
+
+        $passed = $collection
+            ->filter(fn (array $result): bool => in_array((string) ($result['classification'] ?? ''), $passClassifications, true))
+            ->count();
+        $configRequired = $collection
+            ->filter(fn (array $result): bool => in_array((string) ($result['classification'] ?? ''), $configClassifications, true))
+            ->count();
+        $adapterMissing = $collection
+            ->filter(fn (array $result): bool => in_array((string) ($result['classification'] ?? ''), $adapterClassifications, true))
+            ->count();
+        $externalIssues = $collection
+            ->filter(fn (array $result): bool => in_array((string) ($result['classification'] ?? ''), $externalClassifications, true))
+            ->count();
+        $failed = $collection->count() - $passed;
+
+        $overall = match (true) {
+            $collection->isEmpty() => 'NO_ACTIVE_SOURCES',
+            $passed === $collection->count() => 'HEALTHY',
+            $passed > 0 => 'DEGRADED',
+            $configRequired === $collection->count() => 'CONFIG_REQUIRED',
+            default => 'FAILED',
+        };
+
+        $message = match ($overall) {
+            'HEALTHY' => 'Diagnostics completed: HEALTHY. All runnable active sources passed.',
+            'DEGRADED' => sprintf(
+                'Diagnostics completed: DEGRADED. Pipeline is working because %d source(s) passed; %d source(s) need credentials, adapters, proxy fixes, or external access.',
+                $passed,
+                $failed,
+            ),
+            'CONFIG_REQUIRED' => 'Diagnostics completed: CONFIG_REQUIRED. Active sources need credentials before they can run.',
+            'NO_ACTIVE_SOURCES' => 'No active sources found for diagnostics.',
+            default => 'Diagnostics completed: FAILED. No active source produced a healthy diagnostic result.',
+        };
+
+        return [
+            'overall_status' => $overall,
+            'pipeline_working' => $passed > 0,
+            'passed_sources' => $passed,
+            'failed_sources' => $failed,
+            'config_required_sources' => $configRequired,
+            'adapter_missing_sources' => $adapterMissing,
+            'external_issue_sources' => $externalIssues,
+            'message' => $message,
+        ];
     }
 
     private function endpointForQuery(ScrapingSource $source, string $query): string

@@ -116,7 +116,8 @@ class ScrapingOrchestratorTest extends TestCase
             ->assertJsonPath('total_sources', 2)
             ->assertJsonPath('passed_sources', 1)
             ->assertJsonPath('failed_sources', 1)
-            ->assertJsonPath('overall_status', 'partial_failure')
+            ->assertJsonPath('pipeline_working', true)
+            ->assertJsonPath('overall_status', 'DEGRADED')
             ->assertJsonCount(2, 'results');
 
         $this->assertCount(2, $calls);
@@ -209,7 +210,7 @@ class ScrapingOrchestratorTest extends TestCase
 
         $sourceOne = ScrapingSource::create([
             'name' => 'Demo Source One',
-            'endpoint' => 'https://example.test/api/jobs?query={query}',
+            'endpoint' => 'demo://careercompass/jobs',
             'type' => 'api',
             'mode' => 'static',
             'status' => 'active',
@@ -217,10 +218,10 @@ class ScrapingOrchestratorTest extends TestCase
         ]);
 
         $sourceTwo = ScrapingSource::create([
-            'name' => 'Demo Source Two',
-            'endpoint' => 'https://example.test/jobs?q={query}',
-            'type' => 'html',
-            'mode' => 'discovery',
+            'name' => 'Remotive Remote Jobs',
+            'endpoint' => 'https://remotive.com/api/remote-jobs?search={query}',
+            'type' => 'api',
+            'mode' => 'static',
             'status' => 'active',
             'method' => 'GET',
         ]);
@@ -244,6 +245,7 @@ class ScrapingOrchestratorTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonPath('active_sources', 2)
+            ->assertJsonPath('runnable_sources', 2)
             ->assertJsonPath('active_targets', 2)
             ->assertJsonPath('planned_runs', 4);
 
@@ -253,6 +255,53 @@ class ScrapingOrchestratorTest extends TestCase
         });
     }
 
+    public function test_run_extractions_preflight_skips_config_required_sources(): void
+    {
+        config([
+            'services.scraping_sources.adzuna_app_id' => null,
+            'services.scraping_sources.adzuna_app_key' => null,
+        ]);
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        Sanctum::actingAs($admin);
+
+        ScrapingSource::create([
+            'name' => 'CareerCompass Demo Jobs',
+            'endpoint' => 'demo://careercompass/jobs',
+            'type' => 'api',
+            'mode' => 'static',
+            'status' => 'active',
+            'method' => 'GET',
+        ]);
+
+        ScrapingSource::create([
+            'name' => 'Adzuna US Tech',
+            'endpoint' => 'https://api.adzuna.com/v1/api/jobs/us/search/1?what={query}',
+            'type' => 'api',
+            'mode' => 'static',
+            'status' => 'active',
+            'method' => 'GET',
+        ]);
+
+        TargetJobRole::create([
+            'name' => 'Backend Laravel Developer',
+            'search_query' => 'Backend Laravel Developer',
+            'is_active' => true,
+        ]);
+
+        Bus::fake();
+
+        $this->postJson('/api/v1/admin/scraping/run-full')
+            ->assertOk()
+            ->assertJsonPath('active_sources', 2)
+            ->assertJsonPath('runnable_sources', 1)
+            ->assertJsonPath('skipped_sources_count', 1)
+            ->assertJsonPath('planned_runs', 1)
+            ->assertJsonPath('skipped_sources.0.support_status', 'config_required');
+
+        Bus::assertBatched(fn ($batch): bool => $batch->jobs->count() === 1);
+    }
+
     public function test_status_endpoint_returns_summary_and_source_progress_data(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
@@ -260,7 +309,7 @@ class ScrapingOrchestratorTest extends TestCase
 
         $source = ScrapingSource::create([
             'name' => 'Status Source',
-            'endpoint' => 'https://example.test/api/jobs?query={query}',
+            'endpoint' => 'https://remotive.com/api/remote-jobs?search={query}',
             'type' => 'api',
             'mode' => 'static',
             'status' => 'active',
@@ -292,6 +341,8 @@ class ScrapingOrchestratorTest extends TestCase
         $this->getJson('/api/v1/admin/scraping-sources/status')
             ->assertOk()
             ->assertJsonPath('data.summary.active_sources', 1)
+            ->assertJsonPath('data.summary.runnable_sources', 1)
+            ->assertJsonPath('data.summary.skipped_sources', 0)
             ->assertJsonPath('data.summary.active_targets', 1)
             ->assertJsonPath('data.summary.planned_runs', 1)
             ->assertJsonPath('data.sources.' . $source->id . '.status', 'running')

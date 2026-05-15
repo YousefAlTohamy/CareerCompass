@@ -90,8 +90,10 @@ class TargetJobRoleController extends Controller
             ], 422);
         }
 
-        $sourcePayloads = $sources
-            ->map(fn (ScrapingSource $source): array => [
+        $preflight = $sources->map(function (ScrapingSource $source): array {
+            $support = $source->supportMetadata();
+
+            return [
                 'id' => $source->id,
                 'name' => $source->name,
                 'endpoint' => $source->endpoint,
@@ -101,8 +103,37 @@ class TargetJobRoleController extends Controller
                 'params' => $source->params ?? [],
                 'mode' => $source->mode ?? 'static',
                 'pattern' => $source->pattern,
-            ])
+                'adapter_name' => $support['adapter_name'] ?? $source->adapterName(),
+                'support_status' => $support['support_status'] ?? 'unknown',
+                'requires_credentials' => (bool) ($support['requires_credentials'] ?? false),
+                'requires_proxy' => (bool) ($support['requires_proxy'] ?? false),
+                'is_runnable' => (bool) ($support['is_runnable'] ?? false),
+                'skip_reason' => (bool) ($support['is_runnable'] ?? false)
+                    ? null
+                    : ($support['recommended_action'] ?? 'Source is not runnable with the current adapter/configuration.'),
+                'recommended_action' => $support['recommended_action'] ?? null,
+            ];
+        });
+
+        $sourcePayloads = $preflight
+            ->filter(fn (array $source): bool => (bool) ($source['is_runnable'] ?? false))
             ->values();
+        $skippedSources = $preflight
+            ->reject(fn (array $source): bool => (bool) ($source['is_runnable'] ?? false))
+            ->values();
+
+        if ($sourcePayloads->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No runnable scraping sources are configured. Review skipped_sources for credentials or adapter actions.',
+                'active_sources' => $sources->count(),
+                'runnable_sources' => 0,
+                'skipped_sources_count' => $skippedSources->count(),
+                'active_targets' => $targets->count(),
+                'planned_runs' => 0,
+                'skipped_sources' => $skippedSources,
+            ], 422);
+        }
 
         $jobs = [];
         foreach ($targets as $target) {
@@ -139,12 +170,17 @@ class TargetJobRoleController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Manual extraction run dispatched for all active sources and targets.',
+            'message' => $skippedSources->isEmpty()
+                ? 'Manual extraction run dispatched for all runnable active sources and targets.'
+                : 'Manual extraction run dispatched. Some active sources were skipped because they need credentials or adapter work.',
             'batch_id' => $batch->id,
             'active_sources' => $sources->count(),
+            'runnable_sources' => $sourcePayloads->count(),
+            'skipped_sources_count' => $skippedSources->count(),
             'active_targets' => $targets->count(),
             'planned_runs' => count($jobs),
-            'sources' => $sources->pluck('name')->values(),
+            'sources' => $sourcePayloads->pluck('name')->values(),
+            'skipped_sources' => $skippedSources,
             'targets' => $targets->map(fn (TargetJobRole $target): string => $target->search_query ?: $target->name)->values(),
         ]);
     }

@@ -268,7 +268,7 @@ class ProcessMarketScrapingCategory implements ShouldQueue
             return 'EMPTY_SUCCESS';
         }
 
-        return $failed > 0 ? 'EXTERNAL_FAILED' : 'UNSUPPORTED';
+        return $failed > 0 ? 'EXTERNAL_FAILED' : 'ADAPTER_MISSING';
     }
 
     protected function classificationIsAcceptable(string $classification): bool
@@ -281,8 +281,10 @@ class ProcessMarketScrapingCategory implements ShouldQueue
         return match ($classification) {
             'SUCCESS', 'EMPTY_SUCCESS' => 'completed',
             'PARTIAL_SUCCESS' => 'compromised',
-            'UNSUPPORTED' => 'unsupported',
+            'UNSUPPORTED', 'ADAPTER_MISSING' => 'adapter_missing',
+            'CONFIG_REQUIRED' => 'config_required',
             'CONFIG_INVALID' => 'config_invalid',
+            'EXTERNAL_BLOCKED' => 'external_blocked',
             'INTEGRITY_COMPROMISED' => 'compromised',
             default => 'failed',
         };
@@ -294,8 +296,10 @@ class ProcessMarketScrapingCategory implements ShouldQueue
             'SUCCESS' => "{$sourceName} completed and stored {$stored} jobs.",
             'PARTIAL_SUCCESS' => "{$sourceName} stored {$stored} jobs with {$failed} failed URLs.",
             'EMPTY_SUCCESS' => "{$sourceName} responded normally but found no jobs.",
-            'UNSUPPORTED' => "{$sourceName} source type is not implemented by the scraper service.",
+            'UNSUPPORTED', 'ADAPTER_MISSING' => "{$sourceName} needs a source-specific scraper adapter before it can run.",
+            'CONFIG_REQUIRED' => "{$sourceName} requires credentials before it can run.",
             'CONFIG_INVALID' => "{$sourceName} configuration is invalid.",
+            'EXTERNAL_BLOCKED' => "{$sourceName} was blocked by the external site; no jobs were imported.",
             'INTEGRITY_COMPROMISED' => "{$sourceName} finished with runtime or DLQ errors.",
             default => "{$sourceName} failed; no jobs were imported.",
         };

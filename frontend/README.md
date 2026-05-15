@@ -251,9 +251,11 @@ Important behaviors:
 - Admin routes require an admin user.
 - Sources page Diagnostics tests all active sources with the fixed diagnostic query `Software`.
 - Single Source Test checks exactly the selected source, including inactive sources before activation.
-- Run Extractions dispatches active scraping sources x active target roles and shows global/per-source progress.
-- Source diagnostics now treat scraper failure signals as compromised, even if the lower-level process exits successfully.
-- The demo/local source gives a reliable demo path when LinkedIn/proxies or unsupported external sources fail.
+- Run Extractions shows a preflight summary, dispatches runnable active sources x active target roles, and reports skipped sources that need credentials/adapters.
+- Source rows show support badges such as `DEMO`, `SUPPORTED`, `EXTERNAL RISK`, `CONFIG REQUIRED`, and `ADAPTER MISSING`.
+- Diagnostics groups results into passed, config-required, external, and adapter buckets so the whole pipeline is not mislabeled as broken when Demo/Remotive/API sources pass.
+- Source diagnostics still treat scraper failure signals as compromised when appropriate, even if the lower-level process exits successfully.
+- The demo/local source gives a reliable demo path when LinkedIn/proxies or external sources fail or block requests.
 - Target roles can be created/toggled/deleted with care.
 - Do not delete non-disposable data during demos or QA.
 

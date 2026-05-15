@@ -3,10 +3,12 @@ import re
 import subprocess
 import time
 from typing import Any, Optional
+from urllib.parse import quote_plus
 
 from fastapi import FastAPI, Header, HTTPException, Response, status
 from pydantic import AnyHttpUrl, BaseModel, Field
 import httpx
+from bs4 import BeautifulSoup
 
 
 app = FastAPI(
@@ -30,6 +32,10 @@ class SourceConfig(BaseModel):
     params: dict[str, Any] = Field(default_factory=dict)
     mode: Optional[str] = None
     pattern: Optional[str] = None
+    adapter_name: Optional[str] = None
+    support_status: Optional[str] = None
+    requires_credentials: bool = False
+    requires_proxy: bool = False
 
 
 class ScrapeRequest(BaseModel):
@@ -65,8 +71,6 @@ def _source_config(payload: ScrapeRequest) -> SourceConfig:
 
 
 def _apply_query_template(endpoint: str, query: str) -> str:
-    from urllib.parse import quote_plus
-
     encoded = quote_plus(query)
     if "{query}" in endpoint:
         return endpoint.replace("{query}", encoded)
@@ -156,6 +160,123 @@ def _classification(success: bool, jobs_stored: int, failed_urls: int, output: s
         return "EMPTY_SUCCESS"
 
     return "EXTERNAL_FAILED"
+
+
+def _clean_text(value: Any) -> str:
+    if value is None:
+        return ""
+
+    text = BeautifulSoup(str(value), "html.parser").get_text(" ", strip=True)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _canonical_adapter(source: SourceConfig) -> str:
+    if source.adapter_name:
+        return source.adapter_name.lower().strip()
+
+    name = f"{source.name or ''} {source.endpoint or ''} {source.type or ''}".lower()
+
+    if (source.endpoint or "").startswith("demo://") or (source.type or "").lower() in {"demo", "local", "demo/local"}:
+        return "demo"
+    if "remotive.com" in name:
+        return "remotive"
+    if "adzuna.com" in name:
+        return "adzuna"
+    if "remoteok.com" in name:
+        return "remoteok"
+    if "arbeitnow.com" in name:
+        return "arbeitnow"
+    if "wuzzuf.net" in name:
+        return "wuzzuf"
+    if "indeed.com" in name:
+        return "indeed"
+    if "upwork.com" in name:
+        return "upwork"
+    if "linkedin.com" in name:
+        return "linkedin"
+
+    return (source.type or "unknown").lower().strip()
+
+
+def _blocked_reason(html: str, source_name: str) -> Optional[str]:
+    lowered = html.lower()
+    signals = [
+        "captcha",
+        "unusual traffic",
+        "access denied",
+        "temporarily blocked",
+        "verify you are human",
+        "security check",
+        "enable cookies",
+        "sign in to continue",
+        "login to continue",
+    ]
+
+    for signal in signals:
+        if signal in lowered:
+            return f"{source_name} appears to be blocked by anti-bot, login, or verification controls: {signal}."
+
+    return None
+
+
+def _skills_from_text(*values: Any) -> list[str]:
+    known = [
+        "php", "laravel", "mysql", "docker", "react", "javascript", "typescript", "python",
+        "fastapi", "scrapy", "aws", "s3", "redis", "rest", "api", "vue", "node", "sql",
+        "html", "css", "kubernetes", "linux", "git", "ci/cd", "postgresql", "django",
+    ]
+    text = " ".join(_clean_text(value).lower() for value in values if value)
+    skills: list[str] = []
+
+    for skill in known:
+        pattern = r"(?<![a-z0-9])" + re.escape(skill) + r"(?![a-z0-9])"
+        if re.search(pattern, text):
+            skills.append("REST APIs" if skill in {"rest", "api"} else skill.upper() if skill in {"php", "sql", "aws", "s3"} else skill.title())
+
+    return list(dict.fromkeys(skills))
+
+
+def _result(
+    *,
+    payload: ScrapeRequest,
+    source: SourceConfig,
+    started: float,
+    success: bool,
+    classification: str,
+    endpoint_used: str,
+    jobs_preview_count: int = 0,
+    jobs_stored: int = 0,
+    failed_urls_count: int = 0,
+    stdout: str = "",
+    stderr: str = "",
+    error_summary: Optional[str] = None,
+    matching_mode: Optional[str] = None,
+    extra: Optional[dict[str, Any]] = None,
+) -> dict[str, object]:
+    data: dict[str, object] = {
+        "success": success,
+        "classification": classification,
+        "matching_mode": matching_mode or _canonical_adapter(source),
+        "query": payload.query,
+        "source_id": source.id or payload.source_id,
+        "source_name": source.name,
+        "source_type": source.type,
+        "adapter_name": _canonical_adapter(source),
+        "endpoint_used": endpoint_used,
+        "scraping_job_id": payload.scraping_job_id,
+        "jobs_preview_count": jobs_preview_count,
+        "jobs_stored": jobs_stored,
+        "failed_urls_count": failed_urls_count,
+        "elapsed_ms": int((time.monotonic() - started) * 1000),
+        "stdout": stdout,
+        "stderr": stderr,
+        "error_summary": error_summary,
+    }
+
+    if extra:
+        data.update(extra)
+
+    return data
 
 
 def _job_payload(job: dict[str, Any], source: SourceConfig, query: str) -> dict[str, Any]:
@@ -269,6 +390,257 @@ def _parse_api_jobs(data: Any) -> list[dict[str, Any]]:
     return []
 
 
+def _remotive_jobs(data: Any) -> list[dict[str, Any]]:
+    jobs = data.get("jobs", []) if isinstance(data, dict) else []
+    normalized: list[dict[str, Any]] = []
+
+    for job in jobs:
+        if not isinstance(job, dict):
+            continue
+
+        tags = job.get("tags") or []
+        if isinstance(tags, str):
+            tags = [tags]
+
+        normalized.append({
+            "title": job.get("title"),
+            "company": job.get("company_name"),
+            "location": job.get("candidate_required_location") or "Remote",
+            "job_type": job.get("job_type"),
+            "work_type": "remote",
+            "description": _clean_text(job.get("description")),
+            "requirements": _clean_text(job.get("description")),
+            "skills": tags or _skills_from_text(job.get("title"), job.get("description"), job.get("category")),
+            "url": job.get("url"),
+            "source": "Remotive Remote Jobs",
+        })
+
+    return normalized
+
+
+def _adzuna_jobs(data: Any) -> list[dict[str, Any]]:
+    jobs = data.get("results", []) if isinstance(data, dict) else []
+    normalized: list[dict[str, Any]] = []
+
+    for job in jobs:
+        if not isinstance(job, dict):
+            continue
+
+        company = job.get("company") or {}
+        location = job.get("location") or {}
+        category = job.get("category") or {}
+        salary_min = job.get("salary_min")
+        salary_max = job.get("salary_max")
+        salary_range = ""
+        if salary_min or salary_max:
+            salary_range = f"{salary_min or ''}-{salary_max or ''}".strip("-")
+
+        normalized.append({
+            "title": job.get("title"),
+            "company": company.get("display_name") if isinstance(company, dict) else company,
+            "location": location.get("display_name") if isinstance(location, dict) else location,
+            "job_type": job.get("contract_type") or "full-time",
+            "work_type": "remote" if "remote" in _clean_text(job.get("title"), job.get("description")).lower() else "onsite",
+            "description": _clean_text(job.get("description")),
+            "requirements": _clean_text(job.get("description")),
+            "skills": _skills_from_text(job.get("title"), job.get("description"), category.get("label") if isinstance(category, dict) else category),
+            "url": job.get("redirect_url") or job.get("adref"),
+            "salary_range": salary_range,
+            "source": "Adzuna",
+        })
+
+    return normalized
+
+
+def _remoteok_jobs(data: Any, query: str) -> list[dict[str, Any]]:
+    raw_jobs = data if isinstance(data, list) else []
+    normalized: list[dict[str, Any]] = []
+    query_tokens = {token for token in re.split(r"\W+", query.lower()) if len(token) >= 3}
+
+    for job in raw_jobs:
+        if not isinstance(job, dict) or not job.get("position"):
+            continue
+
+        tags = job.get("tags") or []
+        if isinstance(tags, str):
+            tags = [tags]
+
+        haystack = " ".join([
+            str(job.get("position") or ""),
+            str(job.get("company") or ""),
+            " ".join(map(str, tags)),
+            str(job.get("description") or ""),
+        ]).lower()
+        if query_tokens and not any(token in haystack for token in query_tokens):
+            continue
+
+        normalized.append({
+            "title": job.get("position"),
+            "company": job.get("company"),
+            "location": job.get("location") or "Remote",
+            "job_type": "full-time",
+            "work_type": "remote",
+            "description": _clean_text(job.get("description") or job.get("position")),
+            "requirements": _clean_text(job.get("description")),
+            "skills": tags or _skills_from_text(job.get("position"), job.get("description")),
+            "url": job.get("url") or f"https://remoteok.com/remote-jobs/{job.get('id')}",
+            "source": "RemoteOK",
+        })
+
+    return normalized
+
+
+def _arbeitnow_jobs(data: Any, query: str) -> list[dict[str, Any]]:
+    raw_jobs = data.get("data", []) if isinstance(data, dict) else []
+    normalized: list[dict[str, Any]] = []
+    query_tokens = {token for token in re.split(r"\W+", query.lower()) if len(token) >= 3}
+
+    for job in raw_jobs:
+        if not isinstance(job, dict):
+            continue
+
+        tags = job.get("tags") or []
+        if isinstance(tags, str):
+            tags = [tags]
+
+        haystack = " ".join([
+            str(job.get("title") or ""),
+            str(job.get("company_name") or ""),
+            str(job.get("description") or ""),
+            " ".join(map(str, tags)),
+        ]).lower()
+        if query_tokens and not any(token in haystack for token in query_tokens):
+            continue
+
+        normalized.append({
+            "title": job.get("title"),
+            "company": job.get("company_name"),
+            "location": job.get("location") or "Remote",
+            "job_type": (job.get("job_types") or ["full-time"])[0] if isinstance(job.get("job_types"), list) else job.get("job_types"),
+            "work_type": "remote" if bool(job.get("remote")) else "onsite",
+            "description": _clean_text(job.get("description")),
+            "requirements": _clean_text(job.get("description")),
+            "skills": tags or _skills_from_text(job.get("title"), job.get("description")),
+            "url": job.get("url"),
+            "source": "Arbeitnow",
+        })
+
+    return normalized
+
+
+def _wuzzuf_jobs(html: str, query: str) -> list[dict[str, Any]]:
+    soup = BeautifulSoup(html, "html.parser")
+    cards = soup.select("div.css-1gatmva, div[data-testid='job-card']")
+    if not cards:
+        cards = [link.find_parent(["div", "article"]) for link in soup.select("a[href*='/jobs/p/']")]
+        cards = [card for card in cards if card is not None]
+
+    jobs: list[dict[str, Any]] = []
+    for card in cards:
+        title_link = card.select_one("h2 a[href], a[href*='/jobs/p/']")
+        if not title_link:
+            continue
+
+        href = title_link.get("href", "")
+        if href.startswith("/"):
+            href = f"https://wuzzuf.net{href}"
+
+        title = _clean_text(title_link.get_text(" ", strip=True))
+        company = _clean_text((card.select_one("a.css-17s97q8, .css-17s97q8") or "").get_text(" ", strip=True) if card.select_one("a.css-17s97q8, .css-17s97q8") else "")
+        location = _clean_text((card.select_one(".css-5wys0k, [class*='location']") or "").get_text(" ", strip=True) if card.select_one(".css-5wys0k, [class*='location']") else "Egypt")
+        tags = [_clean_text(tag.get_text(" ", strip=True)) for tag in card.select(".css-5x9pm1, a[href*='/a/']")]
+        snippet = _clean_text(card.get_text(" ", strip=True))
+
+        if title:
+            jobs.append({
+                "title": title,
+                "company": company or "Wuzzuf Employer",
+                "location": location or "Egypt",
+                "job_type": "full-time",
+                "work_type": "onsite",
+                "description": snippet or f"{title} role matching {query}.",
+                "requirements": snippet,
+                "skills": tags or _skills_from_text(title, snippet, query),
+                "url": href,
+                "source": "Wuzzuf Egypt",
+            })
+
+    return jobs
+
+
+def _indeed_jobs(html: str, query: str) -> list[dict[str, Any]]:
+    soup = BeautifulSoup(html, "html.parser")
+    cards = soup.select("div.job_seen_beacon, div[data-testid='slider_item'], a[data-jk]")
+    jobs: list[dict[str, Any]] = []
+
+    for card in cards:
+        title_node = card.select_one("h2 span[title], h2 span, a[data-jk] span")
+        link_node = card.select_one("a[href*='/viewjob'], a[data-jk]")
+        if not title_node and link_node:
+            title_node = link_node
+
+        title = _clean_text(title_node.get("title") if title_node and title_node.has_attr("title") else title_node.get_text(" ", strip=True) if title_node else "")
+        if not title:
+            continue
+
+        href = link_node.get("href", "") if link_node else ""
+        if href.startswith("/"):
+            href = f"https://www.indeed.com{href}"
+
+        company_node = card.select_one("[data-testid='company-name'], .companyName")
+        location_node = card.select_one("[data-testid='text-location'], .companyLocation")
+        snippet = _clean_text(card.get_text(" ", strip=True))
+
+        jobs.append({
+            "title": title,
+            "company": _clean_text(company_node.get_text(" ", strip=True) if company_node else "Indeed Employer"),
+            "location": _clean_text(location_node.get_text(" ", strip=True) if location_node else "Remote"),
+            "job_type": "full-time",
+            "work_type": "remote" if "remote" in snippet.lower() else "onsite",
+            "description": snippet,
+            "requirements": snippet,
+            "skills": _skills_from_text(title, snippet, query),
+            "url": href or f"https://www.indeed.com/jobs?q={quote_plus(query)}",
+            "source": "Indeed",
+        })
+
+    return jobs
+
+
+def _upwork_jobs(html: str, query: str) -> list[dict[str, Any]]:
+    soup = BeautifulSoup(html, "html.parser")
+    cards = soup.select("section[data-test='job-tile'], article[data-test='job-tile'], div[data-test='job-tile']")
+    jobs: list[dict[str, Any]] = []
+
+    for card in cards:
+        title_node = card.select_one("a[data-test='job-tile-title-link'], h2, h3")
+        title = _clean_text(title_node.get_text(" ", strip=True) if title_node else "")
+        if not title:
+            continue
+
+        href = title_node.get("href", "") if title_node and title_node.has_attr("href") else ""
+        if href.startswith("/"):
+            href = f"https://www.upwork.com{href}"
+
+        text = _clean_text(card.get_text(" ", strip=True))
+        tags = [_clean_text(tag.get_text(" ", strip=True)) for tag in card.select("[data-test='token'], .air3-token")]
+
+        jobs.append({
+            "title": title,
+            "company": "Upwork Client",
+            "location": "Remote",
+            "job_type": "freelance",
+            "work_type": "remote",
+            "description": text,
+            "requirements": text,
+            "skills": tags or _skills_from_text(title, text, query),
+            "url": href or f"https://www.upwork.com/nx/search/jobs/?q={quote_plus(query)}",
+            "source": "Upwork",
+        })
+
+    return jobs
+
+
 def _run_demo_source(payload: ScrapeRequest, source: SourceConfig, callback_base: str, started: float) -> dict[str, object]:
     jobs = _demo_jobs(payload.query, payload.limit, source)
     stored, errors = _export_jobs(jobs, source, payload.query, callback_base)
@@ -283,6 +655,7 @@ def _run_demo_source(payload: ScrapeRequest, source: SourceConfig, callback_base
         "source_id": source.id or payload.source_id,
         "source_name": source.name,
         "source_type": source.type,
+        "adapter_name": "demo",
         "endpoint_used": source.endpoint or "demo://careercompass/jobs",
         "scraping_job_id": payload.scraping_job_id,
         "jobs_preview_count": len(jobs),
@@ -306,6 +679,7 @@ def _run_api_source(payload: ScrapeRequest, source: SourceConfig, callback_base:
             "source_id": source.id or payload.source_id,
             "source_name": source.name,
             "source_type": source.type,
+            "adapter_name": _canonical_adapter(source),
             "endpoint_used": endpoint,
             "scraping_job_id": payload.scraping_job_id,
             "jobs_preview_count": 0,
@@ -332,6 +706,7 @@ def _run_api_source(payload: ScrapeRequest, source: SourceConfig, callback_base:
             "source_id": source.id or payload.source_id,
             "source_name": source.name,
             "source_type": source.type,
+            "adapter_name": _canonical_adapter(source),
             "endpoint_used": endpoint,
             "scraping_job_id": payload.scraping_job_id,
             "jobs_preview_count": 0,
@@ -355,6 +730,7 @@ def _run_api_source(payload: ScrapeRequest, source: SourceConfig, callback_base:
         "source_id": source.id or payload.source_id,
         "source_name": source.name,
         "source_type": source.type,
+        "adapter_name": _canonical_adapter(source),
         "endpoint_used": endpoint,
         "scraping_job_id": payload.scraping_job_id,
         "jobs_preview_count": len(jobs),
@@ -367,15 +743,173 @@ def _run_api_source(payload: ScrapeRequest, source: SourceConfig, callback_base:
     }
 
 
+def _run_json_adapter(
+    payload: ScrapeRequest,
+    source: SourceConfig,
+    callback_base: str,
+    started: float,
+    parser: str,
+) -> dict[str, object]:
+    endpoint = _apply_query_template(source.endpoint or "", payload.query)
+    headers = {
+        "Accept": "application/json",
+        "User-Agent": "CareerCompassBot/1.0 (+https://careercompass.local)",
+        **(source.headers or {}),
+    }
+    params = dict(source.params or {})
+
+    if parser == "adzuna":
+        app_id = os.getenv("ADZUNA_APP_ID", "").strip()
+        app_key = os.getenv("ADZUNA_APP_KEY", "").strip()
+        if not app_id or not app_key:
+            return _result(
+                payload=payload,
+                source=source,
+                started=started,
+                success=False,
+                classification="CONFIG_REQUIRED",
+                endpoint_used=endpoint,
+                stderr="Set ADZUNA_APP_ID and ADZUNA_APP_KEY to enable Adzuna.",
+                error_summary="Set ADZUNA_APP_ID and ADZUNA_APP_KEY to enable Adzuna.",
+                extra={"requires_credentials": True},
+            )
+
+        params.update({"app_id": app_id, "app_key": app_key})
+
+    try:
+        with httpx.Client(timeout=min(int(os.getenv("SCRAPER_DEFAULT_TIMEOUT", "600")), 30), follow_redirects=True) as client:
+            response = client.get(endpoint, headers=headers, params=params or None)
+        response.raise_for_status()
+        data = response.json()
+    except Exception as exc:
+        return _result(
+            payload=payload,
+            source=source,
+            started=started,
+            success=False,
+            classification="EXTERNAL_FAILED",
+            endpoint_used=endpoint,
+            failed_urls_count=1,
+            stderr=str(exc),
+            error_summary=str(exc)[:500],
+        )
+
+    if parser == "remotive":
+        jobs = _remotive_jobs(data)
+    elif parser == "adzuna":
+        jobs = _adzuna_jobs(data)
+    elif parser == "remoteok":
+        jobs = _remoteok_jobs(data, payload.query)
+    elif parser == "arbeitnow":
+        jobs = _arbeitnow_jobs(data, payload.query)
+    else:
+        jobs = _parse_api_jobs(data)
+
+    jobs = jobs[:payload.limit]
+    stored, errors = _export_jobs(jobs, source, payload.query, callback_base)
+    classification = "SUCCESS" if stored > 0 and not errors else "PARTIAL_SUCCESS" if stored > 0 else "EMPTY_SUCCESS" if not errors else "EXTERNAL_FAILED"
+
+    return _result(
+        payload=payload,
+        source=source,
+        started=started,
+        success=classification in ("SUCCESS", "PARTIAL_SUCCESS", "EMPTY_SUCCESS"),
+        classification=classification,
+        endpoint_used=endpoint,
+        jobs_preview_count=len(jobs),
+        jobs_stored=stored,
+        failed_urls_count=len(errors),
+        stdout=f"{parser} adapter fetched {len(jobs)} candidates and stored {stored}.",
+        stderr="\n".join(errors),
+        error_summary="; ".join(errors)[:500] if errors else None,
+    )
+
+
+def _run_html_adapter(
+    payload: ScrapeRequest,
+    source: SourceConfig,
+    callback_base: str,
+    started: float,
+    parser: str,
+) -> dict[str, object]:
+    endpoint = _apply_query_template(source.endpoint or "", payload.query)
+    headers = {
+        "Accept": "text/html,application/xhtml+xml",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        **(source.headers or {}),
+    }
+
+    try:
+        with httpx.Client(timeout=min(int(os.getenv("SCRAPER_DEFAULT_TIMEOUT", "600")), 30), follow_redirects=True) as client:
+            response = client.get(endpoint, headers=headers, params=source.params or None)
+        response.raise_for_status()
+        html = response.text
+    except Exception as exc:
+        return _result(
+            payload=payload,
+            source=source,
+            started=started,
+            success=False,
+            classification="EXTERNAL_FAILED",
+            endpoint_used=endpoint,
+            failed_urls_count=1,
+            stderr=str(exc),
+            error_summary=str(exc)[:500],
+        )
+
+    blocked = _blocked_reason(html, source.name or parser)
+    if blocked:
+        return _result(
+            payload=payload,
+            source=source,
+            started=started,
+            success=False,
+            classification="EXTERNAL_BLOCKED",
+            endpoint_used=endpoint,
+            failed_urls_count=1,
+            stderr=blocked,
+            error_summary=blocked,
+        )
+
+    if parser == "wuzzuf":
+        jobs = _wuzzuf_jobs(html, payload.query)
+    elif parser == "indeed":
+        jobs = _indeed_jobs(html, payload.query)
+    elif parser == "upwork":
+        jobs = _upwork_jobs(html, payload.query)
+    else:
+        jobs = []
+
+    jobs = jobs[:payload.limit]
+    stored, errors = _export_jobs(jobs, source, payload.query, callback_base)
+    classification = "SUCCESS" if stored > 0 and not errors else "PARTIAL_SUCCESS" if stored > 0 else "EMPTY_SUCCESS" if not errors else "EXTERNAL_FAILED"
+
+    return _result(
+        payload=payload,
+        source=source,
+        started=started,
+        success=classification in ("SUCCESS", "PARTIAL_SUCCESS", "EMPTY_SUCCESS"),
+        classification=classification,
+        endpoint_used=endpoint,
+        jobs_preview_count=len(jobs),
+        jobs_stored=stored,
+        failed_urls_count=len(errors),
+        stdout=f"{parser} adapter parsed {len(jobs)} visible job cards and stored {stored}.",
+        stderr="\n".join(errors),
+        error_summary="; ".join(errors)[:500] if errors else None,
+    )
+
+
 def _unsupported_source(payload: ScrapeRequest, source: SourceConfig, started: float, reason: str) -> dict[str, object]:
     elapsed_ms = int((time.monotonic() - started) * 1000)
     return {
         "success": False,
-        "classification": "UNSUPPORTED",
+        "classification": "ADAPTER_MISSING",
         "query": payload.query,
         "source_id": source.id or payload.source_id,
         "source_name": source.name,
         "source_type": source.type,
+        "adapter_name": _canonical_adapter(source),
         "endpoint_used": _apply_query_template(source.endpoint or "", payload.query),
         "scraping_job_id": payload.scraping_job_id,
         "jobs_preview_count": 0,
@@ -427,9 +961,16 @@ def scrape(
     source = _source_config(payload)
     source_type = (source.type or "").lower().strip()
     endpoint = _apply_query_template(source.endpoint or "", payload.query)
+    adapter = _canonical_adapter(source)
 
-    if source_type in {"demo", "local", "demo/local"} or (source.endpoint or "").startswith("demo://"):
+    if adapter == "demo":
         return _run_demo_source(payload, source, callback_base, started)
+
+    if adapter in {"remotive", "adzuna", "remoteok", "arbeitnow"}:
+        return _run_json_adapter(payload, source, callback_base, started, adapter)
+
+    if adapter in {"wuzzuf", "indeed", "upwork"}:
+        return _run_html_adapter(payload, source, callback_base, started, adapter)
 
     if source_type == "api":
         return _run_api_source(payload, source, callback_base, started)
@@ -447,7 +988,7 @@ def scrape(
             payload,
             source,
             started,
-            "Generic SPA extraction is not implemented yet. This source is not routed to LinkedIn because its endpoint is not LinkedIn.",
+            "No source-specific SPA adapter is implemented for this endpoint yet. Public Indeed and Upwork adapters are handled separately without login or CAPTCHA bypass.",
         )
 
     command = [
@@ -477,6 +1018,7 @@ def scrape(
             "LARAVEL_API_TOKEN": os.getenv("LARAVEL_API_TOKEN", ""),
             "SCRAPING_JOB_ID": str(payload.scraping_job_id),
             "REQUEST_ID": x_request_id or "",
+            "SCRAPER_USE_PROXIES": os.getenv("SCRAPER_USE_PROXIES", "true"),
         }
     )
 
@@ -523,6 +1065,7 @@ def scrape(
         "source_id": source_id,
         "source_name": source.name,
         "source_type": source.type,
+        "adapter_name": "linkedin",
         "endpoint_used": endpoint or f"https://www.linkedin.com/jobs/search/?keywords={payload.query}",
         "scraping_job_id": payload.scraping_job_id,
         "exit_code": result.returncode,
