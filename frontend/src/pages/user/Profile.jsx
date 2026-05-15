@@ -23,14 +23,26 @@ const getInitials = (name) => {
 };
 
 export default function Profile() {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const { t, i18n } = useTranslation();
   const isRtl = i18n.dir() === 'rtl';
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [savingAdmin, setSavingAdmin] = useState(false);
+  const [adminForm, setAdminForm] = useState({ name: '', email: '' });
 
   useEffect(() => { loadProfile(); }, []);
+
+  useEffect(() => {
+    const source = profile ?? user;
+    if (source?.role === 'admin') {
+      setAdminForm({
+        name: source.name || '',
+        email: source.email || '',
+      });
+    }
+  }, [profile, user]);
 
   const loadProfile = async () => {
     try { 
@@ -53,6 +65,35 @@ export default function Profile() {
     if (result.isConfirmed) { await logout(); navigate('/login'); }
   };
 
+  const handleAdminSave = async (event) => {
+    event.preventDefault();
+    try {
+      setSavingAdmin(true);
+      await authAPI.updateProfile({
+        name: adminForm.name,
+        email: adminForm.email,
+      });
+      await refreshUser?.();
+      await loadProfile();
+      await Swal.fire({
+        title: 'Profile updated',
+        text: 'Your admin account details were saved.',
+        icon: 'success',
+        timer: 1800,
+        showConfirmButton: false,
+      });
+    } catch (err) {
+      console.error(err);
+      await Swal.fire({
+        title: 'Profile update failed',
+        text: err.response?.data?.message || 'Please review the fields and try again.',
+        icon: 'error',
+      });
+    } finally {
+      setSavingAdmin(false);
+    }
+  };
+
   const data = profile ?? user;
   const experiences = Array.isArray(data?.experiences) ? data.experiences : [];
   const skills = Array.isArray(data?.skills) ? data.skills : (Array.isArray(data?.profile?.skills) ? data.profile.skills : []);
@@ -67,6 +108,127 @@ export default function Profile() {
   const linkedinUrl = data?.linkedin_url ?? contactInfo.linkedin_url ?? null;
   const githubUrl = data?.github_url ?? contactInfo.github_url ?? null;
   const phone = data?.phone ?? contactInfo.phone ?? null;
+
+  if (data?.role === 'admin') {
+    const adminLinks = [
+      { label: 'Admin dashboard', path: '/admin/dashboard', icon: Activity, note: 'System overview and health checks' },
+      { label: 'Jobs', path: '/admin/jobs', icon: Briefcase, note: 'Review imported and curated opportunities' },
+      { label: 'Users', path: '/admin/users', icon: UserIcon, note: 'Audit accounts and access state' },
+      { label: 'Sources', path: '/admin/sources', icon: Database, note: 'Run scraping diagnostics and extractions' },
+      { label: 'Targets', path: '/admin/targets', icon: Target, note: 'Manage active market roles' },
+    ];
+
+    return (
+      <HUDLayout loading={loading} loadingType="standard">
+        <div className="max-w-7xl mx-auto px-4 pt-32 pb-20 space-y-8 relative z-10">
+          <div className="glass-card !rounded-[2rem] p-8 md:p-10 border-slate-200 dark:border-white/5 bg-white/70 dark:bg-white/5 backdrop-blur-3xl shadow-xl overflow-hidden">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-8">
+              <div className="w-28 h-28 rounded-[1.75rem] bg-slate-900 dark:bg-indigo-600 flex items-center justify-center text-4xl font-black text-white shadow-xl uppercase">
+                {getInitials(data?.name)}
+              </div>
+              <div className="flex-1 space-y-3 text-center lg:text-start">
+                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-300">
+                  <ShieldCheck size={13} /> Administrator account
+                </span>
+                <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-slate-900 dark:text-white">
+                  {data?.name || 'Admin User'}
+                </h1>
+                <p className="text-sm md:text-base font-bold text-slate-500 dark:text-slate-400">
+                  This page shows operational account details for the admin role. Career CV widgets are reserved for job-seeker users.
+                </p>
+              </div>
+              <button onClick={handleLogout} className="px-6 py-3 rounded-xl border border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white transition-all font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
+                <LogOut size={14} /> {t('nav.logout')}
+              </button>
+            </div>
+          </div>
+
+          <div className="grid lg:grid-cols-12 gap-8">
+            <section className="lg:col-span-5 glass-card !rounded-3xl p-8 border-slate-200 dark:border-white/5 bg-white/70 dark:bg-slate-900/50">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-300">
+                  <Settings size={20} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 dark:text-white">Account profile</h2>
+                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400">Safe editable admin identity fields.</p>
+                </div>
+              </div>
+
+              <form onSubmit={handleAdminSave} className="space-y-5">
+                <label className="block space-y-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Name</span>
+                  <input
+                    type="text"
+                    value={adminForm.name}
+                    onChange={(event) => setAdminForm((prev) => ({ ...prev, name: event.target.value }))}
+                    className="w-full rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-950 px-4 py-3 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                    required
+                  />
+                </label>
+                <label className="block space-y-2">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Email</span>
+                  <input
+                    type="email"
+                    value={adminForm.email}
+                    onChange={(event) => setAdminForm((prev) => ({ ...prev, email: event.target.value }))}
+                    className="w-full rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-950 px-4 py-3 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                    required
+                  />
+                </label>
+                <button type="submit" disabled={savingAdmin} className="w-full px-6 py-3 rounded-2xl bg-indigo-600 text-white font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 disabled:opacity-60 transition-all flex items-center justify-center gap-2">
+                  <Save size={14} /> {savingAdmin ? 'Saving...' : 'Save admin profile'}
+                </button>
+              </form>
+            </section>
+
+            <section className="lg:col-span-7 space-y-8">
+              <div className="grid md:grid-cols-3 gap-4">
+                {[
+                  { label: 'Role', value: 'Admin', icon: ShieldCheck },
+                  { label: 'Status', value: data?.is_banned ? 'Restricted' : 'Active', icon: Activity },
+                  { label: 'Account ID', value: data?.id ? `#${data.id}` : 'N/A', icon: Database },
+                ].map((item) => (
+                  <div key={item.label} className="glass-card !rounded-3xl p-6 border-slate-200 dark:border-white/5 bg-white/70 dark:bg-slate-900/50">
+                    <item.icon size={20} className="text-indigo-500 mb-4" />
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">{item.label}</p>
+                    <p className="text-xl font-black text-slate-900 dark:text-white">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="glass-card !rounded-3xl p-8 border-slate-200 dark:border-white/5 bg-white/70 dark:bg-slate-900/50">
+                <h2 className="text-xl font-black text-slate-900 dark:text-white mb-2">Admin capabilities</h2>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-6">
+                  Admin accounts can review platform health, users, imported jobs, scraping sources, and target roles. User-only CV analysis and career widgets are intentionally not shown here.
+                </p>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {adminLinks.map((link) => (
+                    <button
+                      key={link.path}
+                      onClick={() => navigate(link.path)}
+                      className="p-5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-white/5 hover:border-indigo-500/40 text-start transition-all group"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="p-3 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 group-hover:scale-105 transition-transform">
+                          <link.icon size={18} />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-black text-slate-900 dark:text-white">{link.label}</p>
+                          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">{link.note}</p>
+                        </div>
+                        <ExternalLink size={14} className="text-slate-400" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </HUDLayout>
+    );
+  }
 
   return (
     <HUDLayout loading={loading} loadingType="standard">

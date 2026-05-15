@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { 
-  Users, 
-  Briefcase, 
-  Database, 
-  Target, 
-  TrendingUp, 
-  Activity, 
+import {
+  Users,
+  Briefcase,
+  Database,
+  Target,
+  TrendingUp,
+  Activity,
   AlertCircle,
   Server,
   RefreshCw,
@@ -28,33 +28,17 @@ export default function AdminDashboard() {
 
   const [healthData, setHealthData] = useState({
     status: 'checking',
-    services: { 
-      [t('admin.health.database')]: 'checking', 
-      [t('admin.health.cache')]: 'checking', 
-      [t('admin.health.ai')]: 'checking' 
+    services: {
+      [t('admin.health.database')]: 'checking',
+      [t('admin.health.cache')]: 'checking',
+      [t('admin.health.ai')]: 'checking'
     }
   });
 
   // Batch Progress State
   const [batchProgress, setBatchProgress] = useState(null);
 
-  useEffect(() => {
-    fetchDashboardStats();
-    checkSystemHealth();
-    const healthInterval = setInterval(checkSystemHealth, 30000);
-    
-    // Initial batch progress check
-    checkBatchProgress();
-    // Poll batch progress every 5 seconds
-    const batchInterval = setInterval(checkBatchProgress, 5000);
-    
-    return () => {
-      clearInterval(healthInterval);
-      clearInterval(batchInterval);
-    };
-  }, []);
-
-  const fetchDashboardStats = async () => {
+  const fetchDashboardStats = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -70,9 +54,9 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
-  const checkSystemHealth = async () => {
+  const checkSystemHealth = useCallback(async () => {
     try {
       const response = await adminAPI.getAdminSystemHealth();
       if (response.data && response.data.success) {
@@ -82,16 +66,16 @@ export default function AdminDashboard() {
       console.error('Health check failed:', err);
       setHealthData({
         status: 'critical',
-        services: { 
-            [t('admin.health.database')]: 'offline', 
-            [t('admin.health.cache')]: 'offline', 
-            [t('admin.health.ai')]: 'offline' 
+        services: {
+            [t('admin.health.database')]: 'offline',
+            [t('admin.health.cache')]: 'offline',
+            [t('admin.health.ai')]: 'offline'
         }
       });
     }
-  };
+  }, [t]);
 
-  const checkBatchProgress = async () => {
+  const checkBatchProgress = useCallback(async () => {
     try {
       const response = await adminAPI.getAdminBatchProgress();
       if (response.data && response.data.success) {
@@ -100,7 +84,21 @@ export default function AdminDashboard() {
     } catch (err) {
       console.error('Batch progress check failed:', err);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchDashboardStats();
+    checkSystemHealth();
+    const healthInterval = setInterval(checkSystemHealth, 30000);
+
+    checkBatchProgress();
+    const batchInterval = setInterval(checkBatchProgress, 5000);
+
+    return () => {
+      clearInterval(healthInterval);
+      clearInterval(batchInterval);
+    };
+  }, [fetchDashboardStats, checkSystemHealth, checkBatchProgress]);
 
   const statCards = [
     {
@@ -141,7 +139,7 @@ export default function AdminDashboard() {
   return (
     <HUDLayout>
       <div className="p-6 max-w-7xl mx-auto pb-20 space-y-8 pt-28">
-        
+
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
@@ -150,10 +148,10 @@ export default function AdminDashboard() {
               {t('admin.title')}
             </h1>
             <p className="text-slate-500 font-mono text-sm tracking-widest uppercase">
-              // UNIT_ID: CC-ADMIN-ALPHA-01 // STATUS: {healthData.status.toUpperCase()}
+              Operations dashboard // current health: {healthData.status.toUpperCase()}
             </p>
           </div>
-          <button 
+          <button
             onClick={fetchDashboardStats}
             className="flex items-center gap-3 px-6 py-3 bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 border border-slate-200 dark:border-white/10 rounded-2xl shadow-sm transition-all text-xs font-black uppercase tracking-widest text-indigo-600 dark:text-[var(--cc-primary)]"
           >
@@ -193,7 +191,7 @@ export default function AdminDashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* Main Chart */}
           <div className="lg:col-span-2 min-w-0 glass-card p-8 border-white/5 rounded-3xl space-y-6">
             <div className="flex items-center justify-between">
@@ -202,8 +200,8 @@ export default function AdminDashboard() {
                   <TrendingUp size={20} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('admin.neural_performance')}</h3>
-                  <p className="text-xs text-slate-500 font-mono tracking-widest">SIGNAL_STRENGTH: OPTIMAL</p>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Imported jobs by month</h3>
+                  <p className="text-xs text-slate-500 font-mono tracking-widest">Based on stored jobs from active scraping sources and imports.</p>
                 </div>
               </div>
             </div>
@@ -212,34 +210,34 @@ export default function AdminDashboard() {
               {chartData && chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData}>
-                    <CartesianGrid 
-                      strokeDasharray="3 3" 
-                      stroke="currentColor" 
-                      className="text-slate-200 dark:text-white/5" 
-                      vertical={false} 
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="currentColor"
+                      className="text-slate-200 dark:text-white/5"
+                      vertical={false}
                     />
-                    <XAxis 
-                      dataKey="name" 
-                      stroke="currentColor" 
+                    <XAxis
+                      dataKey="name"
+                      stroke="currentColor"
                       className="text-slate-400 dark:text-slate-500"
-                      fontSize={10} 
-                      tickLine={false} 
+                      fontSize={10}
+                      tickLine={false}
                       axisLine={false}
                       tick={{ fontFamily: 'var(--cc-mono)' }}
                     />
-                    <YAxis 
-                      stroke="currentColor" 
+                    <YAxis
+                      stroke="currentColor"
                       className="text-slate-400 dark:text-slate-500"
-                      fontSize={10} 
-                      tickLine={false} 
+                      fontSize={10}
+                      tickLine={false}
                       axisLine={false}
                       tick={{ fontFamily: 'var(--cc-mono)' }}
                     />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'var(--cc-bg-card)', 
-                        border: '1px solid var(--cc-border)', 
-                        borderRadius: '12px', 
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'var(--cc-bg-card)',
+                        border: '1px solid var(--cc-border)',
+                        borderRadius: '12px',
                         fontSize: '12px',
                         color: 'var(--cc-text-primary)'
                       }}
@@ -261,8 +259,8 @@ export default function AdminDashboard() {
                       <TrendingUp size={32} className="text-slate-400" />
                    </div>
                    <div className="text-center">
-                      <p className="text-xs font-black uppercase tracking-widest text-slate-500">{t('admin.no_performance_data', 'No Performance Data Available')}</p>
-                      <p className="text-[10px] text-slate-400 mt-1">System is currently in idle state or AI services are offline</p>
+                      <p className="text-xs font-black uppercase tracking-widest text-slate-500">{t('admin.no_performance_data', 'No imported job history yet')}</p>
+                      <p className="text-[10px] text-slate-400 mt-1">Run scraping diagnostics or manual extractions to populate this chart.</p>
                    </div>
                 </div>
               )}
@@ -271,7 +269,7 @@ export default function AdminDashboard() {
 
           {/* System Health Sidebar */}
           <div className="space-y-6">
-            
+
             <div className="glass-card p-8 border-slate-200/60 dark:border-white/5 rounded-3xl space-y-6">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
@@ -309,28 +307,28 @@ export default function AdminDashboard() {
                   <div className="flex items-center justify-between">
                      <div className="flex items-center gap-2">
                         <Zap size={16} className="text-amber-400" />
-                        <span className="text-xs font-black uppercase tracking-widest text-slate-400">Signal Ingestion</span>
+                        <span className="text-xs font-black uppercase tracking-widest text-slate-400">Manual scraping batch</span>
                      </div>
                      {batchProgress?.status === 'running' && <Loader2 size={14} className="text-amber-400 animate-spin" />}
                   </div>
-                  
+
                   <div className="space-y-1">
                      <div className="flex justify-between text-[10px] font-mono mb-1">
-                        <span className="text-slate-500">EPOCH_BATCH_01</span>
+                        <span className="text-slate-500">Latest run progress</span>
                         <span className="text-[var(--cc-primary)]">{batchProgress?.progress || 0}%</span>
                      </div>
                      <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                        <motion.div 
+                        <motion.div
                            initial={{ width: 0 }}
                            animate={{ width: `${batchProgress?.progress || 0}%` }}
                            className="h-full bg-gradient-to-r from-[var(--cc-primary)] to-indigo-500"
                         />
                      </div>
                   </div>
-                  
+
                   <p className="text-[10px] text-slate-500 font-mono leading-tight">
-                     // THREAD_STATE: {batchProgress?.status?.toUpperCase() || 'STANDBY'} <br/>
-                     // LAST_PULSE: {batchProgress?.last_run || 'N/A'}
+                     STATUS: {batchProgress?.status?.toUpperCase() || 'IDLE'} <br/>
+                     LAST UPDATE: {batchProgress?.last_run || 'N/A'}
                   </p>
                </div>
             </div>

@@ -256,6 +256,7 @@ export default function Dashboard() {
              <div className="glass-card !rounded-2xl px-6 py-3 flex flex-col items-center border-slate-200 dark:border-white/5 bg-white/50 dark:bg-white/5 backdrop-blur-md min-w-[100px]">
                 <span className="micro-typography text-slate-500 mb-1">PROFILE SCORE</span>
                 <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">{Math.round(completenessScore)}%</span>
+                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1 text-center">CV completeness</span>
              </div>
           </div>
         </div>
@@ -301,6 +302,9 @@ export default function Dashboard() {
                           <h3 className="micro-typography text-slate-500">{t('dashboard.profile_completeness')}</h3>
                         </div>
                         <p className="text-3xl font-black text-slate-900 dark:text-white">{Math.round(completenessScore)}%</p>
+                        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2">
+                          Derived from your parsed CV fields, extracted skills, and profile completeness.
+                        </p>
                     </div>
                 </div>
                 <div className="glass-card p-8 border-slate-200 dark:border-white/5 bg-white/80 dark:bg-white/5 backdrop-blur-md flex items-center gap-6">
@@ -314,6 +318,9 @@ export default function Dashboard() {
                     <Zap size={60} className="absolute -right-4 -bottom-4 text-indigo-500/10 group-hover:text-indigo-500/20 transition-colors" />
                     <h3 className="micro-typography text-indigo-600 dark:text-indigo-400 mb-4">{t('dashboard.next_action')}</h3>
                     <h4 className="text-2xl font-black mb-6 text-slate-900 dark:text-white">{t('dashboard.ready_bridge')}</h4>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-6">
+                      Recommendations use imported jobs and your CV role. If market discovery just started, jobs may refresh after the scraping worker finishes.
+                    </p>
                     <Link to="/jobs" className="w-full flex items-center justify-center py-4 bg-indigo-600 rounded-2xl font-black text-sm hover:translate-y-[-2px] transition-transform shadow-xl shadow-indigo-500/20 text-white">
                         {t('dashboard.start_gap')}
                     </Link>

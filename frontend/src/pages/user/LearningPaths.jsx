@@ -23,10 +23,10 @@ export default function LearningPaths() {
   ];
 
   const stats = [
-    { label: t('learning.active_courses', 'Active Courses'), value: '2', icon: PlayCircle, color: 'indigo' },
-    { label: t('learning.hours_learned', 'Hours Learned'), value: '34.5', icon: Clock, color: 'fuchsia' },
-    { label: t('learning.skills_gained', 'Skills Bridged'), value: '12', icon: Target, color: 'emerald' },
-    { label: t('learning.certificates', 'Certificates'), value: '3', icon: Trophy, color: 'amber' },
+    { label: t('learning.active_courses', 'Active Courses'), value: '—', icon: PlayCircle, color: 'indigo' },
+    { label: t('learning.hours_learned', 'Hours Learned'), value: '—', icon: Clock, color: 'fuchsia' },
+    { label: t('learning.skills_gained', 'Skills Bridged'), value: '—', icon: Target, color: 'emerald' },
+    { label: t('learning.certificates', 'Certificates'), value: '—', icon: Trophy, color: 'amber' },
   ];
 
   return (
@@ -43,9 +43,13 @@ export default function LearningPaths() {
               {t('learning.title', 'Learning Hub')}
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium mt-1 max-w-xl">
-              {t('learning.subtitle', 'Follow AI-generated learning paths to bridge your skill gaps and reach your next career milestone.')}
+              {t('learning.subtitle', 'Preview how skill gaps can become learning paths after CV analysis and job market data are connected.')}
             </p>
           </div>
+        </div>
+
+        <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5 text-sm font-bold text-amber-700 dark:text-amber-200">
+          Preview status: course progress and certificates are not tracked yet. Cards below are sample recommendations for demo navigation.
         </div>
 
         {/* STATS */}
@@ -93,7 +97,7 @@ export default function LearningPaths() {
                   </div>
                   {path.match && (
                     <div className="px-2 py-1 bg-indigo-500/10 text-indigo-500 text-[10px] font-black rounded uppercase tracking-widest border border-indigo-500/20">
-                      {path.match}% Match
+                      Sample {path.match}% Match
                     </div>
                   )}
                 </div>
@@ -129,8 +133,8 @@ export default function LearningPaths() {
                       <CheckCircle2 size={16} /> {t('learning.completed', 'Completed')}
                     </div>
                   ) : (
-                    <button className="text-indigo-600 dark:text-indigo-400 font-black text-xs uppercase tracking-widest flex items-center gap-2 group-hover:gap-3 transition-all">
-                      {path.progress > 0 ? t('learning.continue', 'Continue') : t('learning.start', 'Start Path')} <ChevronRight size={16} />
+                    <button disabled className="text-slate-400 font-black text-xs uppercase tracking-widest flex items-center gap-2 cursor-not-allowed">
+                      {path.progress > 0 ? t('learning.continue', 'Continue') : t('learning.start', 'Start Path')} · Planned <ChevronRight size={16} />
                     </button>
                   )}
                 </div>

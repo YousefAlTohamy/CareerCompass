@@ -64,9 +64,13 @@ export default function MockInterview() {
               {t('mock_interview.title', 'AI Mock Interview')}
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">
-              {t('mock_interview.subtitle', 'Practice your interview skills with our hyper-realistic AI avatar.')}
+              {t('mock_interview.subtitle', 'Preview a guided interview flow. Live video analysis and scored reports are planned for the production product.')}
             </p>
           </div>
+        </div>
+
+        <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5 text-sm font-bold text-amber-700 dark:text-amber-200">
+          Preview status: the chat prompt flow is interactive, but camera/microphone analysis and final scoring are illustrative only.
         </div>
 
         <AnimatePresence mode="wait">
@@ -84,7 +88,7 @@ export default function MockInterview() {
               </div>
               <div className="space-y-4 max-w-md mx-auto">
                 <h2 className="text-2xl font-black uppercase tracking-tight">{t('mock_interview.ready', 'Ready to begin?')}</h2>
-                <p className="text-slate-500 font-medium">{t('mock_interview.ready_desc', 'Ensure your microphone and camera are connected. The AI will analyze your facial expressions, tone, and answers.')}</p>
+                <p className="text-slate-500 font-medium">{t('mock_interview.ready_desc', 'Use this preview to practice answer structure. It does not record or analyze real camera or microphone data yet.')}</p>
               </div>
               <div className="flex items-center gap-4">
                 <button onClick={() => setMicActive(!micActive)} className={`p-4 rounded-2xl transition-all ${micActive ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'}`}>
@@ -219,29 +223,29 @@ export default function MockInterview() {
               <div className="grid md:grid-cols-3 gap-6 mb-8">
                 <div className="glass-card !rounded-2xl p-6 border-indigo-500/20 bg-indigo-500/5 flex flex-col justify-center items-center text-center">
                   <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-2">{t('mock_interview.overall_score', 'Overall Score')}</span>
-                  <span className="text-5xl font-black text-slate-900 dark:text-white">85<span className="text-xl text-slate-400">%</span></span>
+                  <span className="text-3xl font-black text-slate-900 dark:text-white">Preview</span>
                 </div>
                 <div className="glass-card !rounded-2xl p-6 border-emerald-500/20 bg-emerald-500/5 flex flex-col justify-center items-center text-center">
                   <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500 mb-2">{t('mock_interview.communication', 'Communication')}</span>
-                  <span className="text-3xl font-black text-slate-900 dark:text-white">Strong</span>
+                  <span className="text-3xl font-black text-slate-900 dark:text-white">Not scored</span>
                 </div>
                 <div className="glass-card !rounded-2xl p-6 border-amber-500/20 bg-amber-500/5 flex flex-col justify-center items-center text-center">
                   <span className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-2">{t('mock_interview.technical', 'Technical Depth')}</span>
-                  <span className="text-3xl font-black text-slate-900 dark:text-white">Needs Work</span>
+                  <span className="text-3xl font-black text-slate-900 dark:text-white">Not scored</span>
                 </div>
               </div>
 
               <div className="space-y-6 bg-slate-50 dark:bg-white/5 p-8 rounded-3xl border border-slate-200 dark:border-white/5">
                 <h3 className="text-xl font-black uppercase tracking-tight flex items-center gap-2"><Sparkles className="text-indigo-500" size={20} /> AI Feedback</h3>
                 <p className="text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-                  Your communication skills are excellent and you structured your answers very well using the STAR method. However, when asked about specific technical constraints, your explanation was slightly generic. I recommend diving deeper into the specific technologies or algorithms you utilized.
+                  This preview captured your typed practice answers. A production evaluator should score clarity, technical depth, examples, and role alignment before this page presents real interview analytics.
                 </p>
                 <div className="flex gap-4 pt-4">
                   <button onClick={() => setInterviewState('setup')} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center gap-2">
                     <RefreshCwIcon /> {t('mock_interview.try_again', 'Try Again')}
                   </button>
-                  <button className="px-6 py-3 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-white/5 transition-all">
-                    {t('mock_interview.download_report', 'Download Report')}
+                  <button disabled className="px-6 py-3 border border-slate-200 dark:border-white/10 text-slate-400 rounded-xl font-black text-xs uppercase tracking-widest cursor-not-allowed">
+                    {t('mock_interview.download_report', 'Download Report')} · Planned
                   </button>
                 </div>
               </div>
