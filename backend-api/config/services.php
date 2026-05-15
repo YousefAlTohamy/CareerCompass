@@ -76,4 +76,11 @@ return [
         'token' => env('SCRAPY_API_TOKEN'),
     ],
 
+    'scraping_sources' => [
+        'adzuna_app_id' => env('ADZUNA_APP_ID'),
+        'adzuna_app_key' => env('ADZUNA_APP_KEY'),
+        'use_proxies' => env('SCRAPER_USE_PROXIES', true),
+        'rate_limit_per_minute' => env('SCRAPER_RATE_LIMIT_PER_MINUTE', 600),
+    ],
+
 ];

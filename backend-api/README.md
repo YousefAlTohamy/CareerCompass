@@ -289,8 +289,12 @@ Admin source diagnostics and manual extractions are intentionally different:
 
 - Diagnostics tests all active sources only, skips inactive sources, and uses the fixed health-check query `Software`.
 - Single-source testing checks exactly the selected source, even before activation.
-- Run Extractions dispatches all active sources x all active target roles immediately, independent from scheduled scraping.
+- Run Extractions preflights all active sources, dispatches runnable/configured sources x all active target roles immediately, and reports skipped sources with reasons.
 - The deterministic `CareerCompass Demo Jobs` source uses `demo://careercompass/jobs` to prove the import pipeline without relying on LinkedIn or proxies.
+- Source support metadata is returned through `ScrapingSourceResource`: `support_status`, `adapter_name`, `requires_credentials`, `requires_proxy`, `is_runnable`, `recommended_action`, and `implementation_notes`.
+- Adzuna remains available but returns `CONFIG_REQUIRED` until `ADZUNA_APP_ID` and `ADZUNA_APP_KEY` are configured.
+- Scraper import callbacks are machine-token protected and use `SCRAPER_RATE_LIMIT_PER_MINUTE` so bulk imports are not throttled like normal user API traffic.
+- Remotive, RemoteOK, Arbeitnow, Wuzzuf, Indeed, Upwork, LinkedIn, and Demo sources keep their templates; external blocking is surfaced honestly instead of deleting or silently disabling sources.
 
 After the scraping orchestrator hardening pass, manual and scheduled scraping batches are forced onto the `scraping` queue. This keeps long-running source-target work out of the default app queue.
 

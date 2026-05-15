@@ -231,11 +231,13 @@ const AdminSources = () => {
   };
 
   const handleRunScraping = async () => {
+    const activeRunnableSources = sources.filter((source) => source.is_active && source.is_runnable).length;
+    const activeSkippedSources = sources.filter((source) => source.is_active && !source.is_runnable).length;
     const result = await Swal.fire({
       title: t('sources.swal_run_title'),
       text: (isRunningExtraction || scrapingStatus.summary?.is_any_scraping)
         ? t('sources.swal_run_in_progress_text', 'A scraping run is already active. Start another one?')
-        : t('sources.swal_run_text'),
+        : `Run manual extraction now? ${activeRunnableSources} active source(s) are runnable; ${activeSkippedSources} active source(s) will be skipped with visible reasons if they need credentials or adapters.`,
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#6366f1",
@@ -254,6 +256,9 @@ const AdminSources = () => {
         position: 'top-end',
         icon: "success",
         title: payload?.message || t('sources.swal_run_success_title'),
+        text: payload?.skipped_sources_count
+          ? `${payload.runnable_sources || 0} runnable source(s), ${payload.skipped_sources_count} skipped.`
+          : undefined,
         showConfirmButton: false,
         timer: 3500
       });
@@ -432,17 +437,39 @@ const AdminSources = () => {
       : "bg-cyan-100 text-cyan-700";
   };
 
-  const getHealthColor = (score) => {
-    if (score > 80) return { bar: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50' };
-    if (score >= 50) return { bar: 'bg-amber-500', text: 'text-amber-700', bg: 'bg-amber-50' };
-    return { bar: 'bg-rose-500', text: 'text-rose-700', bg: 'bg-rose-50' };
+const getHealthColor = (score) => {
+  if (score > 80) return { bar: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50' };
+  if (score >= 50) return { bar: 'bg-amber-500', text: 'text-amber-700', bg: 'bg-amber-50' };
+  return { bar: 'bg-rose-500', text: 'text-rose-700', bg: 'bg-rose-50' };
+};
+
+const getSupportBadge = (status) => {
+  const key = String(status || 'unknown').toLowerCase();
+  const styles = {
+    demo: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/20',
+    supported: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+    external_risk: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+    config_required: 'bg-sky-500/10 text-sky-600 border-sky-500/20',
+    adapter_missing: 'bg-slate-500/10 text-slate-500 border-slate-500/20',
+    blocked: 'bg-rose-500/10 text-rose-600 border-rose-500/20',
   };
+
+  return styles[key] || 'bg-slate-500/10 text-slate-500 border-slate-500/20';
+};
+
+const getDiagnosticGroups = (results) => ({
+  passed: results.filter((item) => ['SUCCESS', 'PARTIAL_SUCCESS', 'EMPTY_SUCCESS'].includes(item.classification)),
+  config: results.filter((item) => ['CONFIG_REQUIRED', 'CONFIG_INVALID'].includes(item.classification)),
+  external: results.filter((item) => ['EXTERNAL_FAILED', 'EXTERNAL_BLOCKED', 'INTEGRITY_COMPROMISED'].includes(item.classification)),
+  adapter: results.filter((item) => ['ADAPTER_MISSING', 'UNSUPPORTED'].includes(item.classification)),
+});
 
   const summary = scrapingStatus.summary || {};
   const sourceStatuses = scrapingStatus.sources || {};
   const activeScrapingSources = Object.values(sourceStatuses).filter((status) => status?.is_scraping).length;
   const isScrapingActive = Boolean(summary.is_any_scraping || activeScrapingSources > 0 || isRunningExtraction);
   const diagnosticResults = Array.isArray(testResult?.results) ? testResult.results : [];
+  const diagnosticGroups = getDiagnosticGroups(diagnosticResults);
 
   return (
     <HUDLayout loading={loading}>
@@ -503,10 +530,11 @@ const AdminSources = () => {
                   Scraping in progress
                 </p>
                 <h2 className="text-lg font-black text-slate-900 dark:text-white mt-1">
-                  {summary.active_sources || 0} active sources • {summary.active_targets || 0} active targets • {summary.planned_runs || 0} planned runs
+                  {summary.runnable_sources ?? summary.active_sources ?? 0} runnable of {summary.active_sources || 0} active sources • {summary.active_targets || 0} active targets • {summary.planned_runs || 0} planned runs
                 </h2>
                 <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
                   Active jobs: {summary.active_jobs || 0} • Completed: {summary.completed_jobs || 0} • Failed: {summary.failed_jobs || 0}
+                  {Number(summary.observed_recent_jobs || 0) > Number(summary.planned_runs || 0) ? ` • Recent observed jobs: ${summary.observed_recent_jobs}` : ''}
                 </p>
               </div>
               <div className="min-w-[220px]">
@@ -613,10 +641,18 @@ const AdminSources = () => {
                                     <span className={`text-[9px] px-2 py-0.5 rounded-full border ${source.is_active ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-slate-500/10 text-slate-500 border-slate-500/20'}`}>
                                       {source.is_active ? 'ACTIVE' : 'INACTIVE'}
                                     </span>
+                                    <span className={`text-[9px] px-2 py-0.5 rounded-full border ${getSupportBadge(source.support_status)}`} title={source.implementation_notes || source.recommended_action || ''}>
+                                      {(source.support_status || 'unknown').replace(/_/g, ' ').toUpperCase()}
+                                    </span>
                                   </div>
                                   <div className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1">
-                                    {formatSourceTypeLabel(source.type)} • {sourceProgress.status || 'idle'} • {sourceProgress.progress_percent || 0}%
+                                    {formatSourceTypeLabel(source.type)} • {source.adapter_name || source.type} • {sourceProgress.status || 'idle'} • {sourceProgress.progress_percent || 0}%
                                   </div>
+                                  {source.recommended_action && (
+                                    <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 max-w-[320px] line-clamp-2">
+                                      {source.recommended_action}
+                                    </div>
+                                  )}
                                   {sourceProgress.is_scraping && (
                                     <div className="mt-2 h-1.5 w-full max-w-[220px] rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
                                       <div className="h-full rounded-full bg-fuchsia-500 transition-all" style={{ width: `${Math.min(sourceProgress.progress_percent || 0, 100)}%` }} />
@@ -638,6 +674,16 @@ const AdminSources = () => {
                             <span className={`w-fit px-2 py-0.5 rounded text-[10px] font-black border ${getModeColor(source.mode)}`}>
                               {source.mode || 'static'}
                             </span>
+                            {source.requires_credentials && (
+                              <span className="w-fit px-2 py-0.5 rounded text-[10px] font-black border bg-sky-500/10 text-sky-600 border-sky-500/20">
+                                CREDENTIALS
+                              </span>
+                            )}
+                            {source.requires_proxy && (
+                              <span className="w-fit px-2 py-0.5 rounded text-[10px] font-black border bg-amber-500/10 text-amber-600 border-amber-500/20">
+                                PROXY RISK
+                              </span>
+                            )}
                           </div>
                         </td>
 
@@ -972,7 +1018,7 @@ const AdminSources = () => {
                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                          <div className="rounded-xl bg-white/60 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-4">
                            <div className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Overall Status</div>
-                           <div className={`mt-2 text-sm font-black ${testResult.success ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                           <div className={`mt-2 text-sm font-black ${testResult.pipeline_working || testResult.success ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                              {testResult.overall_status || (testResult.success ? 'passed' : 'failed')}
                            </div>
                          </div>
@@ -996,6 +1042,33 @@ const AdminSources = () => {
                          </div>
                        </div>
 
+                       {testResult.message && (
+                         <div className="rounded-2xl bg-indigo-500/10 border border-indigo-500/20 p-4 text-sm text-indigo-700 dark:text-indigo-200">
+                           {testResult.message}
+                         </div>
+                       )}
+
+                       {diagnosticResults.length > 0 && (
+                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                           <div className="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-3">
+                             <div className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-600">Passed</div>
+                             <div className="mt-1 text-lg font-black text-emerald-600">{diagnosticGroups.passed.length}</div>
+                           </div>
+                           <div className="rounded-xl bg-sky-500/10 border border-sky-500/20 p-3">
+                             <div className="text-[9px] font-black uppercase tracking-[0.2em] text-sky-600">Config</div>
+                             <div className="mt-1 text-lg font-black text-sky-600">{diagnosticGroups.config.length}</div>
+                           </div>
+                           <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3">
+                             <div className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-600">External</div>
+                             <div className="mt-1 text-lg font-black text-amber-600">{diagnosticGroups.external.length}</div>
+                           </div>
+                           <div className="rounded-xl bg-slate-500/10 border border-slate-500/20 p-3">
+                             <div className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Adapters</div>
+                             <div className="mt-1 text-lg font-black text-slate-500">{diagnosticGroups.adapter.length}</div>
+                           </div>
+                         </div>
+                       )}
+
                        <div className="rounded-2xl border border-slate-200 dark:border-white/10 overflow-hidden">
                          <div className="bg-slate-100/80 dark:bg-white/5 px-4 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
                            Diagnostic Query: {testResult.diagnostic_query || 'Software'}
@@ -1010,6 +1083,9 @@ const AdminSources = () => {
                                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 uppercase tracking-widest">
                                        {result.status || result.classification || 'unknown'}
                                      </span>
+                                     <span className={`text-[9px] px-2 py-0.5 rounded-full border ${getSupportBadge(result.support_status)}`}>
+                                       {(result.support_status || result.classification || 'unknown').replace(/_/g, ' ').toUpperCase()}
+                                     </span>
                                    </div>
                                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 break-all">
                                      {result.endpoint_used || 'n/a'}
@@ -1023,7 +1099,11 @@ const AdminSources = () => {
                                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-[11px]">
                                  <div className="rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-3">
                                    <div className="font-black uppercase tracking-widest text-slate-400 text-[9px]">Mode</div>
-                                   <div className="mt-1 text-slate-800 dark:text-slate-200">{result.source_type || 'unknown'} / {result.source_mode || 'static'}</div>
+                                 <div className="mt-1 text-slate-800 dark:text-slate-200">{result.source_type || 'unknown'} / {result.source_mode || 'static'}</div>
+                                 </div>
+                                 <div className="rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-3">
+                                   <div className="font-black uppercase tracking-widest text-slate-400 text-[9px]">Adapter</div>
+                                   <div className="mt-1 text-slate-800 dark:text-slate-200">{result.adapter_name || 'unknown'}</div>
                                  </div>
                                  <div className="rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-3">
                                    <div className="font-black uppercase tracking-widest text-slate-400 text-[9px]">Jobs Found</div>
@@ -1060,9 +1140,9 @@ const AdminSources = () => {
                          <div className="flex flex-col">
                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Diagnostic Report</span>
                             <div className="flex items-center gap-3">
-                              <div className={`w-3 h-3 rounded-full ${testResult.success ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.6)]' : 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.6)]'}`} />
-                              <span className={`text-base font-black tracking-widest ${testResult.success ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                                {testResult.success ? 'SYSTEMS_OPTIMAL' : (testResult.overall_status || 'INTEGRITY_COMPROMISED').toUpperCase()}
+                              <div className={`w-3 h-3 rounded-full ${testResult.pipeline_working || testResult.success ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.6)]' : 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.6)]'}`} />
+                              <span className={`text-base font-black tracking-widest ${testResult.pipeline_working || testResult.success ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                                {testResult.success ? 'SYSTEMS_OPTIMAL' : (testResult.overall_status || 'DIAGNOSTICS_FAILED').toUpperCase()}
                               </span>
                             </div>
                          </div>
