@@ -23,12 +23,31 @@ const CV_UPLOAD_MAX_BYTES = 5 * 1024 * 1024;
 const CV_UPLOAD_ACCEPT = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
 const CV_UPLOAD_ALLOWED_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
 const CV_UPLOAD_ALLOWED_EXTENSIONS = [".pdf", ".jpg", ".jpeg", ".png"];
+const INTERNAL_CV_URL_HOSTS = new Set([
+  "minio",
+  "db",
+  "backend-api",
+  "ai-cv-analyzer",
+  "ai-job-miner",
+  "nginx",
+]);
 
 const delay = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
 const hasAllowedCvExtension = (name = "") => {
   const lowerName = name.toLowerCase();
   return CV_UPLOAD_ALLOWED_EXTENSIONS.some((extension) => lowerName.endsWith(extension));
+};
+
+const isBrowserSafeCvUrl = (url) => {
+  if (!url) return false;
+
+  try {
+    const parsed = new URL(url, window.location.origin);
+    return !INTERNAL_CV_URL_HOSTS.has(parsed.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
 };
 
 const validateCvFile = (file) => {
@@ -273,6 +292,7 @@ export default function Dashboard() {
   const completenessScore = Number(user?.cv_analysis?.completeness_score) || 0;
   const totalExperience = user?.profile?.total_experience_years ?? user?.total_experience_years;
   const uploadDisabled = uploading || isDiscovering;
+  const safeCvUrl = isBrowserSafeCvUrl(user?.cv_url) ? user.cv_url : null;
 
   return (
     <HUDLayout loading={loading || uploading} loadingType={uploading ? "scanning" : "standard"}>
@@ -288,9 +308,9 @@ export default function Dashboard() {
             </h1>
           </div>
           <div className="flex flex-wrap items-center gap-4">
-             {user?.cv_url && (
+             {safeCvUrl && (
                <a 
-                 href={user.cv_url} target="_blank" rel="noopener noreferrer"
+                 href={safeCvUrl} target="_blank" rel="noopener noreferrer"
                  className="glass-card !rounded-2xl px-6 py-3 flex items-center gap-3 border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 backdrop-blur-md cursor-pointer transition-all hover:scale-105 active:scale-95 group shadow-xl shadow-emerald-500/10"
                >
                  <Eye size={18} className="text-emerald-600 dark:text-emerald-400" />

@@ -50,6 +50,7 @@ Backend:
 - Preserved existing user experiences when AI returns no valid experience items.
 - Continued preserving existing user skills on timeout/error/no-text/empty extraction.
 - Added signed CV URL exposure through `UserResource` when a stored CV exists.
+- CV download links are app-proxied through Laravel temporary signed routes. S3/MinIO native temporary URLs are not exposed to users, so browser-facing links must resolve through the app/Nginx host instead of Docker-internal service names such as `minio`.
 - Hardened CV storage fingerprinting with explicit file path and hash checks.
 - Removed raw upstream exception text from connection-error logs and API responses.
 - Aligned Nginx upload body size with the app-level 5 MB validator so oversized uploads return Laravel's JSON validation response.

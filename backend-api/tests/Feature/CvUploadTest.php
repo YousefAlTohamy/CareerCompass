@@ -7,6 +7,7 @@ use App\Models\Skill;
 use App\Models\TargetJobRole;
 use App\Models\User;
 use App\Models\UserExperience;
+use App\Services\CvStorageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\UploadedFile;
@@ -20,6 +21,18 @@ use Tests\TestCase;
 class CvUploadTest extends TestCase
 {
     use RefreshDatabase;
+
+    /**
+     * @var list<string>
+     */
+    private const INTERNAL_STORAGE_HOSTS = [
+        'minio',
+        'db',
+        'backend-api',
+        'ai-cv-analyzer',
+        'ai-job-miner',
+        'nginx',
+    ];
 
     public function test_cv_upload_requires_authentication(): void
     {
@@ -154,10 +167,14 @@ class CvUploadTest extends TestCase
         Storage::disk($analysis->cv_disk)->assertExists($analysis->cv_path);
         $this->assertSame(91, $analysis->completeness_score);
 
-        $this->getJson('/api/user/cv-analysis/download-url')
+        $downloadUrlResponse = $this->getJson('/api/user/cv-analysis/download-url')
             ->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonStructure(['data' => ['url', 'expires_at']]);
+
+        $downloadUrl = $downloadUrlResponse->json('data.url');
+        $this->assertIsString($downloadUrl);
+        $this->assertBrowserSafeCvUrl($downloadUrl);
     }
 
     public function test_cv_upload_preserves_existing_skills_when_ai_returns_empty_skills(): void
@@ -424,6 +441,96 @@ class CvUploadTest extends TestCase
         $this->get($signedUrl)->assertOk();
     }
 
+    public function test_cv_download_url_uses_app_signed_route_for_s3_minio_storage(): void
+    {
+        config([
+            'app.url' => 'http://localhost',
+            'filesystems.cv_uploads.disk' => 's3',
+            'filesystems.disks.s3.bucket' => 'career-compass',
+            'filesystems.disks.s3.endpoint' => 'http://minio:9000',
+            'filesystems.disks.s3.url' => 'http://minio:9000/career-compass',
+            'filesystems.disks.s3.use_path_style_endpoint' => true,
+        ]);
+
+        Storage::fake('s3');
+
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $path = "cv-uploads/users/{$user->id}/test.pdf";
+        Storage::disk('s3')->put($path, '%PDF-1.4 test');
+
+        $analysis = CvAnalysis::create([
+            'user_id' => $user->id,
+            'cv_disk' => 's3',
+            'cv_path' => $path,
+            'cv_original_name' => 'resume.pdf',
+            'cv_mime' => 'application/pdf',
+            'cv_size' => 16,
+            'cv_sha256' => hash('sha256', 'test'),
+            'cv_uploaded_at' => now(),
+            'parsing_status' => 'success',
+        ]);
+
+        $url = app(CvStorageService::class)->temporaryDownloadUrl($analysis);
+
+        $this->assertBrowserSafeCvUrl($url);
+        $this->assertStringContainsString("/api/cv-files/{$analysis->id}", $url);
+
+        $downloadUrlResponse = $this->getJson('/api/user/cv-analysis/download-url')
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $downloadUrl = $downloadUrlResponse->json('data.url');
+        $this->assertIsString($downloadUrl);
+        $this->assertBrowserSafeCvUrl($downloadUrl);
+
+        $this->get("/api/cv-files/{$analysis->id}")
+            ->assertForbidden();
+
+        $this->get($downloadUrl)
+            ->assertOk();
+    }
+
+    public function test_user_resource_cv_url_is_browser_safe_for_s3_minio_storage(): void
+    {
+        config([
+            'app.url' => 'http://localhost',
+            'filesystems.cv_uploads.disk' => 's3',
+            'filesystems.disks.s3.bucket' => 'career-compass',
+            'filesystems.disks.s3.endpoint' => 'http://minio:9000',
+            'filesystems.disks.s3.url' => 'http://minio:9000/career-compass',
+            'filesystems.disks.s3.use_path_style_endpoint' => true,
+        ]);
+
+        Storage::fake('s3');
+
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $path = "cv-uploads/users/{$user->id}/resource.pdf";
+        Storage::disk('s3')->put($path, '%PDF-1.4 test');
+
+        CvAnalysis::create([
+            'user_id' => $user->id,
+            'cv_disk' => 's3',
+            'cv_path' => $path,
+            'cv_original_name' => 'resource.pdf',
+            'cv_mime' => 'application/pdf',
+            'cv_size' => 16,
+            'cv_sha256' => hash('sha256', 'resource'),
+            'cv_uploaded_at' => now(),
+            'parsing_status' => 'success',
+        ]);
+
+        $response = $this->getJson('/api/user')
+            ->assertOk();
+
+        $cvUrl = $response->json('data.cv_url');
+        $this->assertIsString($cvUrl);
+        $this->assertBrowserSafeCvUrl($cvUrl);
+    }
+
     public function test_cv_upload_splits_comma_delimited_skill_labels(): void
     {
         config(['services.ai_cv_analyzer.url' => 'http://ai-cv-analyzer:8000']);
@@ -517,5 +624,20 @@ class CvUploadTest extends TestCase
 
         $this->assertTrue(TargetJobRole::where('name', 'Frontend React Developer')->exists());
         $this->assertFalse(TargetJobRole::where('name', 'Software Engineering')->exists());
+    }
+
+    private function assertBrowserSafeCvUrl(string $url): void
+    {
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+
+        $this->assertSame('localhost', $host);
+        $this->assertNotContains($host, self::INTERNAL_STORAGE_HOSTS);
+        $this->assertStringContainsString('/api/cv-files/', $url);
+        $this->assertStringNotContainsString('minio:9000', strtolower($url));
+
+        foreach (self::INTERNAL_STORAGE_HOSTS as $internalHost) {
+            $this->assertStringNotContainsString("://{$internalHost}", strtolower($url));
+            $this->assertStringNotContainsString("//{$internalHost}", strtolower($url));
+        }
     }
 }
