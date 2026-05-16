@@ -89,17 +89,6 @@ class CvStorageService
         }
 
         $expiresAt = now()->addMinutes((int) config('filesystems.cv_uploads.temporary_url_minutes', 10));
-        $disk = Storage::disk($analysis->cv_disk);
-
-        if (method_exists($disk, 'temporaryUrl')) {
-            try {
-                return $disk->temporaryUrl($analysis->cv_path, $expiresAt, [
-                    'ResponseContentDisposition' => 'attachment; filename="' . $this->safeDownloadName($analysis) . '"',
-                ]);
-            } catch (\Throwable) {
-                // Local disks do not support native temporary URLs; use Laravel signed routing below.
-            }
-        }
 
         return URL::temporarySignedRoute('api.cv.download', $expiresAt, [
             'cvAnalysis' => $analysis->id,
@@ -126,10 +115,5 @@ class CvStorageService
         $clean = preg_replace('/[^\w.\- ]+/u', '_', $name) ?: 'cv-upload';
 
         return Str::limit(trim($clean), 255, '');
-    }
-
-    private function safeDownloadName(CvAnalysis $analysis): string
-    {
-        return str_replace('"', '', $analysis->cv_original_name ?: 'career-compass-cv');
     }
 }
