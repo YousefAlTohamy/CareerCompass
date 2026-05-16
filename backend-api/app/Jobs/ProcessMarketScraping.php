@@ -114,17 +114,29 @@ class ProcessMarketScraping implements ShouldQueue
         try {
             return ScrapingSource::where('status', 'active')
                 ->get(['id', 'name', 'endpoint', 'method', 'type', 'headers', 'params', 'mode', 'pattern'])
-                ->map(fn($s) => [
-                    'id'       => $s->id,
-                    'name'     => $s->name,
-                    'endpoint' => $s->endpoint,
-                    'method'   => $s->method ?? 'GET',
-                    'type'     => $s->type,
-                    'headers'  => $s->headers ?? [],
-                    'params'   => $s->params  ?? [],
-                    'mode'     => $s->mode ?? 'static',
-                    'pattern'  => $s->pattern,
-                ])
+                ->map(function ($s) {
+                    $support = $s->supportMetadata();
+
+                    return [
+                        'id'       => $s->id,
+                        'name'     => $s->name,
+                        'endpoint' => $s->endpoint,
+                        'method'   => $s->method ?? 'GET',
+                        'type'     => $s->type,
+                        'headers'  => $s->headers ?? [],
+                        'params'   => $s->params  ?? [],
+                        'mode'     => $s->mode ?? 'static',
+                        'pattern'  => $s->pattern,
+                        'adapter_name' => $support['adapter_name'] ?? $s->adapterName(),
+                        'adapter_mode' => $support['adapter_mode'] ?? 'adapter_missing',
+                        'support_status' => $support['support_status'] ?? 'unknown',
+                        'requires_credentials' => (bool) ($support['requires_credentials'] ?? false),
+                        'requires_proxy' => (bool) ($support['requires_proxy'] ?? false),
+                        'is_runnable' => (bool) ($support['is_runnable'] ?? false),
+                    ];
+                })
+                ->filter(fn (array $source): bool => (bool) ($source['is_runnable'] ?? false))
+                ->values()
                 ->toArray();
         } catch (\Exception $e) {
             Log::error('Failed to load active scraping sources', ['error' => $e->getMessage()]);

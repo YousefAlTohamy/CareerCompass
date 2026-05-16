@@ -35,6 +35,25 @@ const extractApplications = (response) => {
   return Array.isArray(payload) ? payload : [];
 };
 
+const hasUsableJobUrl = (job) => {
+  try {
+    const url = new URL(job?.url || '');
+    if (!['http:', 'https:'].includes(url.protocol)) return false;
+    if (['localhost', '127.0.0.1'].includes(url.hostname)) return false;
+    if (url.hostname === 'careercompass.local' && !url.pathname.includes('/demo-jobs/')) return false;
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const isDisplayableJob = (job) => (
+  Boolean(String(job?.title || '').trim())
+  && Boolean(String(job?.company || '').trim())
+  && Boolean(String(job?.description || job?.requirements || '').trim())
+  && hasUsableJobUrl(job)
+);
+
 // --- COMPONENT: SCAN LINE ---
 const ScanLine = () => (
   <motion.div 
@@ -136,7 +155,7 @@ export default function Jobs() {
         ? await jobsAPI.getJobs({ search: searchQuery })
         : await jobsAPI.getRecommendedJobs();
       const data = response.data?.data || response.data || [];
-      const normalizedJobs = Array.isArray(data) ? data : [];
+      const normalizedJobs = (Array.isArray(data) ? data : []).filter(isDisplayableJob);
       setRecommendationMeta(searchQuery ? null : (response.data?.meta ?? null));
       setJobs(normalizedJobs);
 
@@ -215,7 +234,7 @@ export default function Jobs() {
   };
 
   const jobSourceLabel = useMemo(() => (source) => {
-    if (!source) return 'CORE_SYS';
+    if (!source) return 'Unknown Source';
     const cleanSource = source.toLowerCase().includes('linkedin') ? 'linkedin' : source;
     return t(`jobs.source_label.${cleanSource}`, { defaultValue: formatValue(source) });
   }, [t]);
@@ -316,7 +335,7 @@ export default function Jobs() {
                          {selectedJob?.id === job.id && <ScanLine />}
                          <div className="flex justify-between items-start text-start">
                             <div className="space-y-1 flex-1">
-                               <span className="text-[7px] font-black text-slate-500 uppercase tracking-tighter">{jobSourceLabel(job.source)}</span>
+                               <span className="text-[7px] font-black text-slate-500 uppercase tracking-tighter">{jobSourceLabel(job.source_label || job.scraping_source?.name || job.source)}</span>
                                <h3 className="text-sm font-black tracking-tight uppercase leading-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">{job.title}</h3>
                                <p className="text-indigo-600 dark:text-indigo-400 font-bold text-[10px] tracking-tight">{job.company}</p>
                             </div>
@@ -351,7 +370,7 @@ export default function Jobs() {
                              <div className="text-start space-y-3 flex-1">
                                 <div className="flex items-center gap-3">
                                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-white/10 flex items-center justify-center border border-slate-100 dark:border-white/10 font-black text-indigo-600 dark:text-indigo-400 text-lg">
-                                      {selectedJob.company.charAt(0)}
+                                      {(selectedJob.company || '?').charAt(0)}
                                    </div>
                                    <div>
                                       <h4 className="text-indigo-600 dark:text-indigo-400 font-black text-xs uppercase tracking-tight">{selectedJob.company}</h4>
@@ -368,7 +387,7 @@ export default function Jobs() {
                                 </div>
                              </div>
                              <div className="flex md:flex-col gap-3 shrink-0">
-                                {selectedJob.url && (
+                                {hasUsableJobUrl(selectedJob) && (
                                   <a href={selectedJob.url} target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg transition-all flex items-center justify-center gap-2">
                                      <ExternalLink size={14} /> {t('jobs.apply_button', 'Apply')}
                                   </a>

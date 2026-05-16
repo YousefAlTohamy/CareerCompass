@@ -112,6 +112,7 @@ class ScrapingSource extends Model
         return match ($adapter) {
             'demo' => [
                 'support_status' => 'demo',
+                'adapter_mode' => 'reliable_api',
                 'requires_credentials' => false,
                 'requires_proxy' => false,
                 'adapter_name' => 'demo',
@@ -121,6 +122,7 @@ class ScrapingSource extends Model
             ],
             'remotive', 'remoteok', 'arbeitnow' => [
                 'support_status' => 'supported',
+                'adapter_mode' => 'reliable_api',
                 'requires_credentials' => false,
                 'requires_proxy' => false,
                 'adapter_name' => $adapter,
@@ -130,6 +132,7 @@ class ScrapingSource extends Model
             ],
             'adzuna' => [
                 'support_status' => $adzunaConfigured ? 'supported' : 'config_required',
+                'adapter_mode' => $adzunaConfigured ? 'reliable_api' : 'config_required',
                 'requires_credentials' => true,
                 'requires_proxy' => false,
                 'adapter_name' => 'adzuna',
@@ -139,6 +142,7 @@ class ScrapingSource extends Model
             ],
             'wuzzuf' => [
                 'support_status' => 'external_risk',
+                'adapter_mode' => 'public_html',
                 'requires_credentials' => false,
                 'requires_proxy' => false,
                 'adapter_name' => 'wuzzuf',
@@ -148,6 +152,7 @@ class ScrapingSource extends Model
             ],
             'indeed', 'upwork' => [
                 'support_status' => 'external_risk',
+                'adapter_mode' => 'public_playwright',
                 'requires_credentials' => false,
                 'requires_proxy' => false,
                 'adapter_name' => $adapter,
@@ -157,15 +162,17 @@ class ScrapingSource extends Model
             ],
             'linkedin' => [
                 'support_status' => 'external_risk',
+                'adapter_mode' => 'public_playwright',
                 'requires_credentials' => false,
-                'requires_proxy' => (bool) config('services.scraping_sources.use_proxies', true),
+                'requires_proxy' => false,
                 'adapter_name' => 'linkedin',
                 'is_runnable' => true,
-                'recommended_action' => 'Configure reliable proxies or expect external blocking.',
-                'implementation_notes' => 'Scrapy/Playwright LinkedIn adapter exists; third-party blocking and proxy timeouts are expected risks.',
+                'recommended_action' => 'Run only against public pages; if blocked, use official APIs, partner feeds, or licensed data.',
+                'implementation_notes' => 'Scrapy/Playwright LinkedIn adapter exists for public pages only; login walls, anti-bot checks, and blocked responses are reported honestly.',
             ],
             default => [
                 'support_status' => 'adapter_missing',
+                'adapter_mode' => 'adapter_missing',
                 'requires_credentials' => false,
                 'requires_proxy' => false,
                 'adapter_name' => $adapter ?: 'unknown',

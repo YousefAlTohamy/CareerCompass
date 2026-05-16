@@ -60,6 +60,18 @@ const formatDate = (value) => {
   return date.toLocaleDateString();
 };
 
+const hasUsableJobUrl = (value) => {
+  try {
+    const url = new URL(value || '');
+    if (!['http:', 'https:'].includes(url.protocol)) return false;
+    if (['localhost', '127.0.0.1'].includes(url.hostname)) return false;
+    if (url.hostname === 'careercompass.local' && !url.pathname.includes('/demo-jobs/')) return false;
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export default function AdminJobDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -171,7 +183,9 @@ export default function AdminJobDetails() {
   const uniqueSkills = [...new Set(skills)];
   const requirements = listFrom(job.requirements).map(itemLabel).filter(Boolean);
   const description = stripHtml(job.description) || 'No description was stored for this job.';
-  const jobUrl = job.url || job.apply_url || job.external_url || null;
+  const jobUrl = hasUsableJobUrl(job.url || job.apply_url || job.external_url)
+    ? (job.url || job.apply_url || job.external_url)
+    : null;
 
   return (
     <HUDLayout loading={false}>

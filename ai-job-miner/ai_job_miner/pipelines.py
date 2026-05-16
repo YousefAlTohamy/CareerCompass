@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import re
+from urllib.parse import urlparse
 from itemadapter import ItemAdapter
 from scrapy.exceptions import DropItem
 
@@ -11,6 +12,76 @@ from ai.ner_extractor import CustomSkillExtractor
 import httpx
 
 logger = logging.getLogger(__name__)
+
+
+def _clean_text(value):
+    if value is None:
+        return ""
+
+    text = re.sub(r"<[^>]*>", " ", str(value))
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _valid_public_url(value):
+    parsed = urlparse(str(value or "").strip())
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
+def _meaningful_title(value):
+    text = _clean_text(value)
+    if len(text) < 4 or re.match(r"^https?://", text, flags=re.IGNORECASE):
+        return False
+    if re.search(r"\b(?:jobs?|results?|positions?|openings?)\b", text, flags=re.IGNORECASE) and re.search(r"\d", text):
+        return False
+    return True
+
+
+def _meaningful_company(value):
+    text = _clean_text(value)
+    return len(text) >= 2 and text.lower() not in {
+        "unknown",
+        "unknown company",
+        "company",
+        "employer",
+        "linkedin",
+    }
+
+
+def _meaningful_description(value):
+    return len(_clean_text(value)) >= 30
+
+
+def _normal_job_type(value):
+    raw = str(value or "full-time").strip().lower().replace("_", "-")
+    aliases = {
+        "fulltime": "full-time",
+        "full-time": "full-time",
+        "parttime": "part-time",
+        "part-time": "part-time",
+        "contract": "contract",
+        "contractor": "contract",
+        "intern": "internship",
+        "internship": "internship",
+        "freelance": "freelance",
+        "temporary": "temporary",
+        "temp": "temporary",
+    }
+    return aliases.get(raw, "full-time")
+
+
+def _normal_work_type(value):
+    raw = str(value or "").strip().lower().replace("_", "-")
+    aliases = {
+        "remote": "remote",
+        "work-from-home": "remote",
+        "telecommute": "remote",
+        "hybrid": "hybrid",
+        "onsite": "onsite",
+        "on-site": "onsite",
+        "office": "onsite",
+        "in-person": "onsite",
+    }
+    return aliases.get(raw, "remote")
 
 class DeduplicationPipeline:
     """
@@ -176,6 +247,29 @@ class LaravelExportPipeline:
             "salary_range": adapter.get("salary_range", ""),
             "source": adapter.get("source", "Scrapy Spider")
         }
+
+        payload["job_type"] = _normal_job_type(payload.get("job_type"))
+        payload["work_type"] = _normal_work_type(payload.get("work_type"))
+
+        rejection_reasons = []
+        if not _meaningful_title(payload.get("title")):
+            rejection_reasons.append("title_missing_or_not_meaningful")
+        if not _meaningful_company(payload.get("company")):
+            rejection_reasons.append("company_missing_or_not_meaningful")
+        if not _meaningful_description(payload.get("description") or payload.get("requirements")):
+            rejection_reasons.append("description_or_requirements_missing_or_too_short")
+        if not _valid_public_url(payload.get("url")):
+            rejection_reasons.append("url_missing_or_not_absolute")
+
+        if rejection_reasons:
+            logger.warning(
+                "Quality rejected job: title=%r company=%r url=%r reasons=%s",
+                _clean_text(payload.get("title"))[:120],
+                _clean_text(payload.get("company"))[:120],
+                _clean_text(payload.get("url"))[:180],
+                ",".join(rejection_reasons),
+            )
+            raise DropItem(f"Quality rejected job: {','.join(rejection_reasons)}")
 
         headers = {
             "Authorization": f"Bearer {self.api_token}",

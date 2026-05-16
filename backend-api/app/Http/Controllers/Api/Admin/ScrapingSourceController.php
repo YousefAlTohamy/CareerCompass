@@ -34,6 +34,9 @@ class ScrapingSourceController extends Controller
                 'count' => 0,
                 'jobs_found' => 0,
                 'jobs_stored' => 0,
+                'jobs_quality_rejected_count' => 0,
+                'classification' => null,
+                'quality_warnings' => [],
                 'failed_count' => 0,
                 'message' => 'Idle',
             ]);
@@ -50,6 +53,9 @@ class ScrapingSourceController extends Controller
                 'scraping_job_id' => null,
                 'jobs_found' => 0,
                 'jobs_stored' => 0,
+                'jobs_quality_rejected_count' => 0,
+                'classification' => null,
+                'quality_warnings' => [],
                 'failed_count' => 0,
                 'elapsed_seconds' => 0,
                 'message' => 'Idle',
@@ -227,7 +233,7 @@ class ScrapingSourceController extends Controller
                 'failed_sources' => $result['success'] ? 0 : 1,
                 'config_required_sources' => ($result['classification'] ?? null) === 'CONFIG_REQUIRED' ? 1 : 0,
                 'adapter_missing_sources' => in_array(($result['classification'] ?? null), ['ADAPTER_MISSING', 'UNSUPPORTED'], true) ? 1 : 0,
-                'external_issue_sources' => in_array(($result['classification'] ?? null), ['EXTERNAL_FAILED', 'EXTERNAL_BLOCKED', 'INTEGRITY_COMPROMISED'], true) ? 1 : 0,
+                'external_issue_sources' => in_array(($result['classification'] ?? null), ['EXTERNAL_FAILED', 'EXTERNAL_BLOCKED', 'INTEGRITY_COMPROMISED', 'EMPTY_RESULT', 'DATA_QUALITY_FAILED'], true) ? 1 : 0,
                 'results' => [$result],
                 'message' => $result['success']
                     ? 'Selected source passed diagnostics.'
@@ -295,6 +301,8 @@ class ScrapingSourceController extends Controller
                 'CONFIG_INVALID',
                 'CONFIG_REQUIRED',
                 'INTEGRITY_COMPROMISED',
+                'EMPTY_RESULT',
+                'DATA_QUALITY_FAILED',
             ], true);
 
         $success
@@ -308,6 +316,7 @@ class ScrapingSourceController extends Controller
             'source_mode' => $source->mode ?? 'static',
             'source_status' => $source->status,
             'support_status' => $support['support_status'] ?? 'unknown',
+            'adapter_mode' => $support['adapter_mode'] ?? 'adapter_missing',
             'adapter_name' => $result['adapter_name'] ?? ($support['adapter_name'] ?? $source->adapterName()),
             'requires_credentials' => (bool) ($support['requires_credentials'] ?? false),
             'requires_proxy' => (bool) ($support['requires_proxy'] ?? false),
@@ -320,6 +329,10 @@ class ScrapingSourceController extends Controller
             'classification' => $classification,
             'jobs_preview_count' => (int) ($result['jobs_preview_count'] ?? 0),
             'jobs_stored' => $jobsStored,
+            'jobs_quality_rejected_count' => (int) ($result['jobs_quality_rejected_count'] ?? 0),
+            'quality_warnings' => $result['quality_warnings'] ?? [],
+            'rejected_examples' => $result['rejected_examples'] ?? [],
+            'data_quality_summary' => $result['data_quality_summary'] ?? null,
             'failed_urls_count' => $failedUrlsCount,
             'elapsed_ms' => (int) ($result['elapsed_ms'] ?? round((microtime(true) - $started) * 1000)),
             'error_summary' => $result['error_summary'] ?? ($success ? null : mb_substr($output, 0, 500)),
@@ -359,7 +372,7 @@ class ScrapingSourceController extends Controller
         }
 
         if ($success && $stored === 0 && $failed === 0) {
-            return 'EMPTY_SUCCESS';
+            return 'EMPTY_RESULT';
         }
 
         return $failed > 0 ? 'EXTERNAL_FAILED' : 'ADAPTER_MISSING';
@@ -370,7 +383,8 @@ class ScrapingSourceController extends Controller
         return match ($classification) {
             'SUCCESS' => 'passed',
             'PARTIAL_SUCCESS' => 'partial_success',
-            'EMPTY_SUCCESS' => 'empty_success',
+            'EMPTY_RESULT' => 'empty_result',
+            'DATA_QUALITY_FAILED' => 'data_quality_failed',
             'UNSUPPORTED', 'ADAPTER_MISSING' => 'adapter_missing',
             'CONFIG_REQUIRED' => 'config_required',
             'CONFIG_INVALID' => 'config_invalid',
@@ -383,10 +397,10 @@ class ScrapingSourceController extends Controller
     private function summarizeDiagnosticResults(array $results): array
     {
         $collection = collect($results);
-        $passClassifications = ['SUCCESS', 'PARTIAL_SUCCESS', 'EMPTY_SUCCESS'];
+        $passClassifications = ['SUCCESS', 'PARTIAL_SUCCESS'];
         $configClassifications = ['CONFIG_REQUIRED', 'CONFIG_INVALID'];
         $adapterClassifications = ['ADAPTER_MISSING', 'UNSUPPORTED'];
-        $externalClassifications = ['EXTERNAL_FAILED', 'EXTERNAL_BLOCKED', 'INTEGRITY_COMPROMISED'];
+        $externalClassifications = ['EXTERNAL_FAILED', 'EXTERNAL_BLOCKED', 'INTEGRITY_COMPROMISED', 'EMPTY_RESULT', 'DATA_QUALITY_FAILED'];
 
         $passed = $collection
             ->filter(fn (array $result): bool => in_array((string) ($result['classification'] ?? ''), $passClassifications, true))
@@ -453,6 +467,10 @@ class ScrapingSourceController extends Controller
                     $result['failed_urls_count'] ?? 0,
                     $result['endpoint_used'] ?? 'n/a',
                 );
+
+                if (($result['jobs_quality_rejected_count'] ?? 0) > 0) {
+                    $line .= sprintf("\n  quality_rejected=%d", $result['jobs_quality_rejected_count']);
+                }
 
                 if (!empty($result['error_summary'])) {
                     $line .= "\n  error: " . $result['error_summary'];

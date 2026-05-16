@@ -63,7 +63,7 @@ class ScraperClient
         if (!$response->successful() || !is_array($data) || (!$allowFailure && ($data['success'] ?? false) !== true)) {
             Log::error('Scraper service returned a failed response', [
                 'status' => $response->status(),
-                'body' => $response->body(),
+                'body' => $this->redactText($response->body()),
                 'query' => $query,
                 'source_id' => $sourceId,
             ]);
@@ -97,6 +97,7 @@ class ScraperClient
             'mode' => $source->mode ?? 'static',
             'pattern' => $source->pattern,
             'adapter_name' => $support['adapter_name'] ?? $source->adapterName(),
+            'adapter_mode' => $support['adapter_mode'] ?? 'adapter_missing',
             'support_status' => $support['support_status'] ?? 'unknown',
             'requires_credentials' => (bool) ($support['requires_credentials'] ?? false),
             'requires_proxy' => (bool) ($support['requires_proxy'] ?? false),
@@ -125,5 +126,18 @@ class ScraperClient
         return app()->bound('request.id')
             ? [(string) config('observability.request_id_header', 'X-Request-ID') => app('request.id')]
             : [];
+    }
+
+    private function redactText(string $value): string
+    {
+        $redacted = $value;
+        foreach (['ADZUNA_APP_ID', 'ADZUNA_APP_KEY', 'SCRAPER_SERVICE_TOKEN', 'SCRAPY_API_TOKEN'] as $envKey) {
+            $secret = (string) env($envKey, '');
+            if ($secret !== '') {
+                $redacted = str_replace($secret, '[redacted]', $redacted);
+            }
+        }
+
+        return preg_replace('/([?&](?:app_id|app_key|api_key|token)=)[^&\s"]+/i', '$1[redacted]', $redacted) ?? $redacted;
     }
 }
