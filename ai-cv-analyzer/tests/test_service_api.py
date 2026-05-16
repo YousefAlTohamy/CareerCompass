@@ -18,6 +18,19 @@ class FakeMatcher:
         }
 
 
+class FakeOrchestrator:
+    def __init__(self):
+        self.calls = []
+
+    def process_cv(self, file_bytes, filename):
+        self.calls.append(("pdf", filename))
+        return main._timeout_result()
+
+    def process_image_cv(self, file_bytes, filename):
+        self.calls.append(("image", filename))
+        return main._error_result("image route")
+
+
 def test_health_endpoint_returns_request_metadata():
     response = client.get("/", headers={"X-Request-ID": "ci-ai-health"})
 
@@ -45,6 +58,35 @@ def test_parse_cv_rejects_empty_upload_without_model_execution():
 
     assert response.status_code == 400
     assert response.json()["detail"] == "Empty file uploaded."
+
+
+def test_parse_cv_returns_structured_error_when_processing_crashes(monkeypatch):
+    def explode(file_bytes, filename):
+        raise RuntimeError("parser exploded")
+
+    monkeypatch.setattr(main, "_process_with_timeout", explode)
+
+    response = client.post(
+        "/api/parse-cv",
+        files={"file": ("resume.pdf", b"%PDF-1.4\nfake", "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["parsing_status"] == "error"
+    assert body["analysis"]["metadata"]["error"] == "parser exploded"
+    assert body["skills"]["items"] == []
+
+
+def test_process_with_timeout_routes_image_uploads_to_ocr_path(monkeypatch):
+    fake = FakeOrchestrator()
+    monkeypatch.setattr(main, "_get_orchestrator", lambda: fake)
+
+    result = main._process_with_timeout(b"image-bytes", "resume.png")
+
+    assert result["parsing_status"] == "error"
+    assert result["analysis"]["metadata"]["error"] == "image route"
+    assert fake.calls == [("image", "resume.png")]
 
 
 def test_timeout_and_error_results_have_distinct_statuses():

@@ -19,8 +19,38 @@ const formatExperienceYears = (years, t) => {
 
 const CV_UPLOAD_RECOVERY_ATTEMPTS = 8;
 const CV_UPLOAD_RECOVERY_DELAY_MS = 3000;
+const CV_UPLOAD_MAX_BYTES = 5 * 1024 * 1024;
+const CV_UPLOAD_ACCEPT = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
+const CV_UPLOAD_ALLOWED_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
+const CV_UPLOAD_ALLOWED_EXTENSIONS = [".pdf", ".jpg", ".jpeg", ".png"];
 
 const delay = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+const hasAllowedCvExtension = (name = "") => {
+  const lowerName = name.toLowerCase();
+  return CV_UPLOAD_ALLOWED_EXTENSIONS.some((extension) => lowerName.endsWith(extension));
+};
+
+const validateCvFile = (file) => {
+  if (!file) return null;
+
+  if (file.size > CV_UPLOAD_MAX_BYTES) {
+    return "Please upload a CV file that is 5 MB or smaller.";
+  }
+
+  if (!CV_UPLOAD_ALLOWED_TYPES.has(file.type) && !hasAllowedCvExtension(file.name)) {
+    return "Unsupported CV file. Upload a PDF, JPG, JPEG, or PNG file.";
+  }
+
+  return null;
+};
+
+const uploadErrorMessage = (error) => {
+  const data = error?.response?.data;
+  const validationMessage = data?.errors?.cv?.[0];
+  if (validationMessage) return validationMessage;
+  return data?.message || "CV upload failed. Please try again.";
+};
 
 const cvAnalysisFingerprint = (candidate) => {
   const analysis = candidate?.cv_analysis;
@@ -48,6 +78,20 @@ const feedbackForParsingStatus = (payload, parsingStatus) => {
     return {
       type: "warning",
       message: payload?.message || "Your CV was uploaded, but AI parsing did not fully complete. Existing profile details were preserved.",
+    };
+  }
+
+  if (["empty_file", "no_text"].includes(parsingStatus)) {
+    return {
+      type: "warning",
+      message: payload?.message || "Your CV was uploaded, but no readable text was extracted. Try a text-based PDF or a clearer image.",
+    };
+  }
+
+  if (parsingStatus === "partial_success") {
+    return {
+      type: "warning",
+      message: payload?.message || "CV uploaded with partial analysis. Please review the extracted profile details.",
     };
   }
 
@@ -147,6 +191,17 @@ export default function Dashboard() {
     const input = e.target;
     const file = input.files[0];
     if (!file) return;
+
+    const validationError = validateCvFile(file);
+    if (validationError) {
+      setUploadFeedback({
+        type: "error",
+        message: validationError,
+      });
+      input.value = "";
+      return;
+    }
+
     const formData = new FormData();
     formData.append("cv", file);
     const previousFingerprint = cvAnalysisFingerprint(user);
@@ -206,7 +261,7 @@ export default function Dashboard() {
 
       setUploadFeedback({
         type: "error",
-        message: error.response?.data?.message || "CV upload failed. Please try again.",
+        message: uploadErrorMessage(error),
       });
     } finally {
       setUploading(false);
@@ -246,11 +301,12 @@ export default function Dashboard() {
                </a>
              )}
              <label className={`glass-card !rounded-2xl px-6 py-3 flex items-center gap-3 border-indigo-500/30 bg-indigo-500/5 backdrop-blur-md transition-all group shadow-xl shadow-indigo-500/10 ${uploadDisabled ? "opacity-60 cursor-not-allowed" : "hover:bg-indigo-500/10 cursor-pointer hover:scale-105 active:scale-95"}`}>
-                <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={handleCVUpload} disabled={uploadDisabled} />
+                <input type="file" accept={CV_UPLOAD_ACCEPT} className="hidden" onChange={handleCVUpload} disabled={uploadDisabled} />
                 <RefreshCw size={18} className="text-indigo-600 dark:text-indigo-400 group-hover:rotate-180 transition-transform duration-500" />
                 <div className="flex flex-col items-start">
                    <span className="micro-typography text-indigo-600 dark:text-indigo-400 font-black">{uploadDisabled ? t('cv_analyzer.processing', 'PROCESSING') : t('cv_analyzer.update', 'UPDATE_CV')}</span>
                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{t('hud_labels.sync_core', 'SYNC_CORE')}</span>
+                   <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">PDF/JPG/PNG UP TO 5MB</span>
                 </div>
              </label>
              <div className="glass-card !rounded-2xl px-6 py-3 flex flex-col items-center border-slate-200 dark:border-white/5 bg-white/50 dark:bg-white/5 backdrop-blur-md min-w-[100px]">
@@ -284,11 +340,14 @@ export default function Dashboard() {
                   <h2 className="text-4xl md:text-5xl font-black leading-none">{t('cv_analyzer.title')}</h2>
                   <p className="text-slate-500 dark:text-slate-400 text-xl font-medium">{t('cv_analyzer.upload')}</p>
                   <label className={`inline-block ${uploadDisabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}>
-                    <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={handleCVUpload} disabled={uploadDisabled} />
+                    <input type="file" accept={CV_UPLOAD_ACCEPT} className="hidden" onChange={handleCVUpload} disabled={uploadDisabled} />
                     <div className={`px-12 py-6 text-white font-black text-xl rounded-3xl transition-all shadow-2xl ${uploadDisabled ? "bg-slate-400" : "bg-indigo-600 hover:bg-indigo-500"}`}>
                         {uploadDisabled ? t('cv_analyzer.processing', 'Processing...') : t('cv_analyzer.analyze')}
                     </div>
                   </label>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    PDF, JPG, or PNG up to 5 MB. Scanned files may use OCR and take longer.
+                  </p>
               </div>
            </motion.div>
         ) : (

@@ -50,12 +50,7 @@ class CvProcessingService implements CvProcessingServiceInterface
     {
         $v3Response = $this->callV3Gateway($file);
 
-        $parsingStatus = $v3Response['parsing_status'] ?? 'success';
-        if ($parsingStatus === 'empty_file' || $parsingStatus === 'no_text') {
-            throw new RuntimeException(
-                "Could not extract text from the CV (status={$parsingStatus}). Please ensure the file contains readable content."
-            );
-        }
+        $parsingStatus = strtolower((string) ($v3Response['parsing_status'] ?? 'success'));
 
         // Log OCR fallback so we can surface it to the user
         if ($parsingStatus === 'ocr_fallback') {
@@ -66,7 +61,7 @@ class CvProcessingService implements CvProcessingServiceInterface
 
         $storedCv = $this->cvStorageService->store($file, $user);
         $syncedSkills = new Collection();
-        $shouldPersistStructuredData = !in_array($parsingStatus, ['timeout', 'error'], true);
+        $shouldPersistStructuredData = !in_array($parsingStatus, ['timeout', 'error', 'empty_file', 'no_text'], true);
 
         try {
             DB::transaction(function () use ($user, $v3Response, $storedCv, $shouldPersistStructuredData, &$syncedSkills): void {
@@ -84,7 +79,7 @@ class CvProcessingService implements CvProcessingServiceInterface
         }
 
         if (!$shouldPersistStructuredData) {
-            Log::warning('CV parsed with timeout/error; structured profile data was not refreshed', [
+            Log::warning('CV parsed with an incomplete status; structured profile data was not refreshed', [
                 'user_id' => $user->id,
                 'parsing_status' => $parsingStatus,
             ]);
@@ -160,18 +155,17 @@ class CvProcessingService implements CvProcessingServiceInterface
             if ($response->failed()) {
                 Log::error('V3 AI Gateway returned an error', [
                     'status' => $response->status(),
-                    'body'   => Str::limit($response->body(), 500),
+                    'body_present' => $response->body() !== '',
                 ]);
 
-                throw new RuntimeException(
-                    "AI Gateway error [{$response->status()}]: " . Str::limit($response->body(), 200)
-                );
+                throw new RuntimeException('AI Gateway returned an unsuccessful response.');
             }
 
             $data = $response->json();
             if (!is_array($data)) {
                 throw new RuntimeException('AI Gateway returned invalid JSON.');
             }
+            $data = $this->normalizeGatewayResponse($data);
 
             Log::info('V3 AI Gateway response received', [
                 'parsing_status'   => $data['parsing_status'] ?? null,
@@ -189,13 +183,13 @@ class CvProcessingService implements CvProcessingServiceInterface
             Log::error('V3 AI Gateway connection timed out or refused', [
                 'url'     => $url,
                 'timeout' => $this->timeout,
-                'error'   => $e->getMessage(),
+                'error_class' => $e::class,
             ]);
             throw $e;
         } catch (\Throwable $e) {
             Log::error('V3 AI Gateway request failed', [
                 'url'   => $url,
-                'error' => $e->getMessage(),
+                'error_class' => $e::class,
             ]);
             throw new RuntimeException('Failed to communicate with the AI CV parser.', 0, $e);
         } finally {
@@ -203,6 +197,74 @@ class CvProcessingService implements CvProcessingServiceInterface
                 fclose($handle);
             }
         }
+    }
+
+    /**
+     * Normalize the AI response so persistence always sees predictable sections.
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function normalizeGatewayResponse(array $data): array
+    {
+        $hasExpectedSections = array_key_exists('profile', $data)
+            || array_key_exists('analysis', $data)
+            || array_key_exists('skills', $data)
+            || array_key_exists('experience', $data);
+
+        if (!$hasExpectedSections) {
+            return $this->structuredGatewayError('AI response did not include expected CV analysis fields.');
+        }
+
+        $knownStatuses = ['success', 'timeout', 'error', 'ocr_fallback', 'empty_file', 'no_text', 'partial_success'];
+        $status = strtolower(trim((string) ($data['parsing_status'] ?? 'success')));
+        if (!in_array($status, $knownStatuses, true)) {
+            return $this->structuredGatewayError('AI response included an unknown parsing status.');
+        }
+
+        $data['parsing_status'] = $status;
+        $data['profile'] = is_array($data['profile'] ?? null) ? $data['profile'] : [];
+        $data['stats'] = is_array($data['stats'] ?? null) ? $data['stats'] : [];
+        $data['analysis'] = is_array($data['analysis'] ?? null) ? $data['analysis'] : [];
+
+        if (!is_array($data['skills'] ?? null)) {
+            $data['skills'] = [];
+        }
+        if (!is_array($data['skills']['items'] ?? null)) {
+            $data['skills']['items'] = [];
+        }
+
+        if (!is_array($data['experience'] ?? null)) {
+            $data['experience'] = [];
+        }
+        if (!is_array($data['experience']['items'] ?? null)) {
+            $data['experience']['items'] = [];
+        }
+
+        if (!is_array($data['analysis']['metadata'] ?? null)) {
+            $data['analysis']['metadata'] = [];
+        }
+
+        return $data;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function structuredGatewayError(string $message): array
+    {
+        return [
+            'parsing_status' => 'error',
+            'profile' => [],
+            'stats' => [],
+            'skills' => ['items' => []],
+            'experience' => ['items' => []],
+            'analysis' => [
+                'metadata' => [
+                    'error' => $message,
+                ],
+            ],
+        ];
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -263,7 +325,7 @@ class CvProcessingService implements CvProcessingServiceInterface
     private function persistUserExperiences(User $user, array $v3Response): Collection
     {
         $parsingStatus = strtolower((string) ($v3Response['parsing_status'] ?? 'success'));
-        if (in_array($parsingStatus, ['timeout', 'error'], true)) {
+        if (in_array($parsingStatus, ['timeout', 'error', 'empty_file', 'no_text'], true)) {
             Log::warning('Skipping experience refresh because CV parsing did not complete', [
                 'user_id' => $user->id,
                 'parsing_status' => $parsingStatus,
@@ -272,23 +334,36 @@ class CvProcessingService implements CvProcessingServiceInterface
         }
 
         $items = $v3Response['experience']['items'] ?? [];
-        if (!is_array($items)) {
+        if (!is_array($items) || empty($items)) {
+            Log::warning('No experiences returned by V3 AI Gateway; preserving existing user experiences', [
+                'user_id' => $user->id,
+            ]);
+            return new Collection();
+        }
+
+        $created = new Collection();
+        $validItems = array_values(array_filter($items, function (mixed $item): bool {
+            if (!is_array($item)) {
+                return false;
+            }
+
+            return trim((string) ($item['title'] ?? '')) !== ''
+                || trim((string) ($item['company'] ?? '')) !== '';
+        }));
+
+        if (empty($validItems)) {
+            Log::warning('No valid experiences extracted from V3 AI Gateway response; preserving existing user experiences', [
+                'user_id' => $user->id,
+                'items_count' => count($items),
+            ]);
             return new Collection();
         }
 
         $user->experiences()->delete();
 
-        $created = new Collection();
-        foreach ($items as $item) {
-            if (!is_array($item)) {
-                continue;
-            }
-
+        foreach ($validItems as $item) {
             $title   = trim((string) ($item['title'] ?? ''));
             $company = trim((string) ($item['company'] ?? ''));
-            if ($title === '' && $company === '') {
-                continue;
-            }
 
             $startDate  = $this->parseDate($item['start_date'] ?? null);
             $endDate    = $this->parseDate($item['end_date'] ?? null);
@@ -369,7 +444,7 @@ class CvProcessingService implements CvProcessingServiceInterface
     private function persistUserSkills(User $user, array $v3Response): Collection
     {
         $parsingStatus = strtolower((string) ($v3Response['parsing_status'] ?? 'success'));
-        if (in_array($parsingStatus, ['timeout', 'error'], true)) {
+        if (in_array($parsingStatus, ['timeout', 'error', 'empty_file', 'no_text'], true)) {
             Log::warning('Skipping skill refresh because CV parsing did not complete', [
                 'user_id' => $user->id,
                 'parsing_status' => $parsingStatus,
@@ -557,6 +632,10 @@ class CvProcessingService implements CvProcessingServiceInterface
         $expMeta = $analysis['metadata']['experience'] ?? [];
 
         return [
+            'error'               => is_string($analysis['metadata']['error'] ?? null)
+                ? $this->sanitizeStringValue($analysis['metadata']['error'], 500)
+                : null,
+            'warnings'            => is_array($analysis['metadata']['warnings'] ?? null) ? $analysis['metadata']['warnings'] : [],
             'skill_durations'     => is_array($expMeta['skill_durations'] ?? null) ? $expMeta['skill_durations'] : [],
             'top_skills_by_years' => is_array($expMeta['top_skills_by_years'] ?? null) ? $expMeta['top_skills_by_years'] : [],
             'action_verb_score'   => is_numeric($expMeta['action_verb_score'] ?? null) ? (float) $expMeta['action_verb_score'] : 0.0,
@@ -619,6 +698,7 @@ class CvProcessingService implements CvProcessingServiceInterface
             'skills'             => array_map(fn($s) => is_array($s) ? ($s['name'] ?? '') : (string) $s, $v3Response['skills']['items'] ?? []),
             'experience'         => $v3Response['experience'] ?? [],
             'analysis'           => $analysis,
+            'warnings'           => is_array($metadata['warnings'] ?? null) ? $metadata['warnings'] : [],
         ];
     }
 

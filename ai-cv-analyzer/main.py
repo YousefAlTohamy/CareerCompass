@@ -321,8 +321,15 @@ async def analyze_cv(request: Request, file: UploadFile = File(...)) -> Dict[str
 def _process_with_timeout(file_bytes: bytes, filename: str) -> CVParseResult:
     """Submit the CV processing to a thread pool with a timeout."""
     orchestrator = _get_orchestrator()
-    future = _TIMEOUT_EXECUTOR.submit(orchestrator.process_cv, file_bytes, filename)
+    if _is_image_filename(filename):
+        future = _TIMEOUT_EXECUTOR.submit(orchestrator.process_image_cv, file_bytes, filename)
+    else:
+        future = _TIMEOUT_EXECUTOR.submit(orchestrator.process_cv, file_bytes, filename)
     return future.result(timeout=_CV_TIMEOUT_SECONDS)
+
+
+def _is_image_filename(filename: str) -> bool:
+    return Path(filename or "").suffix.lower() in {".jpg", ".jpeg", ".png"}
 
 
 # ---------------------------------------------------------------------------
@@ -346,7 +353,7 @@ def process_file(file_path: str, timeout_seconds: int = 30) -> Dict[str, Any]:
     path = Path(file_path)
     if not path.exists():
         return _error_result(f"File not found: {file_path}")
-    if not path.suffix.lower() == ".pdf":
+    if path.suffix.lower() not in {".pdf", ".jpg", ".jpeg", ".png"}:
         return _error_result(f"Unsupported file type: {path.suffix}")
 
     try:
@@ -361,9 +368,8 @@ def process_file(file_path: str, timeout_seconds: int = 30) -> Dict[str, Any]:
 
     try:
         orchestrator = _get_orchestrator()
-        future = _TIMEOUT_EXECUTOR.submit(
-            orchestrator.process_cv, file_bytes, path.name
-        )
+        method = orchestrator.process_image_cv if _is_image_filename(path.name) else orchestrator.process_cv
+        future = _TIMEOUT_EXECUTOR.submit(method, file_bytes, path.name)
         result = future.result(timeout=timeout_seconds)
     except FuturesTimeoutError:
         elapsed = time.perf_counter() - t0

@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Services\CvStorageService;
 
 class UserResource extends JsonResource
 {
@@ -18,6 +19,15 @@ class UserResource extends JsonResource
         $this->resource->loadMissing(['profile', 'experiences', 'skills']);
 
         $profile = $this->profile;
+
+        $cvUrl = null;
+        if ($this->relationLoaded('cvAnalysis') && $this->cvAnalysis?->cv_path) {
+            try {
+                $cvUrl = app(CvStorageService::class)->temporaryDownloadUrl($this->cvAnalysis);
+            } catch (\Throwable) {
+                $cvUrl = null;
+            }
+        }
 
         return [
             'id'         => $this->id,
@@ -41,6 +51,7 @@ class UserResource extends JsonResource
             'phone'       => $this->phone,
             'linkedin_url'=> $this->linkedin_url,
             'github_url'  => $this->github_url,
+            'cv_url'      => $cvUrl,
 
             // Full profile object (nested)
             'profile' => $this->whenLoaded('profile', fn () => $profile ? [
