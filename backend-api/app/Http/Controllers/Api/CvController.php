@@ -59,11 +59,14 @@ class CvController extends Controller
             $message = match ($parsingStatus) {
                 'timeout' => 'CV uploaded, but AI analysis timed out. Existing profile details were preserved.',
                 'error' => 'CV uploaded, but AI analysis returned an error. Existing profile details were preserved.',
+                'empty_file', 'no_text' => 'CV uploaded, but no readable text could be extracted. Existing profile details were preserved.',
                 'ocr_fallback' => 'CV parsed using OCR fallback. Please review the extracted profile details.',
+                'partial_success' => 'CV uploaded with partial analysis. Please review the extracted profile details.',
                 default => 'CV parsed successfully.',
             };
+            $responseData = $this->buildUploadResponseData($user, $result['aiData'], $warnings, $parsingStatus);
 
-            Log::info('CV parsed and profile updated via AI Gateway', [
+            Log::info('CV upload processed via AI Gateway', [
                 'user_id'     => $user->id,
                 'domain'      => $result['domain'],
                 'skills'      => count($result['syncedSkills']),
@@ -74,8 +77,15 @@ class CvController extends Controller
             return response()->json([
                 'success'     => true,
                 'message'     => $message,
+                'data'        => $responseData,
                 'parsing_status' => $parsingStatus,
                 'warnings'    => $warnings,
+                'analysis_id' => $responseData['analysis_id'],
+                'skills_count' => $responseData['skills_count'],
+                'predicted_role' => $responseData['predicted_role'],
+                'profile_updated' => $responseData['profile_updated'],
+                'retry_available' => $responseData['retry_available'],
+                'download_url' => $responseData['download_url'],
                 'is_new_role' => $result['isNewRole'],
                 'user'        => $userData,
                 'skills'      => SkillResource::collection(
@@ -86,24 +96,51 @@ class CvController extends Controller
             Log::error('AI Gateway unreachable', [
                 'user_id' => $user->id,
                 'url'     => config('services.ai_cv_analyzer.url', 'http://127.0.0.1:8002'),
-                'error'   => $e->getMessage(),
+                'error_class' => $e::class,
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'The AI engine is currently unavailable. Please try again in a moment.',
+                'data' => $this->buildFailureResponseData('error', [
+                    [
+                        'code' => 'ai_unavailable',
+                        'message' => 'The AI engine could not be reached. No profile data was changed.',
+                    ],
+                ]),
+                'parsing_status' => 'error',
+                'warnings' => [
+                    [
+                        'code' => 'ai_unavailable',
+                        'message' => 'The AI engine could not be reached. No profile data was changed.',
+                    ],
+                ],
+                'retry_available' => true,
             ], 503);
         } catch (\Exception $e) {
             Log::error('CV upload failed', [
                 'user_id' => $user->id,
-                'error'   => $e->getMessage(),
-                'trace'   => $e->getTraceAsString(),
+                'error_class' => $e::class,
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'An error occurred while processing your CV.',
-                'error'   => config('app.debug') ? $e->getMessage() : null,
+                'data' => $this->buildFailureResponseData('error', [
+                    [
+                        'code' => 'cv_processing_failed',
+                        'message' => 'The upload could not be completed. No profile data was changed.',
+                    ],
+                ]),
+                'parsing_status' => 'error',
+                'warnings' => [
+                    [
+                        'code' => 'cv_processing_failed',
+                        'message' => 'The upload could not be completed. No profile data was changed.',
+                    ],
+                ],
+                'retry_available' => true,
+                'error_code' => 'cv_processing_failed',
             ], 500);
         }
     }
@@ -126,15 +163,38 @@ class CvController extends Controller
                 'code' => 'ai_error',
                 'message' => 'The AI engine returned an error during analysis.',
             ];
+        } elseif (in_array($parsingStatus, ['empty_file', 'no_text'], true)) {
+            $warnings[] = [
+                'code' => 'no_readable_text',
+                'message' => 'No readable CV text could be extracted from the uploaded file.',
+            ];
         } elseif ($parsingStatus === 'ocr_fallback') {
             $warnings[] = [
                 'code' => 'ocr_fallback',
                 'message' => 'The CV was analyzed using OCR fallback and may need manual review.',
             ];
+        } elseif ($parsingStatus === 'partial_success') {
+            $warnings[] = [
+                'code' => 'partial_analysis',
+                'message' => 'The AI engine returned a partial analysis. Please review the extracted details.',
+            ];
+        }
+
+        $aiWarnings = is_array($aiData['warnings'] ?? null) ? $aiData['warnings'] : [];
+        foreach ($aiWarnings as $warning) {
+            if (!is_array($warning)) {
+                continue;
+            }
+
+            $code = isset($warning['code']) ? (string) $warning['code'] : null;
+            $message = isset($warning['message']) ? (string) $warning['message'] : null;
+            if ($code !== null && $message !== null) {
+                $warnings[] = ['code' => $code, 'message' => $message];
+            }
         }
 
         $skills = $aiData['skills'] ?? [];
-        if (!in_array($parsingStatus, ['timeout', 'error'], true) && is_array($skills) && count(array_filter($skills)) === 0) {
+        if (!in_array($parsingStatus, ['timeout', 'error', 'empty_file', 'no_text'], true) && is_array($skills) && count(array_filter($skills)) === 0) {
             $warnings[] = [
                 'code' => 'no_skills_extracted',
                 'message' => 'No skills were extracted, so existing skills were preserved.',
@@ -142,6 +202,57 @@ class CvController extends Controller
         }
 
         return $warnings;
+    }
+
+    /**
+     * @param array<string, mixed> $aiData
+     * @param array<int, array{code: string, message: string}> $warnings
+     * @return array<string, mixed>
+     */
+    private function buildUploadResponseData(User $user, array $aiData, array $warnings, string $parsingStatus): array
+    {
+        $analysis = $user->cvAnalysis;
+        $skillsCount = $user->skills()->count();
+        $downloadUrl = null;
+
+        if ($analysis !== null && $analysis->cv_path !== null) {
+            try {
+                $downloadUrl = app(CvStorageService::class)->temporaryDownloadUrl($analysis);
+            } catch (\Throwable) {
+                $downloadUrl = null;
+            }
+        }
+
+        $structuredProfileUpdated = !in_array($parsingStatus, ['timeout', 'error', 'empty_file', 'no_text'], true);
+
+        return [
+            'analysis_id' => $analysis?->id,
+            'parsing_status' => $parsingStatus,
+            'warnings' => $warnings,
+            'skills_count' => $skillsCount,
+            'predicted_role' => $analysis?->predicted_role ?? ($aiData['predicted_role'] ?? null),
+            'profile_updated' => $structuredProfileUpdated,
+            'retry_available' => in_array($parsingStatus, ['timeout', 'error', 'empty_file', 'no_text'], true),
+            'download_url' => $downloadUrl,
+        ];
+    }
+
+    /**
+     * @param array<int, array{code: string, message: string}> $warnings
+     * @return array<string, mixed>
+     */
+    private function buildFailureResponseData(string $parsingStatus, array $warnings): array
+    {
+        return [
+            'analysis_id' => null,
+            'parsing_status' => $parsingStatus,
+            'warnings' => $warnings,
+            'skills_count' => null,
+            'predicted_role' => null,
+            'profile_updated' => false,
+            'retry_available' => true,
+            'download_url' => null,
+        ];
     }
 
     /**

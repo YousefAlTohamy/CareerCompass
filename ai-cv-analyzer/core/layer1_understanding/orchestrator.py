@@ -163,6 +163,44 @@ class CVOrchestrator:
 
         return result
 
+    def process_image_cv(self, image_bytes: bytes, filename: Optional[str] = None) -> CVParseResult:
+        """
+        Process a standalone image CV through the existing OCR + NLP pipeline.
+
+        The Laravel upload contract allows PNG/JPEG CVs. This method keeps that
+        path explicit instead of forcing image bytes through the PDF parser.
+        """
+        if filename:
+            logger.info("V2 orchestrator processing image file: %s", filename)
+
+        if not OCR_AVAILABLE or extract_text_from_image is None:
+            result = self._empty_result(parsing_status="error", page_count=1)
+            result.analysis.metadata["error"] = "OCR is not available for image CV uploads."
+            return result
+
+        try:
+            ocr_text = (extract_text_from_image(image_bytes) or "").strip()
+        except Exception as e:
+            logger.warning("Image CV OCR failed: %s", e)
+            result = self._empty_result(parsing_status="error", page_count=1)
+            result.analysis.metadata["error"] = "Image CV OCR failed."
+            return result
+
+        if len(ocr_text) < 20:
+            result = self._empty_result(parsing_status="no_text", page_count=1)
+            result.analysis.metadata["error"] = "No readable text was extracted from the image CV."
+            return result
+
+        return self._run_nlp_pipeline(
+            ordered_text=ocr_text,
+            raw_text_with_hints=ocr_text,
+            page_count=1,
+            extraction_source="ocr",
+            spatial_status="image_ocr",
+            spatial_word_count=_count_words(ocr_text),
+            filename=filename,
+        )
+
     def _process_cv_unlocked(self, pdf_bytes: bytes, filename: Optional[str] = None) -> CVParseResult:
         """Inner implementation without the lock — called by ``process_cv``."""
         # -- Phase 1a: Attempt fast spatial extraction --

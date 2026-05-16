@@ -32,7 +32,12 @@ class CvStorageService
             $extension
         );
 
-        $stream = fopen($file->getRealPath(), 'rb');
+        $realPath = $file->getRealPath();
+        if ($realPath === false) {
+            throw new RuntimeException('Unable to read uploaded CV.');
+        }
+
+        $stream = fopen($realPath, 'rb');
         if ($stream === false) {
             throw new RuntimeException('Unable to read uploaded CV.');
         }
@@ -52,13 +57,18 @@ class CvStorageService
             throw new RuntimeException('Unable to store uploaded CV.');
         }
 
+        $sha256 = hash_file('sha256', $realPath);
+        if ($sha256 === false) {
+            throw new RuntimeException('Unable to fingerprint uploaded CV.');
+        }
+
         return [
             'disk' => $disk,
             'path' => $path,
             'original_name' => $this->sanitizeOriginalName($file->getClientOriginalName()),
             'mime' => $mime,
             'size' => $file->getSize(),
-            'sha256' => hash_file('sha256', $file->getRealPath()),
+            'sha256' => $sha256,
             'uploaded_at' => now(),
         ];
     }
