@@ -3,8 +3,8 @@ BOT_NAME = "ai_job_miner"
 SPIDER_MODULES = ["ai_job_miner.spiders"]
 NEWSPIDER_MODULE = "ai_job_miner.spiders"
 
-# Obey robots.txt rules
-ROBOTSTXT_OBEY = False
+# Obey robots.txt rules for public crawling hygiene.
+ROBOTSTXT_OBEY = True
 
 # Scrapy Playwright settings
 DOWNLOAD_HANDLERS = {
@@ -19,17 +19,15 @@ PLAYWRIGHT_LAUNCH_OPTIONS = {
     "headless": True,
 }
 
-# Stealth and Anti-Detection
 RETRY_TIMES = 3
 RETRY_HTTP_CODES = [500, 502, 503, 504, 400, 403, 408, 429]
 
 DOWNLOAD_DELAY = 3
 RANDOMIZE_DOWNLOAD_DELAY = True
 
-# Middlewares
+# Keep middleware conservative: retries and polite delays only. No proxy
+# rotation, stealth scripts, or fingerprint evasion are used.
 DOWNLOADER_MIDDLEWARES = {
-    'ai_job_miner.middlewares.UserAgentSpoofingMiddleware': 400,
-    'ai_job_miner.middlewares.ProxyRotationMiddleware': 410,
     'scrapy.downloadermiddlewares.retry.RetryMiddleware': 500,
 }
 

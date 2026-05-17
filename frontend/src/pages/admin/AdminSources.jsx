@@ -56,7 +56,10 @@ const getSourceProgress = (snapshot, sourceId) => {
     scraping_job_id: source.scraping_job_id || null,
     jobs_found: Number(source.jobs_found || 0),
     jobs_stored: Number(source.jobs_stored || 0),
+    jobs_quality_rejected_count: Number(source.jobs_quality_rejected_count || 0),
     failed_count: Number(source.failed_count || 0),
+    classification: source.classification || null,
+    quality_warnings: Array.isArray(source.quality_warnings) ? source.quality_warnings : [],
     elapsed_seconds: Number(source.elapsed_seconds || 0),
     message: source.message || 'Idle',
     last_error: source.last_error || null,
@@ -458,9 +461,9 @@ const getSupportBadge = (status) => {
 };
 
 const getDiagnosticGroups = (results) => ({
-  passed: results.filter((item) => ['SUCCESS', 'PARTIAL_SUCCESS', 'EMPTY_SUCCESS'].includes(item.classification)),
+  passed: results.filter((item) => ['SUCCESS', 'PARTIAL_SUCCESS'].includes(item.classification)),
   config: results.filter((item) => ['CONFIG_REQUIRED', 'CONFIG_INVALID'].includes(item.classification)),
-  external: results.filter((item) => ['EXTERNAL_FAILED', 'EXTERNAL_BLOCKED', 'INTEGRITY_COMPROMISED'].includes(item.classification)),
+  external: results.filter((item) => ['EXTERNAL_FAILED', 'EXTERNAL_BLOCKED', 'INTEGRITY_COMPROMISED', 'EMPTY_RESULT', 'DATA_QUALITY_FAILED'].includes(item.classification)),
   adapter: results.filter((item) => ['ADAPTER_MISSING', 'UNSUPPORTED'].includes(item.classification)),
 });
 
@@ -646,7 +649,7 @@ const getDiagnosticGroups = (results) => ({
                                     </span>
                                   </div>
                                   <div className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1">
-                                    {formatSourceTypeLabel(source.type)} • {source.adapter_name || source.type} • {sourceProgress.status || 'idle'} • {sourceProgress.progress_percent || 0}%
+                                    {formatSourceTypeLabel(source.type)} • {source.adapter_mode || source.support_status || 'adapter'} • {source.adapter_name || source.type} • {sourceProgress.classification || sourceProgress.status || 'idle'} • {sourceProgress.progress_percent || 0}%
                                   </div>
                                   {source.recommended_action && (
                                     <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 max-w-[320px] line-clamp-2">
@@ -706,12 +709,20 @@ const getDiagnosticGroups = (results) => ({
                                     Stored {sourceProgress.jobs_stored}
                                   </span>
                                   <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-white/10">
+                                    Rejected {sourceProgress.jobs_quality_rejected_count}
+                                  </span>
+                                  <span className="px-2 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-white/10">
                                     Failed {sourceProgress.failed_count}
                                   </span>
                                 </div>
                                 <p className="text-[10px] text-slate-500 dark:text-slate-400">
                                   {sourceProgress.message}
                                 </p>
+                                {sourceProgress.quality_warnings.length > 0 && (
+                                  <p className="text-[10px] text-amber-600 dark:text-amber-400 line-clamp-2">
+                                    {sourceProgress.quality_warnings.join(' ')}
+                                  </p>
+                                )}
                                 {sourceProgress.last_error && (
                                   <p className="text-[10px] text-rose-600 dark:text-rose-400 line-clamp-2">
                                     {sourceProgress.last_error}
@@ -1092,7 +1103,9 @@ const getDiagnosticGroups = (results) => ({
                                    </div>
                                  </div>
                                  <div className="text-right text-[11px] text-slate-500 dark:text-slate-400">
+                                  <div>Fetched: <span className="font-black text-slate-900 dark:text-white">{result.jobs_preview_count ?? 0}</span></div>
                                    <div>Stored: <span className="font-black text-slate-900 dark:text-white">{result.jobs_stored ?? 0}</span></div>
+                                  <div>Rejected: <span className="font-black text-slate-900 dark:text-white">{result.jobs_quality_rejected_count ?? 0}</span></div>
                                    <div>Failed URLs: <span className="font-black text-slate-900 dark:text-white">{result.failed_urls_count ?? 0}</span></div>
                                  </div>
                                </div>
@@ -1103,7 +1116,7 @@ const getDiagnosticGroups = (results) => ({
                                  </div>
                                  <div className="rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-3">
                                    <div className="font-black uppercase tracking-widest text-slate-400 text-[9px]">Adapter</div>
-                                   <div className="mt-1 text-slate-800 dark:text-slate-200">{result.adapter_name || 'unknown'}</div>
+                                   <div className="mt-1 text-slate-800 dark:text-slate-200">{result.adapter_mode || 'unknown'} / {result.adapter_name || 'unknown'}</div>
                                  </div>
                                  <div className="rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-3">
                                    <div className="font-black uppercase tracking-widest text-slate-400 text-[9px]">Jobs Found</div>
@@ -1117,6 +1130,20 @@ const getDiagnosticGroups = (results) => ({
                                {result.error_summary && (
                                  <p className="text-[11px] text-rose-600 dark:text-rose-400">{result.error_summary}</p>
                                )}
+                              {Array.isArray(result.quality_warnings) && result.quality_warnings.length > 0 && (
+                                <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-[11px] text-amber-700 dark:text-amber-300">
+                                  {result.quality_warnings.join(' ')}
+                                </div>
+                              )}
+                              {Array.isArray(result.rejected_examples) && result.rejected_examples.length > 0 && (
+                                <div className="rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 p-3 text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
+                                  {result.rejected_examples.map((example, exampleIndex) => (
+                                    <div key={`${example.url || example.title || exampleIndex}-${exampleIndex}`}>
+                                      Rejected: {example.title || 'Untitled'} / {example.company || 'Unknown'} ({(example.reasons || []).join(', ')})
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                                {result.output_excerpt && (
                                  <pre className="whitespace-pre-wrap text-[11px] text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 p-3 overflow-x-auto">
                                    {result.output_excerpt}

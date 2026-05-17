@@ -160,7 +160,7 @@ export default function MarketIntelligence() {
         )}
 
         <div className="rounded-3xl border border-indigo-500/20 bg-indigo-500/5 p-5 text-sm font-medium text-indigo-800 dark:text-indigo-200">
-          These charts are derived from jobs stored in CareerCompass by active scraping sources. If the page is empty, upload a CV for personalization or ask an admin to run scraping diagnostics/extractions.
+          These charts are derived from jobs stored in CareerCompass by active scraping sources. Source coverage can be limited by missing credentials, blocked public pages, empty public results, and data quality rejections. If the page is empty, upload a CV for personalization or ask an admin to run scraping diagnostics/extractions.
         </div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">

@@ -19,7 +19,7 @@ class AdminJobController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Job::with('requiredSkills');
+            $query = Job::with(['requiredSkills', 'scrapingSource']);
 
             // Handle search
             if ($request->filled('search')) {
@@ -42,7 +42,7 @@ class AdminJobController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to fetch jobs',
-                'error' => $e->getMessage()
+                'error_code' => 'admin_jobs_fetch_failed'
             ], 500);
         }
     }
@@ -67,7 +67,7 @@ class AdminJobController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to delete job',
-                'error' => $e->getMessage()
+                'error_code' => 'admin_job_delete_failed'
             ], 500);
         }
     }
@@ -81,7 +81,7 @@ class AdminJobController extends Controller
     public function show($id): JsonResponse
     {
         try {
-            $job = Job::with('requiredSkills')->findOrFail($id);
+            $job = Job::with(['requiredSkills', 'scrapingSource'])->findOrFail($id);
             return response()->json([
                 'success' => true,
                 'data' => $job
@@ -95,7 +95,7 @@ class AdminJobController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to fetch job details',
-                'error' => $e->getMessage()
+                'error_code' => 'admin_job_details_failed'
             ], 500);
         }
     }

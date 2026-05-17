@@ -98,7 +98,7 @@ def test_scrape_executes_scrapy_with_callback_environment(monkeypatch):
             }
         )
 
-        return SimpleNamespace(returncode=0, stdout="scraped ok", stderr="")
+        return SimpleNamespace(returncode=0, stdout="Successfully exported job to Laravel: 'Python Developer' at ExampleCo", stderr="")
 
     monkeypatch.setattr(service_api.subprocess, "run", fake_run)
 
@@ -119,6 +119,8 @@ def test_scrape_executes_scrapy_with_callback_environment(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["success"] is True
+    assert response.json()["classification"] == "SUCCESS"
+    assert response.json()["jobs_stored"] == 1
     assert recorded["command"] == [
         "scrapy",
         "crawl",
@@ -151,7 +153,7 @@ def test_scrape_uses_source_endpoint_when_configured(monkeypatch):
 
     def fake_run(command, cwd, env, capture_output, text, timeout, check):
         recorded.update({"command": command, "env": env, "timeout": timeout})
-        return SimpleNamespace(returncode=0, stdout="scraped ok", stderr="")
+        return SimpleNamespace(returncode=0, stdout="Successfully exported job to Laravel: 'Backend Developer' at ExampleCo", stderr="")
 
     monkeypatch.setattr(service_api.subprocess, "run", fake_run)
 
@@ -259,6 +261,57 @@ def test_job_payload_normalizes_external_job_and_work_types():
 
     assert payload["job_type"] == "full-time"
     assert payload["work_type"] == "remote"
+
+
+def test_quality_gate_accepts_valid_external_job():
+    source = service_api.SourceConfig(id=5, name="Remotive", type="api", endpoint="https://remotive.com/api/remote-jobs")
+
+    accepted, summary = service_api._quality_gate([
+        {
+            "title": "Remote Laravel Engineer",
+            "company": "RemoteCo",
+            "description": "Build and maintain Laravel APIs for distributed product teams.",
+            "url": "https://remotive.com/jobs/remote-laravel-engineer",
+            "job_type": "full_time",
+            "work_type": "remote",
+        }
+    ], source, "Laravel")
+
+    assert len(accepted) == 1
+    assert summary["jobs_quality_rejected_count"] == 0
+
+
+def test_quality_gate_rejects_external_job_without_valid_url():
+    source = service_api.SourceConfig(id=5, name="Remotive", type="api", endpoint="https://remotive.com/api/remote-jobs")
+
+    accepted, summary = service_api._quality_gate([
+        {
+            "title": "Remote Laravel Engineer",
+            "company": "RemoteCo",
+            "description": "Build and maintain Laravel APIs for distributed product teams.",
+            "url": "",
+        }
+    ], source, "Laravel")
+
+    assert accepted == []
+    assert summary["jobs_quality_rejected_count"] == 1
+    assert "url_missing_or_not_absolute" in summary["rejected_examples"][0]["reasons"]
+
+
+def test_quality_gate_allows_demo_generated_url():
+    source = service_api.SourceConfig(id=1, name="CareerCompass Demo Jobs", type="demo", endpoint="demo://careercompass/jobs")
+
+    accepted, summary = service_api._quality_gate([
+        {
+            "title": "Backend Laravel Developer",
+            "company": "CareerCompass Labs",
+            "description": "Deterministic demo role for validating the CareerCompass scraping pipeline.",
+            "url": "https://careercompass.local/demo-jobs/backend-laravel-developer-1",
+        }
+    ], source, "Backend Laravel Developer")
+
+    assert len(accepted) == 1
+    assert summary["jobs_quality_rejected_count"] == 0
 
 
 def test_scrape_routes_indeed_to_public_adapter_without_subprocess(monkeypatch):
@@ -389,6 +442,39 @@ def test_adzuna_adapter_normalizes_configured_response(monkeypatch):
     assert "Laravel" in exported["jobs"][0]["skills"]
 
 
+def test_adzuna_api_errors_are_redacted(monkeypatch):
+    monkeypatch.setenv("SCRAPER_SERVICE_TOKEN", "expected-token")
+    monkeypatch.setenv("ADZUNA_APP_ID", "example-app-id-value")
+    monkeypatch.setenv("ADZUNA_APP_KEY", "example-app-key-value")
+
+    monkeypatch.setattr(
+        service_api.httpx,
+        "Client",
+        lambda *args, **kwargs: FakeClient(FakeResponse(text="bad credential example-app-key-value", status_code=500)),
+    )
+
+    response = client.post(
+        "/scrape",
+        headers={"X-Scraper-Service-Token": "expected-token"},
+        json={
+            "query": "Laravel",
+            "limit": 1,
+            "scraping_job_id": 81,
+            "source": {
+                "id": 6,
+                "name": "Adzuna US Tech",
+                "type": "api",
+                "endpoint": "https://api.adzuna.com/v1/api/jobs/us/search/1?what={query}",
+            },
+        },
+    )
+
+    payload = response.json()
+    assert payload["classification"] == "EXTERNAL_FAILED"
+    assert "example-app-id-value" not in str(payload)
+    assert "example-app-key-value" not in str(payload)
+
+
 def test_remotive_adapter_normalizes_and_exports_jobs(monkeypatch):
     monkeypatch.setenv("SCRAPER_SERVICE_TOKEN", "expected-token")
     monkeypatch.setenv("LARAVEL_API_TOKEN", "laravel-callback-token")
@@ -405,7 +491,7 @@ def test_remotive_adapter_normalizes_and_exports_jobs(monkeypatch):
                     "job_type": "full_time",
                     "category": "Software Development",
                     "tags": ["PHP", "Laravel"],
-                    "description": "<p>Build Laravel APIs.</p>",
+                    "description": "<p>Build Laravel APIs and maintain production integrations for remote teams.</p>",
                     "url": "https://remotive.com/jobs/1",
                 }
             ]
@@ -446,6 +532,49 @@ def test_remotive_adapter_normalizes_and_exports_jobs(monkeypatch):
     assert exported["jobs"][0]["skills"] == ["PHP", "Laravel"]
 
 
+def test_remoteok_parser_normalizes_sample_payload():
+    jobs = service_api._remoteok_jobs([
+        {"legal": "notice"},
+        {
+            "id": 123,
+            "position": "Remote Python Developer",
+            "company": "RemoteOK Co",
+            "location": "Worldwide",
+            "description": "Build Python APIs for remote-first teams.",
+            "tags": ["Python", "FastAPI"],
+            "salary_min": 90000,
+            "salary_max": 120000,
+        },
+    ], "Python")
+
+    assert len(jobs) == 1
+    assert jobs[0]["title"] == "Remote Python Developer"
+    assert jobs[0]["url"] == "https://remoteok.com/remote-jobs/123"
+    assert jobs[0]["salary_range"] == "90000-120000"
+
+
+def test_arbeitnow_parser_normalizes_sample_payload():
+    jobs = service_api._arbeitnow_jobs({
+        "data": [
+            {
+                "title": "Backend PHP Developer",
+                "company_name": "Berlin Tech",
+                "location": "Berlin",
+                "remote": True,
+                "job_types": ["full-time"],
+                "description": "Build PHP services and Laravel integrations.",
+                "tags": ["PHP", "Laravel"],
+                "url": "https://www.arbeitnow.com/jobs/123",
+            }
+        ]
+    }, "PHP")
+
+    assert len(jobs) == 1
+    assert jobs[0]["company"] == "Berlin Tech"
+    assert jobs[0]["work_type"] == "remote"
+    assert jobs[0]["skills"] == ["PHP", "Laravel"]
+
+
 def test_wuzzuf_parser_extracts_jobs_from_fixture():
     html = """
     <div class="css-1gatmva">
@@ -463,6 +592,161 @@ def test_wuzzuf_parser_extracts_jobs_from_fixture():
     assert jobs[0]["title"] == "Backend Laravel Developer"
     assert jobs[0]["company"] == "Egypt Tech"
     assert jobs[0]["url"] == "https://wuzzuf.net/jobs/p/abc123"
+
+
+def test_indeed_parser_extracts_jobs_from_fixture():
+    html = """
+    <div class="job_seen_beacon">
+      <h2><a data-jk="abc" href="/viewjob?jk=abc"><span title="React Developer">React Developer</span></a></h2>
+      <span data-testid="company-name">IndeedCo</span>
+      <div data-testid="text-location">Remote</div>
+      <div>Build React interfaces and TypeScript components for public products.</div>
+    </div>
+    """
+
+    jobs = service_api._indeed_jobs(html, "React")
+
+    assert len(jobs) == 1
+    assert jobs[0]["company"] == "IndeedCo"
+    assert jobs[0]["url"] == "https://www.indeed.com/viewjob?jk=abc"
+
+
+def test_upwork_parser_extracts_jobs_from_fixture():
+    html = """
+    <section data-test="job-tile">
+      <a data-test="job-tile-title-link" href="/jobs/~012345">Laravel API Consultant</a>
+      <span data-test="client-country">United States client</span>
+      <p>Need a Laravel consultant to improve API reliability and Docker deployment.</p>
+      <span data-test="token">Laravel</span>
+      <span data-test="token">Docker</span>
+    </section>
+    """
+
+    jobs = service_api._upwork_jobs(html, "Laravel")
+
+    assert len(jobs) == 1
+    assert jobs[0]["company"] == "United States client"
+    assert jobs[0]["url"] == "https://www.upwork.com/jobs/~012345"
+    assert jobs[0]["skills"] == ["Laravel", "Docker"]
+
+
+def test_json_ld_job_parser_extracts_job_posting():
+    html = """
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "JobPosting",
+      "title": "Senior Backend Engineer",
+      "description": "Build resilient backend systems with Python, APIs, and PostgreSQL.",
+      "hiringOrganization": {"name": "SchemaCo"},
+      "jobLocation": {"address": {"addressLocality": "Cairo", "addressCountry": "EG"}},
+      "employmentType": "FULL_TIME",
+      "url": "/jobs/backend-1"
+    }
+    </script>
+    """
+
+    jobs = service_api._json_ld_jobs(html, "https://example.test/search", "Example")
+
+    assert len(jobs) == 1
+    assert jobs[0]["title"] == "Senior Backend Engineer"
+    assert jobs[0]["company"] == "SchemaCo"
+    assert jobs[0]["url"] == "https://example.test/jobs/backend-1"
+
+
+def test_blocked_html_returns_external_blocked(monkeypatch):
+    monkeypatch.setenv("SCRAPER_SERVICE_TOKEN", "expected-token")
+    monkeypatch.setattr(
+        service_api.httpx,
+        "Client",
+        lambda *args, **kwargs: FakeClient(FakeResponse(text="<html>verify you are human</html>")),
+    )
+
+    response = client.post(
+        "/scrape",
+        headers={"X-Scraper-Service-Token": "expected-token"},
+        json={
+            "query": "software",
+            "limit": 1,
+            "scraping_job_id": 90,
+            "source": {
+                "id": 10,
+                "name": "Wuzzuf Egypt",
+                "type": "html",
+                "endpoint": "https://wuzzuf.net/search/jobs/?q={query}",
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["classification"] == "EXTERNAL_BLOCKED"
+
+
+def test_robots_txt_block_returns_external_blocked():
+    output = "ERROR: Request failed: https://www.linkedin.com/jobs/search/, error: IgnoreRequest('Forbidden by robots.txt')"
+
+    assert service_api._classification(False, 0, 1, output) == "EXTERNAL_BLOCKED"
+
+
+def test_empty_public_page_returns_empty_result(monkeypatch):
+    monkeypatch.setenv("SCRAPER_SERVICE_TOKEN", "expected-token")
+    monkeypatch.setattr(
+        service_api.httpx,
+        "Client",
+        lambda *args, **kwargs: FakeClient(FakeResponse(text="<html><body>No jobs here</body></html>")),
+    )
+    monkeypatch.setattr(service_api, "_render_public_page_sync", lambda *args, **kwargs: ("<html><body>No jobs here</body></html>", None))
+
+    response = client.post(
+        "/scrape",
+        headers={"X-Scraper-Service-Token": "expected-token"},
+        json={
+            "query": "software",
+            "limit": 1,
+            "scraping_job_id": 91,
+            "source": {
+                "id": 11,
+                "name": "Wuzzuf Egypt",
+                "type": "html",
+                "endpoint": "https://wuzzuf.net/search/jobs/?q={query}",
+            },
+        },
+    )
+
+    payload = response.json()
+    assert response.status_code == 200
+    assert payload["classification"] == "EMPTY_RESULT"
+    assert payload["success"] is False
+    assert payload["jobs_stored"] == 0
+
+
+def test_no_fake_success_when_jobs_stored_is_zero(monkeypatch):
+    monkeypatch.setenv("SCRAPER_SERVICE_TOKEN", "expected-token")
+    monkeypatch.setattr(
+        service_api.httpx,
+        "Client",
+        lambda *args, **kwargs: FakeClient(FakeResponse(json_data={"jobs": []})),
+    )
+
+    response = client.post(
+        "/scrape",
+        headers={"X-Scraper-Service-Token": "expected-token"},
+        json={
+            "query": "nope",
+            "limit": 1,
+            "scraping_job_id": 92,
+            "source": {
+                "id": 12,
+                "name": "Remotive Remote Jobs",
+                "type": "api",
+                "endpoint": "https://remotive.com/api/remote-jobs?search={query}",
+            },
+        },
+    )
+
+    payload = response.json()
+    assert payload["classification"] == "EMPTY_RESULT"
+    assert payload["success"] is False
 
 
 def test_scrape_classifies_linkedin_proxy_timeouts_as_integrity_compromised(monkeypatch):

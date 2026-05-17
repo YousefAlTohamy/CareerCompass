@@ -22,7 +22,7 @@ class JobController extends Controller
     public function index(JobIndexRequest $request): JsonResponse
     {
         $validated = $request->validated();
-        $query = Job::with('requiredSkills');
+        $query = $this->publicUsableJobsQuery();
 
         if (!empty($validated['search'] ?? null)) {
             $search = $validated['search'];
@@ -57,7 +57,7 @@ class JobController extends Controller
      */
     public function show(int $id): JsonResponse
     {
-        $job = Job::with('requiredSkills')->find($id);
+        $job = Job::with(['requiredSkills', 'scrapingSource'])->find($id);
 
         if (!$job) {
             return response()->json([
@@ -101,7 +101,7 @@ class JobController extends Controller
                 $keyword = implode(' ', array_slice($words, 0, 2));
 
                 // Eager load skills to prevent N+1 during matching
-                $jobs = Job::with('requiredSkills')
+                $jobs = $this->publicUsableJobsQuery()
                     ->where(function ($q) use ($keyword, $cleanTitle) {
                         $q->where('title', 'LIKE', '%' . $keyword . '%')
                             ->orWhere('title', 'LIKE', '%' . $cleanTitle . '%');
@@ -161,7 +161,7 @@ class JobController extends Controller
                 ]);
             } else {
                 // No job_title or CV analysis yet — return latest 50 jobs as default
-                $jobs = Job::with('requiredSkills')->latest()->take(50)->get();
+                $jobs = $this->publicUsableJobsQuery()->latest()->take(50)->get();
 
                 Log::info('No job_title for user, returning latest jobs', [
                     'user_id' => $user->id,
@@ -345,8 +345,8 @@ class JobController extends Controller
                 ];
 
                 // Get actual jobs
-                $jobs = Job::where('title', 'like', "%{$scrapingJob->job_title}%")
-                    ->with('requiredSkills')
+                $jobs = $this->publicUsableJobsQuery()
+                    ->where('title', 'like', "%{$scrapingJob->job_title}%")
                     ->latest()
                     ->take(50)
                     ->get();
@@ -372,5 +372,18 @@ class JobController extends Controller
                 'error' => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
+    }
+
+    private function publicUsableJobsQuery()
+    {
+        return Job::with(['requiredSkills', 'scrapingSource'])
+            ->whereNotNull('title')
+            ->where('title', '<>', '')
+            ->whereNotNull('company')
+            ->where('company', '<>', '')
+            ->whereNotNull('description')
+            ->where('description', '<>', '')
+            ->whereNotNull('url')
+            ->where('url', 'like', 'http%');
     }
 }

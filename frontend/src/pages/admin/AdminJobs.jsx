@@ -24,6 +24,19 @@ import {
 import Swal from 'sweetalert2';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const sourceLabel = (job) => (
+  job?.scraping_source?.name
+  || job?.scrapingSource?.name
+  || job?.source_label
+  || job?.source
+  || 'Unknown source'
+);
+
+const displayValue = (value, fallback = 'Not recorded') => {
+  const text = String(value || '').trim();
+  return text || fallback;
+};
+
 const AdminJobs = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -204,15 +217,15 @@ const AdminJobs = () => {
                     >
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
-                          <span className="font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-[var(--cc-primary)] transition-colors">{job.title}</span>
-                          <span className="text-[10px] font-mono text-slate-500 mt-0.5">{String(job.id).substring(0, 13)}...</span>
+                          <span className="font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-[var(--cc-primary)] transition-colors">{displayValue(job.title, 'Untitled job')}</span>
+                          <span className="text-[10px] font-mono text-slate-500 mt-0.5">{sourceLabel(job)} • {String(job.id).substring(0, 13)}...</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-slate-300 text-sm font-medium">{job.company}</td>
+                      <td className="px-6 py-4 text-slate-600 dark:text-slate-300 text-sm font-medium">{displayValue(job.company, 'Unknown company')}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs font-medium">
                           <MapPin size={12} className="text-indigo-500 dark:text-[var(--cc-primary)]" />
-                          {job.location}
+                          {displayValue(job.location, 'Not specified')}
                         </div>
                       </td>
                       <td className="px-6 py-4">

@@ -104,6 +104,7 @@ class TargetJobRoleController extends Controller
                 'mode' => $source->mode ?? 'static',
                 'pattern' => $source->pattern,
                 'adapter_name' => $support['adapter_name'] ?? $source->adapterName(),
+                'adapter_mode' => $support['adapter_mode'] ?? 'adapter_missing',
                 'support_status' => $support['support_status'] ?? 'unknown',
                 'requires_credentials' => (bool) ($support['requires_credentials'] ?? false),
                 'requires_proxy' => (bool) ($support['requires_proxy'] ?? false),

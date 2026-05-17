@@ -84,6 +84,9 @@ class ProcessMarketScrapingCategory implements ShouldQueue
             'scraping_job_id' => $scrapingJob->id,
             'jobs_found' => 0,
             'jobs_stored' => 0,
+            'jobs_quality_rejected_count' => 0,
+            'classification' => null,
+            'quality_warnings' => [],
             'failed_count' => 0,
             'count' => 0,
             'elapsed_seconds' => 0,
@@ -114,6 +117,9 @@ class ProcessMarketScrapingCategory implements ShouldQueue
                 'progress_percent' => 75,
                 'jobs_found' => (int) ($scrapeResult['jobs_preview_count'] ?? 0),
                 'jobs_stored' => (int) ($scrapeResult['jobs_stored'] ?? 0),
+                'jobs_quality_rejected_count' => (int) ($scrapeResult['jobs_quality_rejected_count'] ?? 0),
+                'classification' => $scrapeResult['classification'] ?? null,
+                'quality_warnings' => $scrapeResult['quality_warnings'] ?? [],
                 'failed_count' => (int) ($scrapeResult['failed_urls_count'] ?? 0),
                 'message' => "Importing {$sourceName} results for {$this->category}",
                 'last_error' => $scrapeResult['error_summary'] ?? null,
@@ -152,6 +158,9 @@ class ProcessMarketScrapingCategory implements ShouldQueue
                     'progress_percent' => 100,
                     'jobs_found' => $found,
                     'jobs_stored' => $stored,
+                    'jobs_quality_rejected_count' => (int) ($scrapeResult['jobs_quality_rejected_count'] ?? 0),
+                    'classification' => $classification,
+                    'quality_warnings' => $scrapeResult['quality_warnings'] ?? [],
                     'failed_count' => $failed,
                     'count' => $stored,
                     'elapsed_seconds' => (int) round($elapsedMs / 1000),
@@ -186,6 +195,9 @@ class ProcessMarketScrapingCategory implements ShouldQueue
                 'progress_percent' => 100,
                 'jobs_found' => $found,
                 'jobs_stored' => $stored,
+                'jobs_quality_rejected_count' => (int) ($scrapeResult['jobs_quality_rejected_count'] ?? 0),
+                'classification' => $classification,
+                'quality_warnings' => $scrapeResult['quality_warnings'] ?? [],
                 'failed_count' => $failed,
                 'count' => $stored,
                 'elapsed_seconds' => (int) round($elapsedMs / 1000),
@@ -265,7 +277,7 @@ class ProcessMarketScrapingCategory implements ShouldQueue
         }
 
         if ($success && $failed === 0) {
-            return 'EMPTY_SUCCESS';
+            return 'EMPTY_RESULT';
         }
 
         return $failed > 0 ? 'EXTERNAL_FAILED' : 'ADAPTER_MISSING';
@@ -273,14 +285,16 @@ class ProcessMarketScrapingCategory implements ShouldQueue
 
     protected function classificationIsAcceptable(string $classification): bool
     {
-        return in_array($classification, ['SUCCESS', 'PARTIAL_SUCCESS', 'EMPTY_SUCCESS'], true);
+        return in_array($classification, ['SUCCESS', 'PARTIAL_SUCCESS'], true);
     }
 
     protected function statusForClassification(string $classification): string
     {
         return match ($classification) {
-            'SUCCESS', 'EMPTY_SUCCESS' => 'completed',
+            'SUCCESS' => 'completed',
             'PARTIAL_SUCCESS' => 'compromised',
+            'EMPTY_RESULT' => 'empty_result',
+            'DATA_QUALITY_FAILED' => 'data_quality_failed',
             'UNSUPPORTED', 'ADAPTER_MISSING' => 'adapter_missing',
             'CONFIG_REQUIRED' => 'config_required',
             'CONFIG_INVALID' => 'config_invalid',
@@ -295,7 +309,8 @@ class ProcessMarketScrapingCategory implements ShouldQueue
         return match ($classification) {
             'SUCCESS' => "{$sourceName} completed and stored {$stored} jobs.",
             'PARTIAL_SUCCESS' => "{$sourceName} stored {$stored} jobs with {$failed} failed URLs.",
-            'EMPTY_SUCCESS' => "{$sourceName} responded normally but found no jobs.",
+            'EMPTY_RESULT' => "{$sourceName} responded normally but found no public jobs for this target.",
+            'DATA_QUALITY_FAILED' => "{$sourceName} found candidates but all failed the data quality gate.",
             'UNSUPPORTED', 'ADAPTER_MISSING' => "{$sourceName} needs a source-specific scraper adapter before it can run.",
             'CONFIG_REQUIRED' => "{$sourceName} requires credentials before it can run.",
             'CONFIG_INVALID' => "{$sourceName} configuration is invalid.",

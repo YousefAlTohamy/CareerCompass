@@ -46,6 +46,13 @@ class ScrapedJobController extends Controller
                         ->first();
                 }
 
+                if (!$job) {
+                    $job = Job::query()
+                        ->whereRaw('LOWER(title) = ?', [mb_strtolower(Str::of($validated['title'])->squish()->toString())])
+                        ->whereRaw('LOWER(company) = ?', [mb_strtolower(Str::of($validated['company'])->squish()->toString())])
+                        ->first();
+                }
+
                 if ($job) {
                     $job->fill($validated);
                     $job->save();
@@ -83,12 +90,12 @@ class ScrapedJobController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to import scraped job', [
                 'error' => $e->getMessage(),
-                'payload' => $request->all(),
+                'payload' => $this->redactForLogs($request->all()),
             ]);
 
             return response()->json([
                 'message' => 'Failed to import job',
-                'error' => $e->getMessage(),
+                'error_code' => 'scraped_job_import_failed',
             ], 500);
         }
     }
@@ -124,13 +131,35 @@ class ScrapedJobController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to report scraping failure', [
                 'error' => $e->getMessage(),
-                'payload' => $request->all(),
+                'payload' => $this->redactForLogs($request->all()),
             ]);
 
             return response()->json([
                 'message' => 'Failed to report',
-                'error' => $e->getMessage()
+                'error_code' => 'scraping_failure_report_failed',
             ], 500);
         }
+    }
+
+    private function redactForLogs(array $payload): array
+    {
+        $sensitiveKeys = ['token', 'api_key', 'app_key', 'app_id', 'authorization', 'password', 'secret'];
+
+        return collect($payload)
+            ->mapWithKeys(function ($value, $key) use ($sensitiveKeys): array {
+                $lowerKey = strtolower((string) $key);
+                foreach ($sensitiveKeys as $needle) {
+                    if (str_contains($lowerKey, $needle)) {
+                        return [$key => '[redacted]'];
+                    }
+                }
+
+                if (is_array($value)) {
+                    return [$key => $this->redactForLogs($value)];
+                }
+
+                return [$key => $value];
+            })
+            ->all();
     }
 }
