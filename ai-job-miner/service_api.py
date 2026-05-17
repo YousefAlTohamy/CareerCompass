@@ -611,10 +611,14 @@ def _demo_jobs(query: str, limit: int, source: SourceConfig) -> list[dict[str, A
 
 
 def _export_jobs(jobs: list[dict[str, Any]], source: SourceConfig, query: str, callback_base: str) -> tuple[int, list[str]]:
-    api_token = os.getenv("LARAVEL_API_TOKEN", "")
-    import_url = f"{callback_base}/jobs/import"
     errors: list[str] = []
     stored = 0
+
+    if not jobs:
+        return 0, []
+
+    api_token = os.getenv("LARAVEL_API_TOKEN", "")
+    import_url = f"{callback_base}/jobs/import"
 
     if not api_token:
         return 0, ["LARAVEL_API_TOKEN is not configured; refusing to export jobs"]
