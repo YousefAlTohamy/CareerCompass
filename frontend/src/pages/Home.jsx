@@ -514,31 +514,37 @@ export default function Home() {
               <div className="cc-terminal__status-item">
                 <div>
                   <div className="cc-terminal__status-label">{t('home.contact.uplink_label')}</div>
-                  <div className="cc-terminal__status-bar"><div className="cc-terminal__status-progress" style={{ width: '85%' }} /></div>
+                  <div style={{ fontFamily: 'var(--cc-mono)', fontSize: 10, color: 'var(--cc-text-tertiary)', marginTop: 6 }}>
+                    {t('home.contact.uplink_note')}
+                  </div>
                 </div>
                 <div className="cc-terminal__status-value">{t('home.contact.uplink_active')}</div>
               </div>
               <div className="cc-terminal__status-item" style={{ marginTop: 16 }}>
                 <div>
                   <div className="cc-terminal__status-label">{t('home.contact.encryption_label')}</div>
-                  <div className="cc-terminal__status-bar"><div className="cc-terminal__status-progress" style={{ width: '100%', background: '#28c840' }} /></div>
+                  <div style={{ fontFamily: 'var(--cc-mono)', fontSize: 10, color: 'var(--cc-text-tertiary)', marginTop: 6 }}>
+                    {t('home.contact.encryption_note')}
+                  </div>
                 </div>
-                <div className="cc-terminal__status-value">Demo form</div>
+                <div className="cc-terminal__status-value">{t('home.contact.demo_form_value')}</div>
               </div>
               <div className="cc-terminal__status-item" style={{ marginTop: 16 }}>
                 <div>
                   <div className="cc-terminal__status-label">{t('home.contact.latency_label')}</div>
-                  <div className="cc-terminal__status-bar"><div className="cc-terminal__status-progress" style={{ width: '12%', background: '#febc2e' }} /></div>
+                  <div style={{ fontFamily: 'var(--cc-mono)', fontSize: 10, color: 'var(--cc-text-tertiary)', marginTop: 6 }}>
+                    {t('home.contact.latency_note')}
+                  </div>
                 </div>
-                <div className="cc-terminal__status-value">Not measured</div>
+                <div className="cc-terminal__status-value">{t('home.contact.not_measured_value')}</div>
               </div>
             </div>
 
             <div style={{ marginTop: 'auto', borderTop: '1px solid rgba(0, 210, 255, 0.08)', paddingTop: 20 }}>
               <div className="cc-terminal__status-label" style={{ marginBottom: 8 }}>{t('home.contact.secure_port')}</div>
               <div style={{ fontFamily: 'var(--cc-mono)', fontSize: 10, color: 'var(--cc-text-tertiary)' }}>
-                Graduation demo <br/>
-                No live message backend
+                {t('home.contact.demo_context')} <br/>
+                {t('home.contact.no_backend')}
               </div>
             </div>
           </div>

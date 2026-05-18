@@ -66,6 +66,12 @@ export default function SystemStatus() {
         ? `Current check: ${new Date(health.checkedAt).toLocaleString()}`
         : t('status_page.loading', 'Checking status...');
 
+    const statusTitle = health.loading
+        ? t('status_page.title_checking', 'Checking demo service status')
+        : health.ready
+            ? t('status_page.title_operational', 'Demo systems are operational')
+            : t('status_page.title_attention', 'Some demo checks need attention');
+
     const systems = useMemo(() => {
         const statusLabel = (check, fallback = 'operational') => {
             if (health.loading) {
@@ -127,7 +133,7 @@ export default function SystemStatus() {
                             </motion.div>
                             
                             <h1 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white leading-tight tracking-tighter">
-                                {t('status_page.title')}
+                                {statusTitle}
                             </h1>
                             <p className="text-slate-500 dark:text-slate-400 font-medium">
                                 {health.loading ? t('status_page.loading', 'Checking status...') : (health.error || checkedLabel)}
