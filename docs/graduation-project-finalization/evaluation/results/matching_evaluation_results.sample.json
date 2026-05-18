@@ -1,0 +1,154 @@
+{
+  "counts": {
+    "by_human_fit": {
+      "High": 2,
+      "Low": 1,
+      "Medium": 1
+    },
+    "extra_prediction_ids": [],
+    "gold_items": 4,
+    "missing_predictions": 0,
+    "prediction_items": 4
+  },
+  "metadata": {
+    "note": "Metrics are computed only from the provided matching labels and predictions. Sample files are not final benchmark results.",
+    "report_type": "matching_evaluation"
+  },
+  "overall": {
+    "average_rank_by_fit": {
+      "High": 1.5,
+      "Low": 8.0,
+      "Medium": 4.0
+    },
+    "average_score_by_fit": {
+      "High": 82.0,
+      "Low": 22.0,
+      "Medium": 54.0
+    },
+    "macro_matched_core_skill_recall": 0.5833333333333334,
+    "macro_missing_skill_recall": 0.9166666666666666,
+    "rank_sanity": "pass",
+    "score_sanity": "pass"
+  },
+  "per_case": [
+    {
+      "case_id": "MATCH-SAMPLE-001",
+      "cv_id": "CV-SAMPLE-001",
+      "expected_core_skills": [
+        "laravel",
+        "mysql",
+        "php",
+        "rest api"
+      ],
+      "expected_missing_skills": [
+        "testing"
+      ],
+      "human_fit": "High",
+      "job_id": "JOB-SAMPLE-BACKEND",
+      "matched_core_skill_recall": 1.0,
+      "matched_core_skills": [
+        "laravel",
+        "mysql",
+        "php",
+        "rest api"
+      ],
+      "method": "hybrid",
+      "missing_prediction": false,
+      "missing_skill_recall": 1.0,
+      "rank_position": 1.0,
+      "recalled_missing_skills": [
+        "testing"
+      ],
+      "score": 86.0
+    },
+    {
+      "case_id": "MATCH-SAMPLE-002",
+      "cv_id": "CV-SAMPLE-002",
+      "expected_core_skills": [
+        "laravel",
+        "mysql",
+        "php",
+        "rest api"
+      ],
+      "expected_missing_skills": [
+        "laravel",
+        "mysql",
+        "php"
+      ],
+      "human_fit": "Medium",
+      "job_id": "JOB-SAMPLE-BACKEND",
+      "matched_core_skill_recall": 0.25,
+      "matched_core_skills": [
+        "rest api"
+      ],
+      "method": "hybrid",
+      "missing_prediction": false,
+      "missing_skill_recall": 1.0,
+      "rank_position": 4.0,
+      "recalled_missing_skills": [
+        "laravel",
+        "mysql",
+        "php"
+      ],
+      "score": 54.0
+    },
+    {
+      "case_id": "MATCH-SAMPLE-003",
+      "cv_id": "CV-SAMPLE-003",
+      "expected_core_skills": [
+        "machine learning",
+        "nlp",
+        "python"
+      ],
+      "expected_missing_skills": [
+        "deep learning",
+        "machine learning",
+        "nlp"
+      ],
+      "human_fit": "Low",
+      "job_id": "JOB-SAMPLE-ML",
+      "matched_core_skill_recall": 0.3333333333333333,
+      "matched_core_skills": [
+        "python"
+      ],
+      "method": "hybrid",
+      "missing_prediction": false,
+      "missing_skill_recall": 0.6666666666666666,
+      "rank_position": 8.0,
+      "recalled_missing_skills": [
+        "machine learning",
+        "nlp"
+      ],
+      "score": 22.0
+    },
+    {
+      "case_id": "MATCH-SAMPLE-004",
+      "cv_id": "CV-SAMPLE-004",
+      "expected_core_skills": [
+        "aws",
+        "ci/cd",
+        "docker",
+        "linux"
+      ],
+      "expected_missing_skills": [
+        "terraform"
+      ],
+      "human_fit": "High",
+      "job_id": "JOB-SAMPLE-DEVOPS",
+      "matched_core_skill_recall": 0.75,
+      "matched_core_skills": [
+        "aws",
+        "docker",
+        "linux"
+      ],
+      "method": "hybrid",
+      "missing_prediction": false,
+      "missing_skill_recall": 1.0,
+      "rank_position": 2.0,
+      "recalled_missing_skills": [
+        "terraform"
+      ],
+      "score": 78.0
+    }
+  ]
+}

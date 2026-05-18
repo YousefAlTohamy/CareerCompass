@@ -1,0 +1,44 @@
+{
+  "metadata": {
+    "dataset_type": "sample_matching_gold_labels",
+    "description": "Synthetic sample job-fit labels for verifying the evaluation script. Not final results."
+  },
+  "items": [
+    {
+      "case_id": "MATCH-SAMPLE-001",
+      "cv_id": "CV-SAMPLE-001",
+      "job_id": "JOB-SAMPLE-BACKEND",
+      "human_fit": "High",
+      "expected_core_skills": ["PHP", "Laravel", "MySQL", "REST API"],
+      "expected_missing_skills": ["Testing"],
+      "notes": "Backend CV has most required Laravel API skills."
+    },
+    {
+      "case_id": "MATCH-SAMPLE-002",
+      "cv_id": "CV-SAMPLE-002",
+      "job_id": "JOB-SAMPLE-BACKEND",
+      "human_fit": "Medium",
+      "expected_core_skills": ["PHP", "Laravel", "MySQL", "REST API"],
+      "expected_missing_skills": ["PHP", "Laravel", "MySQL"],
+      "notes": "Frontend CV has related web skills but misses backend framework/database requirements."
+    },
+    {
+      "case_id": "MATCH-SAMPLE-003",
+      "cv_id": "CV-SAMPLE-003",
+      "job_id": "JOB-SAMPLE-ML",
+      "human_fit": "Low",
+      "expected_core_skills": ["Python", "Machine Learning", "NLP"],
+      "expected_missing_skills": ["Machine Learning", "NLP", "Deep Learning"],
+      "notes": "Data analyst CV has Python but lacks the core AI/ML requirements."
+    },
+    {
+      "case_id": "MATCH-SAMPLE-004",
+      "cv_id": "CV-SAMPLE-004",
+      "job_id": "JOB-SAMPLE-DEVOPS",
+      "human_fit": "High",
+      "expected_core_skills": ["Docker", "Linux", "AWS", "CI/CD"],
+      "expected_missing_skills": ["Terraform"],
+      "notes": "DevOps CV covers most core infrastructure skills but misses Terraform."
+    }
+  ]
+}

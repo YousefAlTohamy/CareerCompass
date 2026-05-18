@@ -90,12 +90,17 @@ deployment checklist.
 
 ## AI/Matching Evaluation Checks
 
+- [x] Create the graduation evaluation framework under
+      `docs/graduation-project-finalization/evaluation/`.
+- [x] Provide CV extraction and matching evaluation scripts.
 - [ ] Prepare manual labeling instructions for CV skills and target roles.
 - [ ] Prepare an evaluation table template for precision, recall, F1-score, role
       prediction accuracy, and parsing status correctness.
 - [ ] Prepare manual fit labels for matching: High, Medium, and Low.
 - [ ] Prepare an ablation table template for skill overlap, TF-IDF only,
       semantic similarity only, and hybrid matching.
+- [ ] Generate final measured evaluation results before the defense if the team
+      wants to present numbers.
 - [ ] Confirm the demo explanation distinguishes measured results from planned
       evaluation work.
 

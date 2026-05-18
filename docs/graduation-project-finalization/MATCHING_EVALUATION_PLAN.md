@@ -102,6 +102,22 @@ to defend than an unexplained score.
 6. Review matched/missing skill explanations.
 7. Document disagreement examples honestly.
 
+## Implemented Evaluation Framework
+
+An initial graduation evaluation framework is available at:
+
+`docs/graduation-project-finalization/evaluation/`
+
+It includes:
+
+- Sample matching gold labels and prediction templates.
+- `evaluate_matching.py` for High/Medium/Low score sanity, ranking sanity,
+  matched core skill checks, and missing skill recall.
+- Runbook and labeling guides for preparing real job-fit evaluation cases.
+
+No final matching or gap-analysis results are claimed yet. The sample files
+exist only to verify that the framework and scripts run correctly.
+
 ## Limitations
 
 - Human labels may be subjective.

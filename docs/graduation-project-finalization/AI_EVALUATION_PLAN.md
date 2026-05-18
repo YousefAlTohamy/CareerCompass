@@ -137,6 +137,22 @@ This matters because honest status reporting is part of system quality.
 | CV-001 | success | TBD | TBD | Clean text PDF |
 | CV-010 | no_text or ocr_fallback | TBD | TBD | Scanned document |
 
+## Implemented Evaluation Framework
+
+An initial graduation evaluation framework is available at:
+
+`docs/graduation-project-finalization/evaluation/`
+
+It includes:
+
+- Sample CV gold labels and prediction templates.
+- `evaluate_cv_extraction.py` for skill extraction precision/recall/F1,
+  role prediction accuracy, and parsing status accuracy.
+- Runbook and labeling guides for preparing a real evaluation dataset.
+
+No final CV Analyzer results are claimed yet. The sample files exist only to
+verify that the framework and scripts run correctly.
+
 ## Limitations
 
 - The graduation dataset will likely be small.
