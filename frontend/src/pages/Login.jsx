@@ -74,7 +74,7 @@ export default function Login() {
             <div className={`flex ${isRtl ? 'space-x-reverse -space-x-3' : '-space-x-3'}`}>
               <div className="w-10 h-10 rounded-full border-2 border-slate-900 bg-indigo-500"></div>
               <div className="w-10 h-10 rounded-full border-2 border-slate-900 bg-emerald-500"></div>
-              <div className="w-10 h-10 rounded-full border-2 border-slate-900 bg-fuchsia-500 flex items-center justify-center text-white text-xs">+2k</div>
+              <div className="w-10 h-10 rounded-full border-2 border-slate-900 bg-fuchsia-500 flex items-center justify-center text-white text-[10px] font-black">Demo</div>
             </div>
             <span>{t('auth.professionals_joined')}</span>
           </div>

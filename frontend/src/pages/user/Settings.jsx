@@ -198,7 +198,7 @@ export default function Settings() {
                ))}
                <div className="p-6 glass-card !rounded-2xl border-dashed border-slate-200 dark:border-white/5 mt-8 text-center space-y-2 opacity-50">
                   <Database size={24} className="mx-auto text-indigo-500" />
-                  <p className="text-[8px] font-black uppercase leading-tight">Neural synchronization active. All changes are encrypted.</p>
+                  <p className="text-[8px] font-black uppercase leading-tight">Profile updates are saved to your account.</p>
                </div>
             </div>
 
@@ -345,8 +345,8 @@ export default function Settings() {
                      {activeTab === 'skills' && (
                         <div className="space-y-8 text-start">
                            <div className="space-y-2">
-                              <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Neural Skills Matrix</h2>
-                              <p className="text-xs font-medium text-slate-500">Add or remove competencies from your core sync profile.</p>
+                              <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Skills Matrix</h2>
+                              <p className="text-xs font-medium text-slate-500">Add or remove competencies from your profile data.</p>
                            </div>
 
                            <div className="space-y-6">

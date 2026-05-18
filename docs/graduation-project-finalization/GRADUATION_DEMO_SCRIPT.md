@@ -34,8 +34,9 @@ evidence from the app.
    - Upload the prepared technical CV.
    - Explain that Laravel receives the file, stores it, and sends it to the
      Python AI CV Analyzer.
-   - If processing takes time, explain that CV analysis may be asynchronous or
-     service-dependent depending on the current flow.
+   - If processing takes time, explain that CV analysis is service-dependent
+     and may use timeout/recovery handling; a fully asynchronous progress flow
+     is future work.
 
 5. Show extracted profile/skills.
    - Open the profile or dashboard area that shows parsed CV data.

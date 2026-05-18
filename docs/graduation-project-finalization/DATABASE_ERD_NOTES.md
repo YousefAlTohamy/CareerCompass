@@ -26,6 +26,9 @@ is prepared.
 
 - One `user` has one `user_profile`.
 - One `user` can have many `cv_analyses`.
+- The application can store multiple CV analyses historically through
+  `cvAnalyses`, while `cvAnalysis` refers to the latest analysis used by the
+  current user flow.
 - One `user` can have many `applications`.
 - One `user` can have many `skills` through `user_skills`.
 - One `skill` can belong to many users through `user_skills`.

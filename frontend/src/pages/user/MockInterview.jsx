@@ -58,13 +58,13 @@ export default function MockInterview() {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-lg text-[10px] font-black uppercase tracking-widest text-fuchsia-500 mb-3">
-              <BrainCircuit size={14} className="animate-pulse" /> {t('mock_interview.neural_engine', 'Neural Interview Engine')}
+              <BrainCircuit size={14} className="animate-pulse" /> {t('mock_interview.neural_engine', 'Interview Practice Preview')}
             </div>
             <h1 className="text-3xl md:text-4xl font-black text-slate-800 dark:text-white tracking-tight">
               {t('mock_interview.title', 'AI Mock Interview')}
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">
-              {t('mock_interview.subtitle', 'Preview a guided interview flow. Live video analysis and scored reports are planned for the production product.')}
+              {t('mock_interview.subtitle', 'Preview a guided interview flow. Video analysis and scored reports are planned for the production product.')}
             </p>
           </div>
         </div>
@@ -160,7 +160,7 @@ export default function MockInterview() {
                 <div className="p-6 border-b border-slate-200 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/5">
                   <div className="flex items-center gap-2">
                     <MessageSquare size={18} className="text-indigo-500" />
-                    <h3 className="font-black uppercase tracking-widest text-xs">{t('mock_interview.transcript', 'Live Transcript')}</h3>
+                    <h3 className="font-black uppercase tracking-widest text-xs">{t('mock_interview.transcript', 'Practice Transcript')}</h3>
                   </div>
                   <Activity size={18} className="text-emerald-500 animate-pulse" />
                 </div>
@@ -216,7 +216,7 @@ export default function MockInterview() {
                 </div>
                 <div>
                   <h2 className="text-3xl font-black uppercase tracking-tight">{t('mock_interview.session_complete', 'Session Complete')}</h2>
-                  <p className="text-slate-500 font-medium">{t('mock_interview.report_ready', 'Your neural performance report is ready.')}</p>
+                  <p className="text-slate-500 font-medium">{t('mock_interview.report_ready', 'Your practice summary is ready.')}</p>
                 </div>
               </div>
 
@@ -236,7 +236,7 @@ export default function MockInterview() {
               </div>
 
               <div className="space-y-6 bg-slate-50 dark:bg-white/5 p-8 rounded-3xl border border-slate-200 dark:border-white/5">
-                <h3 className="text-xl font-black uppercase tracking-tight flex items-center gap-2"><Sparkles className="text-indigo-500" size={20} /> AI Feedback</h3>
+                <h3 className="text-xl font-black uppercase tracking-tight flex items-center gap-2"><Sparkles className="text-indigo-500" size={20} /> Practice Feedback</h3>
                 <p className="text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
                   This preview captured your typed practice answers. A production evaluator should score clarity, technical depth, examples, and role alignment before this page presents real interview analytics.
                 </p>

@@ -43,7 +43,7 @@ export default function HUDLayout({ children, loading = false, loadingType = 'st
                  <div className="absolute w-20 h-20 border border-indigo-500/20 rounded-full animate-ping" />
                </motion.div>
                <div className="mt-8 text-center">
-                  <div className="text-[10px] font-black uppercase tracking-[0.5em] text-indigo-500 animate-pulse">Initializing Neural Link</div>
+                  <div className="text-[10px] font-black uppercase tracking-[0.5em] text-indigo-500 animate-pulse">Loading CareerCompass</div>
                </div>
             </div>
           </motion.div>

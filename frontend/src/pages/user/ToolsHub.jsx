@@ -20,7 +20,7 @@ export default function ToolsHub() {
     {
       id: 'cv-builder',
       title: t('tools.cv_builder', 'Smart CV Builder'),
-      desc: t('tools.cv_builder_desc', 'Preview workspace for drafting a CV layout. Upload your real CV from the dashboard for live AI analysis.'),
+      desc: t('tools.cv_builder_desc', 'Preview workspace for drafting a CV layout. Upload your real CV from the dashboard for structured CV analysis.'),
       icon: FileText,
       color: 'indigo',
       path: '/cv-builder'
@@ -28,7 +28,7 @@ export default function ToolsHub() {
     {
       id: 'mock-interview',
       title: t('tools.mock_interview', 'Mock Interview AI'),
-      desc: t('tools.mock_interview_desc', 'Preview interview simulator with guided prompts. Scores are illustrative until the live evaluator is connected.'),
+      desc: t('tools.mock_interview_desc', 'Preview interview simulator with guided prompts. Scores are illustrative until the evaluator is connected.'),
       icon: Video,
       color: 'fuchsia',
       path: '/mock-interview'
@@ -52,7 +52,7 @@ export default function ToolsHub() {
     {
       id: 'mentorship',
       title: t('tools.mentorship', 'Mentorship'),
-      desc: t('tools.mentorship_desc', 'Preview mentor marketplace concept. Booking is not live yet.'),
+      desc: t('tools.mentorship_desc', 'Preview mentor marketplace concept. Booking is not connected yet.'),
       icon: Users,
       color: 'blue',
       path: '/mentorship'
@@ -73,7 +73,7 @@ export default function ToolsHub() {
               {t('tools.title', 'Career Tools Preview')}
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium mt-1 max-w-xl">
-              {t('tools.subtitle', 'These pages remain available for the graduation demo, but each one clearly marks what is live now versus planned for the production product.')}
+              {t('tools.subtitle', 'These pages remain available for the graduation demo, and each one clearly marks what is available now versus planned after graduation.')}
             </p>
           </div>
         </div>

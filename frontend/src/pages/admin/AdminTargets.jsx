@@ -157,7 +157,7 @@ const AdminTargets = () => {
                 className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-slate-700 dark:text-white font-black placeholder-slate-400 text-[10px] uppercase tracking-widest"
               />
               {newRoleName.trim() && (
-                <button type="submit" className="ml-2 text-[10px] font-black text-indigo-500 animate-pulse">EXECUTE</button>
+                <button type="submit" className="ml-2 text-[10px] font-black text-indigo-500 animate-pulse">ADD</button>
               )}
             </div>
           </form>

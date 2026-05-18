@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -491,7 +491,7 @@ const getDiagnosticGroups = (results) => ({
               {t('nav.admin_sources')} <span className="text-fuchsia-600 dark:text-fuchsia-400">{t('admin.neural_matrix')}</span>
             </h1>
             <p className="text-slate-500 dark:text-slate-400 mt-3 text-sm font-medium max-w-lg">
-              {t('dashboard.market')}
+              Source diagnostics for imported jobs, API/demo baselines, blocked public pages, and extraction health.
             </p>
           </div>
 
@@ -516,7 +516,7 @@ const getDiagnosticGroups = (results) => ({
                className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-all shadow-premium text-[11px] font-black uppercase tracking-widest shrink-0"
              >
                <Plus size={16} />
-               Node
+               Source
              </button>
           </div>
         </motion.div>
@@ -588,11 +588,11 @@ const getDiagnosticGroups = (results) => ({
             <table className="w-full text-left border-collapse min-w-[900px]">
               <thead>
                 <tr className="bg-slate-50 dark:bg-white/5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 border-b border-slate-200 dark:border-white/10">
-                  <th className="p-6">{t('admin.node_config', 'Node Config')}</th>
+                  <th className="p-6">{t('admin.node_config', 'Source Config')}</th>
                   <th className="p-6">{t('admin.protocols', 'Protocols')}</th>
                   <th className="p-6">{t('admin.endpoint_access', 'Endpoint Access')}</th>
                   <th className="p-6">{t('sources.col_health', 'Ingestion Health')}</th>
-                  <th className="p-6 text-center">{t('admin.neural_state', 'Neural State')}</th>
+                  <th className="p-6 text-center">{t('admin.neural_state', 'Source State')}</th>
                   <th className="p-6 text-right">{t('admin.operations', 'Operations')}</th>
                 </tr>
               </thead>
@@ -845,7 +845,7 @@ const getDiagnosticGroups = (results) => ({
                 <div className="p-8 border-b border-white/5 flex justify-between items-center bg-slate-50 dark:bg-white/5">
                    <div>
                      <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">
-                       {editingSource ? "Edit Node" : "Register Node"}
+                       {editingSource ? "Edit Source" : "Register Source"}
                      </h2>
                      <p className="text-[10px] font-black text-fuchsia-500 uppercase tracking-widest mt-1">Source Authentication & Config</p>
                    </div>
@@ -857,14 +857,14 @@ const getDiagnosticGroups = (results) => ({
                 <div className="p-8 space-y-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ps-1">Node Identity</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ps-1">Source Identity</label>
                         <input
                           type="text"
                           required
                           value={formData.name}
                           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                           className="w-full px-5 py-3 bg-slate-100 dark:bg-white/5 border border-transparent dark:border-white/5 rounded-2xl focus:border-fuchsia-500 outline-none transition-all text-sm font-bold"
-                          placeholder="Node Name"
+                          placeholder="Source Name"
                         />
                       </div>
                       <div className="space-y-2">
@@ -890,7 +890,7 @@ const getDiagnosticGroups = (results) => ({
                         value={formData.endpoint}
                         onChange={(e) => setFormData({ ...formData, endpoint: e.target.value })}
                         className="w-full px-5 py-3 bg-slate-100 dark:bg-white/5 border border-transparent dark:border-white/5 rounded-2xl focus:border-fuchsia-500 outline-none transition-all text-sm font-mono"
-                        placeholder="https://ext.api.node/v1/... or demo://careercompass/jobs"
+                        placeholder="https://api.example.com/jobs or demo://careercompass/jobs"
                       />
                    </div>
 
@@ -903,7 +903,7 @@ const getDiagnosticGroups = (results) => ({
                           className="w-full px-5 py-3 bg-slate-100 dark:bg-white/5 border border-transparent dark:border-white/5 rounded-2xl focus:border-fuchsia-500 outline-none transition-all text-sm font-bold"
                         >
                           <option value="static">Static Endpoint</option>
-                          <option value="discovery">Neural Discovery</option>
+                          <option value="discovery">Discovery Pattern</option>
                         </select>
                       </div>
                       <div className="space-y-2">
@@ -952,7 +952,7 @@ const getDiagnosticGroups = (results) => ({
                           value={formData.headers}
                           onChange={(e) => setFormData({ ...formData, headers: e.target.value })}
                           className="w-full px-5 py-4 bg-slate-900 text-fuchsia-400 border border-white/5 rounded-2xl outline-none font-mono text-xs custom-scrollbar"
-                          placeholder='{"Authorization": "Bearer NODE_KEY"}'
+                          placeholder='{"Authorization": "Bearer API_KEY"}'
                         />
                       </div>
                       <div className="space-y-2">
@@ -970,7 +970,7 @@ const getDiagnosticGroups = (results) => ({
 
                 <div className="p-8 bg-slate-50 dark:bg-white/5 border-t border-white/5 flex justify-end gap-4">
                    <button type="button" onClick={() => setIsModalOpen(false)} className="px-8 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-200 dark:hover:bg-white/5 transition-all">Cancel</button>
-                   <button type="submit" className="px-8 py-3 bg-fuchsia-600 text-white rounded-2xl hover:bg-fuchsia-700 shadow-premium text-[11px] font-black uppercase tracking-widest transition-all">Synchronize Node</button>
+                   <button type="submit" className="px-8 py-3 bg-fuchsia-600 text-white rounded-2xl hover:bg-fuchsia-700 shadow-premium text-[11px] font-black uppercase tracking-widest transition-all">Save Source</button>
                 </div>
               </form>
             </motion.div>
@@ -1020,7 +1020,7 @@ const getDiagnosticGroups = (results) => ({
                            <Radar size={64} className="text-emerald-500 animate-pulse" />
                         </div>
                         <div className="flex flex-col items-center gap-2 text-center">
-                           <div className="text-emerald-600 dark:text-emerald-500 font-black tracking-widest uppercase">SCANNING_ACTIVE_NODES...</div>
+                           <div className="text-emerald-600 dark:text-emerald-500 font-black tracking-widest uppercase">CHECKING_ACTIVE_SOURCES...</div>
                            <div className="text-slate-500 dark:text-slate-400 text-[10px]">Pinging endpoints and verifying extraction layers</div>
                         </div>
                      </div>

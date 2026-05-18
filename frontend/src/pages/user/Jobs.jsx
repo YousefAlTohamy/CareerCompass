@@ -1,11 +1,11 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
   Search, MapPin, Briefcase, Clock, DollarSign, Filter, 
-  ChevronRight, Bookmark, CheckCircle2, Star, Zap, Info,
-  ExternalLink, ArrowLeft, Target, Cpu, Database, Activity, RefreshCw, XCircle,
-  AlertCircle, Sparkles, TrendingUp, LayoutGrid, List, Layers, ShieldCheck, Globe
+  ChevronRight, Bookmark, CheckCircle2, Info,
+  ExternalLink, Target, Cpu, Database, Activity, XCircle,
+  AlertCircle, Sparkles, TrendingUp, Layers, ShieldCheck
 } from 'lucide-react';
 import { jobsAPI, gapAnalysisAPI } from '../../api/endpoints';
 import applicationsAPI from '../../api/applications';
@@ -81,13 +81,13 @@ const MatchGauge = ({ score }) => {
           />
         ))}
       </div>
-      <span className={`text-[8px] font-black tracking-tighter ${color} uppercase`}>{score}% SYNC</span>
+      <span className={`text-[8px] font-black tracking-tighter ${color} uppercase`}>{score}% est. match</span>
     </div>
   );
 };
 
 // --- TOAST COMPONENT ---
-const Toast = ({ toast, onClose }) => (
+const Toast = ({ toast }) => (
   <AnimatePresence>
     {toast.show && (
       <motion.div 
@@ -228,7 +228,8 @@ export default function Jobs() {
         await loadTrackedApplications();
       }
       showToast('Opportunity saved to your tracker.');
-    } catch (err) { 
+    } catch (err) {
+      console.error('Failed to save opportunity:', err);
       showToast(t('jobs.error_save'), 'error'); 
     }
   };
@@ -241,7 +242,7 @@ export default function Jobs() {
 
   return (
     <HUDLayout loading={loading} loadingType="standard">
-      <Toast toast={toast} onClose={() => setToast((t) => ({ ...t, show: false }))} />
+      <Toast toast={toast} />
 
       <div className="max-w-7xl mx-auto px-4 pt-32 pb-20 space-y-12 relative z-10">
         
@@ -255,13 +256,13 @@ export default function Jobs() {
                    <div className="flex -space-x-1.5">
                       {[1,2,3].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_#6366f1]" />)}
                    </div>
-                   <span className="micro-typography text-indigo-600 dark:text-indigo-400 font-black tracking-[0.2em] uppercase text-[9px]">Market Scan // active_sync</span>
+                   <span className="micro-typography text-indigo-600 dark:text-indigo-400 font-black tracking-[0.2em] uppercase text-[9px]">Imported jobs // CV-based matching</span>
                 </div>
                 <h1 className="text-4xl md:text-5xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 dark:from-white dark:via-indigo-200 dark:to-white uppercase italic">
-                   {t('nav.jobs')} <span className="text-indigo-600 dark:text-indigo-400">Command</span>
+                   {t('nav.jobs')} <span className="text-indigo-600 dark:text-indigo-400">Recommendations</span>
                 </h1>
                 <p className="text-slate-500 dark:text-slate-400 text-base font-medium max-w-lg leading-relaxed">
-                   {t('jobs.subtitle', 'Scanning global job market with advanced neural matching algorithms.')}
+                   {t('jobs.subtitle', 'Matching uses extracted CV skills, profile context, semantic similarity, and TF-IDF scoring where available.')}
                 </p>
                 {!searchQuery && recommendationMeta && (
                   <p className="text-xs font-bold text-indigo-600 dark:text-indigo-300 max-w-xl">
@@ -295,8 +296,8 @@ export default function Jobs() {
                 <div className="absolute inset-0 bg-indigo-500/10 rounded-3xl rotate-6 border border-indigo-500/20 animate-pulse" />
                 <div className="relative h-full w-full glass-card !rounded-3xl border-white/10 flex flex-col items-center justify-center gap-2 text-center bg-white/30 dark:bg-white/5 backdrop-blur-xl">
                    <Activity className="text-indigo-500" size={32} />
-                   <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Global Flow</p>
-                   <p className="text-xl font-black text-slate-800 dark:text-white leading-none tabular-nums">12.4k</p>
+                   <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Visible jobs</p>
+                   <p className="text-xl font-black text-slate-800 dark:text-white leading-none tabular-nums">{jobs.length}</p>
                 </div>
              </div>
           </div>
@@ -308,7 +309,7 @@ export default function Jobs() {
             {/* MANIFEST (Left) */}
             <div className="lg:col-span-4 space-y-4">
                <div className="flex items-center justify-between px-2">
-                  <h3 className="micro-typography text-slate-500 font-black tracking-[0.2em] uppercase text-[9px]">{t('jobs.manifest', 'MANIFEST')} [{jobs.length}]</h3>
+                  <h3 className="micro-typography text-slate-500 font-black tracking-[0.2em] uppercase text-[9px]">{t('jobs.manifest', 'VISIBLE JOBS')} [{jobs.length}]</h3>
                   <Filter size={14} className="text-slate-400" />
                </div>
 
@@ -317,7 +318,7 @@ export default function Jobs() {
                     {jobs.length === 0 ? (
                       <HUDEmptyState 
                         icon={Search}
-                        title={t('jobs.no_results_criteria', 'No Signals Detected')}
+                        title={t('jobs.no_results_criteria', 'No Jobs Found')}
                         description={t('common.no_data_desc')}
                       />
                     ) : jobs.map((job, idx) => (
@@ -342,7 +343,7 @@ export default function Jobs() {
                          </div>
                          <div className="flex flex-wrap items-center gap-3 text-[8px] font-black text-slate-400 uppercase tracking-tighter">
                             <span className="flex items-center gap-1"><MapPin size={10} className="text-indigo-500" /> {job.location || 'Remote'}</span>
-                            <span className="flex items-center gap-1"><Clock size={10} className="text-fuchsia-500" /> {job.job_type ? formatValue(job.job_type).slice(0,4) : 'SYNC'}</span>
+                            <span className="flex items-center gap-1"><Clock size={10} className="text-fuchsia-500" /> {job.job_type ? formatValue(job.job_type).slice(0,4) : 'N/A'}</span>
                          </div>
                          <div className="pt-2 border-t border-slate-100 dark:border-white/5">
                             <MatchGauge score={getJobMatchScore(job)} />
@@ -423,20 +424,20 @@ export default function Jobs() {
                                    </div>
                                 </div>
                                 <div className="space-y-1">
-                                   <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{t('gap_analysis.neural_alignment')}</h4>
-                                   <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Synced with your neural profile data.</p>
+                                   <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{t('gap_analysis.neural_alignment', 'Estimated CV/job alignment')}</h4>
+                                   <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Based on your extracted CV/profile data.</p>
                                 </div>
                              </div>
                              <div className="glass-card !rounded-2xl p-4 flex flex-col items-center justify-center gap-2 shadow-sm">
                                 <TrendingUp size={24} className="text-fuchsia-500" />
-                                <p className="text-xs font-black uppercase italic">Hot_Opp</p>
+                                <p className="text-xs font-black uppercase italic">Imported</p>
                              </div>
                           </div>
 
                           <div className="space-y-4">
                              <div className="flex items-center gap-2">
                                 <Sparkles className="text-indigo-500" size={16} />
-                                <h4 className="text-[9px] font-black text-slate-900 dark:text-white uppercase tracking-[0.4em]">AI_SYNTHESIS</h4>
+                                <h4 className="text-[9px] font-black text-slate-900 dark:text-white uppercase tracking-[0.4em]">MATCH_SUMMARY</h4>
                                 <div className="h-px flex-1 bg-slate-100 dark:bg-white/5" />
                              </div>
 
@@ -466,7 +467,7 @@ export default function Jobs() {
                                      </div>
                                   </div>
                                   <button onClick={() => navigate(`/gap-analysis/${selectedJob.id}`)} className="w-full py-4 glass-card !rounded-2xl border-indigo-500/40 hover:bg-indigo-600 hover:text-white text-indigo-600 dark:text-indigo-400 font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2">
-                                     {t('jobs.view_detailed_report', 'View Detailed Neural Report')} <ChevronRight size={16} />
+                                     {t('jobs.view_detailed_report', 'View Detailed Gap Report')} <ChevronRight size={16} />
                                   </button>
                                </motion.div>
                              )}
@@ -516,8 +517,8 @@ export default function Jobs() {
                   ) : (
                     <div className="glass-card border-2 border-dashed border-slate-200 dark:border-white/5 flex flex-col items-center justify-center text-center p-20 !rounded-[2.5rem] opacity-40 h-[700px]">
                        <Database size={48} className="text-indigo-500 mb-4" strokeWidth={1} />
-                       <h3 className="text-sm font-black uppercase tracking-tighter mb-1">Initialization Required</h3>
-                       <p className="max-w-xs text-[10px] font-medium text-slate-500">Select an entry from the manifest to begin.</p>
+                       <h3 className="text-sm font-black uppercase tracking-tighter mb-1">Selection Required</h3>
+                       <p className="max-w-xs text-[10px] font-medium text-slate-500">Select a job from the visible list to begin.</p>
                     </div>
                   )}
                </AnimatePresence>

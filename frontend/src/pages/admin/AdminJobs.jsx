@@ -167,7 +167,7 @@ const AdminJobs = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-1">
             <h1 className="text-4xl font-black tracking-tight text-slate-900 dark:text-white leading-tight">{t('admin.stats.jobs')}</h1>
-            <p className="text-slate-500 font-mono text-sm tracking-widest uppercase">// NEURAL_INDEX_STREAM</p>
+            <p className="text-slate-500 font-mono text-sm tracking-widest uppercase">// IMPORTED_JOB_INDEX</p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
@@ -313,7 +313,7 @@ const AdminJobs = () => {
                 {dlqLoading ? (
                   <div className="py-20 flex flex-col items-center justify-center space-y-4">
                     <RefreshCw className="text-[var(--cc-primary)] animate-spin" size={40} />
-                    <p className="text-xs font-mono text-slate-500">SYNCHRONIZING_SIGNAL_LOSS...</p>
+                    <p className="text-xs font-mono text-slate-500">LOADING_FAILED_JOB_RECORDS...</p>
                   </div>
                 ) : dlqData ? (
                   <div className="space-y-6">

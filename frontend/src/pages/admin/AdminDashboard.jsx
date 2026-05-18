@@ -1,18 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import {
-  Users,
-  Briefcase,
-  Database,
-  Target,
   TrendingUp,
   Activity,
   AlertCircle,
   Server,
   RefreshCw,
   LayoutDashboard,
-  HeartPulse,
   Zap,
   Loader2
 } from 'lucide-react';

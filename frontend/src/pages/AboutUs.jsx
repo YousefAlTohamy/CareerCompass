@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Compass, Target, Zap, Users, ShieldCheck, Globe, ArrowDown } from 'lucide-react';
+import { Compass, Target, ShieldCheck, Globe, ArrowDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import HUDLayout from '../components/HUDLayout';
 
@@ -118,10 +118,10 @@ export default function AboutUs() {
               
               <div className="pt-24 grid grid-cols-2 md:grid-cols-4 gap-12">
                  {[
-                   { val: "50k+", lbl: t('about_us.stats_jobs'), col: 'text-indigo-600 dark:text-indigo-400' },
-                   { val: "120+", lbl: t('about_us.stats_roles'), col: 'text-purple-600 dark:text-purple-400' },
-                   { val: "95%", lbl: t('about_us.stats_accuracy'), col: 'text-emerald-600 dark:text-emerald-400' },
-                   { val: "24/7", lbl: t('about_us.stats_updates'), col: 'text-amber-600 dark:text-amber-400' }
+                   { val: "Docker", lbl: t('about_us.stats_jobs'), col: 'text-indigo-600 dark:text-indigo-400' },
+                   { val: "AI/NLP", lbl: t('about_us.stats_roles'), col: 'text-purple-600 dark:text-purple-400' },
+                   { val: "Imported", lbl: t('about_us.stats_accuracy'), col: 'text-emerald-600 dark:text-emerald-400' },
+                   { val: "Planned", lbl: t('about_us.stats_updates'), col: 'text-amber-600 dark:text-amber-400' }
                  ].map((s, i) => (
                    <div key={i} className="space-y-3">
                       <div className={`text-4xl font-black ${s.col} tracking-tighter`}>{s.val}</div>

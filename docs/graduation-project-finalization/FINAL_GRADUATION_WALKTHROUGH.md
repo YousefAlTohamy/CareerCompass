@@ -18,6 +18,8 @@ actual result on the final demo machine.
 ## Health Checks
 
 - [ ] `http://localhost/api/health` works.
+- [ ] `http://localhost/api/ready` works.
+- [ ] `http://localhost/api/v1/health` works.
 - [ ] `http://localhost:8000/` works for the AI analyzer.
 - [ ] `http://localhost:8003/health` works for the job miner.
 - [ ] `http://localhost:9090/` works if Prometheus is part of the demo.

@@ -96,7 +96,7 @@ export default function Applications() {
                 <div className="flex -space-x-1.5">
                   {[1, 2, 3].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_#6366f1]" />)}
                 </div>
-                <span className="micro-typography text-indigo-600 dark:text-indigo-400 font-black tracking-[0.2em] uppercase text-[9px]">Mission Tracker // active_nodes</span>
+                <span className="micro-typography text-indigo-600 dark:text-indigo-400 font-black tracking-[0.2em] uppercase text-[9px]">Application tracker // saved opportunities</span>
               </div>
               <h1 className="text-4xl md:text-5xl font-black tracking-tighter leading-none bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 dark:from-white dark:via-indigo-200 dark:to-white">
                 {t('tracker.title')}
@@ -161,7 +161,7 @@ export default function Applications() {
               >
                 <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400"><Briefcase size={32} /></div>
                 <div className="space-y-1">
-                   <h3 className="text-xl font-black uppercase tracking-tight">{t('tracker.no_jobs', 'NO_DATA_NODES')}</h3>
+                   <h3 className="text-xl font-black uppercase tracking-tight">{t('tracker.no_jobs', 'NO_SAVED_OPPORTUNITIES')}</h3>
                    <p className="text-sm font-medium text-slate-400">{t('tracker.no_jobs_subtitle', 'Start by saving interesting opportunities from the hub.')}</p>
                 </div>
                 <Link to="/jobs" className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-indigo-500/20 hover:scale-105 transition-all">{t('tracker.find_jobs')}</Link>
@@ -184,7 +184,7 @@ export default function Applications() {
                   <div className="space-y-1 overflow-hidden">
                     <div className="flex items-center gap-2">
                        <span className="px-2 py-0.5 bg-slate-100 dark:bg-white/10 rounded text-[8px] font-black text-slate-500 uppercase">{app.job?.source || 'PORTAL'}</span>
-                       <span className="text-[8px] font-black text-slate-400">#NODE_{String(app.id).slice(0,6)}</span>
+                       <span className="text-[8px] font-black text-slate-400">#APP_{String(app.id).slice(0,6)}</span>
                     </div>
                     <h3 className="text-lg font-black tracking-tight text-slate-900 dark:text-white uppercase truncate group-hover:text-indigo-600 transition-colors">
                       {app.job?.title || 'Unknown Role'}
