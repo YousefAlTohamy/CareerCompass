@@ -17,6 +17,13 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
+      const message = this.state.error?.message || '';
+      const isChunkLoadError = /Failed to fetch dynamically imported module|Importing a module script failed|Loading chunk|ChunkLoadError/i.test(message);
+      const recoveryMessage = isChunkLoadError
+        ? 'The frontend bundle was updated. Please refresh the page.'
+        : (message || 'An unexpected runtime error occurred during synthesis.');
+      const buttonLabel = isChunkLoadError ? 'Refresh Page' : 'Re-initialize App';
+
       return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6 font-sans">
           <div className="glass-card p-10 max-w-md w-full border-rose-500/20 bg-white dark:bg-slate-900 shadow-2xl text-center space-y-8">
@@ -26,14 +33,14 @@ class ErrorBoundary extends React.Component {
             <div className="space-y-2">
               <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">SYSTEM_HALT</h1>
               <p className="text-slate-500 dark:text-slate-400 font-medium">
-                {this.state.error?.message || 'An unexpected runtime error occurred during synthesis.'}
+                {recoveryMessage}
               </p>
             </div>
             <button
               onClick={() => window.location.reload()}
               className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-indigo-500/20 flex items-center justify-center gap-3 transition-all"
             >
-              <RefreshCw size={18} /> Re-initialize App
+              <RefreshCw size={18} /> {buttonLabel}
             </button>
           </div>
         </div>
