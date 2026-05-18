@@ -12,6 +12,7 @@ curl.exe -I http://localhost/api/health
 curl.exe -I http://localhost/api/ready
 curl.exe -I http://localhost/api/v1/health
 curl.exe -I http://localhost:5173/
+curl.exe -I http://localhost:8000/
 curl.exe -I http://localhost:8003/health
 ```
 

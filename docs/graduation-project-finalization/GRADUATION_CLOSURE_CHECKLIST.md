@@ -22,6 +22,11 @@ deployment checklist.
 - [ ] Document the AI evaluation plan.
 - [ ] Document the matching evaluation plan.
 - [ ] Document the scraping source matrix.
+- [x] Create the final documentation index.
+- [x] Create the final report outline.
+- [x] Create the defense presentation outline.
+- [x] Create the defense readiness checklist.
+- [x] Document the project closure status.
 - [ ] Prepare a limitations slide.
 - [ ] Prepare a future work slide.
 - [ ] Run a final browser walkthrough.
@@ -85,6 +90,7 @@ deployment checklist.
 - [ ] Limitations and future work are honest and graduation-focused.
 - [x] Demo assets are documented under
       `docs/graduation-project-finalization/demo-assets/`.
+- [x] AI CV Analyzer health check is included in the final smoke test.
 
 ## UI Honesty Checks
 
