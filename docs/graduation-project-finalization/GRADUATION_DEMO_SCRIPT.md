@@ -4,6 +4,12 @@ This script is designed for a real graduation defense. Keep the pace calm:
 show the working system first, then explain architecture and limitations with
 evidence from the app.
 
+For the final rehearsed version of this flow, use
+[`demo-assets/FINAL_DEMO_FLOW.md`](demo-assets/FINAL_DEMO_FLOW.md). For quick
+recovery steps during the defense, keep
+[`demo-assets/DEMO_FAILURE_PLAYBOOK.md`](demo-assets/DEMO_FAILURE_PLAYBOOK.md)
+available.
+
 ## Before Starting
 
 - Start the Docker stack and wait for the app, backend, database, AI analyzer,

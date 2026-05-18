@@ -41,6 +41,7 @@ CareerCompass is prepared as a graduation system that demonstrates:
 | [MATCHING_EVALUATION_PLAN.md](MATCHING_EVALUATION_PLAN.md) | Academic evaluation plan for recommendation and gap-analysis behavior. |
 | [SCRAPING_SOURCE_MATRIX.md](SCRAPING_SOURCE_MATRIX.md) | Source matrix and honest demo behavior for API, demo, and public HTML scraping sources. |
 | [LIMITATIONS_AND_FUTURE_WORK.md](LIMITATIONS_AND_FUTURE_WORK.md) | Graduation-focused limitations and future work for defense slides and final report. |
+| [demo-assets/](demo-assets/) | Practical demo assets, synthetic CV/job plans, final flow, failure playbook, screenshots, talking points, and smoke-test checklist. |
 
 ## Suggested Use During Finalization
 
@@ -51,3 +52,5 @@ Use these documents as the closure pack for the project:
 3. Run the manual walkthrough on the final demo machine.
 4. Use the architecture, ERD, AI, matching, scraping, limitations, and future-work
    documents as supporting material for the final report and presentation.
+5. Use `demo-assets/` to rehearse the final defense flow and prepare fallback
+   screenshots before the demo.

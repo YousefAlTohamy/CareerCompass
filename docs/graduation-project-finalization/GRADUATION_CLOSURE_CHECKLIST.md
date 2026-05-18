@@ -10,6 +10,7 @@ deployment checklist.
       CV with formatting or missing sections.
 - [ ] Prepare a normal demo user account.
 - [ ] Prepare an admin demo account.
+- [ ] Prepare demo users locally with credentials kept outside git.
 - [ ] Confirm the public landing page, registration, login, dashboard, jobs,
       gap analysis, applications tracker, and admin pages load.
 - [ ] Remove fake/static UI metrics from dashboards and public pages, or clearly
@@ -25,6 +26,7 @@ deployment checklist.
 - [ ] Prepare a future work slide.
 - [ ] Run a final browser walkthrough.
 - [ ] Run a final smoke test.
+- [ ] Capture fallback screenshots before the defense.
 
 ## Should Do Before Defense
 
@@ -40,6 +42,10 @@ deployment checklist.
       behavior.
 - [ ] Prepare screenshots of the main flows in case the live demo machine has
       network or Docker problems.
+- [x] Prepare the graduation demo-assets documentation folder.
+- [x] Define synthetic CV personas for the final demo.
+- [x] Document the final smoke test checklist.
+- [x] Prepare the demo failure playbook.
 
 ## Nice To Have
 
@@ -77,6 +83,8 @@ deployment checklist.
 - [ ] Scraping source matrix separates reliable demo/API sources from public
       HTML sources that may be blocked.
 - [ ] Limitations and future work are honest and graduation-focused.
+- [x] Demo assets are documented under
+      `docs/graduation-project-finalization/demo-assets/`.
 
 ## UI Honesty Checks
 
