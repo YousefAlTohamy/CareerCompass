@@ -1,0 +1,32 @@
+{
+  "metadata": {
+    "dataset_type": "sample_prediction_template",
+    "description": "Synthetic/template predictions for verifying the evaluation script. Not real CareerCompass benchmark results."
+  },
+  "items": [
+    {
+      "cv_id": "CV-SAMPLE-001",
+      "predicted_role": "Laravel Developer",
+      "parsing_status": "success",
+      "skills": ["PHP", "Laravel", "MySQL", "REST APIs", "Docker", "API"]
+    },
+    {
+      "cv_id": "CV-SAMPLE-002",
+      "predicted_role": "React Developer",
+      "parsing_status": "success",
+      "skills": ["JS", "React.js", "HTML", "CSS"]
+    },
+    {
+      "cv_id": "CV-SAMPLE-003",
+      "predicted_role": "Data Analyst",
+      "parsing_status": "partial_success",
+      "skills": ["Python", "SQL", "Excel", "Tableau"]
+    },
+    {
+      "cv_id": "CV-SAMPLE-004",
+      "predicted_role": "Cloud Engineer",
+      "parsing_status": "ocr_fallback",
+      "skills": ["Docker", "Linux", "AWS", "Kubernetes"]
+    }
+  ]
+}

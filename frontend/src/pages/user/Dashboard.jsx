@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  RefreshCw, Target, Award, Zap, Compass, Activity, Globe, Eye
+  RefreshCw, Zap, Compass, Activity, Eye
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useTranslation } from "react-i18next";
@@ -301,7 +301,9 @@ export default function Dashboard() {
           <div className="space-y-2">
             <div className="flex items-center gap-3">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]" />
-                <span className="micro-typography text-emerald-600 dark:text-emerald-400">{t('hud_labels.core_systems')}: {t('hud_labels.active')}</span>
+                <span className="micro-typography text-emerald-600 dark:text-emerald-400">
+                  Profile data: {hasCvAnalysis ? 'Parsed CV available' : 'Awaiting CV upload'}
+                </span>
             </div>
             <h1 className="text-5xl font-black tracking-tighter leading-none">
               {t('dashboard.welcome', { name: (user?.name || "User").split(" ")[0] })}
@@ -325,7 +327,7 @@ export default function Dashboard() {
                 <RefreshCw size={18} className="text-indigo-600 dark:text-indigo-400 group-hover:rotate-180 transition-transform duration-500" />
                 <div className="flex flex-col items-start">
                    <span className="micro-typography text-indigo-600 dark:text-indigo-400 font-black">{uploadDisabled ? t('cv_analyzer.processing', 'PROCESSING') : t('cv_analyzer.update', 'UPDATE_CV')}</span>
-                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{t('hud_labels.sync_core', 'SYNC_CORE')}</span>
+                   <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{t('hud_labels.core_sync', 'DATA_UPDATE')}</span>
                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">PDF/JPG/PNG UP TO 5MB</span>
                 </div>
              </label>
@@ -411,7 +413,7 @@ export default function Dashboard() {
                        <h3 className="text-3xl font-black text-slate-900 dark:text-white">{t('dashboard.skills')}</h3>
                        <div className="flex items-center gap-2">
                          <span className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_10px_#6366f1]" />
-                         <span className="micro-typography text-slate-500">{t('hud_labels.neural_net_mapping', 'NEURAL_NET_MAPPING')}</span>
+                        <span className="micro-typography text-slate-500">{t('hud_labels.neural_net_mapping', 'SKILL_EXTRACTION_MAPPING')}</span>
                        </div>
                     </div>
                     <div className="text-xs font-black px-4 py-2 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-400">

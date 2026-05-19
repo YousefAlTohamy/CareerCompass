@@ -47,7 +47,7 @@ export default function Mentorship() {
               {t('mentorship.title', 'Career Mentorship')}
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium mt-1 max-w-xl">
-              {t('mentorship.subtitle', 'Preview the mentor discovery experience. Live booking and payments are planned for production.')}
+              {t('mentorship.subtitle', 'Preview the mentor discovery experience. Booking and payments are planned after graduation.')}
             </p>
           </div>
           

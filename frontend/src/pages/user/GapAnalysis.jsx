@@ -231,7 +231,7 @@ export default function GapAnalysis() {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 no-print">
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-3">
-              <Activity size={14} className="animate-pulse" /> {t('gap_analysis.dossier_active', 'Neural Dossier Active')}
+              <Activity size={14} className="animate-pulse" /> {t('gap_analysis.dossier_active', 'Gap Analysis Active')}
             </div>
             <h1 className="text-3xl md:text-4xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
               <ArrowLeft onClick={() => navigate('/jobs')} size={28} className="cursor-pointer hover:text-indigo-500 transition-colors md:hidden" />

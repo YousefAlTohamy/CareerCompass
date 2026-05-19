@@ -1,0 +1,40 @@
+{
+  "metadata": {
+    "dataset_type": "sample_matching_prediction_template",
+    "description": "Synthetic/template matching predictions for verifying the evaluation script. Not real CareerCompass benchmark results."
+  },
+  "items": [
+    {
+      "case_id": "MATCH-SAMPLE-001",
+      "score": 86,
+      "matched_skills": ["PHP", "Laravel", "MySQL", "REST APIs", "Docker"],
+      "missing_skills": ["Testing"],
+      "rank_position": 1,
+      "method": "hybrid"
+    },
+    {
+      "case_id": "MATCH-SAMPLE-002",
+      "score": 54,
+      "matched_skills": ["REST API", "JavaScript"],
+      "missing_skills": ["PHP", "Laravel", "MySQL"],
+      "rank_position": 4,
+      "method": "hybrid"
+    },
+    {
+      "case_id": "MATCH-SAMPLE-003",
+      "score": 22,
+      "matched_skills": ["Python"],
+      "missing_skills": ["Machine Learning", "NLP"],
+      "rank_position": 8,
+      "method": "hybrid"
+    },
+    {
+      "case_id": "MATCH-SAMPLE-004",
+      "score": 78,
+      "matched_skills": ["Docker", "Linux", "AWS", "GitHub Actions"],
+      "missing_skills": ["Terraform"],
+      "rank_position": 2,
+      "method": "hybrid"
+    }
+  ]
+}

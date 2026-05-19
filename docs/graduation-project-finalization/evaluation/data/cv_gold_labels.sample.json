@@ -1,0 +1,32 @@
+{
+  "metadata": {
+    "dataset_type": "sample_gold_labels",
+    "description": "Synthetic sample labels for verifying the evaluation script. Not final results."
+  },
+  "items": [
+    {
+      "cv_id": "CV-SAMPLE-001",
+      "expected_role": "Backend Developer",
+      "expected_status": "success",
+      "skills": ["PHP", "Laravel", "MySQL", "REST API", "Docker"]
+    },
+    {
+      "cv_id": "CV-SAMPLE-002",
+      "expected_role": "Frontend Developer",
+      "expected_status": "success",
+      "skills": ["JavaScript", "React", "HTML", "CSS", "Vite"]
+    },
+    {
+      "cv_id": "CV-SAMPLE-003",
+      "expected_role": "Data Analyst",
+      "expected_status": "partial_success",
+      "skills": ["Python", "SQL", "Excel", "Power BI"]
+    },
+    {
+      "cv_id": "CV-SAMPLE-004",
+      "expected_role": "DevOps Engineer",
+      "expected_status": "ocr_fallback",
+      "skills": ["Docker", "Linux", "AWS", "GitHub Actions"]
+    }
+  ]
+}

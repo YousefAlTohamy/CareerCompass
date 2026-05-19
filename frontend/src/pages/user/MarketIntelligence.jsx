@@ -18,7 +18,7 @@ const safeArray = (arr) => Array.isArray(arr) ? arr : [];
 const formatNumber = (num) => (Number(num) || 0).toLocaleString();
 
 // --- BUILD TREND DATA (API may not provide time-series; fallback to empty or derived) ---
-function buildTrendData(overview, topSkillsFromOverview) {
+function buildTrendData(topSkillsFromOverview) {
   const arr = safeArray(topSkillsFromOverview);
   if (arr.length === 0) return [];
   // Use top skills as proxy for "trend" - one point per skill (or empty)
@@ -69,12 +69,12 @@ export default function MarketIntelligence() {
   // --- Derived data (crash-proof) ---
   const totalJobs = Number(overview?.total_jobs) || 0;
   const totalRoles = Number(overview?.total_roles) || 0;
-  const avgSkillsPerJob = overview?.average_skills_per_job ?? '—';
+  const avgSkillsPerJob = overview?.average_skills_per_job ?? 'N/A';
   const lastUpdate = overview?.last_data_update ?? 'N/A';
   const topSkillName = topSkillsOverview[0]?.name ?? trendingSkills[0]?.name ?? 'N/A';
 
   // Trend chart: use top skills count as proxy when no time-series exists
-  const trendChartData = buildTrendData(overview, topSkillsOverview);
+  const trendChartData = buildTrendData(topSkillsOverview);
   const hasTrendData = trendChartData.length > 0 && trendChartData.some((d) => d.count > 0);
 
   // Skills bar chart: vertical, need { name, value }
@@ -134,10 +134,10 @@ export default function MarketIntelligence() {
               <Activity size={14} className="animate-pulse" /> Imported job data
             </div>
             <h1 className="text-3xl md:text-4xl font-black text-slate-800 dark:text-white tracking-tight">
-              Market Insight
+              Market Data
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium mt-1 max-w-2xl">
-              What do imported jobs currently ask for, and how should that shape your next CV, skills, and gap analysis?
+              What do imported active-source jobs currently ask for, and how should that shape your next CV, skills, and gap analysis?
             </p>
           </div>
           <button

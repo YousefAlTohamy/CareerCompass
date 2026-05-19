@@ -299,7 +299,7 @@ export default function Profile() {
            {[
               { label: t('hud_labels.exp_units', 'EXPERIENCE'), val: totalExperienceYears ?? '—', unit: 'YEARS', icon: Calendar, color: 'indigo' },
               { label: t('hud_labels.seniority', 'SENIORITY'), val: seniority || '—', unit: 'CV', icon: Target, color: 'fuchsia' },
-              { label: t('dashboard.skills', 'SKILLS'), val: skills.length, unit: 'NODES', icon: Cpu, color: 'emerald' },
+              { label: t('dashboard.skills', 'SKILLS'), val: skills.length, unit: 'SKILLS', icon: Cpu, color: 'emerald' },
               { label: t('dashboard.profile_completeness', 'PROFILE'), val: `${Math.round(completenessScore)}%`, unit: 'SCORE', icon: TrendingUp, color: 'amber' }
            ].map((stat, i) => (
               <div key={i} className="bg-white/50 dark:bg-slate-900/50 rounded-3xl p-6 shadow-sm border border-slate-200 dark:border-slate-800 backdrop-blur-md flex flex-col items-center justify-center text-center group hover:border-indigo-500/20 transition-all">
@@ -319,7 +319,7 @@ export default function Profile() {
               {/* CONTACTS PANEL */}
               <div className="bg-white/60 dark:bg-slate-900/50 rounded-3xl p-8 shadow-sm border border-slate-200 dark:border-slate-800 backdrop-blur-md">
                  <h3 className="text-sm font-black mb-6 flex items-center gap-2 uppercase tracking-tighter">
-                    <Database size={16} className="text-indigo-500" /> {t('hud_labels.contact_points', 'Data Nodes')}
+                    <Database size={16} className="text-indigo-500" /> {t('hud_labels.contact_points', 'Contact Points')}
                  </h3>
                  <div className="space-y-4">
                     {[
@@ -345,7 +345,7 @@ export default function Profile() {
                  </div>
               </div>
 
-              {/* NEURAL SKILLS PANEL */}
+              {/* Skills panel */}
               <div className="bg-white/60 dark:bg-slate-900/50 rounded-3xl p-8 shadow-sm border border-slate-200 dark:border-slate-800 backdrop-blur-md relative overflow-hidden">
                  <div className="absolute top-0 right-0 p-6 opacity-5 -z-10"><Zap size={80} /></div>
                  <h3 className="text-sm font-black mb-6 flex items-center gap-2 uppercase tracking-tighter">
@@ -378,7 +378,7 @@ export default function Profile() {
                  {experiences.length === 0 ? (
                     <div className="text-center py-16 opacity-30">
                        <Briefcase size={48} className="mx-auto mb-3" />
-                       <p className="font-black text-[10px] uppercase tracking-widest">{t('dashboard.no_experience', 'NO_DATA_NODES')}</p>
+                       <p className="font-black text-[10px] uppercase tracking-widest">{t('dashboard.no_experience', 'NO_EXPERIENCE_DATA')}</p>
                     </div>
                  ) : experiences.map((exp, i) => (
                     <motion.div 

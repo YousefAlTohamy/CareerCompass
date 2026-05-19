@@ -54,13 +54,13 @@ export default function CVBuilder() {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 no-print">
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-3">
-              <Wand2 size={14} className="animate-pulse" /> {t('cv_builder.ai_powered', 'AI-Powered Builder')}
+              <Wand2 size={14} className="animate-pulse" /> {t('cv_builder.ai_powered', 'Draft Builder Preview')}
             </div>
             <h1 className="text-3xl md:text-4xl font-black text-slate-800 dark:text-white tracking-tight">
               {t('cv_builder.title', 'Smart CV Builder')}
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">
-              {t('cv_builder.subtitle', 'Preview a resume layout and export a draft. Live ATS scoring is planned for a later production pass.')}
+              {t('cv_builder.subtitle', 'Preview a resume layout and export a draft. Full ATS scoring is planned for a later production pass.')}
             </p>
           </div>
           

@@ -48,7 +48,7 @@ export default function CareerPlanner() {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg text-[10px] font-black uppercase tracking-widest text-amber-500 mb-3">
-              <MapPin size={14} className="animate-pulse" /> {t('career_planner.pathing_engine', 'Neural Pathing Engine')}
+              <MapPin size={14} className="animate-pulse" /> {t('career_planner.pathing_engine', 'Career Roadmap Preview')}
             </div>
             <h1 className="text-3xl md:text-4xl font-black text-slate-800 dark:text-white tracking-tight">
               {t('career_planner.title', 'Career Planner')}

@@ -271,7 +271,7 @@ export default function AdminUserDetails() {
               )}
             </div>
 
-            {/* Neural Matrix: Skills */}
+            {/* Skills extraction panel */}
             <div className="bg-white/40 dark:bg-slate-950/40 backdrop-blur-xl border border-white/40 dark:border-white/5 rounded-[32px] p-10 shadow-premium">
                <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-indigo-500 mb-8">{t('admin.neural_matrix_skills')}</h3>
                

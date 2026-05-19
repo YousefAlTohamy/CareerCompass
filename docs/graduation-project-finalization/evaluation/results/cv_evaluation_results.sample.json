@@ -1,0 +1,141 @@
+{
+  "counts": {
+    "extra_prediction_ids": [],
+    "gold_items": 4,
+    "missing_predictions": 0,
+    "prediction_items": 4
+  },
+  "metadata": {
+    "note": "Metrics are computed only from the provided labels and predictions. Sample files are not final benchmark results.",
+    "report_type": "cv_extraction_evaluation"
+  },
+  "overall": {
+    "macro_f1": 0.8244949494949495,
+    "macro_precision": 0.8333333333333334,
+    "macro_recall": 0.825,
+    "micro_f1": 0.8333333333333334,
+    "micro_precision": 0.8333333333333334,
+    "micro_recall": 0.8333333333333334,
+    "parsing_status_accuracy": 1.0,
+    "role_compatible_accuracy": 1.0,
+    "role_exact_accuracy": 0.25,
+    "skill_totals": {
+      "fn": 3,
+      "fp": 3,
+      "tp": 15
+    }
+  },
+  "per_cv": [
+    {
+      "cv_id": "CV-SAMPLE-001",
+      "expected_role": "Backend Developer",
+      "expected_status": "success",
+      "f1": 0.9090909090909091,
+      "false_negatives": [],
+      "false_positives": [
+        "api"
+      ],
+      "fn": 0,
+      "fp": 1,
+      "missing_prediction": false,
+      "precision": 0.8333333333333334,
+      "predicted_role": "Laravel Developer",
+      "predicted_status": "success",
+      "recall": 1.0,
+      "role_compatible": true,
+      "role_exact": false,
+      "status_correct": true,
+      "tp": 5,
+      "true_positives": [
+        "docker",
+        "laravel",
+        "mysql",
+        "php",
+        "rest api"
+      ]
+    },
+    {
+      "cv_id": "CV-SAMPLE-002",
+      "expected_role": "Frontend Developer",
+      "expected_status": "success",
+      "f1": 0.888888888888889,
+      "false_negatives": [
+        "vite"
+      ],
+      "false_positives": [],
+      "fn": 1,
+      "fp": 0,
+      "missing_prediction": false,
+      "precision": 1.0,
+      "predicted_role": "React Developer",
+      "predicted_status": "success",
+      "recall": 0.8,
+      "role_compatible": true,
+      "role_exact": false,
+      "status_correct": true,
+      "tp": 4,
+      "true_positives": [
+        "css",
+        "html",
+        "javascript",
+        "react"
+      ]
+    },
+    {
+      "cv_id": "CV-SAMPLE-003",
+      "expected_role": "Data Analyst",
+      "expected_status": "partial_success",
+      "f1": 0.75,
+      "false_negatives": [
+        "power bi"
+      ],
+      "false_positives": [
+        "tableau"
+      ],
+      "fn": 1,
+      "fp": 1,
+      "missing_prediction": false,
+      "precision": 0.75,
+      "predicted_role": "Data Analyst",
+      "predicted_status": "partial_success",
+      "recall": 0.75,
+      "role_compatible": true,
+      "role_exact": true,
+      "status_correct": true,
+      "tp": 3,
+      "true_positives": [
+        "excel",
+        "python",
+        "sql"
+      ]
+    },
+    {
+      "cv_id": "CV-SAMPLE-004",
+      "expected_role": "DevOps Engineer",
+      "expected_status": "ocr_fallback",
+      "f1": 0.75,
+      "false_negatives": [
+        "github actions"
+      ],
+      "false_positives": [
+        "kubernetes"
+      ],
+      "fn": 1,
+      "fp": 1,
+      "missing_prediction": false,
+      "precision": 0.75,
+      "predicted_role": "Cloud Engineer",
+      "predicted_status": "ocr_fallback",
+      "recall": 0.75,
+      "role_compatible": true,
+      "role_exact": false,
+      "status_correct": true,
+      "tp": 3,
+      "true_positives": [
+        "aws",
+        "docker",
+        "linux"
+      ]
+    }
+  ]
+}

@@ -63,8 +63,14 @@ export default function SystemStatus() {
     }, []);
 
     const checkedLabel = health.checkedAt
-        ? `Live check: ${new Date(health.checkedAt).toLocaleString()}`
-        : t('status_page.loading', 'Checking live status...');
+        ? `Current check: ${new Date(health.checkedAt).toLocaleString()}`
+        : t('status_page.loading', 'Checking status...');
+
+    const statusTitle = health.loading
+        ? t('status_page.title_checking', 'Checking demo service status')
+        : health.ready
+            ? t('status_page.title_operational', 'Demo systems are operational')
+            : t('status_page.title_attention', 'Some demo checks need attention');
 
     const systems = useMemo(() => {
         const statusLabel = (check, fallback = 'operational') => {
@@ -78,12 +84,12 @@ export default function SystemStatus() {
         };
 
         return [
-            { name: t('status_page.systems.api'), status: health.ready ? t('status_page.states.operational', 'operational') : statusLabel(health.checks.database, 'degraded'), uptime: health.checks.database?.ok ? '100%' : 'degraded', icon: Server, color: health.checks.database?.ok ? 'text-emerald-500' : 'text-amber-500', bg: health.checks.database?.ok ? 'bg-emerald-500/10' : 'bg-amber-500/10' },
-            { name: t('status_page.systems.ai'), status: statusLabel(health.checks.ai, 'degraded'), uptime: health.checks.ai?.ok ? '100%' : 'degraded', icon: Cpu, color: health.checks.ai?.ok ? 'text-emerald-500' : 'text-amber-500', bg: health.checks.ai?.ok ? 'bg-emerald-500/10' : 'bg-amber-500/10' },
-            { name: t('status_page.systems.scraping'), status: statusLabel(health.checks.scraper, 'degraded'), uptime: health.checks.scraper?.ok ? '100%' : 'degraded', icon: Globe, color: health.checks.scraper?.ok ? 'text-emerald-500' : 'text-amber-500', bg: health.checks.scraper?.ok ? 'bg-emerald-500/10' : 'bg-amber-500/10' },
-            { name: t('status_page.systems.db'), status: statusLabel(health.checks.database, 'degraded'), uptime: health.checks.database?.ok ? '100%' : 'degraded', icon: Database, color: health.checks.database?.ok ? 'text-emerald-500' : 'text-amber-500', bg: health.checks.database?.ok ? 'bg-emerald-500/10' : 'bg-amber-500/10' },
-            { name: t('status_page.systems.analytics'), status: statusLabel(health.checks.cache, 'degraded'), uptime: health.checks.cache?.ok ? '100%' : 'degraded', icon: Activity, color: health.checks.cache?.ok ? 'text-emerald-500' : 'text-amber-500', bg: health.checks.cache?.ok ? 'bg-emerald-500/10' : 'bg-amber-500/10' },
-            { name: t('status_page.systems.websockets'), status: t('status_page.states.maintenance', 'maintenance'), uptime: 'planned', icon: Zap, color: 'text-amber-500', bg: 'bg-amber-500/10' }
+            { name: t('status_page.systems.api'), status: health.ready ? t('status_page.states.operational', 'operational') : statusLabel(health.checks.database, 'degraded'), evidence: health.checks.database?.ok ? 'ready check passed' : 'check degraded', icon: Server, color: health.checks.database?.ok ? 'text-emerald-500' : 'text-amber-500', bg: health.checks.database?.ok ? 'bg-emerald-500/10' : 'bg-amber-500/10' },
+            { name: t('status_page.systems.ai'), status: statusLabel(health.checks.ai, 'degraded'), evidence: health.checks.ai?.ok ? 'health check passed' : 'check degraded', icon: Cpu, color: health.checks.ai?.ok ? 'text-emerald-500' : 'text-amber-500', bg: health.checks.ai?.ok ? 'bg-emerald-500/10' : 'bg-amber-500/10' },
+            { name: t('status_page.systems.scraping'), status: statusLabel(health.checks.scraper, 'degraded'), evidence: health.checks.scraper?.ok ? 'health check passed' : 'check degraded', icon: Globe, color: health.checks.scraper?.ok ? 'text-emerald-500' : 'text-amber-500', bg: health.checks.scraper?.ok ? 'bg-emerald-500/10' : 'bg-amber-500/10' },
+            { name: t('status_page.systems.db'), status: statusLabel(health.checks.database, 'degraded'), evidence: health.checks.database?.ok ? 'database reachable' : 'check degraded', icon: Database, color: health.checks.database?.ok ? 'text-emerald-500' : 'text-amber-500', bg: health.checks.database?.ok ? 'bg-emerald-500/10' : 'bg-amber-500/10' },
+            { name: t('status_page.systems.analytics'), status: statusLabel(health.checks.cache, 'degraded'), evidence: health.checks.cache?.ok ? 'cache check passed' : 'check degraded', icon: Activity, color: health.checks.cache?.ok ? 'text-emerald-500' : 'text-amber-500', bg: health.checks.cache?.ok ? 'bg-emerald-500/10' : 'bg-amber-500/10' },
+            { name: t('status_page.systems.websockets'), status: t('status_page.states.maintenance', 'maintenance'), evidence: 'future work', icon: Zap, color: 'text-amber-500', bg: 'bg-amber-500/10' }
         ];
     }, [health, t]);
 
@@ -127,10 +133,10 @@ export default function SystemStatus() {
                             </motion.div>
                             
                             <h1 className="text-4xl md:text-6xl font-black text-slate-900 dark:text-white leading-tight tracking-tighter">
-                                {t('status_page.title')}
+                                {statusTitle}
                             </h1>
                             <p className="text-slate-500 dark:text-slate-400 font-medium">
-                                {health.loading ? t('status_page.loading', 'Checking live status...') : (health.error || checkedLabel)}
+                                {health.loading ? t('status_page.loading', 'Checking status...') : (health.error || checkedLabel)}
                             </p>
                         </div>
                         
@@ -173,7 +179,7 @@ export default function SystemStatus() {
                                                 <span className={`w-2 h-2 rounded-full ${s.color.replace('text-', 'bg-')} animate-pulse`} />
                                                 <span className="text-xs font-black text-slate-800 dark:text-slate-100">{s.status}</span>
                                             </div>
-                                            <span className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">{s.uptime} uptime</span>
+                                            <span className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">{s.evidence}</span>
                                         </div>
                                     </div>
                                     <h3 className="text-lg font-black text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
@@ -188,7 +194,7 @@ export default function SystemStatus() {
                 <div className="space-y-10 pt-10">
                     <div className="flex justify-between items-center px-4">
                         <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{t('status_page.past_events')}</h2>
-                        <div className="text-[10px] font-black uppercase text-slate-400 tracking-widest">90 DAY ARCHIVE</div>
+                        <div className="text-[10px] font-black uppercase text-slate-400 tracking-widest">SAMPLE NOTES</div>
                     </div>
                     
                     <div className="space-y-6">
@@ -223,7 +229,7 @@ export default function SystemStatus() {
                 <div className="text-center pt-20">
                         <div className="inline-flex items-center gap-3 px-6 py-3 glass-card !rounded-2xl border-white/10 dark:border-white/5 bg-white/5 text-slate-500 dark:text-slate-400 text-xs font-bold">
                         <AlertCircle size={14} className="text-indigo-500" />
-                        {health.requestId ? `Request ${health.requestId}` : 'Automated infrastructure monitoring powered by Career Compass AI'}
+                        {health.requestId ? `Request ${health.requestId}` : 'Status is based on available health checks in this graduation demo.'}
                      </div>
                 </div>
 
