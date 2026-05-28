@@ -16,7 +16,7 @@ use RuntimeException;
 /**
  * Gap Analysis Service — Layer 3 Job Matching Engine
  *
- * Performs highly accurate job matching by leveraging:
+ * Performs explainable job matching by leveraging:
  * - Canonical skills from user_skills + skills tables (no raw PDF parsing during match)
  * - Rich profile data (headline, summary, experiences) for semantic matching
  * - Python AI Layer 3 endpoint (semantic + TF-IDF skill overlap)
@@ -736,9 +736,9 @@ class GapAnalysisService implements GapAnalysisServiceInterface
         $recommendations = [];
 
         if ($matchPercentage >= 90) {
-            $recommendations[] = "🚀 Excellent match! Apply with full confidence.";
+            $recommendations[] = "Strong match based on the available CV and job data. Review the job details before applying.";
         } elseif ($matchPercentage >= 75) {
-            $recommendations[] = "👍 Good match! Address a few skill gaps and you're ready to apply.";
+            $recommendations[] = "Good match based on available data. Review the listed skill gaps before applying.";
         } elseif ($matchPercentage >= 60) {
             $recommendations[] = "📈 Fair match. Focus on the critical skills listed below before applying.";
         } elseif ($matchPercentage >= 40) {
@@ -780,7 +780,7 @@ class GapAnalysisService implements GapAnalysisServiceInterface
 
     /**
      * Analyze skill gap against a specific target role.
-     * Uses JobRoleStatistic or aggregates job skills in real-time.
+     * Uses JobRoleStatistic or aggregates job skills dynamically from stored data.
      */
     public function analyzeTargetRole(User $user, \App\Models\TargetJobRole $targetRole): array
     {

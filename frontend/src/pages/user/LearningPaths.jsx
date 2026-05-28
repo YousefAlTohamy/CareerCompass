@@ -6,6 +6,7 @@ import {
   Target, ChevronRight, Zap, GraduationCap, Compass
 } from 'lucide-react';
 import HUDLayout from '../../components/HUDLayout';
+import GraduationDemoPreview from '../../components/GraduationDemoPreview';
 
 export default function LearningPaths() {
   const { t, i18n } = useTranslation();
@@ -48,9 +49,9 @@ export default function LearningPaths() {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5 text-sm font-bold text-amber-700 dark:text-amber-200">
-          Preview status: course progress and certificates are not tracked yet. Cards below are sample recommendations for demo navigation.
-        </div>
+        <GraduationDemoPreview>
+          {t('learning.preview_note', 'Course progress and certificates are not tracked yet. Cards below are sample recommendations for demo navigation.')}
+        </GraduationDemoPreview>
 
         {/* STATS */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

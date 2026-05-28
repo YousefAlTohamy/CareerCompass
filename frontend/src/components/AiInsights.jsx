@@ -122,7 +122,7 @@ export const CareerIdentityCard = ({ cvAnalysis }) => {
               <SeniorityBadge seniority={seniority} />
               {confidence_score != null && (
                 <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
-                  {Math.round(confidence_score * 100)}% confidence
+                  {Math.round(confidence_score * 100)}% model confidence estimate
                 </span>
               )}
             </div>

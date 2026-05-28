@@ -79,7 +79,7 @@
     "prioritized_gaps": "Skills to Improve",
     "global_gap_focus": "Key Target Skills",
     "analyzing_gaps": "Analyzing your skill gaps...",
-    "all_caught_up": "All caught up! Excellent profile match.",
+    "all_caught_up": "All caught up! Strong profile alignment based on available data.",
     "upload_for_gaps": "Upload CV to view personalized gaps.",
     "view_profile": "View Profile"
   },
@@ -115,7 +115,7 @@
     "experience_instruction": "Upload your CV to populate your experiences automatically, or add them when editing your profile.",
     "no_skills_message": "No skills extracted for your profile yet.",
     "skills_instruction": "Upload your CV to populate your skills automatically, or add them manually by editing your profile.",
-    "ai_confidence": "AI confidence"
+    "ai_confidence": "AI confidence estimate"
   },
   "jobs": {
     "title": "Job Opportunities",
@@ -360,7 +360,7 @@
     "features": {
       "badge": "Powering Your Growth",
       "title": "Smart Career Engineering",
-      "subtitle": "We've built the most advanced tools to help you navigate the modern job market with precision.",
+      "subtitle": "CareerCompass combines practical demo tools for CV review, imported job data, and explainable skill-gap analysis.",
       "atsValidation": {
         "title": "ATS & CV Validation",
         "desc": "The analyzer checks CV structure and extracted content to support review and future ATS-focused improvements."
@@ -457,7 +457,7 @@
     "mission": "Our Mission",
     "headline": "Map your <br class=\"hidden md:block\" /> <span class=\"text-gradient-career\">professional</span> direction.",
     "desc_p1": "Career Compass was born from a simple observation: students need clearer ways to connect academic preparation with available job requirements. The graduation project demonstrates CV parsing, skill extraction, matching, and source diagnostics.",
-    "v1_title": "Precision Insights",
+    "v1_title": "Explainable Insights",
     "v1_desc": "We compare extracted CV skills and profile context with imported job requirements.",
     "v2_title": "Unbiased Analysis",
     "v2_desc": "The system presents structured CV feedback with parsing status, confidence, and reviewable outputs.",
@@ -476,7 +476,7 @@
     "title": "Terms of Service",
     "last_updated": "Last updated: April 6, 2026",
     "s1_title": "1. Use of Service",
-    "s1_desc": "Career Compass provides a graduation-project career guidance platform. By using the demo, you agree to provide accurate professional information for analysis. Misuse of scraping diagnostics or unauthorized access to the API is prohibited.",
+    "s1_desc": "Career Compass provides a graduation-project career guidance platform. By using the demo, you agree to provide truthful professional information for analysis. Misuse of scraping diagnostics or unauthorized access to the API is prohibited.",
     "s2_title": "2. Intellectual Property",
     "s2_desc": "The platform architecture, AI/NLP components, and branding are part of the CareerCompass graduation project repository and documentation.",
     "s3_title": "3. Responsibility",
@@ -586,6 +586,10 @@
     "professional_timeline": "PROFESSIONAL_TIMELINE",
     "undefined": "UNDEFINED"
   },
+  "demo_preview": {
+    "title": "Graduation Demo Preview",
+    "body": "This module is included as a planned extension for the graduation demo and is not presented as a fully evaluated production feature."
+  },
   "tools": {
     "cv_builder": "Smart CV Builder",
     "cv_builder_desc": "Preview workspace for drafting a CV layout. Upload your real CV from the dashboard for structured CV analysis.",
@@ -600,7 +604,8 @@
     "dev_suite": "Development Suite",
     "title": "Career Tools Preview",
     "subtitle": "These pages remain available for the graduation demo and clearly mark what is available now versus planned after graduation.",
-    "launch": "Open Preview"
+    "launch": "Open Preview",
+    "preview_note": "The tools below are preview modules for demo navigation and future-work discussion. Core evaluated flows remain CV upload, recommendations, gap analysis, saved applications, and admin source diagnostics."
   },
   "cv_builder": {
     "personal": "Personal Info",
@@ -609,7 +614,7 @@
     "skills": "Skills",
     "ai_powered": "Draft Builder Preview",
     "title": "Smart CV Builder",
-    "subtitle": "Preview a resume layout and export a draft. Full ATS scoring is planned for a later production pass.",
+    "subtitle": "Preview a resume layout and export a draft. Full ATS scoring is planned as future evaluated work.",
     "edit_mode": "Edit Mode",
     "preview": "Preview",
     "export_pdf": "Export PDF",
@@ -620,12 +625,18 @@
     "summary": "Professional Summary",
     "add_experience": "Add Experience",
     "add_education": "Add Education",
-    "skills_comma": "Skills (Comma separated)"
+    "skills_comma": "Skills (Comma separated)",
+    "institution": "Institution",
+    "degree": "Degree",
+    "period": "Period",
+    "company": "Company",
+    "description": "Description",
+    "preview_note": "This builder edits a local draft only. It does not save to your profile yet; use Dashboard CV upload for real parsing, skills, and recommendations."
   },
   "mock_interview": {
     "neural_engine": "Interview Practice Preview",
     "title": "AI Mock Interview",
-    "subtitle": "Preview a guided interview flow. Video analysis and scored reports are planned for the production product.",
+    "subtitle": "Preview a guided interview flow. Video analysis and scored reports are planned as future evaluated work.",
     "ready": "Ready to begin?",
     "ready_desc": "Use this preview to practice answer structure. It does not record or analyze real camera or microphone data yet.",
     "start": "Start Session",
@@ -642,6 +653,7 @@
     "technical": "Technical Depth",
     "try_again": "Try Again",
     "download_report": "Download Report",
+    "preview_note": "The chat prompt flow is interactive, but camera/microphone analysis and final scoring are illustrative only.",
     "intro_msg": "Hello! I'm your AI Interviewer. I've reviewed your profile. Let's start. Can you tell me about a recent challenging project you worked on?",
     "followup_msg": "That's very interesting. How did you handle the specific technical constraints in that situation?"
   },
@@ -658,14 +670,16 @@
     "progress": "Progress",
     "completed": "Completed",
     "continue": "Continue",
-    "start": "Start Path"
+    "start": "Start Path",
+    "preview_note": "Course progress and certificates are not tracked yet. Cards below are sample recommendations for demo navigation."
   },
   "career_planner": {
     "pathing_engine": "Career Roadmap Preview",
     "title": "Career Planner",
     "subtitle": "Preview how a CV role, skill gaps, and market demand can become a career roadmap.",
     "progress": "Progress to Next Level",
-    "requirements": "Key Requirements"
+    "requirements": "Key Requirements",
+    "preview_note": "Milestones are illustrative and not saved yet. Future work should generate them from your CV, gap analysis, and saved opportunities."
   },
   "mentorship": {
     "expert_network": "Expert Network",
@@ -674,7 +688,8 @@
     "upcoming": "Upcoming Sessions",
     "search": "Search mentors by name, role, or company...",
     "rate": "Rate",
-    "book_session": "Book Session"
+    "book_session": "Book Session",
+    "preview_note": "Mentor cards are sample data for UX validation. No real booking request is sent from this page."
   },
   "admin": {
     "title": "Admin Control Unit",

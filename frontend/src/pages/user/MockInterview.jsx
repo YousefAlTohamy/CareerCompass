@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import HUDLayout from '../../components/HUDLayout';
 import TypingEffect from '../../components/TypingEffect';
+import GraduationDemoPreview from '../../components/GraduationDemoPreview';
 
 export default function MockInterview() {
   const { t, i18n } = useTranslation();
@@ -64,14 +65,14 @@ export default function MockInterview() {
               {t('mock_interview.title', 'AI Mock Interview')}
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">
-              {t('mock_interview.subtitle', 'Preview a guided interview flow. Video analysis and scored reports are planned for the production product.')}
+              {t('mock_interview.subtitle', 'Preview a guided interview flow. Video analysis and scored reports are planned as future evaluated work.')}
             </p>
           </div>
         </div>
 
-        <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5 text-sm font-bold text-amber-700 dark:text-amber-200">
-          Preview status: the chat prompt flow is interactive, but camera/microphone analysis and final scoring are illustrative only.
-        </div>
+        <GraduationDemoPreview>
+          {t('mock_interview.preview_note', 'The chat prompt flow is interactive, but camera/microphone analysis and final scoring are illustrative only.')}
+        </GraduationDemoPreview>
 
         <AnimatePresence mode="wait">
           {interviewState === 'setup' && (
@@ -238,7 +239,7 @@ export default function MockInterview() {
               <div className="space-y-6 bg-slate-50 dark:bg-white/5 p-8 rounded-3xl border border-slate-200 dark:border-white/5">
                 <h3 className="text-xl font-black uppercase tracking-tight flex items-center gap-2"><Sparkles className="text-indigo-500" size={20} /> Practice Feedback</h3>
                 <p className="text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
-                  This preview captured your typed practice answers. A production evaluator should score clarity, technical depth, examples, and role alignment before this page presents real interview analytics.
+                  This preview captured your typed practice answers. A future evaluated version should score clarity, technical depth, examples, and role alignment before this page presents real interview analytics.
                 </p>
                 <div className="flex gap-4 pt-4">
                   <button onClick={() => setInterviewState('setup')} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center gap-2">

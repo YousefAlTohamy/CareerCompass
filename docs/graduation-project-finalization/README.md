@@ -37,6 +37,7 @@ Recommended starting point:
 | --- | --- |
 | [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md) | Central navigation page for all graduation finalization, evaluation, demo, and defense planning documents. |
 | [GRADUATION_CLOSURE_CHECKLIST.md](GRADUATION_CLOSURE_CHECKLIST.md) | Practical defense-readiness checklist covering demo, documentation, UI honesty, AI/matching evaluation, and scraping checks. |
+| [GRADUATION_DEMO_READINESS_NOTES.md](GRADUATION_DEMO_READINESS_NOTES.md) | Short positioning note for demo honesty, recommended flow, known limitations, and defense reminders. |
 | [GRADUATION_DEMO_SCRIPT.md](GRADUATION_DEMO_SCRIPT.md) | Step-by-step script for presenting the app during the graduation defense. |
 | [FINAL_GRADUATION_WALKTHROUGH.md](FINAL_GRADUATION_WALKTHROUGH.md) | Manual QA checklist for the final browser walkthrough and smoke validation. |
 | [SYSTEM_ARCHITECTURE_OVERVIEW.md](SYSTEM_ARCHITECTURE_OVERVIEW.md) | Graduation-friendly explanation of services, data flow, queues, CV analysis, recommendation, scraping, and monitoring. |

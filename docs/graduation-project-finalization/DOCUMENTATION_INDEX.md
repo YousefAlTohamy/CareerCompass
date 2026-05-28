@@ -10,6 +10,7 @@ The documents are for academic/demo readiness, not production deployment.
 | --- | --- |
 | [README.md](README.md) | Entry point explaining the purpose of the graduation-finalization folder. |
 | [GRADUATION_CLOSURE_CHECKLIST.md](GRADUATION_CLOSURE_CHECKLIST.md) | Main defense-readiness checklist across demo, docs, UI honesty, evaluation, and scraping. |
+| [GRADUATION_DEMO_READINESS_NOTES.md](GRADUATION_DEMO_READINESS_NOTES.md) | Short positioning note for demo honesty, recommended flow, known limitations, and defense reminders. |
 | [GRADUATION_DEMO_SCRIPT.md](GRADUATION_DEMO_SCRIPT.md) | Step-by-step script for presenting the system during the defense. |
 | [FINAL_GRADUATION_WALKTHROUGH.md](FINAL_GRADUATION_WALKTHROUGH.md) | Manual QA walkthrough for the final browser and service checks. |
 | [SYSTEM_ARCHITECTURE_OVERVIEW.md](SYSTEM_ARCHITECTURE_OVERVIEW.md) | Graduation-friendly architecture explanation and Mermaid diagrams. |

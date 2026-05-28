@@ -7,6 +7,7 @@ import {
   ArrowRight, Sparkles, ChevronRight, Zap
 } from 'lucide-react';
 import HUDLayout from '../../components/HUDLayout';
+import GraduationDemoPreview from '../../components/GraduationDemoPreview';
 
 export default function ToolsHub() {
   const { t, i18n } = useTranslation();
@@ -77,6 +78,10 @@ export default function ToolsHub() {
             </p>
           </div>
         </div>
+
+        <GraduationDemoPreview>
+          {t('tools.preview_note', 'The tools below are preview modules for demo navigation and future-work discussion. Core evaluated flows remain CV upload, recommendations, gap analysis, saved applications, and admin source diagnostics.')}
+        </GraduationDemoPreview>
 
         {/* TOOLS GRID */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
