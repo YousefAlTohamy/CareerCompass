@@ -34,6 +34,9 @@ services:
       APP_ENV: local
       APP_DEBUG: "true"
       APP_URL: http://localhost
+      DEMO_ADMIN_NAME: ${DEMO_ADMIN_NAME:-Admin}
+      DEMO_ADMIN_EMAIL: ${DEMO_ADMIN_EMAIL:-careercompassadmin@gmail.com}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:-CareerCompassAdmin2026}
       DB_HOST: db
       DB_DATABASE: career_compass
       DB_USERNAME: cc_user

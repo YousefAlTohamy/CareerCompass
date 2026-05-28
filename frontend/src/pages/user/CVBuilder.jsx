@@ -6,6 +6,7 @@ import {
   ChevronRight, Sparkles, Layout, Save, Wand2, Activity, Eye, EyeOff
 } from 'lucide-react';
 import HUDLayout from '../../components/HUDLayout';
+import GraduationDemoPreview from '../../components/GraduationDemoPreview';
 
 export default function CVBuilder() {
   const { t, i18n } = useTranslation();
@@ -60,7 +61,7 @@ export default function CVBuilder() {
               {t('cv_builder.title', 'Smart CV Builder')}
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">
-              {t('cv_builder.subtitle', 'Preview a resume layout and export a draft. Full ATS scoring is planned for a later production pass.')}
+              {t('cv_builder.subtitle', 'Preview a resume layout and export a draft. Full ATS scoring is planned as future evaluated work.')}
             </p>
           </div>
           
@@ -81,8 +82,10 @@ export default function CVBuilder() {
           </div>
         </div>
 
-        <div className="no-print rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5 text-sm font-bold text-amber-700 dark:text-amber-200">
-          Preview status: this builder edits a local draft only. It does not save to your profile yet; use Dashboard CV upload for real parsing, skills, and recommendations.
+        <div className="no-print">
+          <GraduationDemoPreview>
+            {t('cv_builder.preview_note', 'This builder edits a local draft only. It does not save to your profile yet; use Dashboard CV upload for real parsing, skills, and recommendations.')}
+          </GraduationDemoPreview>
         </div>
 
         <div className="grid lg:grid-cols-12 gap-8">

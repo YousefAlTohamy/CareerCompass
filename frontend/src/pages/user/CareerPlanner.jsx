@@ -6,6 +6,7 @@ import {
   MapPin, Star, TrendingUp, Compass, Target
 } from 'lucide-react';
 import HUDLayout from '../../components/HUDLayout';
+import GraduationDemoPreview from '../../components/GraduationDemoPreview';
 
 export default function CareerPlanner() {
   const { t, i18n } = useTranslation();
@@ -59,9 +60,9 @@ export default function CareerPlanner() {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5 text-sm font-bold text-amber-700 dark:text-amber-200">
-          Preview status: milestones are illustrative and not saved yet. Future work should generate them from your CV, gap analysis, and saved opportunities.
-        </div>
+        <GraduationDemoPreview>
+          {t('career_planner.preview_note', 'Milestones are illustrative and not saved yet. Future work should generate them from your CV, gap analysis, and saved opportunities.')}
+        </GraduationDemoPreview>
 
         {/* TIMELINE */}
         <div className="relative pt-10">

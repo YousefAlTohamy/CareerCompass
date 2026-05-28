@@ -17,7 +17,8 @@ export const jobsAPI = {
   getJobs: (params = {}) => apiClient.get('/jobs', { params }),
   getJobById: (id) => apiClient.get(`/jobs/${id}`),
   getRecommendedJobs: () => apiClient.get('/jobs/recommended'),
-  scrapeJobs: () => apiClient.post('/jobs/scrape'),
+  scrapeJobs: (query, maxResults = 30) =>
+    apiClient.post('/jobs/scrape', { query, max_results: maxResults }),
   // On-Demand Scraping
   scrapeJobIfMissing: (jobTitle, maxResults = 30) =>
     apiClient.post('/jobs/scrape-if-missing', { job_title: jobTitle, max_results: maxResults }),

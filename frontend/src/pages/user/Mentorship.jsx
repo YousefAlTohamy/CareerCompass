@@ -6,6 +6,7 @@ import {
   MessageCircle, Video, CheckCircle2, Award, Zap
 } from 'lucide-react';
 import HUDLayout from '../../components/HUDLayout';
+import GraduationDemoPreview from '../../components/GraduationDemoPreview';
 
 export default function Mentorship() {
   const { t, i18n } = useTranslation();
@@ -64,9 +65,9 @@ export default function Mentorship() {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5 text-sm font-bold text-amber-700 dark:text-amber-200">
-          Preview status: mentor cards are sample data for UX validation. No real booking request is sent from this page.
-        </div>
+        <GraduationDemoPreview>
+          {t('mentorship.preview_note', 'Mentor cards are sample data for UX validation. No real booking request is sent from this page.')}
+        </GraduationDemoPreview>
 
         {/* SEARCH & FILTERS */}
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white/40 dark:bg-slate-900/40 p-2 rounded-3xl backdrop-blur-xl border border-slate-200 dark:border-white/10">

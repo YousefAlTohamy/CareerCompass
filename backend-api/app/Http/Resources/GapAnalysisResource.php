@@ -112,7 +112,7 @@ class GapAnalysisResource extends JsonResource
      */
     private function getMatchLevel(float $percentage): string
     {
-        if ($percentage >= 90) return 'Excellent Match';
+        if ($percentage >= 90) return 'Strong Match';
         if ($percentage >= 75) return 'Good Match';
         if ($percentage >= 60) return 'Fair Match';
         if ($percentage >= 40) return 'Moderate Gap';
