@@ -4,20 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { adminAPI } from '../../api/endpoints';
 import HUDLayout from '../../components/HUDLayout';
 import { 
-  Briefcase, 
   Search, 
   Trash2, 
-  Eye, 
   MapPin, 
-  Building2,
-  ChevronLeft,
-  ChevronRight,
-  Link as LinkIcon,
-  Timer,
   AlertTriangle,
   Info,
   X,
-  RefreshCw,
   ArrowRight,
   ArrowLeft
 } from 'lucide-react';
@@ -46,9 +38,6 @@ const AdminJobs = () => {
 
   // DLQ Modal State
   const [dlqOpen, setDlqOpen] = useState(false);
-  const [dlqData, setDlqData] = useState(null);
-  const [dlqLoading, setDlqLoading] = useState(false);
-  const [dlqRetrying, setDlqRetrying] = useState(false);
 
   // Pagination & Search State (URL Synced)
   const [searchParams, setSearchParams] = useSearchParams();
@@ -131,32 +120,8 @@ const AdminJobs = () => {
     }
   };
 
-  const fetchDLQ = async () => {
-    setDlqLoading(true);
+  const fetchDLQ = () => {
     setDlqOpen(true);
-    try {
-      const response = await adminAPI.getAdminJobsDLQ();
-      if (response.data && response.data.success) {
-        setDlqData(response.data.data);
-      }
-    } catch (err) {
-      console.error('Failed to fetch DLQ:', err);
-    } finally {
-      setDlqLoading(false);
-    }
-  };
-
-  const retryDLQ = async () => {
-    setDlqRetrying(true);
-    try {
-      await adminAPI.retryAdminJobsDLQ();
-      setDlqOpen(false);
-      fetchJobs();
-    } catch (err) {
-      console.error('DLQ retry failed:', err);
-    } finally {
-      setDlqRetrying(false);
-    }
   };
 
   return (
@@ -310,48 +275,31 @@ const AdminJobs = () => {
               </div>
 
               <div className="p-8 space-y-6">
-                {dlqLoading ? (
-                  <div className="py-20 flex flex-col items-center justify-center space-y-4">
-                    <RefreshCw className="text-[var(--cc-primary)] animate-spin" size={40} />
-                    <p className="text-xs font-mono text-slate-500">LOADING_FAILED_JOB_RECORDS...</p>
+                <div className="space-y-6">
+                  <div className="p-5 rounded-2xl bg-amber-500/5 border border-amber-500/10">
+                    <div className="flex items-center gap-2 mb-3 text-amber-500">
+                      <Info size={16} />
+                      <span className="text-[10px] font-black uppercase tracking-widest">{t('admin.demo_safe_note', 'Demo-safe note')}</span>
+                    </div>
+                    <p className="text-sm text-slate-300 leading-relaxed">
+                      {t(
+                        'admin.jobs_dlq_unavailable',
+                        'Failed URL retry is scoped to scraping batches from the Admin Sources diagnostics screen. Use Admin Sources to inspect failed source URLs during the graduation demo.'
+                      )}
+                    </p>
                   </div>
-                ) : dlqData ? (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="p-6 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 shadow-sm">
-                        <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{t('admin.stats.failed_records')}</div>
-                        <div className="text-3xl font-black text-slate-900 dark:text-white">{dlqData.total_failed || 0}</div>
-                      </div>
-                      <div className="p-6 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 shadow-sm">
-                        <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{t('admin.stats.retry_count')}</div>
-                        <div className="text-3xl font-black text-slate-900 dark:text-white">{dlqData.retry_attempts || 0}</div>
-                      </div>
-                    </div>
-                    
-                    <div className="p-4 rounded-2xl bg-rose-500/5 border border-rose-500/10">
-                      <div className="flex items-center gap-2 mb-2 text-rose-400">
-                        <Info size={14} />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Analysis</span>
-                      </div>
-                      <p className="text-xs text-slate-400 leading-relaxed italic">
-                        {t('admin.dlq_hint')}
-                      </p>
-                    </div>
 
-                    <button 
-                      onClick={retryDLQ}
-                      disabled={dlqRetrying || dlqData.total_failed === 0}
-                      className="w-full py-4 bg-white text-slate-950 font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-20 flex items-center justify-center gap-3"
-                    >
-                      {dlqRetrying ? <RefreshCw className="animate-spin" size={18} /> : <RefreshCw size={18} />}
-                      {t('admin.stats.reinject_signals')}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="py-12 text-center">
-                    <p className="text-slate-500 font-mono text-sm">{t('admin.stats.no_failures')}</p>
-                  </div>
-                )}
+                  <button
+                    onClick={() => {
+                      setDlqOpen(false);
+                      navigate('/admin/sources');
+                    }}
+                    className="w-full py-4 bg-white text-slate-950 font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-3"
+                  >
+                    {t('admin.stats.sources')}
+                    <ArrowRight size={18} className={isRtl ? 'rotate-180' : ''} />
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>

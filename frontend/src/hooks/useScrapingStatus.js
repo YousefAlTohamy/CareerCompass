@@ -153,14 +153,14 @@ export function useScrapingStatus(scrapingJobId, options = {}) {
  * 
  * // UI State Management
  * if (isPolling && status === 'processing') {
- *   return <LoadingSpinner message="Scraping jobs..." />;
+ *   return <div>Scraping jobs...</div>;
  * }
  * 
  * if (status === 'completed') {
- *   return <SuccessAlert message="Jobs scraped successfully!" />;
+ *   return <div>Jobs scraped successfully!</div>;
  * }
  * 
  * if (status === 'failed') {
- *   return <ErrorAlert message={error} />;
+ *   return <div>{error}</div>;
  * }
  */
