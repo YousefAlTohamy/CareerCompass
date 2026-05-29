@@ -5,6 +5,9 @@
 *.yml text eol=lf
 *.yaml text eol=lf
 *.md text eol=lf
+*.pdf binary
+*.png binary
+*.docx binary
 Dockerfile* text eol=lf
 .dockerignore text eol=lf
 .env.example text eol=lf
