@@ -29,13 +29,15 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 
 ## Counts
 
-- PDF pages: 51
+- PDF pages: 52
 - Screenshots/evidence images: 19
 - Diagrams: 8
 
 ## Table of Contents and Tables
 
 - TOC placement: standalone page immediately after the cover page
+- Front matter order: Cover -> Table of Contents -> List of Figures -> List of Tables -> Acknowledgment -> Abstract -> Abbreviations -> Chapter 1
+- Abbreviations placement: standalone page after Abstract and before Chapter 1
 - DOCX TOC status: 15 custom manual TOC entries contain internal hyperlinks to bookmarked major headings
 - DOCX List of Figures status: 27 List of Figures entries link to bookmarked figure captions
 - DOCX List of Tables status: 17 List of Tables entries link to bookmarked table captions
@@ -52,7 +54,7 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - Table-caption order was checked structurally from DOCX block order and Markdown source order so that `Table n. ...` captions occur after the corresponding table blocks.
 - DOCX structural scan: OOXML inspection counted TOC/List of Figures/List of Tables internal hyperlinks, checked that every hyperlink anchor has a matching bookmark, and counted figure/table caption bookmarks.
 - PDF structural scan: `pypdf` counted pages and link annotations after Microsoft Word export.
-- TOC placement was checked from DOCX body order and PDF page text extraction: the first generated page after the cover is the Table of Contents page, followed by Acknowledgment.
+- Front-matter placement was checked from DOCX body order and PDF page text extraction: the first generated page after the cover is the Table of Contents page, followed by List of Figures, List of Tables, Acknowledgment, Abstract, standalone Abbreviations, and Chapter 1.
 - Table layout was checked through OOXML for fixed table layout, table grids, cell widths, and repeated header rows on data tables.
 
 ## Mini Dataset Evaluation

@@ -24,10 +24,10 @@ Ahmed Sobhy Mohamed Ali
 
 # Table of Contents
 
-- [Acknowledgment](#bm_acknowledgment)
-- [Abstract](#bm_abstract)
 - [List of Figures](#bm_list_of_figures)
 - [List of Tables](#bm_list_of_tables)
+- [Acknowledgment](#bm_acknowledgment)
+- [Abstract](#bm_abstract)
 - [Abbreviations](#bm_abbreviations)
 - [Chapter 1: Introduction](#bm_chapter_1_introduction)
 - [Chapter 2: System Analysis](#bm_chapter_2_system_analysis)
@@ -41,18 +41,6 @@ Ahmed Sobhy Mohamed Ali
 - [Appendices](#bm_appendices)
 
 \pagebreak
-
-# Acknowledgment
-
-The project team would like to express sincere appreciation to Dr. Amna Mahmoud for academic supervision, technical guidance, and continuous feedback during the preparation of CareerCompass. The team also thanks the Faculty of Computers and Information at Kafr El-Sheikh University for providing the academic setting in which this graduation project was designed, implemented, tested, and documented.
-
-The work presented in this book reflects a collaborative software engineering effort. It combines web application development, database design, AI-assisted document analysis, explainable matching, containerized deployment, testing, and technical documentation. The two supervisor-provided graduation books were used only to understand expected report structure and visual formality; no content, wording, project-specific claims, diagrams, or references were copied from them.
-
-# Abstract
-
-CareerCompass is a graduation/demo career guidance platform that helps students and early-career users understand their CV profile, explore imported job opportunities, and compare their current skills against job requirements. The system consists of a React and Vite frontend, a Laravel API backend, a MySQL database, a FastAPI-based CV analyzer, a FastAPI/Scrapy-based job miner, MinIO-compatible private file storage, Nginx routing, and Prometheus/Grafana monitoring. The platform supports registration, login, CV upload, AI-assisted CV parsing, normalized profile and skills storage, job recommendation, gap analysis, an application tracker, and administrator dashboards for job and source diagnostics.
-
-The implementation is intentionally described as a graduation/demo system rather than a production product. The AI outputs are estimates, the job data depends on imported and demo sources, and the security posture is appropriate for demonstration but requires further production hardening. Validation was performed through Docker Compose configuration checks, backend tests, frontend lint/build, Python service tests or syntax checks, HTTP probes, and manual browser screenshots. Backend tests passed with 39 tests and 297 assertions, the AI job miner tests passed with 75 tests, and the frontend build completed successfully. The AI CV analyzer container did not include pytest, so its pytest suite was marked as skipped while Python syntax compilation passed.
 
 # List of Figures
 
@@ -84,6 +72,8 @@ The implementation is intentionally described as a graduation/demo system rather
 - [Figure 26. Docker services evidence.](#bm_figure_26)
 - [Figure 27. Validation command evidence.](#bm_figure_27)
 
+\pagebreak
+
 # List of Tables
 
 - [Table 1. Stakeholder summary.](#bm_table_1)
@@ -103,6 +93,22 @@ The implementation is intentionally described as a graduation/demo system rather
 - [Table 15. API endpoint summary.](#bm_table_15)
 - [Table 16. Database tables summary.](#bm_table_16)
 - [Table 17. Docker services summary.](#bm_table_17)
+
+\pagebreak
+
+# Acknowledgment
+
+The project team would like to express sincere appreciation to Dr. Amna Mahmoud for academic supervision, technical guidance, and continuous feedback during the preparation of CareerCompass. The team also thanks the Faculty of Computers and Information at Kafr El-Sheikh University for providing the academic setting in which this graduation project was designed, implemented, tested, and documented.
+
+The work presented in this book reflects a collaborative software engineering effort. It combines web application development, database design, AI-assisted document analysis, explainable matching, containerized deployment, testing, and technical documentation. The two supervisor-provided graduation books were used only to understand expected report structure and visual formality; no content, wording, project-specific claims, diagrams, or references were copied from them.
+
+# Abstract
+
+CareerCompass is a graduation/demo career guidance platform that helps students and early-career users understand their CV profile, explore imported job opportunities, and compare their current skills against job requirements. The system consists of a React and Vite frontend, a Laravel API backend, a MySQL database, a FastAPI-based CV analyzer, a FastAPI/Scrapy-based job miner, MinIO-compatible private file storage, Nginx routing, and Prometheus/Grafana monitoring. The platform supports registration, login, CV upload, AI-assisted CV parsing, normalized profile and skills storage, job recommendation, gap analysis, an application tracker, and administrator dashboards for job and source diagnostics.
+
+The implementation is intentionally described as a graduation/demo system rather than a production product. The AI outputs are estimates, the job data depends on imported and demo sources, and the security posture is appropriate for demonstration but requires further production hardening. Validation was performed through Docker Compose configuration checks, backend tests, frontend lint/build, Python service tests or syntax checks, HTTP probes, and manual browser screenshots. Backend tests passed with 39 tests and 297 assertions, the AI job miner tests passed with 75 tests, and the frontend build completed successfully. The AI CV analyzer container did not include pytest, so its pytest suite was marked as skipped while Python syntax compilation passed.
+
+\pagebreak
 
 # Abbreviations
 

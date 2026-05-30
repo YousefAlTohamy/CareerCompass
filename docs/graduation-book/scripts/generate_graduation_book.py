@@ -68,10 +68,10 @@ STUDENTS = [
 ]
 
 TOC_ENTRIES = [
-    ("Acknowledgment", "Acknowledgment"),
-    ("Abstract", "Abstract"),
     ("List of Figures", "List of Figures"),
     ("List of Tables", "List of Tables"),
+    ("Acknowledgment", "Acknowledgment"),
+    ("Abstract", "Abstract"),
     ("Abbreviations", "Abbreviations"),
     ("Chapter 1: Introduction", "Chapter 1: Introduction"),
     ("Chapter 2: System Analysis", "Chapter 2: System Analysis"),
@@ -751,6 +751,18 @@ Submitted by:
 
 \\pagebreak
 
+# List of Figures
+
+{fig_list}
+
+\\pagebreak
+
+# List of Tables
+
+{table_list}
+
+\\pagebreak
+
 # Acknowledgment
 
 The project team would like to express sincere appreciation to {SUPERVISOR} for academic supervision, technical guidance, and continuous feedback during the preparation of CareerCompass. The team also thanks the Faculty of Computers and Information at Kafr El-Sheikh University for providing the academic setting in which this graduation project was designed, implemented, tested, and documented.
@@ -763,13 +775,7 @@ CareerCompass is a graduation/demo career guidance platform that helps students 
 
 The implementation is intentionally described as a graduation/demo system rather than a production product. The AI outputs are estimates, the job data depends on imported and demo sources, and the security posture is appropriate for demonstration but requires further production hardening. Validation was performed through Docker Compose configuration checks, backend tests, frontend lint/build, Python service tests or syntax checks, HTTP probes, and manual browser screenshots. Backend tests passed with 39 tests and 297 assertions, the AI job miner tests passed with 75 tests, and the frontend build completed successfully. The AI CV analyzer container did not include pytest, so its pytest suite was marked as skipped while Python syntax compilation passed.
 
-# List of Figures
-
-{fig_list}
-
-# List of Tables
-
-{table_list}
+\\pagebreak
 
 # Abbreviations
 
@@ -2185,6 +2191,8 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 ## Table of Contents and Tables
 
 - TOC placement: standalone page immediately after the cover page
+- Front matter order: Cover -> Table of Contents -> List of Figures -> List of Tables -> Acknowledgment -> Abstract -> Abbreviations -> Chapter 1
+- Abbreviations placement: standalone page after Abstract and before Chapter 1
 - DOCX TOC status: {toc_docx_status}
 - DOCX List of Figures status: {figures_docx_status}
 - DOCX List of Tables status: {tables_docx_status}
@@ -2201,7 +2209,7 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - Table-caption order was checked structurally from DOCX block order and Markdown source order so that `Table n. ...` captions occur after the corresponding table blocks.
 - DOCX structural scan: OOXML inspection counted TOC/List of Figures/List of Tables internal hyperlinks, checked that every hyperlink anchor has a matching bookmark, and counted figure/table caption bookmarks.
 - PDF structural scan: `pypdf` counted pages and link annotations after Microsoft Word export.
-- TOC placement was checked from DOCX body order and PDF page text extraction: the first generated page after the cover is the Table of Contents page, followed by Acknowledgment.
+- Front-matter placement was checked from DOCX body order and PDF page text extraction: the first generated page after the cover is the Table of Contents page, followed by List of Figures, List of Tables, Acknowledgment, Abstract, standalone Abbreviations, and Chapter 1.
 - Table layout was checked through OOXML for fixed table layout, table grids, cell widths, and repeated header rows on data tables.
 
 ## Mini Dataset Evaluation
