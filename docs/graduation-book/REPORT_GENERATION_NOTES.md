@@ -46,6 +46,7 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - Figure caption status: explicit italic caption lines are the single visible figure-caption source; Markdown image alt text is not rendered as a visible figure caption
 - Table caption status: formal table captions are rendered below their corresponding tables and remain linked from the List of Tables
 - Section 2.6/2.7 layout status: 2.6 heading, FR-01/FR-11 rows, and Table 2 caption appear on PDF page(s) [10]; 2.7 starts on PDF page(s) [10] after the Table 2 caption
+- Section 2.9/2.10 layout status: 2.9 heading, Software Requirements rows, and Table 4 caption appear on PDF page(s) [11]; 2.10 starts on PDF page(s) [11] after the Table 4 caption
 
 ## Caption, Link, and Layout Verification Method
 

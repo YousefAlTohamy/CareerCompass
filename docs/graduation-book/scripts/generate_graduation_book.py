@@ -930,6 +930,8 @@ CareerCompass implements two practical roles. The student role can register, log
 
 For local demonstration, a developer machine capable of running Docker Desktop and multiple containers is required. CV parsing and OCR-like processing can be CPU-intensive; therefore, enough memory should be available for the Laravel backend, MySQL, frontend, Python services, MinIO, Prometheus, and Grafana. GPU acceleration is not required for the demonstrated flow.
 
+\\pagebreak
+
 ## 2.9 Software Requirements
 
 | Layer | Software |
@@ -1673,11 +1675,14 @@ def set_cell_text(
 def table_widths(headers: list[str], column_count: int) -> list[int]:
     total = 9300
     joined = " ".join(headers).lower()
-    if column_count == 2:
+    header_set = {h.strip().lower() for h in headers}
+    if column_count == 2 and {"layer", "software"}.issubset(header_set):
+        weights = [0.20, 0.80]
+    elif column_count == 2:
         weights = [0.24, 0.76]
-    elif column_count == 3 and {"id", "requirement", "implementation evidence"}.issubset({h.strip().lower() for h in headers}):
+    elif column_count == 3 and {"id", "requirement", "implementation evidence"}.issubset(header_set):
         weights = [0.10, 0.34, 0.56]
-    elif column_count == 3 and {"category", "requirement", "careercompass approach"}.issubset({h.strip().lower() for h in headers}):
+    elif column_count == 3 and {"category", "requirement", "careercompass approach"}.issubset(header_set):
         weights = [0.18, 0.31, 0.51]
     elif column_count == 3:
         weights = [0.22, 0.30, 0.48]
@@ -1775,6 +1780,7 @@ def add_md_table_docx(doc: Document, lines: list[str]) -> None:
     column_count = max(len(r) for r in rows)
     header_key = [clean_inline(cell).strip().lower() for cell in rows[0]]
     is_functional_requirements = header_key[:3] == ["id", "requirement", "implementation evidence"]
+    is_software_requirements = header_key[:2] == ["layer", "software"]
     table = doc.add_table(rows=len(rows), cols=column_count)
     table.style = "Table Grid"
     widths = table_widths(rows[0], column_count)
@@ -1790,8 +1796,8 @@ def add_md_table_docx(doc: Document, lines: list[str]) -> None:
                 shade_cell(cell, "D9EAF7")
             short_cell = c_idx == 0 or clean_inline(value).lower() in {"passed", "not run manual", "skipped, pytest missing"}
             align = WD_ALIGN_PARAGRAPH.CENTER if short_cell else WD_ALIGN_PARAGRAPH.LEFT
-            font_size = 7.3 if is_functional_requirements else (7.6 if column_count >= 5 else 8.5)
-            spacing = 0.95 if is_functional_requirements else 1.05
+            font_size = 7.3 if is_functional_requirements else (8.2 if is_software_requirements else (7.6 if column_count >= 5 else 8.5))
+            spacing = 0.95 if is_functional_requirements else (1.0 if is_software_requirements else 1.05)
             set_cell_text(cell, value, bold=(r_idx == 0), size=font_size, align=align, line_spacing=spacing)
     spacer = doc.add_paragraph()
     spacer.paragraph_format.space_after = Pt(4)
@@ -2190,6 +2196,7 @@ def write_notes(
     table_status: str,
     caption_status: str,
     requirements_layout_status: str,
+    software_layout_status: str,
 ) -> None:
     screenshot_count = len(list(SCREENSHOTS.glob("*.png")))
     diagram_count = len(list(DIAGRAMS.glob("*.png")))
@@ -2249,6 +2256,7 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - Figure caption status: {caption_status}
 - Table caption status: formal table captions are rendered below their corresponding tables and remain linked from the List of Tables
 - Section 2.6/2.7 layout status: {requirements_layout_status}
+- Section 2.9/2.10 layout status: {software_layout_status}
 
 ## Caption, Link, and Layout Verification Method
 
@@ -2339,6 +2347,15 @@ def main() -> None:
         "FR-11",
         "Table 2. Functional requirements summary.",
         "2.7 Non-Functional Requirements",
+        "2.9 Software Requirements",
+        "Frontend",
+        "Backend",
+        "AI services",
+        "Data",
+        "Infrastructure",
+        "Testing",
+        "Table 4. Hardware and software environment.",
+        "2.10 Input and Output Flow",
     ])
     section_26_start = min(section_pages.get("2.6 Functional Requirements", []) or section_pages.get("FR-01", []) or [1])
     table_2_body_pages = [page for page in section_pages.get("Table 2. Functional requirements summary.", []) if page >= section_26_start]
@@ -2352,6 +2369,21 @@ def main() -> None:
         f"2.6 heading, FR-01/FR-11 rows, and Table 2 caption appear on PDF page(s) {fr_pages or 'not detected'}; "
         f"2.7 starts on PDF page(s) {section_pages.get('2.7 Non-Functional Requirements', []) or 'not detected'} after the Table 2 caption"
     )
+    section_29_start = min(section_pages.get("2.9 Software Requirements", []) or [1])
+    section_210_start = min(section_pages.get("2.10 Input and Output Flow", []) or [section_29_start])
+    table_4_body_pages = [page for page in section_pages.get("Table 4. Hardware and software environment.", []) if page >= section_29_start]
+    software_row_pages = []
+    for term in ["Frontend", "Backend", "AI services", "Data", "Infrastructure", "Testing"]:
+        software_row_pages.extend(page for page in section_pages.get(term, []) if section_29_start <= page <= section_210_start)
+    software_pages = sorted(set(
+        section_pages.get("2.9 Software Requirements", [])
+        + software_row_pages
+        + table_4_body_pages
+    ))
+    software_layout_status = (
+        f"2.9 heading, Software Requirements rows, and Table 4 caption appear on PDF page(s) {software_pages or 'not detected'}; "
+        f"2.10 starts on PDF page(s) {section_pages.get('2.10 Input and Output Flow', []) or 'not detected'} after the Table 4 caption"
+    )
     write_notes(
         page_count,
         pdf_method,
@@ -2362,6 +2394,7 @@ def main() -> None:
         table_status,
         caption_status,
         requirements_layout_status,
+        software_layout_status,
     )
     print(f"Generated Markdown: {MD_PATH}")
     print(f"Generated DOCX: {DOCX_PATH}")

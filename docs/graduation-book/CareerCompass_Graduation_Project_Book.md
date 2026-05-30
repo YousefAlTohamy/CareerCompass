@@ -251,6 +251,8 @@ CareerCompass implements two practical roles. The student role can register, log
 
 For local demonstration, a developer machine capable of running Docker Desktop and multiple containers is required. CV parsing and OCR-like processing can be CPU-intensive; therefore, enough memory should be available for the Laravel backend, MySQL, frontend, Python services, MinIO, Prometheus, and Grafana. GPU acceleration is not required for the demonstrated flow.
 
+\pagebreak
+
 ## 2.9 Software Requirements
 
 | Layer | Software |
