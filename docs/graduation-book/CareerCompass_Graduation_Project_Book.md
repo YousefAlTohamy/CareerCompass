@@ -214,6 +214,8 @@ The system targets common problems in student career preparation:
 
 CareerCompass implements two practical roles. The student role can register, login, upload a CV, view recommendations, run gap analysis, and track applications. The admin role can access protected admin routes for dashboard statistics, job administration, scraping sources, target roles, and user review.
 
+\pagebreak
+
 ## 2.6 Functional Requirements
 
 | ID | Requirement | Implementation Evidence |

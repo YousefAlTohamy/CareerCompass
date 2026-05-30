@@ -45,6 +45,7 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - Table formatting status: data tables use fixed DXA widths, wrapped text, repeated header rows, smaller table fonts, and split wide manual test observations into narrower tables; cover layout tables are intentionally excluded from repeated-header checks
 - Figure caption status: explicit italic caption lines are the single visible figure-caption source; Markdown image alt text is not rendered as a visible figure caption
 - Table caption status: formal table captions are rendered below their corresponding tables and remain linked from the List of Tables
+- Section 2.6/2.7 layout status: 2.6 heading, FR-01/FR-11 rows, and Table 2 caption appear on PDF page(s) [10]; 2.7 starts on PDF page(s) [10] after the Table 2 caption
 
 ## Caption, Link, and Layout Verification Method
 

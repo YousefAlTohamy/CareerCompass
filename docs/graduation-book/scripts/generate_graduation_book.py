@@ -537,11 +537,23 @@ def text_image(path: Path, title: str, lines: Iterable[str]) -> None:
 
 def create_terminal_evidence() -> None:
     ps_text = command_text(["docker", "compose", "-f", "docker-compose.yml", "-f", "docker-compose.prod.yml", "ps"])
-    text_image(
-        SCREENSHOTS / "18_docker_containers.png",
-        "Docker Compose Services Evidence",
-        ps_text.splitlines(),
+    ps_path = SCREENSHOTS / "18_docker_containers.png"
+    ps_lower = ps_text.lower()
+    docker_daemon_unavailable = any(
+        marker in ps_lower
+        for marker in [
+            "failed to connect to the docker api",
+            "cannot connect to the docker daemon",
+            "is the docker daemon running",
+        ]
     )
+    # Keep the previously captured running-services evidence when this local machine cannot reach Docker.
+    if not docker_daemon_unavailable or not ps_path.exists():
+        text_image(
+            ps_path,
+            "Docker Compose Services Evidence",
+            ps_text.splitlines(),
+        )
     validation_lines = [
         "Validation summary captured for the graduation book:",
         "",
@@ -880,6 +892,8 @@ The system targets common problems in student career preparation:
 ## 2.5 User Roles
 
 CareerCompass implements two practical roles. The student role can register, login, upload a CV, view recommendations, run gap analysis, and track applications. The admin role can access protected admin routes for dashboard statistics, job administration, scraping sources, target roles, and user review.
+
+\\pagebreak
 
 ## 2.6 Functional Requirements
 
@@ -1635,13 +1649,21 @@ def find_following_caption(lines: list[str], index: int, kind: str) -> tuple[str
     return None, index
 
 
-def set_cell_text(cell, value: str, *, bold: bool = False, size: float = 8.5, align=WD_ALIGN_PARAGRAPH.LEFT) -> None:
+def set_cell_text(
+    cell,
+    value: str,
+    *,
+    bold: bool = False,
+    size: float = 8.5,
+    align=WD_ALIGN_PARAGRAPH.LEFT,
+    line_spacing: float = 1.05,
+) -> None:
     cell.text = ""
     para = cell.paragraphs[0]
     para.alignment = align
     para.paragraph_format.space_before = Pt(0)
     para.paragraph_format.space_after = Pt(0)
-    para.paragraph_format.line_spacing = 1.05
+    para.paragraph_format.line_spacing = line_spacing
     run = para.add_run(clean_inline(value))
     run.font.name = "Calibri"
     run.font.size = Pt(size)
@@ -1653,6 +1675,10 @@ def table_widths(headers: list[str], column_count: int) -> list[int]:
     joined = " ".join(headers).lower()
     if column_count == 2:
         weights = [0.24, 0.76]
+    elif column_count == 3 and {"id", "requirement", "implementation evidence"}.issubset({h.strip().lower() for h in headers}):
+        weights = [0.10, 0.34, 0.56]
+    elif column_count == 3 and {"category", "requirement", "careercompass approach"}.issubset({h.strip().lower() for h in headers}):
+        weights = [0.18, 0.31, 0.51]
     elif column_count == 3:
         weights = [0.22, 0.30, 0.48]
     elif column_count == 4 and "value" in joined and "notes" in joined:
@@ -1747,6 +1773,8 @@ def add_md_table_docx(doc: Document, lines: list[str]) -> None:
     if not rows:
         return
     column_count = max(len(r) for r in rows)
+    header_key = [clean_inline(cell).strip().lower() for cell in rows[0]]
+    is_functional_requirements = header_key[:3] == ["id", "requirement", "implementation evidence"]
     table = doc.add_table(rows=len(rows), cols=column_count)
     table.style = "Table Grid"
     widths = table_widths(rows[0], column_count)
@@ -1762,7 +1790,9 @@ def add_md_table_docx(doc: Document, lines: list[str]) -> None:
                 shade_cell(cell, "D9EAF7")
             short_cell = c_idx == 0 or clean_inline(value).lower() in {"passed", "not run manual", "skipped, pytest missing"}
             align = WD_ALIGN_PARAGRAPH.CENTER if short_cell else WD_ALIGN_PARAGRAPH.LEFT
-            set_cell_text(cell, value, bold=(r_idx == 0), size=7.6 if column_count >= 5 else 8.5, align=align)
+            font_size = 7.3 if is_functional_requirements else (7.6 if column_count >= 5 else 8.5)
+            spacing = 0.95 if is_functional_requirements else 1.05
+            set_cell_text(cell, value, bold=(r_idx == 0), size=font_size, align=align, line_spacing=spacing)
     spacer = doc.add_paragraph()
     spacer.paragraph_format.space_after = Pt(4)
 
@@ -1866,14 +1896,17 @@ def generate_docx() -> None:
         if line.startswith("# "):
             title = clean_inline(line[2:])
             para = doc.add_heading(title, level=1)
+            para.paragraph_format.keep_with_next = True
             add_bookmark(para, heading_anchor(title))
         elif line.startswith("## "):
             title = clean_inline(line[3:])
             para = doc.add_heading(title, level=2)
+            para.paragraph_format.keep_with_next = True
             add_bookmark(para, heading_anchor(title))
         elif line.startswith("### "):
             title = clean_inline(line[4:])
             para = doc.add_heading(title, level=3)
+            para.paragraph_format.keep_with_next = True
             add_bookmark(para, heading_anchor(title))
         elif line.startswith("- "):
             link = re.fullmatch(r"\[([^\]]+)\]\(#([^)]+)\)", line[2:].strip())
@@ -2110,6 +2143,20 @@ def count_pdf_link_annotations() -> int:
         return 0
 
 
+def pdf_pages_for_terms(terms: list[str]) -> dict[str, list[int]]:
+    try:
+        reader = PdfReader(str(PDF_PATH))
+        pages: dict[str, list[int]] = {term: [] for term in terms}
+        for page_number, page in enumerate(reader.pages, start=1):
+            text = page.extract_text() or ""
+            for term in terms:
+                if term in text:
+                    pages[term].append(page_number)
+        return pages
+    except Exception:
+        return {term: [] for term in terms}
+
+
 def count_docx_internal_links() -> dict[str, int]:
     try:
         from zipfile import ZipFile
@@ -2142,6 +2189,7 @@ def write_notes(
     toc_pdf_status: str,
     table_status: str,
     caption_status: str,
+    requirements_layout_status: str,
 ) -> None:
     screenshot_count = len(list(SCREENSHOTS.glob("*.png")))
     diagram_count = len(list(DIAGRAMS.glob("*.png")))
@@ -2200,6 +2248,7 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - Table formatting status: {table_status}
 - Figure caption status: {caption_status}
 - Table caption status: formal table captions are rendered below their corresponding tables and remain linked from the List of Tables
+- Section 2.6/2.7 layout status: {requirements_layout_status}
 
 ## Caption, Link, and Layout Verification Method
 
@@ -2284,7 +2333,36 @@ def main() -> None:
     toc_pdf_status = f"PDF contains {link_count} link annotations after export" if link_count else "PDF link preservation could not be confirmed from annotations"
     table_status = "data tables use fixed DXA widths, wrapped text, repeated header rows, smaller table fonts, and split wide manual test observations into narrower tables; cover layout tables are intentionally excluded from repeated-header checks"
     caption_status = "explicit italic caption lines are the single visible figure-caption source; Markdown image alt text is not rendered as a visible figure caption"
-    write_notes(page_count, pdf_method, toc_docx_status, figures_docx_status, tables_docx_status, toc_pdf_status, table_status, caption_status)
+    section_pages = pdf_pages_for_terms([
+        "2.6 Functional Requirements",
+        "FR-01",
+        "FR-11",
+        "Table 2. Functional requirements summary.",
+        "2.7 Non-Functional Requirements",
+    ])
+    section_26_start = min(section_pages.get("2.6 Functional Requirements", []) or section_pages.get("FR-01", []) or [1])
+    table_2_body_pages = [page for page in section_pages.get("Table 2. Functional requirements summary.", []) if page >= section_26_start]
+    fr_pages = sorted(set(
+        section_pages.get("2.6 Functional Requirements", [])
+        + section_pages.get("FR-01", [])
+        + section_pages.get("FR-11", [])
+        + table_2_body_pages
+    ))
+    requirements_layout_status = (
+        f"2.6 heading, FR-01/FR-11 rows, and Table 2 caption appear on PDF page(s) {fr_pages or 'not detected'}; "
+        f"2.7 starts on PDF page(s) {section_pages.get('2.7 Non-Functional Requirements', []) or 'not detected'} after the Table 2 caption"
+    )
+    write_notes(
+        page_count,
+        pdf_method,
+        toc_docx_status,
+        figures_docx_status,
+        tables_docx_status,
+        toc_pdf_status,
+        table_status,
+        caption_status,
+        requirements_layout_status,
+    )
     print(f"Generated Markdown: {MD_PATH}")
     print(f"Generated DOCX: {DOCX_PATH}")
     print(f"Generated PDF: {PDF_PATH}")
