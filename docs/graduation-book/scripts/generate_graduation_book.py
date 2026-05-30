@@ -1362,6 +1362,8 @@ Laravel form requests validate registration, login, CV upload, applications, and
 
 The API client attaches request IDs, and backend logging records important events such as CV processing status and AI gateway errors. For production, logs should avoid sensitive CV content and should be retained according to a privacy policy.
 
+\\pagebreak
+
 ## 7.9 Demo Security Limitations
 
 | Area | Current Demo Control | Production Hardening Needed |
@@ -1684,6 +1686,8 @@ def table_widths(headers: list[str], column_count: int) -> list[int]:
         weights = [0.10, 0.34, 0.56]
     elif column_count == 3 and {"category", "requirement", "careercompass approach"}.issubset(header_set):
         weights = [0.18, 0.31, 0.51]
+    elif column_count == 3 and {"area", "current demo control", "production hardening needed"}.issubset(header_set):
+        weights = [0.20, 0.31, 0.49]
     elif column_count == 3:
         weights = [0.22, 0.30, 0.48]
     elif column_count == 4 and "value" in joined and "notes" in joined:
@@ -1781,6 +1785,7 @@ def add_md_table_docx(doc: Document, lines: list[str]) -> None:
     header_key = [clean_inline(cell).strip().lower() for cell in rows[0]]
     is_functional_requirements = header_key[:3] == ["id", "requirement", "implementation evidence"]
     is_software_requirements = header_key[:2] == ["layer", "software"]
+    is_security_controls = header_key[:3] == ["area", "current demo control", "production hardening needed"]
     table = doc.add_table(rows=len(rows), cols=column_count)
     table.style = "Table Grid"
     widths = table_widths(rows[0], column_count)
@@ -1796,8 +1801,8 @@ def add_md_table_docx(doc: Document, lines: list[str]) -> None:
                 shade_cell(cell, "D9EAF7")
             short_cell = c_idx == 0 or clean_inline(value).lower() in {"passed", "not run manual", "skipped, pytest missing"}
             align = WD_ALIGN_PARAGRAPH.CENTER if short_cell else WD_ALIGN_PARAGRAPH.LEFT
-            font_size = 7.3 if is_functional_requirements else (8.2 if is_software_requirements else (7.6 if column_count >= 5 else 8.5))
-            spacing = 0.95 if is_functional_requirements else (1.0 if is_software_requirements else 1.05)
+            font_size = 7.3 if is_functional_requirements else (8.2 if is_software_requirements or is_security_controls else (7.6 if column_count >= 5 else 8.5))
+            spacing = 0.95 if is_functional_requirements else (1.0 if is_software_requirements or is_security_controls else 1.05)
             set_cell_text(cell, value, bold=(r_idx == 0), size=font_size, align=align, line_spacing=spacing)
     spacer = doc.add_paragraph()
     spacer.paragraph_format.space_after = Pt(4)
@@ -2197,6 +2202,7 @@ def write_notes(
     caption_status: str,
     requirements_layout_status: str,
     software_layout_status: str,
+    security_layout_status: str,
 ) -> None:
     screenshot_count = len(list(SCREENSHOTS.glob("*.png")))
     diagram_count = len(list(DIAGRAMS.glob("*.png")))
@@ -2257,6 +2263,7 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - Table caption status: formal table captions are rendered below their corresponding tables and remain linked from the List of Tables
 - Section 2.6/2.7 layout status: {requirements_layout_status}
 - Section 2.9/2.10 layout status: {software_layout_status}
+- Section 7.9/7.10 layout status: {security_layout_status}
 
 ## Caption, Link, and Layout Verification Method
 
@@ -2356,6 +2363,15 @@ def main() -> None:
         "Testing",
         "Table 4. Hardware and software environment.",
         "2.10 Input and Output Flow",
+        "7.9 Demo Security Limitations",
+        "Admin account",
+        "CV files",
+        "Tokens",
+        "Scraper service",
+        "Monitoring",
+        "Privacy",
+        "Table 14. Security and privacy controls.",
+        "7.10 Future Production Hardening",
     ])
     section_26_start = min(section_pages.get("2.6 Functional Requirements", []) or section_pages.get("FR-01", []) or [1])
     table_2_body_pages = [page for page in section_pages.get("Table 2. Functional requirements summary.", []) if page >= section_26_start]
@@ -2384,6 +2400,21 @@ def main() -> None:
         f"2.9 heading, Software Requirements rows, and Table 4 caption appear on PDF page(s) {software_pages or 'not detected'}; "
         f"2.10 starts on PDF page(s) {section_pages.get('2.10 Input and Output Flow', []) or 'not detected'} after the Table 4 caption"
     )
+    section_79_start = min(section_pages.get("7.9 Demo Security Limitations", []) or [1])
+    section_710_start = min(section_pages.get("7.10 Future Production Hardening", []) or [section_79_start])
+    table_14_body_pages = [page for page in section_pages.get("Table 14. Security and privacy controls.", []) if page >= section_79_start]
+    security_row_pages = []
+    for term in ["Admin account", "CV files", "Tokens", "Scraper service", "Monitoring", "Privacy"]:
+        security_row_pages.extend(page for page in section_pages.get(term, []) if section_79_start <= page <= section_710_start)
+    security_pages = sorted(set(
+        section_pages.get("7.9 Demo Security Limitations", [])
+        + security_row_pages
+        + table_14_body_pages
+    ))
+    security_layout_status = (
+        f"7.9 heading, security-control rows, and Table 14 caption appear on PDF page(s) {security_pages or 'not detected'}; "
+        f"7.10 starts on PDF page(s) {section_pages.get('7.10 Future Production Hardening', []) or 'not detected'} after the Table 14 caption"
+    )
     write_notes(
         page_count,
         pdf_method,
@@ -2395,6 +2426,7 @@ def main() -> None:
         caption_status,
         requirements_layout_status,
         software_layout_status,
+        security_layout_status,
     )
     print(f"Generated Markdown: {MD_PATH}")
     print(f"Generated DOCX: {DOCX_PATH}")

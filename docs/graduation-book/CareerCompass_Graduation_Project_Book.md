@@ -798,6 +798,8 @@ Laravel form requests validate registration, login, CV upload, applications, and
 
 The API client attaches request IDs, and backend logging records important events such as CV processing status and AI gateway errors. For production, logs should avoid sensitive CV content and should be retained according to a privacy policy.
 
+\pagebreak
+
 ## 7.9 Demo Security Limitations
 
 | Area | Current Demo Control | Production Hardening Needed |
