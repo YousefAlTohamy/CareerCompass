@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import {
   RefreshCw, Zap, Compass, Activity, Eye
 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { useAuth } from "../../context/AuthContext";
 import { useTranslation } from "react-i18next";
 import { cvAPI } from "../../api/endpoints";
@@ -154,6 +155,182 @@ const ProfileCompletenessRing = ({ score }) => {
         <span className="text-lg font-black text-slate-900 dark:text-white">{Math.round(safeScore)}%</span>
       </div>
     </div>
+  );
+};
+
+const SIGNAL_COLORS = ["#6366f1", "#06b6d4", "#10b981", "#f59e0b"];
+
+const clampPercentage = (value) => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return 0;
+  return Math.min(100, Math.max(0, numericValue));
+};
+
+const confidenceToPercentage = (value) => {
+  if (value == null || value === "") return null;
+
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return null;
+
+  return clampPercentage(numericValue <= 1 ? numericValue * 100 : numericValue);
+};
+
+const experienceToPercentage = (years) => {
+  if (years == null || years === "") return null;
+
+  const numericValue = Number(years);
+  if (!Number.isFinite(numericValue)) return null;
+
+  return clampPercentage((numericValue / 3) * 100);
+};
+
+const formatSignalValue = (value) => (
+  value == null ? "N/A" : `${Math.round(clampPercentage(value))}%`
+);
+
+const CareerReadinessTooltip = ({ active, payload }) => {
+  if (!active || !payload?.length) return null;
+
+  const signal = payload[0].payload;
+
+  return (
+    <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white/95 dark:bg-slate-950/95 px-4 py-3 shadow-2xl backdrop-blur-xl">
+      <p className="text-xs font-black text-slate-900 dark:text-white">{signal.label}</p>
+      <p className="mt-1 text-lg font-black" style={{ color: signal.color }}>
+        {signal.displayValue}
+      </p>
+      <p className="mt-1 max-w-[220px] text-[10px] font-medium leading-relaxed text-slate-500 dark:text-slate-400">
+        {signal.description}
+      </p>
+    </div>
+  );
+};
+
+const CareerReadinessChart = ({ completenessScore, confidenceScore, skillsCount, totalExperience }) => {
+  const { t } = useTranslation();
+  const confidencePercentage = confidenceToPercentage(confidenceScore);
+  const experiencePercentage = experienceToPercentage(totalExperience);
+  const skillSignalsPercentage = clampPercentage((Number(skillsCount) || 0) * 10);
+
+  const signals = [
+    {
+      key: "completeness",
+      label: t("dashboard.cv_completeness", "CV completeness"),
+      value: clampPercentage(completenessScore),
+      rawValue: clampPercentage(completenessScore),
+      description: t("dashboard.cv_completeness_signal_desc", "Estimated from parsed CV fields and profile details."),
+    },
+    {
+      key: "confidence",
+      label: t("dashboard.model_confidence", "Model confidence"),
+      value: confidencePercentage ?? 0,
+      rawValue: confidencePercentage,
+      description: t("dashboard.model_confidence_signal_desc", "Estimated confidence reported by the CV parser when available."),
+    },
+    {
+      key: "skills",
+      label: t("dashboard.skill_signals", "Skill signals"),
+      value: skillSignalsPercentage,
+      rawValue: skillSignalsPercentage,
+      description: t("dashboard.skill_signals_desc", "Normalized from extracted skill count, capped at ten detected skills."),
+    },
+    {
+      key: "experience",
+      label: t("dashboard.experience_signal", "Experience signal"),
+      value: experiencePercentage ?? 0,
+      rawValue: experiencePercentage,
+      description: t("dashboard.experience_signal_desc", "Estimated from total years of experience parsed from the CV."),
+    },
+  ].map((signal, index) => ({
+    ...signal,
+    color: SIGNAL_COLORS[index % SIGNAL_COLORS.length],
+    displayValue: formatSignalValue(signal.rawValue),
+  }));
+
+  const hasSignalData = signals.some((signal) => signal.rawValue != null && signal.rawValue > 0);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
+      className="glass-card p-8 border-slate-200 dark:border-white/5 bg-white/80 dark:bg-white/5 backdrop-blur-xl space-y-6"
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+            <Activity size={24} />
+          </div>
+          <div>
+            <h3 className="text-2xl font-black text-slate-900 dark:text-white">
+              {t("dashboard.career_readiness_snapshot", "Career Readiness Snapshot")}
+            </h3>
+            <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+              {t("dashboard.derived_from_parsed_cv", "Derived from parsed CV data. These are estimated dashboard signals, not hiring predictions.")}
+            </p>
+          </div>
+        </div>
+        <span className="w-fit rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-300">
+          {t("dashboard.estimated_snapshot", "Estimated")}
+        </span>
+      </div>
+
+      {hasSignalData ? (
+        <div className="h-[250px] min-h-[250px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={signals}
+              layout="vertical"
+              margin={{ top: 8, right: 24, left: 8, bottom: 8 }}
+              barCategoryGap={18}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                horizontal={false}
+                stroke="currentColor"
+                className="text-slate-200 dark:text-white/5"
+              />
+              <XAxis type="number" domain={[0, 100]} hide />
+              <YAxis
+                type="category"
+                dataKey="label"
+                width={120}
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 10, fill: "currentColor", fontWeight: 800 }}
+                className="text-slate-500 dark:text-slate-400"
+              />
+              <Tooltip content={<CareerReadinessTooltip />} cursor={{ fill: "currentColor", opacity: 0.04 }} />
+              <Bar dataKey="value" radius={[0, 10, 10, 0]} barSize={16}>
+                {signals.map((signal) => (
+                  <Cell key={signal.key} fill={signal.color} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      ) : (
+        <div className="flex min-h-[220px] flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.03] px-6 py-10 text-center">
+          <Activity size={32} className="text-slate-300 dark:text-slate-600" />
+          <p className="mt-4 text-sm font-black text-slate-600 dark:text-slate-300">
+            {t("dashboard.low_signal_data", "No parsed signal values yet")}
+          </p>
+          <p className="mt-2 max-w-md text-xs font-medium text-slate-500 dark:text-slate-400">
+            {t("dashboard.low_signal_data_desc", "The CV analysis exists, but the dashboard needs extracted skills, confidence, completeness, or experience values to draw this snapshot.")}
+          </p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {signals.map((signal) => (
+          <div key={signal.key} className="rounded-2xl border border-slate-200/70 dark:border-white/10 bg-white/60 dark:bg-white/5 px-4 py-3">
+            <div className="h-1.5 w-10 rounded-full" style={{ backgroundColor: signal.color }} />
+            <p className="mt-3 text-[10px] font-black uppercase tracking-widest text-slate-400">{signal.label}</p>
+            <p className="mt-1 text-lg font-black text-slate-900 dark:text-white">{signal.displayValue}</p>
+          </div>
+        ))}
+      </div>
+    </motion.div>
   );
 };
 
@@ -374,7 +551,15 @@ export default function Dashboard() {
            </motion.div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-             <div className="md:col-span-8"><CareerIdentityCard cvAnalysis={user?.cv_analysis} /></div>
+             <div className="md:col-span-8 space-y-8">
+                <CareerIdentityCard cvAnalysis={user?.cv_analysis} />
+                <CareerReadinessChart
+                  completenessScore={completenessScore}
+                  confidenceScore={user?.cv_analysis?.confidence_score}
+                  skillsCount={skills.length}
+                  totalExperience={totalExperience}
+                />
+             </div>
              <div className="md:col-span-4 space-y-8">
                 <div className="glass-card p-8 border-slate-200 dark:border-white/5 bg-white/80 dark:bg-white/5 backdrop-blur-md flex items-center gap-6">
                     <ProfileCompletenessRing score={completenessScore} />
