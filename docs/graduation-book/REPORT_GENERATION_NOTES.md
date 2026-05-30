@@ -29,7 +29,7 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 
 ## Counts
 
-- PDF pages: 52
+- PDF pages: 51
 - Screenshots/evidence images: 19
 - Diagrams: 8
 
@@ -41,12 +41,15 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - DOCX List of Tables status: 17 List of Tables entries link to bookmarked table captions
 - PDF TOC status: PDF contains 58 link annotations after export
 - Table formatting status: data tables use fixed DXA widths, wrapped text, repeated header rows, smaller table fonts, and split wide manual test observations into narrower tables; cover layout tables are intentionally excluded from repeated-header checks
-- Figure caption status: explicit italic caption lines are the single visible figure-caption source; Markdown image alt text is no longer rendered as a visible figure caption
+- Figure caption status: explicit italic caption lines are the single visible figure-caption source; Markdown image alt text is not rendered as a visible figure caption
+- Table caption status: formal table captions are rendered below their corresponding tables and remain linked from the List of Tables
 
 ## Caption, Link, and Layout Verification Method
 
-- Duplicate figure captions were checked by removing caption-like figure numbers from Markdown image alt text and rendering only the explicit italic `Figure n. ...` caption line in DOCX/PDF generation paths.
+- Duplicate figure captions were checked by removing image-prefix alt text and rendering only the explicit italic `Figure n. ...` caption line in DOCX/PDF generation paths.
 - Markdown scan: `rg -n "Figure [0-9]+:" docs/graduation-book/CareerCompass_Graduation_Project_Book.md` returned no matches after regeneration.
+- DOCX/PDF text extraction checks verify that no visible image-prefix caption lines remain and that figure captions still exist.
+- Table-caption order was checked structurally from DOCX block order and Markdown source order so that `Table n. ...` captions occur after the corresponding table blocks.
 - DOCX structural scan: OOXML inspection counted TOC/List of Figures/List of Tables internal hyperlinks, checked that every hyperlink anchor has a matching bookmark, and counted figure/table caption bookmarks.
 - PDF structural scan: `pypdf` counted pages and link annotations after Microsoft Word export.
 - TOC placement was checked from DOCX body order and PDF page text extraction: the first generated page after the cover is the Table of Contents page, followed by Acknowledgment.

@@ -681,38 +681,38 @@ def mini_eval_markdown(results: dict) -> str:
 
 The mini evaluation uses fake synthetic CVs and fake synthetic job records stored under `docs/graduation-book/evaluation/`. It is intentionally small and preliminary. It is useful for graduation validation and regression checks, but it is not statistically representative and should not be used as a production benchmark.
 
-*Table 6. Mini CV dataset.*
-
 {cv_dataset_table}
 
-*Table 7. Mini job dataset.*
+*Table 6. Mini CV dataset.*
 
 {job_dataset_table}
+
+*Table 7. Mini job dataset.*
 
 ### Metric Definitions
 
 Skill precision measures how many extracted skills are expected labels. Skill recall measures how many expected skills were extracted. Skill F1 is the harmonic mean of precision and recall [30]. Recommendation top-1 and top-3 relevance compare ranked jobs against manual relevance labels. Gap agreement compares computed matched/missing skills against expected matched/missing skills.
 
-*Table 8. Mini evaluation metrics.*
-
 {metric_table}
+
+*Table 8. Mini evaluation metrics.*
 
 ### Recommendation Ranking Details
 
-*Table 9. Recommendation ranking details.*
-
 {recommendation_table}
+
+*Table 9. Recommendation ranking details.*
 
 ### Gap Analysis Pair Details
 
-*Table 10. Gap analysis pair details.*
-
 {gap_table}
+
+*Table 10. Gap analysis pair details.*
 """
 
 
 def figure_markdown(number: str, caption: str, rel_path: str) -> str:
-    return f"![Image: {caption}]({rel_path})\n\n*{number}. {caption}*"
+    return f"![{caption}]({rel_path})\n\n*{number}. {caption}*"
 
 
 def report_markdown(mini_results: dict) -> str:
@@ -862,8 +862,6 @@ The system targets common problems in student career preparation:
 
 ## 2.4 Target Users and Stakeholders
 
-*Table 1. Stakeholder summary.*
-
 | Stakeholder | Description | Main Interest |
 |---|---|---|
 | Student user | A university student or early-career user. | Upload CV, view profile, discover jobs, analyze gaps, save opportunities. |
@@ -871,13 +869,13 @@ The system targets common problems in student career preparation:
 | Supervisor | Academic supervisor evaluating the graduation project. | Correctness, completeness, originality, and honest evaluation. |
 | Project team | Developers responsible for design and implementation. | Maintainable code, demonstrable workflows, testing, and documentation. |
 
+*Table 1. Stakeholder summary.*
+
 ## 2.5 User Roles
 
 CareerCompass implements two practical roles. The student role can register, login, upload a CV, view recommendations, run gap analysis, and track applications. The admin role can access protected admin routes for dashboard statistics, job administration, scraping sources, target roles, and user review.
 
 ## 2.6 Functional Requirements
-
-*Table 2. Functional requirements summary.*
 
 | ID | Requirement | Implementation Evidence |
 |---|---|---|
@@ -893,9 +891,9 @@ CareerCompass implements two practical roles. The student role can register, log
 | FR-10 | Provide admin dashboards. | Admin Dashboard, Jobs, Sources, Targets pages and admin API routes. |
 | FR-11 | Provide health and metrics endpoints. | HealthController, MetricsController, Prometheus/Grafana compose services. |
 
-## 2.7 Non-Functional Requirements
+*Table 2. Functional requirements summary.*
 
-*Table 3. Non-functional requirements summary.*
+## 2.7 Non-Functional Requirements
 
 | Category | Requirement | CareerCompass Approach |
 |---|---|---|
@@ -906,13 +904,13 @@ CareerCompass implements two practical roles. The student role can register, log
 | Observability | Health and metrics should be available. | `/api/health`, `/api/ready`, `/api/metrics`, Prometheus, Grafana. |
 | Portability | The demo should run locally. | Docker Compose services and environment examples. |
 
+*Table 3. Non-functional requirements summary.*
+
 ## 2.8 Hardware Requirements
 
 For local demonstration, a developer machine capable of running Docker Desktop and multiple containers is required. CV parsing and OCR-like processing can be CPU-intensive; therefore, enough memory should be available for the Laravel backend, MySQL, frontend, Python services, MinIO, Prometheus, and Grafana. GPU acceleration is not required for the demonstrated flow.
 
 ## 2.9 Software Requirements
-
-*Table 4. Hardware and software environment.*
 
 | Layer | Software |
 |---|---|
@@ -922,6 +920,8 @@ For local demonstration, a developer machine capable of running Docker Desktop a
 | Data | MySQL 8.0, MinIO/S3-compatible storage. |
 | Infrastructure | Docker, Docker Compose, Nginx, Prometheus, Grafana. |
 | Testing | PHPUnit/Pest-style Laravel tests, pytest for Python, ESLint and Vite build. |
+
+*Table 4. Hardware and software environment.*
 
 ## 2.10 Input and Output Flow
 
@@ -1009,8 +1009,6 @@ CareerCompass includes live, readiness, and metrics endpoints. Prometheus is use
 
 ## 3.14 Design Decisions and Justification
 
-*Table 5. Design decisions summary.*
-
 | Decision | Justification |
 |---|---|
 | Use Laravel for the main API. | The project benefits from built-in routing, validation, Eloquent ORM, queues, resources, tests, and middleware [1]. |
@@ -1019,6 +1017,8 @@ CareerCompass includes live, readiness, and metrics endpoints. Prometheus is use
 | Use Docker Compose. | Multiple services can be started consistently for a graduation defense [11]. |
 | Use private object storage for CV files. | CV files are sensitive; private storage and signed downloads reduce accidental exposure [9], [27]. |
 | Keep AI wording honest. | Match scores and CV parsing are estimates; the demo should avoid claiming certain outcomes. |
+
+*Table 5. Design decisions summary.*
 
 \\pagebreak
 
@@ -1258,8 +1258,6 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 
 ## 6.16 Summary of Results
 
-*Table 11. Automated validation results.*
-
 | Area | Command or Scenario | Result | Evidence |
 |---|---|---|---|
 | Docker config | `docker compose config --quiet` | Passed | Terminal evidence |
@@ -1274,7 +1272,7 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 | AI CV Analyzer pytest | `python -m pytest` | Skipped, pytest missing | Command output |
 | HTTP probes | `/`, `/api/health`, `/api/ready`, `/status`, AI services | 200 responses | Command output |
 
-*Table 12. Manual functional evaluation matrix.*
+*Table 11. Automated validation results.*
 
 | Test ID | Module | Scenario | Status | Evidence |
 |---|---|---|---|---|
@@ -1289,7 +1287,7 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 | M-09 | Admin sources | Open diagnostics | Passed | Figure 24 |
 | M-10 | Status | Open system status page | Passed | Figure 21 |
 
-*Table 13. Manual functional observations.*
+*Table 12. Manual functional evaluation matrix.*
 
 | Test ID | Expected vs Actual Observation |
 |---|---|
@@ -1303,6 +1301,8 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 | M-08 | Expected admin-only dashboard; actual dashboard visible after admin login. |
 | M-09 | Expected source diagnostics; actual diagnostics page visible. |
 | M-10 | Expected health UI; actual system status page visible. |
+
+*Table 13. Manual functional observations.*
 
 \\pagebreak
 
@@ -1342,8 +1342,6 @@ The API client attaches request IDs, and backend logging records important event
 
 ## 7.9 Demo Security Limitations
 
-*Table 14. Security and privacy controls.*
-
 | Area | Current Demo Control | Production Hardening Needed |
 |---|---|---|
 | Admin account | Demo seeder account | Secret rotation, SSO/MFA, audit logs |
@@ -1352,6 +1350,8 @@ The API client attaches request IDs, and backend logging records important event
 | Scraper service | Internal token | Secret manager, network isolation, rate limits |
 | Monitoring | Local Prometheus/Grafana | Auth, TLS, dashboard access control |
 | Privacy | Local demo posture | Legal review, privacy notice, data minimization |
+
+*Table 14. Security and privacy controls.*
 
 ## 7.10 Future Production Hardening
 
@@ -1415,8 +1415,6 @@ CareerCompass is an original graduation project that connects academic software 
 
 ## Appendix A: API Endpoint Summary
 
-*Table 15. API endpoint summary.*
-
 | Group | Example Endpoints | Purpose |
 |---|---|---|
 | Health | `/api/health`, `/api/ready`, `/api/metrics` | Liveness, readiness, and Prometheus metrics. |
@@ -1428,9 +1426,9 @@ CareerCompass is an original graduation project that connects academic software 
 | Admin | `/api/v1/admin/dashboard/stats`, `/api/v1/admin/jobs`, `/api/v1/admin/scraping-sources`, `/api/v1/admin/target-roles` | Admin dashboards and diagnostics. |
 | Internal Scraper | `/api/jobs/import`, `/api/jobs/import/check`, `/api/proxies/active` | Service-token protected import routes. |
 
-## Appendix B: Database Tables Summary
+*Table 15. API endpoint summary.*
 
-*Table 16. Database tables summary.*
+## Appendix B: Database Tables Summary
 
 | Table | Purpose |
 |---|---|
@@ -1446,9 +1444,9 @@ CareerCompass is an original graduation project that connects academic software 
 | target_job_roles | Target role list for scraping and market exploration. |
 | scraping_jobs | Scraping batch execution state. |
 
-## Appendix C: Docker Services Summary
+*Table 16. Database tables summary.*
 
-*Table 17. Docker services summary.*
+## Appendix C: Docker Services Summary
 
 | Service | Role |
 |---|---|
@@ -1463,6 +1461,8 @@ CareerCompass is an original graduation project that connects academic software 
 | ai-job-miner | FastAPI job mining service. |
 | prometheus | Metrics collection. |
 | grafana | Metrics visualization. |
+
+*Table 17. Docker services summary.*
 
 ## Appendix D: Screenshots
 
@@ -1618,6 +1618,15 @@ def clean_inline(text: str) -> str:
     text = re.sub(r"`([^`]+)`", r"\1", text)
     text = text.replace("\\", "")
     return text
+
+
+def find_following_caption(lines: list[str], index: int, kind: str) -> tuple[str | None, int]:
+    j = index
+    while j < len(lines) and not lines[j].strip():
+        j += 1
+    if j < len(lines) and lines[j].startswith(f"*{kind}"):
+        return clean_inline(lines[j].strip("*")), j + 1
+    return None, index
 
 
 def set_cell_text(cell, value: str, *, bold: bool = False, size: float = 8.5, align=WD_ALIGN_PARAGRAPH.LEFT) -> None:
@@ -1835,10 +1844,10 @@ def generate_docx() -> None:
         if image_match:
             rel_path = image_match.group(2)
             caption = clean_inline(image_match.group(1))
-            next_index = i + 1
-            if next_index < len(lines) and lines[next_index].startswith("*Figure"):
-                caption = clean_inline(lines[next_index].strip("*"))
-                i += 2
+            explicit_caption, next_index = find_following_caption(lines, i + 1, "Figure")
+            if explicit_caption:
+                caption = explicit_caption
+                i = next_index
             else:
                 i += 1
             bookmark_name = caption_anchor(caption)
@@ -2004,10 +2013,10 @@ def generate_pdf() -> int:
         image_match = re.match(r"!\[(.*?)\]\((.*?)\)", line)
         if image_match:
             caption = clean_inline(image_match.group(1))
-            next_index = i + 1
-            if next_index < len(lines) and lines[next_index].startswith("*Figure"):
-                caption = clean_inline(lines[next_index].strip("*"))
-                i += 2
+            explicit_caption, next_index = find_following_caption(lines, i + 1, "Figure")
+            if explicit_caption:
+                caption = explicit_caption
+                i = next_index
             else:
                 i += 1
             add_pdf_image(story, image_match.group(2), caption)
@@ -2182,11 +2191,14 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - PDF TOC status: {toc_pdf_status}
 - Table formatting status: {table_status}
 - Figure caption status: {caption_status}
+- Table caption status: formal table captions are rendered below their corresponding tables and remain linked from the List of Tables
 
 ## Caption, Link, and Layout Verification Method
 
-- Duplicate figure captions were checked by removing caption-like figure numbers from Markdown image alt text and rendering only the explicit italic `Figure n. ...` caption line in DOCX/PDF generation paths.
+- Duplicate figure captions were checked by removing image-prefix alt text and rendering only the explicit italic `Figure n. ...` caption line in DOCX/PDF generation paths.
 - Markdown scan: `rg -n "Figure [0-9]+:" docs/graduation-book/CareerCompass_Graduation_Project_Book.md` returned no matches after regeneration.
+- DOCX/PDF text extraction checks verify that no visible image-prefix caption lines remain and that figure captions still exist.
+- Table-caption order was checked structurally from DOCX block order and Markdown source order so that `Table n. ...` captions occur after the corresponding table blocks.
 - DOCX structural scan: OOXML inspection counted TOC/List of Figures/List of Tables internal hyperlinks, checked that every hyperlink anchor has a matching bookmark, and counted figure/table caption bookmarks.
 - PDF structural scan: `pypdf` counted pages and link annotations after Microsoft Word export.
 - TOC placement was checked from DOCX body order and PDF page text extraction: the first generated page after the cover is the Table of Contents page, followed by Acknowledgment.
@@ -2263,7 +2275,7 @@ def main() -> None:
     tables_docx_status = f"{docx_link_counts['tables']} List of Tables entries link to bookmarked table captions"
     toc_pdf_status = f"PDF contains {link_count} link annotations after export" if link_count else "PDF link preservation could not be confirmed from annotations"
     table_status = "data tables use fixed DXA widths, wrapped text, repeated header rows, smaller table fonts, and split wide manual test observations into narrower tables; cover layout tables are intentionally excluded from repeated-header checks"
-    caption_status = "explicit italic caption lines are the single visible figure-caption source; Markdown image alt text is no longer rendered as a visible figure caption"
+    caption_status = "explicit italic caption lines are the single visible figure-caption source; Markdown image alt text is not rendered as a visible figure caption"
     write_notes(page_count, pdf_method, toc_docx_status, figures_docx_status, tables_docx_status, toc_pdf_status, table_status, caption_status)
     print(f"Generated Markdown: {MD_PATH}")
     print(f"Generated DOCX: {DOCX_PATH}")
