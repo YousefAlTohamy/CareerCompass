@@ -29,15 +29,28 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 
 ## Counts
 
-- PDF pages: 50
+- PDF pages: 52
 - Screenshots/evidence images: 19
 - Diagrams: 8
 
 ## Table of Contents and Tables
 
-- DOCX TOC status: custom manual TOC entries contain internal hyperlinks to bookmarked major headings
-- PDF TOC status: PDF contains 14 link annotations after export
+- TOC placement: standalone page immediately after the cover page
+- DOCX TOC status: 15 custom manual TOC entries contain internal hyperlinks to bookmarked major headings
+- DOCX List of Figures status: 27 List of Figures entries link to bookmarked figure captions
+- DOCX List of Tables status: 17 List of Tables entries link to bookmarked table captions
+- PDF TOC status: PDF contains 58 link annotations after export
 - Table formatting status: data tables use fixed DXA widths, wrapped text, repeated header rows, smaller table fonts, and split wide manual test observations into narrower tables; cover layout tables are intentionally excluded from repeated-header checks
+- Figure caption status: explicit italic caption lines are the single visible figure-caption source; Markdown image alt text is no longer rendered as a visible figure caption
+
+## Caption, Link, and Layout Verification Method
+
+- Duplicate figure captions were checked by removing caption-like figure numbers from Markdown image alt text and rendering only the explicit italic `Figure n. ...` caption line in DOCX/PDF generation paths.
+- Markdown scan: `rg -n "Figure [0-9]+:" docs/graduation-book/CareerCompass_Graduation_Project_Book.md` returned no matches after regeneration.
+- DOCX structural scan: OOXML inspection counted TOC/List of Figures/List of Tables internal hyperlinks, checked that every hyperlink anchor has a matching bookmark, and counted figure/table caption bookmarks.
+- PDF structural scan: `pypdf` counted pages and link annotations after Microsoft Word export.
+- TOC placement was checked from DOCX body order and PDF page text extraction: the first generated page after the cover is the Table of Contents page, followed by Acknowledgment.
+- Table layout was checked through OOXML for fixed table layout, table grids, cell widths, and repeated header rows on data tables.
 
 ## Mini Dataset Evaluation
 
@@ -75,7 +88,8 @@ All previously listed student placeholders were removed and replaced with the fi
 
 - This script creates a ReportLab PDF fallback first. Microsoft Word COM automation is then used when available to export the DOCX to PDF.
 - The Documents skill `render_docx.py` workflow was attempted after DOCX generation, but it could not render because LibreOffice/soffice was not available on the host PATH (`FileNotFoundError: [WinError 2]`).
-- The report uses a custom manual Table of Contents with internal DOCX hyperlinks instead of a fragile automatic Word field.
+- The report uses custom manual Table of Contents, List of Figures, and List of Tables links instead of fragile automatic Word fields.
+- PDF link preservation is checked through PDF annotation counts after Microsoft Word export; individual clicks should still be spot-checked in a PDF reader before printing.
 - GitHub Actions status should be reviewed on the draft PR after every push.
 - AI evaluation results are treated as preliminary/manual smoke evidence, not as statistical accuracy claims.
 

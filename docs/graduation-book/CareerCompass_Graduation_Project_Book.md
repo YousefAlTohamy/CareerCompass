@@ -22,18 +22,6 @@ Ahmed Sobhy Mohamed Ali
 
 \pagebreak
 
-# Acknowledgment
-
-The project team would like to express sincere appreciation to Dr. Amna Mahmoud for academic supervision, technical guidance, and continuous feedback during the preparation of CareerCompass. The team also thanks the Faculty of Computers and Information at Kafr El-Sheikh University for providing the academic setting in which this graduation project was designed, implemented, tested, and documented.
-
-The work presented in this book reflects a collaborative software engineering effort. It combines web application development, database design, AI-assisted document analysis, explainable matching, containerized deployment, testing, and technical documentation. The two supervisor-provided graduation books were used only to understand expected report structure and visual formality; no content, wording, project-specific claims, diagrams, or references were copied from them.
-
-# Abstract
-
-CareerCompass is a graduation/demo career guidance platform that helps students and early-career users understand their CV profile, explore imported job opportunities, and compare their current skills against job requirements. The system consists of a React and Vite frontend, a Laravel API backend, a MySQL database, a FastAPI-based CV analyzer, a FastAPI/Scrapy-based job miner, MinIO-compatible private file storage, Nginx routing, and Prometheus/Grafana monitoring. The platform supports registration, login, CV upload, AI-assisted CV parsing, normalized profile and skills storage, job recommendation, gap analysis, an application tracker, and administrator dashboards for job and source diagnostics.
-
-The implementation is intentionally described as a graduation/demo system rather than a production product. The AI outputs are estimates, the job data depends on imported and demo sources, and the security posture is appropriate for demonstration but requires further production hardening. Validation was performed through Docker Compose configuration checks, backend tests, frontend lint/build, Python service tests or syntax checks, HTTP probes, and manual browser screenshots. Backend tests passed with 39 tests and 297 assertions, the AI job miner tests passed with 75 tests, and the frontend build completed successfully. The AI CV analyzer container did not include pytest, so its pytest suite was marked as skipped while Python syntax compilation passed.
-
 # Table of Contents
 
 - [Acknowledgment](#bm_acknowledgment)
@@ -52,53 +40,69 @@ The implementation is intentionally described as a graduation/demo system rather
 - [References](#bm_references)
 - [Appendices](#bm_appendices)
 
+\pagebreak
+
+# Acknowledgment
+
+The project team would like to express sincere appreciation to Dr. Amna Mahmoud for academic supervision, technical guidance, and continuous feedback during the preparation of CareerCompass. The team also thanks the Faculty of Computers and Information at Kafr El-Sheikh University for providing the academic setting in which this graduation project was designed, implemented, tested, and documented.
+
+The work presented in this book reflects a collaborative software engineering effort. It combines web application development, database design, AI-assisted document analysis, explainable matching, containerized deployment, testing, and technical documentation. The two supervisor-provided graduation books were used only to understand expected report structure and visual formality; no content, wording, project-specific claims, diagrams, or references were copied from them.
+
+# Abstract
+
+CareerCompass is a graduation/demo career guidance platform that helps students and early-career users understand their CV profile, explore imported job opportunities, and compare their current skills against job requirements. The system consists of a React and Vite frontend, a Laravel API backend, a MySQL database, a FastAPI-based CV analyzer, a FastAPI/Scrapy-based job miner, MinIO-compatible private file storage, Nginx routing, and Prometheus/Grafana monitoring. The platform supports registration, login, CV upload, AI-assisted CV parsing, normalized profile and skills storage, job recommendation, gap analysis, an application tracker, and administrator dashboards for job and source diagnostics.
+
+The implementation is intentionally described as a graduation/demo system rather than a production product. The AI outputs are estimates, the job data depends on imported and demo sources, and the security posture is appropriate for demonstration but requires further production hardening. Validation was performed through Docker Compose configuration checks, backend tests, frontend lint/build, Python service tests or syntax checks, HTTP probes, and manual browser screenshots. Backend tests passed with 39 tests and 297 assertions, the AI job miner tests passed with 75 tests, and the frontend build completed successfully. The AI CV analyzer container did not include pytest, so its pytest suite was marked as skipped while Python syntax compilation passed.
+
 # List of Figures
 
-- Figure 1. High-level architecture of CareerCompass.
-- Figure 2. Docker deployment architecture.
-- Figure 3. DFD Level 0 context diagram.
-- Figure 4. DFD Level 1 process diagram.
-- Figure 5. UML use case diagram.
-- Figure 6. Sequence diagram for CV upload and analysis.
-- Figure 7. Sequence diagram for recommendation and gap analysis.
-- Figure 8. ERD and database summary diagram.
-- Figure 9. Home page.
-- Figure 10. Register page.
-- Figure 11. Login page.
-- Figure 12. Student dashboard before CV upload.
-- Figure 13. CV upload user interface.
-- Figure 14. Dashboard after successful CV parsing.
-- Figure 15. Extracted profile and skills page.
-- Figure 16. Jobs recommendations page.
-- Figure 17. Job detail and inline gap panel.
-- Figure 18. Gap analysis page.
-- Figure 19. Applications tracker page.
-- Figure 20. Tools Hub preview page.
-- Figure 21. System status page.
-- Figure 22. Admin dashboard.
-- Figure 23. Admin jobs page.
-- Figure 24. Admin sources diagnostics page.
-- Figure 25. Admin target roles page.
-- Figure 26. Docker services evidence.
-- Figure 27. Validation command evidence.
+- [Figure 1. High-level architecture of CareerCompass.](#bm_figure_1)
+- [Figure 2. Docker deployment architecture.](#bm_figure_2)
+- [Figure 3. DFD Level 0 context diagram.](#bm_figure_3)
+- [Figure 4. DFD Level 1 process diagram.](#bm_figure_4)
+- [Figure 5. UML use case diagram.](#bm_figure_5)
+- [Figure 6. Sequence diagram for CV upload and analysis.](#bm_figure_6)
+- [Figure 7. Sequence diagram for recommendation and gap analysis.](#bm_figure_7)
+- [Figure 8. ERD and database summary diagram.](#bm_figure_8)
+- [Figure 9. Home page.](#bm_figure_9)
+- [Figure 10. Register page.](#bm_figure_10)
+- [Figure 11. Login page.](#bm_figure_11)
+- [Figure 12. Student dashboard before CV upload.](#bm_figure_12)
+- [Figure 13. CV upload user interface.](#bm_figure_13)
+- [Figure 14. Dashboard after successful CV parsing.](#bm_figure_14)
+- [Figure 15. Extracted profile and skills page.](#bm_figure_15)
+- [Figure 16. Jobs recommendations page.](#bm_figure_16)
+- [Figure 17. Job detail and inline gap panel.](#bm_figure_17)
+- [Figure 18. Gap analysis page.](#bm_figure_18)
+- [Figure 19. Applications tracker page.](#bm_figure_19)
+- [Figure 20. Tools Hub preview page.](#bm_figure_20)
+- [Figure 21. System status page.](#bm_figure_21)
+- [Figure 22. Admin dashboard.](#bm_figure_22)
+- [Figure 23. Admin jobs page.](#bm_figure_23)
+- [Figure 24. Admin sources diagnostics page.](#bm_figure_24)
+- [Figure 25. Admin target roles page.](#bm_figure_25)
+- [Figure 26. Docker services evidence.](#bm_figure_26)
+- [Figure 27. Validation command evidence.](#bm_figure_27)
 
 # List of Tables
 
-- Table 1. Functional requirements summary.
-- Table 2. Non-functional requirements summary.
-- Table 3. Hardware and software environment.
-- Table 4. Major implementation modules.
-- Table 5. Automated validation results.
-- Table 6. Manual functional evaluation matrix.
-- Table 7. Security and privacy controls.
-- Table 8. Docker services summary.
-- Table 9. API endpoint summary.
-- Table 10. Database tables summary.
-- Table 11. Mini CV dataset.
-- Table 12. Mini job dataset.
-- Table 13. Mini evaluation metrics.
-- Table 14. Recommendation ranking details.
-- Table 15. Gap analysis pair details.
+- [Table 1. Stakeholder summary.](#bm_table_1)
+- [Table 2. Functional requirements summary.](#bm_table_2)
+- [Table 3. Non-functional requirements summary.](#bm_table_3)
+- [Table 4. Hardware and software environment.](#bm_table_4)
+- [Table 5. Design decisions summary.](#bm_table_5)
+- [Table 6. Mini CV dataset.](#bm_table_6)
+- [Table 7. Mini job dataset.](#bm_table_7)
+- [Table 8. Mini evaluation metrics.](#bm_table_8)
+- [Table 9. Recommendation ranking details.](#bm_table_9)
+- [Table 10. Gap analysis pair details.](#bm_table_10)
+- [Table 11. Automated validation results.](#bm_table_11)
+- [Table 12. Manual functional evaluation matrix.](#bm_table_12)
+- [Table 13. Manual functional observations.](#bm_table_13)
+- [Table 14. Security and privacy controls.](#bm_table_14)
+- [Table 15. API endpoint summary.](#bm_table_15)
+- [Table 16. Database tables summary.](#bm_table_16)
+- [Table 17. Docker services summary.](#bm_table_17)
 
 # Abbreviations
 
@@ -191,6 +195,8 @@ The system targets common problems in student career preparation:
 
 ## 2.4 Target Users and Stakeholders
 
+*Table 1. Stakeholder summary.*
+
 | Stakeholder | Description | Main Interest |
 |---|---|---|
 | Student user | A university student or early-career user. | Upload CV, view profile, discover jobs, analyze gaps, save opportunities. |
@@ -203,6 +209,8 @@ The system targets common problems in student career preparation:
 CareerCompass implements two practical roles. The student role can register, login, upload a CV, view recommendations, run gap analysis, and track applications. The admin role can access protected admin routes for dashboard statistics, job administration, scraping sources, target roles, and user review.
 
 ## 2.6 Functional Requirements
+
+*Table 2. Functional requirements summary.*
 
 | ID | Requirement | Implementation Evidence |
 |---|---|---|
@@ -220,6 +228,8 @@ CareerCompass implements two practical roles. The student role can register, log
 
 ## 2.7 Non-Functional Requirements
 
+*Table 3. Non-functional requirements summary.*
+
 | Category | Requirement | CareerCompass Approach |
 |---|---|---|
 | Usability | The UI should guide students through CV upload and recommendations. | React pages, dashboard cards, profile score, and action buttons. |
@@ -234,6 +244,8 @@ CareerCompass implements two practical roles. The student role can register, log
 For local demonstration, a developer machine capable of running Docker Desktop and multiple containers is required. CV parsing and OCR-like processing can be CPU-intensive; therefore, enough memory should be available for the Laravel backend, MySQL, frontend, Python services, MinIO, Prometheus, and Grafana. GPU acceleration is not required for the demonstrated flow.
 
 ## 2.9 Software Requirements
+
+*Table 4. Hardware and software environment.*
 
 | Layer | Software |
 |---|---|
@@ -252,7 +264,7 @@ Primary inputs include user account data, uploaded CV files, imported job record
 
 The main use cases are shown in Figure 5. The system separates student and administrator responsibilities while sharing the same backend API and database.
 
-![Figure 5: UML use case diagram.](assets/diagrams/05_use_case_diagram.png)
+![Image: UML use case diagram.](assets/diagrams/05_use_case_diagram.png)
 
 *Figure 5. UML use case diagram.*
 
@@ -268,7 +280,7 @@ CareerCompass is designed as a Dockerized multi-service application. This design
 
 The high-level architecture is shown in Figure 1. Browser users interact with the React frontend through Nginx. The frontend calls the Laravel API. Laravel persists records in MySQL, stores CV files in MinIO-compatible storage, calls the AI CV Analyzer for parsing, calls matching logic for recommendations/gaps, and receives job imports from the job miner.
 
-![Figure 1: High-level architecture of CareerCompass.](assets/diagrams/01_high_level_architecture.png)
+![Image: High-level architecture of CareerCompass.](assets/diagrams/01_high_level_architecture.png)
 
 *Figure 1. High-level architecture of CareerCompass.*
 
@@ -300,7 +312,7 @@ MySQL stores users, profiles, skills, experience records, CV analyses, job posti
 
 Figure 8 summarizes the main database tables and relationships. It is not a complete replacement for migrations, but it provides a readable graduation-book view of the data model.
 
-![Figure 8: ERD and database summary diagram.](assets/diagrams/08_erd.png)
+![Image: ERD and database summary diagram.](assets/diagrams/08_erd.png)
 
 *Figure 8. ERD and database summary diagram.*
 
@@ -308,11 +320,11 @@ Figure 8 summarizes the main database tables and relationships. It is not a comp
 
 The context-level data flow is shown in Figure 3, and the expanded process-level view is shown in Figure 4. Student and administrator workflows enter the same system boundary, while external job sources and AI services interact with controlled backend processes.
 
-![Figure 3: DFD Level 0 context diagram.](assets/diagrams/03_dfd_level_0.png)
+![Image: DFD Level 0 context diagram.](assets/diagrams/03_dfd_level_0.png)
 
 *Figure 3. DFD Level 0 context diagram.*
 
-![Figure 4: DFD Level 1 process diagram.](assets/diagrams/04_dfd_level_1.png)
+![Image: DFD Level 1 process diagram.](assets/diagrams/04_dfd_level_1.png)
 
 *Figure 4. DFD Level 1 process diagram.*
 
@@ -324,11 +336,11 @@ The use case diagram separates student actions from administrator actions. Stude
 
 Figure 6 shows the CV upload and analysis sequence. Figure 7 shows recommendation and gap analysis.
 
-![Figure 6: Sequence diagram for CV upload and analysis.](assets/diagrams/06_sequence_cv_upload_analysis.png)
+![Image: Sequence diagram for CV upload and analysis.](assets/diagrams/06_sequence_cv_upload_analysis.png)
 
 *Figure 6. Sequence diagram for CV upload and analysis.*
 
-![Figure 7: Sequence diagram for recommendation and gap analysis.](assets/diagrams/07_sequence_job_recommendation_gap_analysis.png)
+![Image: Sequence diagram for recommendation and gap analysis.](assets/diagrams/07_sequence_job_recommendation_gap_analysis.png)
 
 *Figure 7. Sequence diagram for recommendation and gap analysis.*
 
@@ -336,7 +348,7 @@ Figure 6 shows the CV upload and analysis sequence. Figure 7 shows recommendatio
 
 The deployment is defined by Docker Compose files. Nginx exposes the application, the frontend serves built React assets, the Laravel API and workers handle backend work, MySQL stores structured data, MinIO stores private CV objects, Python services provide AI CV parsing and job mining, and Prometheus/Grafana provide monitoring. Figure 2 summarizes the container layout.
 
-![Figure 2: Docker deployment architecture.](assets/diagrams/02_docker_deployment.png)
+![Image: Docker deployment architecture.](assets/diagrams/02_docker_deployment.png)
 
 *Figure 2. Docker deployment architecture.*
 
@@ -345,6 +357,8 @@ The deployment is defined by Docker Compose files. Nginx exposes the application
 CareerCompass includes live, readiness, and metrics endpoints. Prometheus is used for scraping and time-series metrics collection [13], while Grafana visualizes metrics and dashboard panels [14]. The admin dashboard also exposes application-level health information for the graduation demo.
 
 ## 3.14 Design Decisions and Justification
+
+*Table 5. Design decisions summary.*
 
 | Decision | Justification |
 |---|---|
@@ -433,11 +447,11 @@ The register request restricts emails to selected public email domains and valid
 
 The student dashboard is implemented in `frontend/src/pages/user/Dashboard.jsx`. It presents the current profile state, CV upload/update controls, profile completeness, career identity, AI insights, and next actions. Before CV upload, it prompts the user to add a CV. After upload, it displays parsed CV availability, role inference, profile score, experience, and action buttons.
 
-![Figure 12: Student dashboard before CV upload.](assets/screenshots/04_dashboard_before_cv_upload.png)
+![Image: Student dashboard before CV upload.](assets/screenshots/04_dashboard_before_cv_upload.png)
 
 *Figure 12. Student dashboard before CV upload.*
 
-![Figure 14: Dashboard after successful CV parsing.](assets/screenshots/06_dashboard_after_cv_upload.png)
+![Image: Dashboard after successful CV parsing.](assets/screenshots/06_dashboard_after_cv_upload.png)
 
 *Figure 14. Dashboard after successful CV parsing.*
 
@@ -447,7 +461,7 @@ The student dashboard is implemented in `frontend/src/pages/user/Dashboard.jsx`.
 
 CV storage is handled as a private file workflow. The system supports signed download URLs, which is a better demo posture than public file exposure. OWASP recommends validating uploaded file type, extension, size, and storage handling carefully [27].
 
-![Figure 13: CV upload user interface.](assets/screenshots/05_cv_upload_ui.png)
+![Image: CV upload user interface.](assets/screenshots/05_cv_upload_ui.png)
 
 *Figure 13. CV upload user interface.*
 
@@ -459,7 +473,7 @@ The CV processing flow sends the file to the AI CV Analyzer, receives parsed dat
 
 The profile page reads normalized user data, profile fields, experiences, skills, and CV analysis. The system distinguishes user fields, profile fields, extracted skills, predicted role, seniority, and completeness score. Skill synchronization is handled through backend services rather than only frontend state.
 
-![Figure 15: Extracted profile and skills page.](assets/screenshots/07_extracted_profile_skills.png)
+![Image: Extracted profile and skills page.](assets/screenshots/07_extracted_profile_skills.png)
 
 *Figure 15. Extracted profile and skills page.*
 
@@ -471,7 +485,7 @@ Jobs are represented in the backend through job posting models and migrations. F
 
 The job miner exposes a FastAPI service and imports jobs using configured sources. The backend protects scraper import routes with an internal service token. Admin pages expose source diagnostics, source status, testing, and target role management. The project differentiates demo/local sources, API sources, and HTML/scraping sources instead of claiming complete market coverage.
 
-![Figure 24: Admin sources diagnostics page.](assets/screenshots/16_admin_sources_diagnostics.png)
+![Image: Admin sources diagnostics page.](assets/screenshots/16_admin_sources_diagnostics.png)
 
 *Figure 24. Admin sources diagnostics page.*
 
@@ -479,7 +493,7 @@ The job miner exposes a FastAPI service and imports jobs using configured source
 
 The jobs page requests recommended jobs when no manual search query is active. Recommendations are based on CV/profile context when available. Matching combines normalized database data with semantic and TF-IDF-style comparison where available. TF-IDF represents text using term frequency and inverse document frequency weighting [19], while cosine similarity compares vector orientation [20].
 
-![Figure 16: Jobs recommendations page.](assets/screenshots/08_jobs_recommendations.png)
+![Image: Jobs recommendations page.](assets/screenshots/08_jobs_recommendations.png)
 
 *Figure 16. Jobs recommendations page.*
 
@@ -487,7 +501,7 @@ The jobs page requests recommended jobs when no manual search query is active. R
 
 Gap analysis compares a selected job or target role against the user's profile and extracted skills. It returns matched skills, critical/missing skills, recommendations, match percentage, and roadmap-like guidance. The frontend displays these outputs in an explainable layout rather than a single opaque score.
 
-![Figure 18: Gap analysis page.](assets/screenshots/10_gap_analysis.png)
+![Image: Gap analysis page.](assets/screenshots/10_gap_analysis.png)
 
 *Figure 18. Gap analysis page.*
 
@@ -495,7 +509,7 @@ Gap analysis compares a selected job or target role against the user's profile a
 
 The application tracker is implemented through `ApplicationController`, `ApplicationTrackerService`, and `frontend/src/pages/user/Applications.jsx`. Students can save a job, update status, view counts, and delete tracked items. The backend validates job existence and allowed statuses.
 
-![Figure 19: Applications tracker page.](assets/screenshots/11_applications_tracker.png)
+![Image: Applications tracker page.](assets/screenshots/11_applications_tracker.png)
 
 *Figure 19. Applications tracker page.*
 
@@ -503,7 +517,7 @@ The application tracker is implemented through `ApplicationController`, `Applica
 
 The admin dashboard summarizes users, imported jobs, active sources, target roles, health status, and scraping batch progress. It is protected by admin middleware and uses admin API routes.
 
-![Figure 22: Admin dashboard.](assets/screenshots/14_admin_dashboard.png)
+![Image: Admin dashboard.](assets/screenshots/14_admin_dashboard.png)
 
 *Figure 22. Admin dashboard.*
 
@@ -511,7 +525,7 @@ The admin dashboard summarizes users, imported jobs, active sources, target role
 
 The source diagnostics page lists configured scraping sources, supports source testing, and displays quality and scraping status information. The target roles page manages role names used by scraping and market discovery.
 
-![Figure 25: Admin target roles page.](assets/screenshots/17_admin_targets.png)
+![Image: Admin target roles page.](assets/screenshots/17_admin_targets.png)
 
 *Figure 25. Admin target roles page.*
 
@@ -519,7 +533,7 @@ The source diagnostics page lists configured scraping sources, supports source t
 
 Health endpoints include live and readiness checks. The system status page presents service state to users, while admin health data supports operational monitoring. Metrics are available for Prometheus and dashboards are available through Grafana.
 
-![Figure 21: System status page.](assets/screenshots/13_system_status.png)
+![Image: System status page.](assets/screenshots/13_system_status.png)
 
 *Figure 21. System status page.*
 
@@ -531,7 +545,7 @@ The code includes explicit handling for CV processing failures, AI gateway conne
 
 The frontend contains English and Arabic locale files. Preview modules include CV Builder, Mock Interview, Learning Paths, Career Planner, Mentorship, Tools Hub, and Market Intelligence. The report treats these as preview modules unless tests or implementation prove production completeness.
 
-![Figure 20: Tools Hub preview page.](assets/screenshots/12_tools_hub.png)
+![Image: Tools Hub preview page.](assets/screenshots/12_tools_hub.png)
 
 *Figure 20. Tools Hub preview page.*
 
@@ -539,7 +553,7 @@ The frontend contains English and Arabic locale files. Preview modules include C
 
 The runtime starts through Docker Compose. Nginx exposes the app, frontend and backend containers serve UI/API flows, backend workers process queues, Python services support AI workflows, MySQL and MinIO persist state, and monitoring services observe the stack.
 
-![Figure 26: Docker services evidence.](assets/screenshots/18_docker_containers.png)
+![Image: Docker services evidence.](assets/screenshots/18_docker_containers.png)
 
 *Figure 26. Docker services evidence.*
 
@@ -571,7 +585,7 @@ The AI Job Miner pytest suite passed with 75 tests. Python syntax compilation pa
 
 Docker Compose configuration validation passed for both development and production overlay configurations. A full compose build/start was attempted; the initial full build exceeded the 15-minute command timeout, but the stack continued building and was later brought up successfully with targeted frontend/Nginx rebuild/start. All main containers reached healthy or running state during final checks.
 
-![Figure 27: Validation command evidence.](assets/screenshots/19_validation_summary.png)
+![Image: Validation command evidence.](assets/screenshots/19_validation_summary.png)
 
 *Figure 27. Validation command evidence.*
 
@@ -598,6 +612,8 @@ The gap-analysis mini evaluation compares expected matched and missing skills wi
 
 The mini evaluation uses fake synthetic CVs and fake synthetic job records stored under `docs/graduation-book/evaluation/`. It is intentionally small and preliminary. It is useful for graduation validation and regression checks, but it is not statistically representative and should not be used as a production benchmark.
 
+*Table 6. Mini CV dataset.*
+
 | Sample ID | Expected Role | Seniority | Domain | Expected Skills |
 | --- | --- | --- | --- | --- |
 | cv_backend_laravel | Backend Laravel Developer | junior | backend_web | PHP, Laravel, MySQL, REST API, Docker, Git |
@@ -605,6 +621,8 @@ The mini evaluation uses fake synthetic CVs and fake synthetic job records store
 | cv_data_ml | Data and ML Student | student | data_ml | Python, pandas, scikit-learn, NLP, data analysis |
 | cv_full_stack | Full Stack Developer | junior | full_stack_web | Laravel, React, MySQL, Docker, REST API, Git |
 | cv_qa_testing | QA Testing Engineer | intern | quality_assurance | testing, test cases, pytest, API testing, bug reporting |
+
+*Table 7. Mini job dataset.*
 
 | Job ID | Title | Domain | Required Skills |
 | --- | --- | --- | --- |
@@ -620,6 +638,8 @@ The mini evaluation uses fake synthetic CVs and fake synthetic job records store
 ### Metric Definitions
 
 Skill precision measures how many extracted skills are expected labels. Skill recall measures how many expected skills were extracted. Skill F1 is the harmonic mean of precision and recall [30]. Recommendation top-1 and top-3 relevance compare ranked jobs against manual relevance labels. Gap agreement compares computed matched/missing skills against expected matched/missing skills.
+
+*Table 8. Mini evaluation metrics.*
 
 | Area | Metric | Value | Notes |
 | --- | --- | --- | --- |
@@ -637,6 +657,8 @@ Skill precision measures how many extracted skills are expected labels. Skill re
 
 ### Recommendation Ranking Details
 
+*Table 9. Recommendation ranking details.*
+
 | CV Sample | Expected Relevant Jobs | Top 3 Offline Recommendations | P@3 |
 | --- | --- | --- | --- |
 | cv_backend_laravel | job_laravel_backend, job_php_api, job_full_stack_web, job_devops_docker | job_laravel_backend, job_php_api, job_full_stack_web | 1.000 |
@@ -646,6 +668,8 @@ Skill precision measures how many extracted skills are expected labels. Skill re
 | cv_qa_testing | job_qa_intern, job_nlp_assistant | job_qa_intern, job_nlp_assistant, job_react_frontend | 0.667 |
 
 ### Gap Analysis Pair Details
+
+*Table 10. Gap analysis pair details.*
 
 | CV / Job Pair | Matched Skills | Missing Skills | Agreement |
 | --- | --- | --- | --- |
@@ -682,6 +706,8 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 
 ## 6.16 Summary of Results
 
+*Table 11. Automated validation results.*
+
 | Area | Command or Scenario | Result | Evidence |
 |---|---|---|---|
 | Docker config | `docker compose config --quiet` | Passed | Terminal evidence |
@@ -696,6 +722,8 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 | AI CV Analyzer pytest | `python -m pytest` | Skipped, pytest missing | Command output |
 | HTTP probes | `/`, `/api/health`, `/api/ready`, `/status`, AI services | 200 responses | Command output |
 
+*Table 12. Manual functional evaluation matrix.*
+
 | Test ID | Module | Scenario | Status | Evidence |
 |---|---|---|---|---|
 | M-01 | Authentication | Register demo user | Passed | Register screenshot/API output |
@@ -708,6 +736,8 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 | M-08 | Admin | Login admin and open dashboard | Passed | Figure 22 |
 | M-09 | Admin sources | Open diagnostics | Passed | Figure 24 |
 | M-10 | Status | Open system status page | Passed | Figure 21 |
+
+*Table 13. Manual functional observations.*
 
 | Test ID | Expected vs Actual Observation |
 |---|---|
@@ -759,6 +789,8 @@ Laravel form requests validate registration, login, CV upload, applications, and
 The API client attaches request IDs, and backend logging records important events such as CV processing status and AI gateway errors. For production, logs should avoid sensitive CV content and should be retained according to a privacy policy.
 
 ## 7.9 Demo Security Limitations
+
+*Table 14. Security and privacy controls.*
 
 | Area | Current Demo Control | Production Hardening Needed |
 |---|---|---|
@@ -860,6 +892,8 @@ CareerCompass is an original graduation project that connects academic software 
 
 ## Appendix A: API Endpoint Summary
 
+*Table 15. API endpoint summary.*
+
 | Group | Example Endpoints | Purpose |
 |---|---|---|
 | Health | `/api/health`, `/api/ready`, `/api/metrics` | Liveness, readiness, and Prometheus metrics. |
@@ -872,6 +906,8 @@ CareerCompass is an original graduation project that connects academic software 
 | Internal Scraper | `/api/jobs/import`, `/api/jobs/import/check`, `/api/proxies/active` | Service-token protected import routes. |
 
 ## Appendix B: Database Tables Summary
+
+*Table 16. Database tables summary.*
 
 | Table | Purpose |
 |---|---|
@@ -889,6 +925,8 @@ CareerCompass is an original graduation project that connects academic software 
 
 ## Appendix C: Docker Services Summary
 
+*Table 17. Docker services summary.*
+
 | Service | Role |
 |---|---|
 | nginx | Public gateway and reverse proxy. |
@@ -905,61 +943,61 @@ CareerCompass is an original graduation project that connects academic software 
 
 ## Appendix D: Screenshots
 
-![Figure 9: Home page.](assets/screenshots/01_home.png)
+![Image: Home page.](assets/screenshots/01_home.png)
 
 *Figure 9. Home page.*
-![Figure 10: Register page.](assets/screenshots/02_register.png)
+![Image: Register page.](assets/screenshots/02_register.png)
 
 *Figure 10. Register page.*
-![Figure 11: Login page.](assets/screenshots/03_login.png)
+![Image: Login page.](assets/screenshots/03_login.png)
 
 *Figure 11. Login page.*
-![Figure 12: Student dashboard before CV upload.](assets/screenshots/04_dashboard_before_cv_upload.png)
+![Image: Student dashboard before CV upload.](assets/screenshots/04_dashboard_before_cv_upload.png)
 
 *Figure 12. Student dashboard before CV upload.*
-![Figure 13: CV upload user interface.](assets/screenshots/05_cv_upload_ui.png)
+![Image: CV upload user interface.](assets/screenshots/05_cv_upload_ui.png)
 
 *Figure 13. CV upload user interface.*
-![Figure 14: Dashboard after successful CV parsing.](assets/screenshots/06_dashboard_after_cv_upload.png)
+![Image: Dashboard after successful CV parsing.](assets/screenshots/06_dashboard_after_cv_upload.png)
 
 *Figure 14. Dashboard after successful CV parsing.*
-![Figure 15: Extracted profile and skills page.](assets/screenshots/07_extracted_profile_skills.png)
+![Image: Extracted profile and skills page.](assets/screenshots/07_extracted_profile_skills.png)
 
 *Figure 15. Extracted profile and skills page.*
-![Figure 16: Jobs recommendations page.](assets/screenshots/08_jobs_recommendations.png)
+![Image: Jobs recommendations page.](assets/screenshots/08_jobs_recommendations.png)
 
 *Figure 16. Jobs recommendations page.*
-![Figure 17: Job detail and inline gap panel.](assets/screenshots/09_job_details_and_inline_gap.png)
+![Image: Job detail and inline gap panel.](assets/screenshots/09_job_details_and_inline_gap.png)
 
 *Figure 17. Job detail and inline gap panel.*
-![Figure 18: Gap analysis page.](assets/screenshots/10_gap_analysis.png)
+![Image: Gap analysis page.](assets/screenshots/10_gap_analysis.png)
 
 *Figure 18. Gap analysis page.*
-![Figure 19: Applications tracker page.](assets/screenshots/11_applications_tracker.png)
+![Image: Applications tracker page.](assets/screenshots/11_applications_tracker.png)
 
 *Figure 19. Applications tracker page.*
-![Figure 20: Tools Hub preview page.](assets/screenshots/12_tools_hub.png)
+![Image: Tools Hub preview page.](assets/screenshots/12_tools_hub.png)
 
 *Figure 20. Tools Hub preview page.*
-![Figure 21: System status page.](assets/screenshots/13_system_status.png)
+![Image: System status page.](assets/screenshots/13_system_status.png)
 
 *Figure 21. System status page.*
-![Figure 22: Admin dashboard.](assets/screenshots/14_admin_dashboard.png)
+![Image: Admin dashboard.](assets/screenshots/14_admin_dashboard.png)
 
 *Figure 22. Admin dashboard.*
-![Figure 23: Admin jobs page.](assets/screenshots/15_admin_jobs.png)
+![Image: Admin jobs page.](assets/screenshots/15_admin_jobs.png)
 
 *Figure 23. Admin jobs page.*
-![Figure 24: Admin sources diagnostics page.](assets/screenshots/16_admin_sources_diagnostics.png)
+![Image: Admin sources diagnostics page.](assets/screenshots/16_admin_sources_diagnostics.png)
 
 *Figure 24. Admin sources diagnostics page.*
-![Figure 25: Admin target roles page.](assets/screenshots/17_admin_targets.png)
+![Image: Admin target roles page.](assets/screenshots/17_admin_targets.png)
 
 *Figure 25. Admin target roles page.*
-![Figure 26: Docker services evidence.](assets/screenshots/18_docker_containers.png)
+![Image: Docker services evidence.](assets/screenshots/18_docker_containers.png)
 
 *Figure 26. Docker services evidence.*
-![Figure 27: Validation command evidence.](assets/screenshots/19_validation_summary.png)
+![Image: Validation command evidence.](assets/screenshots/19_validation_summary.png)
 
 *Figure 27. Validation command evidence.*
 

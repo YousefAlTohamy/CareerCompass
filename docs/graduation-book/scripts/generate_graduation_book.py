@@ -161,6 +161,26 @@ FIGURES = [
     ("Figure 27", "Validation command evidence.", "assets/screenshots/19_validation_summary.png"),
 ]
 
+TABLES = [
+    ("Table 1", "Stakeholder summary."),
+    ("Table 2", "Functional requirements summary."),
+    ("Table 3", "Non-functional requirements summary."),
+    ("Table 4", "Hardware and software environment."),
+    ("Table 5", "Design decisions summary."),
+    ("Table 6", "Mini CV dataset."),
+    ("Table 7", "Mini job dataset."),
+    ("Table 8", "Mini evaluation metrics."),
+    ("Table 9", "Recommendation ranking details."),
+    ("Table 10", "Gap analysis pair details."),
+    ("Table 11", "Automated validation results."),
+    ("Table 12", "Manual functional evaluation matrix."),
+    ("Table 13", "Manual functional observations."),
+    ("Table 14", "Security and privacy controls."),
+    ("Table 15", "API endpoint summary."),
+    ("Table 16", "Database tables summary."),
+    ("Table 17", "Docker services summary."),
+]
+
 
 def ensure_dirs() -> None:
     for folder in [OUT_DIR, ASSETS, DIAGRAMS, SCREENSHOTS, LOGOS, EVALUATION]:
@@ -170,6 +190,21 @@ def ensure_dirs() -> None:
 def heading_anchor(text: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
     return f"bm_{slug or 'section'}"
+
+
+def figure_anchor(number: str) -> str:
+    return f"bm_figure_{number.split()[-1]}"
+
+
+def table_anchor(number: str) -> str:
+    return f"bm_table_{number.split()[-1]}"
+
+
+def caption_anchor(caption: str) -> str | None:
+    match = re.match(r"^(Figure|Table)\s+(\d+)\.", caption)
+    if not match:
+        return None
+    return f"bm_{match.group(1).lower()}_{match.group(2)}"
 
 
 def toc_markdown() -> str:
@@ -646,7 +681,11 @@ def mini_eval_markdown(results: dict) -> str:
 
 The mini evaluation uses fake synthetic CVs and fake synthetic job records stored under `docs/graduation-book/evaluation/`. It is intentionally small and preliminary. It is useful for graduation validation and regression checks, but it is not statistically representative and should not be used as a production benchmark.
 
+*Table 6. Mini CV dataset.*
+
 {cv_dataset_table}
+
+*Table 7. Mini job dataset.*
 
 {job_dataset_table}
 
@@ -654,43 +693,31 @@ The mini evaluation uses fake synthetic CVs and fake synthetic job records store
 
 Skill precision measures how many extracted skills are expected labels. Skill recall measures how many expected skills were extracted. Skill F1 is the harmonic mean of precision and recall [30]. Recommendation top-1 and top-3 relevance compare ranked jobs against manual relevance labels. Gap agreement compares computed matched/missing skills against expected matched/missing skills.
 
+*Table 8. Mini evaluation metrics.*
+
 {metric_table}
 
 ### Recommendation Ranking Details
 
+*Table 9. Recommendation ranking details.*
+
 {recommendation_table}
 
 ### Gap Analysis Pair Details
+
+*Table 10. Gap analysis pair details.*
 
 {gap_table}
 """
 
 
 def figure_markdown(number: str, caption: str, rel_path: str) -> str:
-    return f"![{number}: {caption}]({rel_path})\n\n*{number}. {caption}*"
+    return f"![Image: {caption}]({rel_path})\n\n*{number}. {caption}*"
 
 
 def report_markdown(mini_results: dict) -> str:
-    fig_list = "\n".join([f"- {num}. {caption}" for num, caption, _ in FIGURES])
-    table_list = "\n".join(
-        [
-            "- Table 1. Functional requirements summary.",
-            "- Table 2. Non-functional requirements summary.",
-            "- Table 3. Hardware and software environment.",
-            "- Table 4. Major implementation modules.",
-            "- Table 5. Automated validation results.",
-            "- Table 6. Manual functional evaluation matrix.",
-            "- Table 7. Security and privacy controls.",
-            "- Table 8. Docker services summary.",
-            "- Table 9. API endpoint summary.",
-            "- Table 10. Database tables summary.",
-            "- Table 11. Mini CV dataset.",
-            "- Table 12. Mini job dataset.",
-            "- Table 13. Mini evaluation metrics.",
-            "- Table 14. Recommendation ranking details.",
-            "- Table 15. Gap analysis pair details.",
-        ]
-    )
+    fig_list = "\n".join([f"- [{num}. {caption}](#{figure_anchor(num)})" for num, caption, _ in FIGURES])
+    table_list = "\n".join([f"- [{num}. {caption}](#{table_anchor(num)})" for num, caption in TABLES])
     refs = "\n".join(
         [
             f"[{ref.key}] {ref.organization}, \"{ref.title},\" {ref.source}, {ref.year}. [Online]. Available: {ref.url}. {ref.accessed}."
@@ -718,6 +745,12 @@ Submitted by:
 
 \\pagebreak
 
+# Table of Contents
+
+{toc_markdown()}
+
+\\pagebreak
+
 # Acknowledgment
 
 The project team would like to express sincere appreciation to {SUPERVISOR} for academic supervision, technical guidance, and continuous feedback during the preparation of CareerCompass. The team also thanks the Faculty of Computers and Information at Kafr El-Sheikh University for providing the academic setting in which this graduation project was designed, implemented, tested, and documented.
@@ -729,10 +762,6 @@ The work presented in this book reflects a collaborative software engineering ef
 CareerCompass is a graduation/demo career guidance platform that helps students and early-career users understand their CV profile, explore imported job opportunities, and compare their current skills against job requirements. The system consists of a React and Vite frontend, a Laravel API backend, a MySQL database, a FastAPI-based CV analyzer, a FastAPI/Scrapy-based job miner, MinIO-compatible private file storage, Nginx routing, and Prometheus/Grafana monitoring. The platform supports registration, login, CV upload, AI-assisted CV parsing, normalized profile and skills storage, job recommendation, gap analysis, an application tracker, and administrator dashboards for job and source diagnostics.
 
 The implementation is intentionally described as a graduation/demo system rather than a production product. The AI outputs are estimates, the job data depends on imported and demo sources, and the security posture is appropriate for demonstration but requires further production hardening. Validation was performed through Docker Compose configuration checks, backend tests, frontend lint/build, Python service tests or syntax checks, HTTP probes, and manual browser screenshots. Backend tests passed with 39 tests and 297 assertions, the AI job miner tests passed with 75 tests, and the frontend build completed successfully. The AI CV analyzer container did not include pytest, so its pytest suite was marked as skipped while Python syntax compilation passed.
-
-# Table of Contents
-
-{toc_markdown()}
 
 # List of Figures
 
@@ -833,6 +862,8 @@ The system targets common problems in student career preparation:
 
 ## 2.4 Target Users and Stakeholders
 
+*Table 1. Stakeholder summary.*
+
 | Stakeholder | Description | Main Interest |
 |---|---|---|
 | Student user | A university student or early-career user. | Upload CV, view profile, discover jobs, analyze gaps, save opportunities. |
@@ -845,6 +876,8 @@ The system targets common problems in student career preparation:
 CareerCompass implements two practical roles. The student role can register, login, upload a CV, view recommendations, run gap analysis, and track applications. The admin role can access protected admin routes for dashboard statistics, job administration, scraping sources, target roles, and user review.
 
 ## 2.6 Functional Requirements
+
+*Table 2. Functional requirements summary.*
 
 | ID | Requirement | Implementation Evidence |
 |---|---|---|
@@ -862,6 +895,8 @@ CareerCompass implements two practical roles. The student role can register, log
 
 ## 2.7 Non-Functional Requirements
 
+*Table 3. Non-functional requirements summary.*
+
 | Category | Requirement | CareerCompass Approach |
 |---|---|---|
 | Usability | The UI should guide students through CV upload and recommendations. | React pages, dashboard cards, profile score, and action buttons. |
@@ -876,6 +911,8 @@ CareerCompass implements two practical roles. The student role can register, log
 For local demonstration, a developer machine capable of running Docker Desktop and multiple containers is required. CV parsing and OCR-like processing can be CPU-intensive; therefore, enough memory should be available for the Laravel backend, MySQL, frontend, Python services, MinIO, Prometheus, and Grafana. GPU acceleration is not required for the demonstrated flow.
 
 ## 2.9 Software Requirements
+
+*Table 4. Hardware and software environment.*
 
 | Layer | Software |
 |---|---|
@@ -971,6 +1008,8 @@ The deployment is defined by Docker Compose files. Nginx exposes the application
 CareerCompass includes live, readiness, and metrics endpoints. Prometheus is used for scraping and time-series metrics collection [13], while Grafana visualizes metrics and dashboard panels [14]. The admin dashboard also exposes application-level health information for the graduation demo.
 
 ## 3.14 Design Decisions and Justification
+
+*Table 5. Design decisions summary.*
 
 | Decision | Justification |
 |---|---|
@@ -1219,6 +1258,8 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 
 ## 6.16 Summary of Results
 
+*Table 11. Automated validation results.*
+
 | Area | Command or Scenario | Result | Evidence |
 |---|---|---|---|
 | Docker config | `docker compose config --quiet` | Passed | Terminal evidence |
@@ -1233,6 +1274,8 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 | AI CV Analyzer pytest | `python -m pytest` | Skipped, pytest missing | Command output |
 | HTTP probes | `/`, `/api/health`, `/api/ready`, `/status`, AI services | 200 responses | Command output |
 
+*Table 12. Manual functional evaluation matrix.*
+
 | Test ID | Module | Scenario | Status | Evidence |
 |---|---|---|---|---|
 | M-01 | Authentication | Register demo user | Passed | Register screenshot/API output |
@@ -1245,6 +1288,8 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 | M-08 | Admin | Login admin and open dashboard | Passed | Figure 22 |
 | M-09 | Admin sources | Open diagnostics | Passed | Figure 24 |
 | M-10 | Status | Open system status page | Passed | Figure 21 |
+
+*Table 13. Manual functional observations.*
 
 | Test ID | Expected vs Actual Observation |
 |---|---|
@@ -1296,6 +1341,8 @@ Laravel form requests validate registration, login, CV upload, applications, and
 The API client attaches request IDs, and backend logging records important events such as CV processing status and AI gateway errors. For production, logs should avoid sensitive CV content and should be retained according to a privacy policy.
 
 ## 7.9 Demo Security Limitations
+
+*Table 14. Security and privacy controls.*
 
 | Area | Current Demo Control | Production Hardening Needed |
 |---|---|---|
@@ -1368,6 +1415,8 @@ CareerCompass is an original graduation project that connects academic software 
 
 ## Appendix A: API Endpoint Summary
 
+*Table 15. API endpoint summary.*
+
 | Group | Example Endpoints | Purpose |
 |---|---|---|
 | Health | `/api/health`, `/api/ready`, `/api/metrics` | Liveness, readiness, and Prometheus metrics. |
@@ -1380,6 +1429,8 @@ CareerCompass is an original graduation project that connects academic software 
 | Internal Scraper | `/api/jobs/import`, `/api/jobs/import/check`, `/api/proxies/active` | Service-token protected import routes. |
 
 ## Appendix B: Database Tables Summary
+
+*Table 16. Database tables summary.*
 
 | Table | Purpose |
 |---|---|
@@ -1396,6 +1447,8 @@ CareerCompass is an original graduation project that connects academic software 
 | scraping_jobs | Scraping batch execution state. |
 
 ## Appendix C: Docker Services Summary
+
+*Table 17. Docker services summary.*
 
 | Service | Role |
 |---|---|
@@ -1699,7 +1752,7 @@ def add_md_table_docx(doc: Document, lines: list[str]) -> None:
     spacer.paragraph_format.space_after = Pt(4)
 
 
-def add_image_docx(doc: Document, rel_path: str, caption: str) -> None:
+def add_image_docx(doc: Document, rel_path: str, caption: str, bookmark_name: str | None = None) -> None:
     image_path = OUT_DIR / rel_path
     if not image_path.exists():
         doc.add_paragraph(f"[Missing image: {rel_path}]")
@@ -1712,6 +1765,8 @@ def add_image_docx(doc: Document, rel_path: str, caption: str) -> None:
         para.add_run(f"[Unable to insert image: {rel_path}]")
     cap = doc.add_paragraph(caption)
     cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    if bookmark_name:
+        add_bookmark(cap, bookmark_name)
     for run in cap.runs:
         run.italic = True
 
@@ -1750,6 +1805,7 @@ def generate_docx() -> None:
     doc = Document()
     set_doc_defaults(doc)
     add_cover(doc)
+    caption_bookmarks_seen: set[str] = set()
     lines = MD_PATH.read_text(encoding="utf-8").splitlines()
     i = 0
     while i < len(lines) and lines[i] != "\\pagebreak":
@@ -1777,12 +1833,20 @@ def generate_docx() -> None:
             continue
         image_match = re.match(r"!\[(.*?)\]\((.*?)\)", line)
         if image_match:
-            caption = image_match.group(1)
             rel_path = image_match.group(2)
-            add_image_docx(doc, rel_path, caption)
-            i += 1
-            if i < len(lines) and lines[i].startswith("*Figure"):
+            caption = clean_inline(image_match.group(1))
+            next_index = i + 1
+            if next_index < len(lines) and lines[next_index].startswith("*Figure"):
+                caption = clean_inline(lines[next_index].strip("*"))
+                i += 2
+            else:
                 i += 1
+            bookmark_name = caption_anchor(caption)
+            if bookmark_name in caption_bookmarks_seen:
+                bookmark_name = None
+            elif bookmark_name:
+                caption_bookmarks_seen.add(bookmark_name)
+            add_image_docx(doc, rel_path, caption, bookmark_name)
             continue
         if line.startswith("# "):
             title = clean_inline(line[2:])
@@ -1806,8 +1870,13 @@ def generate_docx() -> None:
         elif re.match(r"^\d+\. ", line):
             doc.add_paragraph(clean_inline(re.sub(r"^\d+\. ", "", line)), style="List Number")
         elif line.startswith("*Figure") or line.startswith("*Table"):
-            p = doc.add_paragraph(clean_inline(line.strip("*")))
+            caption = clean_inline(line.strip("*"))
+            p = doc.add_paragraph(caption)
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            bookmark_name = caption_anchor(caption)
+            if bookmark_name and bookmark_name not in caption_bookmarks_seen:
+                add_bookmark(p, bookmark_name)
+                caption_bookmarks_seen.add(bookmark_name)
             for run in p.runs:
                 run.italic = True
         else:
@@ -1934,10 +2003,14 @@ def generate_pdf() -> int:
             continue
         image_match = re.match(r"!\[(.*?)\]\((.*?)\)", line)
         if image_match:
-            add_pdf_image(story, image_match.group(2), image_match.group(1))
-            i += 1
-            if i < len(lines) and lines[i].startswith("*Figure"):
+            caption = clean_inline(image_match.group(1))
+            next_index = i + 1
+            if next_index < len(lines) and lines[next_index].startswith("*Figure"):
+                caption = clean_inline(lines[next_index].strip("*"))
+                i += 2
+            else:
                 i += 1
+            add_pdf_image(story, image_match.group(2), caption)
             continue
         if line.startswith("# "):
             story.append(Paragraph(html.escape(clean_inline(line[2:])), h1))
@@ -2022,7 +2095,39 @@ def count_pdf_link_annotations() -> int:
         return 0
 
 
-def write_notes(page_count: int, pdf_method: str, toc_docx_status: str, toc_pdf_status: str, table_status: str) -> None:
+def count_docx_internal_links() -> dict[str, int]:
+    try:
+        from zipfile import ZipFile
+        from xml.etree import ElementTree as ET
+
+        ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+        with ZipFile(DOCX_PATH) as zf:
+            xml = ET.fromstring(zf.read("word/document.xml"))
+        counts = {"toc": 0, "figures": 0, "tables": 0, "total": 0}
+        for link in xml.findall(".//w:hyperlink", ns):
+            anchor = link.get(qn("w:anchor")) or ""
+            counts["total"] += 1
+            if anchor.startswith("bm_figure_"):
+                counts["figures"] += 1
+            elif anchor.startswith("bm_table_"):
+                counts["tables"] += 1
+            else:
+                counts["toc"] += 1
+        return counts
+    except Exception:
+        return {"toc": 0, "figures": 0, "tables": 0, "total": 0}
+
+
+def write_notes(
+    page_count: int,
+    pdf_method: str,
+    toc_docx_status: str,
+    figures_docx_status: str,
+    tables_docx_status: str,
+    toc_pdf_status: str,
+    table_status: str,
+    caption_status: str,
+) -> None:
     screenshot_count = len(list(SCREENSHOTS.glob("*.png")))
     diagram_count = len(list(DIAGRAMS.glob("*.png")))
     evaluation_files = [
@@ -2070,9 +2175,22 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 
 ## Table of Contents and Tables
 
+- TOC placement: standalone page immediately after the cover page
 - DOCX TOC status: {toc_docx_status}
+- DOCX List of Figures status: {figures_docx_status}
+- DOCX List of Tables status: {tables_docx_status}
 - PDF TOC status: {toc_pdf_status}
 - Table formatting status: {table_status}
+- Figure caption status: {caption_status}
+
+## Caption, Link, and Layout Verification Method
+
+- Duplicate figure captions were checked by removing caption-like figure numbers from Markdown image alt text and rendering only the explicit italic `Figure n. ...` caption line in DOCX/PDF generation paths.
+- Markdown scan: `rg -n "Figure [0-9]+:" docs/graduation-book/CareerCompass_Graduation_Project_Book.md` returned no matches after regeneration.
+- DOCX structural scan: OOXML inspection counted TOC/List of Figures/List of Tables internal hyperlinks, checked that every hyperlink anchor has a matching bookmark, and counted figure/table caption bookmarks.
+- PDF structural scan: `pypdf` counted pages and link annotations after Microsoft Word export.
+- TOC placement was checked from DOCX body order and PDF page text extraction: the first generated page after the cover is the Table of Contents page, followed by Acknowledgment.
+- Table layout was checked through OOXML for fixed table layout, table grids, cell widths, and repeated header rows on data tables.
 
 ## Mini Dataset Evaluation
 
@@ -2105,7 +2223,8 @@ All previously listed student placeholders were removed and replaced with the fi
 
 - This script creates a ReportLab PDF fallback first. Microsoft Word COM automation is then used when available to export the DOCX to PDF.
 - The Documents skill `render_docx.py` workflow was attempted after DOCX generation, but it could not render because LibreOffice/soffice was not available on the host PATH (`FileNotFoundError: [WinError 2]`).
-- The report uses a custom manual Table of Contents with internal DOCX hyperlinks instead of a fragile automatic Word field.
+- The report uses custom manual Table of Contents, List of Figures, and List of Tables links instead of fragile automatic Word fields.
+- PDF link preservation is checked through PDF annotation counts after Microsoft Word export; individual clicks should still be spot-checked in a PDF reader before printing.
 - GitHub Actions status should be reviewed on the draft PR after every push.
 - AI evaluation results are treated as preliminary/manual smoke evidence, not as statistical accuracy claims.
 
@@ -2138,10 +2257,14 @@ def main() -> None:
         pdf_method = f"generated directly with ReportLab fallback; Word export failed ({export_output or 'no output'})"
         page_count = fallback_page_count
     link_count = count_pdf_link_annotations()
-    toc_docx_status = "custom manual TOC entries contain internal hyperlinks to bookmarked major headings"
+    docx_link_counts = count_docx_internal_links()
+    toc_docx_status = f"{docx_link_counts['toc']} custom manual TOC entries contain internal hyperlinks to bookmarked major headings"
+    figures_docx_status = f"{docx_link_counts['figures']} List of Figures entries link to bookmarked figure captions"
+    tables_docx_status = f"{docx_link_counts['tables']} List of Tables entries link to bookmarked table captions"
     toc_pdf_status = f"PDF contains {link_count} link annotations after export" if link_count else "PDF link preservation could not be confirmed from annotations"
     table_status = "data tables use fixed DXA widths, wrapped text, repeated header rows, smaller table fonts, and split wide manual test observations into narrower tables; cover layout tables are intentionally excluded from repeated-header checks"
-    write_notes(page_count, pdf_method, toc_docx_status, toc_pdf_status, table_status)
+    caption_status = "explicit italic caption lines are the single visible figure-caption source; Markdown image alt text is no longer rendered as a visible figure caption"
+    write_notes(page_count, pdf_method, toc_docx_status, figures_docx_status, tables_docx_status, toc_pdf_status, table_status, caption_status)
     print(f"Generated Markdown: {MD_PATH}")
     print(f"Generated DOCX: {DOCX_PATH}")
     print(f"Generated PDF: {PDF_PATH}")
