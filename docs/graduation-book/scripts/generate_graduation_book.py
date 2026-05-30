@@ -1,19 +1,21 @@
 from __future__ import annotations
 
 import html
+import json
 import re
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
 from docx import Document
-from docx.enum.section import WD_SECTION
+from docx.enum.section import WD_ORIENT, WD_SECTION
 from docx.enum.table import WD_TABLE_ALIGNMENT, WD_CELL_VERTICAL_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.shared import Cm, Inches, Pt, RGBColor
+from docx.shared import Cm, Inches, Pt, RGBColor, Twips
 from PIL import Image as PILImage
 from PIL import ImageDraw, ImageFont
 from pypdf import PdfReader
@@ -44,6 +46,10 @@ PDF_PATH = OUT_DIR / "CareerCompass_Graduation_Project_Book.pdf"
 MD_PATH = OUT_DIR / "CareerCompass_Graduation_Project_Book.md"
 REFERENCES_PATH = OUT_DIR / "references.md"
 NOTES_PATH = OUT_DIR / "REPORT_GENERATION_NOTES.md"
+EVALUATION = OUT_DIR / "evaluation"
+MINI_EVAL_SCRIPT = EVALUATION / "run_mini_evaluation.py"
+MINI_EVAL_RESULTS = EVALUATION / "mini_evaluation_results.json"
+MINI_EVAL_SUMMARY = EVALUATION / "mini_evaluation_summary.md"
 
 PROJECT_TITLE = "CareerCompass: AI-Powered Career Guidance and Job Recommendation Platform"
 SHORT_NAME = "CareerCompass"
@@ -55,9 +61,28 @@ SUPERVISOR = "Dr. Amna Mahmoud"
 STUDENTS = [
     "Yousef Altohamy Ahmed Altohamy",
     "Ahmed Mohamed Ahmed Abdelaziz",
-    "[Student Name 3]",
-    "[Student Name 4]",
-    "[Student Name 5]",
+    "Mohamed Ali Ahmed Mohamed",
+    "Mohamed Ibrahim Ahmed Mohamed",
+    "Ahmed Khamis Mohamed Younes",
+    "Ahmed Sobhy Mohamed Ali",
+]
+
+TOC_ENTRIES = [
+    ("Acknowledgment", "Acknowledgment"),
+    ("Abstract", "Abstract"),
+    ("List of Figures", "List of Figures"),
+    ("List of Tables", "List of Tables"),
+    ("Abbreviations", "Abbreviations"),
+    ("Chapter 1: Introduction", "Chapter 1: Introduction"),
+    ("Chapter 2: System Analysis", "Chapter 2: System Analysis"),
+    ("Chapter 3: System Design and Architecture", "Chapter 3: System Design and Architecture"),
+    ("Chapter 4: Software and Tools Used", "Chapter 4: Software and Tools Used"),
+    ("Chapter 5: System Implementation", "Chapter 5: System Implementation"),
+    ("Chapter 6: Testing and Evaluation", "Chapter 6: Testing and Evaluation"),
+    ("Chapter 7: Security and Privacy", "Chapter 7: Security and Privacy"),
+    ("Chapter 8: Conclusion and Future Work", "Chapter 8: Conclusion and Future Work"),
+    ("References", "References"),
+    ("Appendices", "Appendices"),
 ]
 
 
@@ -102,6 +127,7 @@ REFERENCES = [
     Reference(27, "OWASP", "File Upload Cheat Sheet", "OWASP Cheat Sheet Series", "2026", "https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html"),
     Reference(28, "OWASP", "Authentication Cheat Sheet", "OWASP Cheat Sheet Series", "2026", "https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html"),
     Reference(29, "Martin Fowler and James Lewis", "Microservices", "martinfowler.com", "2014", "https://martinfowler.com/articles/microservices.html"),
+    Reference(30, "scikit-learn", "precision_recall_fscore_support", "scikit-learn Documentation", "2026", "https://scikit-learn.org/stable/modules/generated/sklearn.metrics.precision_recall_fscore_support.html"),
 ]
 
 
@@ -137,8 +163,17 @@ FIGURES = [
 
 
 def ensure_dirs() -> None:
-    for folder in [OUT_DIR, ASSETS, DIAGRAMS, SCREENSHOTS, LOGOS]:
+    for folder in [OUT_DIR, ASSETS, DIAGRAMS, SCREENSHOTS, LOGOS, EVALUATION]:
         folder.mkdir(parents=True, exist_ok=True)
+
+
+def heading_anchor(text: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
+    return f"bm_{slug or 'section'}"
+
+
+def toc_markdown() -> str:
+    return "\n".join([f"- [{label}](#{heading_anchor(target)})" for label, target in TOC_ENTRIES])
 
 
 def load_font(size: int, bold: bool = False):
@@ -505,11 +540,137 @@ def references_markdown() -> str:
     return "\n".join(lines)
 
 
+def run_mini_evaluation() -> dict:
+    if MINI_EVAL_SCRIPT.exists():
+        subprocess.run([sys.executable, str(MINI_EVAL_SCRIPT)], cwd=ROOT, check=True)
+    if MINI_EVAL_RESULTS.exists():
+        return json.loads(MINI_EVAL_RESULTS.read_text(encoding="utf-8"))
+    return {
+        "summary": {
+            "evaluation_mode": "not_run",
+            "statistical_scope": "Mini evaluation results were not generated.",
+            "cv_samples": 0,
+            "job_samples": 0,
+            "cv_analyzer_offline": {},
+            "recommendation_offline": {},
+            "gap_analysis_offline": {},
+        },
+        "cv_analyzer_results": [],
+        "recommendation_results": [],
+        "gap_analysis_results": [],
+    }
+
+
+def md_table(headers: list[str], rows: list[list[str]]) -> str:
+    body = ["| " + " | ".join(headers) + " |", "| " + " | ".join(["---"] * len(headers)) + " |"]
+    for row in rows:
+        body.append("| " + " | ".join(str(cell).replace("\n", " ").replace("|", "/") for cell in row) + " |")
+    return "\n".join(body)
+
+
+def mini_eval_markdown(results: dict) -> str:
+    cv_samples = json.loads((EVALUATION / "mini_cv_dataset.json").read_text(encoding="utf-8"))
+    job_samples = json.loads((EVALUATION / "mini_jobs_dataset.json").read_text(encoding="utf-8"))
+    summary = results["summary"]
+    cv_summary = summary["cv_analyzer_offline"]
+    rec_summary = summary["recommendation_offline"]
+    gap_summary = summary["gap_analysis_offline"]
+
+    cv_dataset_table = md_table(
+        ["Sample ID", "Expected Role", "Seniority", "Domain", "Expected Skills"],
+        [
+            [
+                sample["sample_id"],
+                sample["expected_role"],
+                sample["expected_seniority"],
+                sample["expected_domain"],
+                ", ".join(sample["expected_skills"]),
+            ]
+            for sample in cv_samples
+        ],
+    )
+    job_dataset_table = md_table(
+        ["Job ID", "Title", "Domain", "Required Skills"],
+        [
+            [
+                job["job_id"],
+                job["title"],
+                job["domain"],
+                ", ".join(job["required_skills"]),
+            ]
+            for job in job_samples
+        ],
+    )
+    metric_table = md_table(
+        ["Area", "Metric", "Value", "Notes"],
+        [
+            ["CV offline", "Macro skill precision", f"{cv_summary['macro_skill_precision']:.3f}", "Keyword extraction over synthetic CV text"],
+            ["CV offline", "Macro skill recall", f"{cv_summary['macro_skill_recall']:.3f}", "Compared with expected skill labels"],
+            ["CV offline", "Macro skill F1", f"{cv_summary['macro_skill_f1']:.3f}", "F1 computed from precision/recall [30]"],
+            ["CV offline", "Role match rate", f"{cv_summary['role_match_rate']:.3f}", "Rule-based role inference on synthetic data"],
+            ["CV offline", "Seniority match rate", f"{cv_summary['seniority_match_rate']:.3f}", "Rule-based seniority inference"],
+            ["CV offline", "Domain match rate", f"{cv_summary['domain_match_rate']:.3f}", "Rule-based domain inference"],
+            ["Recommendation offline", "Top-1 relevance", f"{rec_summary['top_1_relevance']:.3f}", "Top recommendation belongs to manual relevant set"],
+            ["Recommendation offline", "Top-3 relevance", f"{rec_summary['top_3_relevance']:.3f}", "Any top-3 job belongs to manual relevant set"],
+            ["Recommendation offline", "Mean precision@3", f"{rec_summary['mean_precision_at_3']:.3f}", "Relevant jobs among top three"],
+            ["Gap offline", "Matched skill agreement F1", f"{gap_summary['mean_matched_skill_agreement_f1']:.3f}", "Computed matched skills vs. expected matched skills"],
+            ["Gap offline", "Missing skill agreement F1", f"{gap_summary['mean_missing_skill_agreement_f1']:.3f}", "Computed missing skills vs. expected missing skills"],
+        ],
+    )
+    recommendation_table = md_table(
+        ["CV Sample", "Expected Relevant Jobs", "Top 3 Offline Recommendations", "P@3"],
+        [
+            [
+                item["sample_id"],
+                ", ".join(item["expected_relevant_job_ids"]),
+                ", ".join(item["top_3_recommended_job_ids"]),
+                f"{item['precision_at_3']:.3f}",
+            ]
+            for item in results["recommendation_results"]
+        ],
+    )
+    gap_table = md_table(
+        ["CV / Job Pair", "Matched Skills", "Missing Skills", "Agreement"],
+        [
+            [
+                f"{item['cv_sample_id']} -> {item['job_id']}",
+                ", ".join(item["computed_matched_skills"]) or "None",
+                ", ".join(item["computed_missing_skills"]) or "None",
+                f"matched F1={item['matched_skill_agreement_f1']:.3f}; missing F1={item['missing_skill_agreement_f1']:.3f}",
+            ]
+            for item in results["gap_analysis_results"]
+        ],
+    )
+    return f"""
+### Mini Dataset Files
+
+The mini evaluation uses fake synthetic CVs and fake synthetic job records stored under `docs/graduation-book/evaluation/`. It is intentionally small and preliminary. It is useful for graduation validation and regression checks, but it is not statistically representative and should not be used as a production benchmark.
+
+{cv_dataset_table}
+
+{job_dataset_table}
+
+### Metric Definitions
+
+Skill precision measures how many extracted skills are expected labels. Skill recall measures how many expected skills were extracted. Skill F1 is the harmonic mean of precision and recall [30]. Recommendation top-1 and top-3 relevance compare ranked jobs against manual relevance labels. Gap agreement compares computed matched/missing skills against expected matched/missing skills.
+
+{metric_table}
+
+### Recommendation Ranking Details
+
+{recommendation_table}
+
+### Gap Analysis Pair Details
+
+{gap_table}
+"""
+
+
 def figure_markdown(number: str, caption: str, rel_path: str) -> str:
     return f"![{number}: {caption}]({rel_path})\n\n*{number}. {caption}*"
 
 
-def report_markdown() -> str:
+def report_markdown(mini_results: dict) -> str:
     fig_list = "\n".join([f"- {num}. {caption}" for num, caption, _ in FIGURES])
     table_list = "\n".join(
         [
@@ -523,6 +684,11 @@ def report_markdown() -> str:
             "- Table 8. Docker services summary.",
             "- Table 9. API endpoint summary.",
             "- Table 10. Database tables summary.",
+            "- Table 11. Mini CV dataset.",
+            "- Table 12. Mini job dataset.",
+            "- Table 13. Mini evaluation metrics.",
+            "- Table 14. Recommendation ranking details.",
+            "- Table 15. Gap analysis pair details.",
         ]
     )
     refs = "\n".join(
@@ -531,6 +697,7 @@ def report_markdown() -> str:
             for ref in REFERENCES
         ]
     )
+    mini_eval = mini_eval_markdown(mini_results)
 
     return f"""# {PROJECT_TITLE}
 
@@ -565,17 +732,7 @@ The implementation is intentionally described as a graduation/demo system rather
 
 # Table of Contents
 
-- Front Matter
-- Chapter 1: Introduction
-- Chapter 2: System Analysis
-- Chapter 3: System Design and Architecture
-- Chapter 4: Software and Tools Used
-- Chapter 5: System Implementation
-- Chapter 6: Testing and Evaluation
-- Chapter 7: Security and Privacy
-- Chapter 8: Conclusion and Future Work
-- References
-- Appendices
+{toc_markdown()}
 
 # List of Figures
 
@@ -642,7 +799,7 @@ The proposed solution is a multi-service application. React renders the browser 
 
 ## 1.7 Project Scope
 
-The scope covers a graduation/demo environment: local Docker deployment, student workflows, admin workflows, testing, screenshots, and documentation. It does not claim production readiness. The project does not guarantee job placement, full job market coverage, legal compliance for production privacy, or perfect AI accuracy.
+The scope covers a graduation/demo environment: local Docker deployment, student workflows, admin workflows, testing, screenshots, and documentation. It does not claim production readiness, job placement certainty, full job market coverage, legal compliance for production privacy, or complete AI accuracy.
 
 ## 1.8 Graduation Demo Positioning
 
@@ -822,7 +979,7 @@ CareerCompass includes live, readiness, and metrics endpoints. Prometheus is use
 | Use FastAPI for AI services. | Python AI/NLP dependencies are easier to isolate behind typed HTTP services [6]. |
 | Use Docker Compose. | Multiple services can be started consistently for a graduation defense [11]. |
 | Use private object storage for CV files. | CV files are sensitive; private storage and signed downloads reduce accidental exposure [9], [27]. |
-| Keep AI wording honest. | Match scores and CV parsing are estimates; the demo should not claim guaranteed outcomes. |
+| Keep AI wording honest. | Match scores and CV parsing are estimates; the demo should avoid claiming certain outcomes. |
 
 \\pagebreak
 
@@ -1020,17 +1177,21 @@ Docker Compose configuration validation passed for both development and producti
 
 GitHub Actions workflow files were reviewed as part of repository inspection. A live GitHub Actions status screenshot was not captured before the draft PR because PR checks only become meaningful after the branch is pushed and GitHub schedules workflows. The manual review checklist asks the team to inspect CI status on the opened draft PR.
 
-## 6.8 CV Analyzer Evaluation
+## 6.8 CV Analyzer Mini Dataset Evaluation
 
-A sample PDF CV was generated for the screenshot workflow and uploaded through the running system. The upload succeeded, and the dashboard showed parsed CV data, a backend role inference, extracted skills, and profile completeness. This is a functional smoke evaluation, not a statistical AI accuracy evaluation. The existing AI evaluation plan should be used for larger future evaluation.
+A sample PDF CV was generated for the screenshot workflow and uploaded through the running system. The upload succeeded, and the dashboard showed parsed CV data, backend role inference, extracted skills, and profile completeness. To strengthen the evaluation beyond that smoke test, this revision adds a mini synthetic dataset under `docs/graduation-book/evaluation/`.
 
-## 6.9 Recommendation Evaluation
+The mini CV evaluation is explicitly offline and deterministic. It uses fake CV text, expected skill labels, and a keyword/role inference evaluator. It does not claim live model accuracy. The live AI CV Analyzer endpoint can be added to this mini-evaluation later, but the current document records only metrics that were actually computed from the synthetic dataset.
 
-After CV upload, the jobs page displayed recommendations with estimated match information. The gap page showed a 55 percent estimated match score for a selected backend Laravel developer job in the captured demo data. This value is reported only as observed demo output from the system, not as a verified global recommendation quality metric.
+## 6.9 Recommendation Mini Dataset Evaluation
 
-## 6.10 Gap Analysis Evaluation
+The recommendation mini evaluation ranks synthetic jobs for each synthetic CV using skill overlap plus domain and seniority bonuses. This validates the recommendation concept and provides a repeatable regression check for report evidence. It is not a production recommender benchmark, and the report does not claim complete job-market coverage.
 
-Gap analysis produced matched expertise and missing/priority gap output for the selected job. The screenshot demonstrates that the route, backend analysis call, and frontend rendering worked in the local demo.
+## 6.10 Gap Analysis Mini Dataset Evaluation
+
+The gap-analysis mini evaluation compares expected matched and missing skills with computed matched and missing skills for selected CV/job pairs. This directly validates the explanation structure used by the gap-analysis workflow: matched skills should be shown separately from missing skills.
+
+{mini_eval}
 
 ## 6.11 Job Miner Evaluation
 
@@ -1051,7 +1212,7 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 ## 6.15 Evaluation Limitations
 
 - The AI CV Analyzer pytest suite was not executed because pytest was absent in that container.
-- The sample CV evaluation is a smoke test, not a statistically valid dataset evaluation.
+- The browser CV upload remains a smoke test, and the mini dataset is synthetic rather than statistically representative.
 - The recommendation score shown in screenshots is an estimated local demo output.
 - External scraping reliability depends on source availability and changing website/API behavior.
 - Production security, privacy, and performance audits remain future work.
@@ -1072,18 +1233,31 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 | AI CV Analyzer pytest | `python -m pytest` | Skipped, pytest missing | Command output |
 | HTTP probes | `/`, `/api/health`, `/api/ready`, `/status`, AI services | 200 responses | Command output |
 
-| Test ID | Module | Scenario | Expected Result | Actual Result | Status | Evidence |
-|---|---|---|---|---|---|---|
-| M-01 | Authentication | Register demo user | User created and token returned | User created with accepted Gmail-style address | Passed | Register screenshot/API output |
-| M-02 | Authentication | Login student | Dashboard accessible | Dashboard loaded | Passed | Figure 12 |
-| M-03 | CV upload | Upload valid PDF | CV accepted and parsed | Parsed successfully | Passed | Figures 13-15 |
-| M-04 | CV upload | Invalid file handling | Validation error expected | Covered by backend validation/tests; not manually repeated in browser | Not Run Manual | Backend tests |
-| M-05 | Recommendations | Open jobs page after CV | Jobs list with estimated matches | Jobs page loaded | Passed | Figure 16 |
-| M-06 | Gap analysis | Analyze selected job | Match and skill breakdown | Gap page loaded | Passed | Figure 18 |
-| M-07 | Tracker | Save job | Application appears in tracker | Application page loaded with saved item | Passed | Figure 19 |
-| M-08 | Admin | Login admin and open dashboard | Admin-only dashboard visible | Dashboard visible | Passed | Figure 22 |
-| M-09 | Admin sources | Open diagnostics | Sources visible | Diagnostics page visible | Passed | Figure 24 |
-| M-10 | Status | Open system status page | Health UI visible | Status page visible | Passed | Figure 21 |
+| Test ID | Module | Scenario | Status | Evidence |
+|---|---|---|---|---|
+| M-01 | Authentication | Register demo user | Passed | Register screenshot/API output |
+| M-02 | Authentication | Login student | Passed | Figure 12 |
+| M-03 | CV upload | Upload valid PDF | Passed | Figures 13-15 |
+| M-04 | CV upload | Invalid file handling | Not Run Manual | Backend validation tests |
+| M-05 | Recommendations | Open jobs page after CV | Passed | Figure 16 |
+| M-06 | Gap analysis | Analyze selected job | Passed | Figure 18 |
+| M-07 | Tracker | Save job | Passed | Figure 19 |
+| M-08 | Admin | Login admin and open dashboard | Passed | Figure 22 |
+| M-09 | Admin sources | Open diagnostics | Passed | Figure 24 |
+| M-10 | Status | Open system status page | Passed | Figure 21 |
+
+| Test ID | Expected vs Actual Observation |
+|---|---|
+| M-01 | Expected user creation and token return; actual user was created with an accepted Gmail-style address. |
+| M-02 | Expected dashboard access after login; actual dashboard loaded. |
+| M-03 | Expected CV acceptance and parsing; actual upload parsed successfully. |
+| M-04 | Expected validation error for invalid file; actual manual browser repetition was not run because backend validation/tests already cover the rule. |
+| M-05 | Expected recommendations with estimated matches; actual jobs page loaded. |
+| M-06 | Expected match and skill breakdown; actual gap page loaded. |
+| M-07 | Expected saved job in tracker; actual application page loaded with saved item. |
+| M-08 | Expected admin-only dashboard; actual dashboard visible after admin login. |
+| M-09 | Expected source diagnostics; actual diagnostics page visible. |
+| M-10 | Expected health UI; actual system status page visible. |
 
 \\pagebreak
 
@@ -1245,6 +1419,15 @@ CareerCompass is an original graduation project that connects academic software 
 
 The manual test matrix in Chapter 6 should be repeated before final submission. Additional recommended tests include invalid CV uploads, banned user login, expired signed download URLs, failed AI service behavior, scraper token rejection, admin route rejection for normal users, and browser checks on a clean database.
 
+The mini dataset evaluation files are:
+
+- `evaluation/mini_cv_dataset.json`
+- `evaluation/mini_jobs_dataset.json`
+- `evaluation/expected_labels.json`
+- `evaluation/run_mini_evaluation.py`
+- `evaluation/mini_evaluation_results.json`
+- `evaluation/mini_evaluation_summary.md`
+
 ## Appendix F: GitHub Actions / CI Summary
 
 The repository contains GitHub Actions workflow definitions. After the draft PR is opened, reviewers should inspect PR checks, rerun failed jobs if needed, and confirm that branch protection expectations are satisfied before merging. A CI screenshot was not embedded in this generated report because live PR checks were not available until after branch push.
@@ -1271,8 +1454,8 @@ def write_references() -> None:
     REFERENCES_PATH.write_text(references_markdown(), encoding="utf-8")
 
 
-def write_markdown() -> None:
-    MD_PATH.write_text(report_markdown(), encoding="utf-8")
+def write_markdown(mini_results: dict) -> None:
+    MD_PATH.write_text(report_markdown(mini_results), encoding="utf-8")
 
 
 def set_doc_defaults(doc: Document) -> None:
@@ -1357,10 +1540,15 @@ def add_cover(doc: Document) -> None:
     submitted = doc.add_paragraph()
     submitted.alignment = WD_ALIGN_PARAGRAPH.CENTER
     submitted.add_run("Submitted by:").bold = True
-    for student in STUDENTS:
-        para = doc.add_paragraph()
-        para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        para.add_run(student)
+    student_table = doc.add_table(rows=3, cols=2)
+    student_table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    student_table.autofit = False
+    set_table_geometry(student_table, [4500, 4500])
+    for idx, student in enumerate(STUDENTS):
+        cell = student_table.cell(idx // 2, idx % 2)
+        cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+        set_cell_width(cell, 4500)
+        set_cell_text(cell, student, size=10.5, align=WD_ALIGN_PARAGRAPH.CENTER)
 
     doc.add_paragraph()
     sup = doc.add_paragraph()
@@ -1373,9 +1561,112 @@ def add_cover(doc: Document) -> None:
 
 
 def clean_inline(text: str) -> str:
+    text = re.sub(r"\[([^\]]+)\]\(#[^)]+\)", r"\1", text)
     text = re.sub(r"`([^`]+)`", r"\1", text)
     text = text.replace("\\", "")
     return text
+
+
+def set_cell_text(cell, value: str, *, bold: bool = False, size: float = 8.5, align=WD_ALIGN_PARAGRAPH.LEFT) -> None:
+    cell.text = ""
+    para = cell.paragraphs[0]
+    para.alignment = align
+    para.paragraph_format.space_before = Pt(0)
+    para.paragraph_format.space_after = Pt(0)
+    para.paragraph_format.line_spacing = 1.05
+    run = para.add_run(clean_inline(value))
+    run.font.name = "Calibri"
+    run.font.size = Pt(size)
+    run.bold = bold
+
+
+def table_widths(headers: list[str], column_count: int) -> list[int]:
+    total = 9300
+    joined = " ".join(headers).lower()
+    if column_count == 2:
+        weights = [0.24, 0.76]
+    elif column_count == 3:
+        weights = [0.22, 0.30, 0.48]
+    elif column_count == 4 and "value" in joined and "notes" in joined:
+        weights = [0.22, 0.24, 0.12, 0.42]
+    elif column_count == 4:
+        weights = [0.18, 0.28, 0.24, 0.30]
+    elif column_count == 5:
+        weights = [0.11, 0.17, 0.32, 0.14, 0.26]
+    else:
+        weights = [1 / column_count] * column_count
+    widths = [int(total * weight) for weight in weights]
+    widths[-1] += total - sum(widths)
+    return widths
+
+
+def set_table_geometry(table, widths: list[int]) -> None:
+    table.autofit = False
+    tbl = table._tbl
+    tbl_pr = tbl.tblPr
+    tbl_w = tbl_pr.find(qn("w:tblW"))
+    if tbl_w is None:
+        tbl_w = OxmlElement("w:tblW")
+        tbl_pr.append(tbl_w)
+    tbl_w.set(qn("w:w"), str(sum(widths)))
+    tbl_w.set(qn("w:type"), "dxa")
+
+    layout = tbl_pr.find(qn("w:tblLayout"))
+    if layout is None:
+        layout = OxmlElement("w:tblLayout")
+        tbl_pr.append(layout)
+    layout.set(qn("w:type"), "fixed")
+
+    margins = tbl_pr.find(qn("w:tblCellMar"))
+    if margins is None:
+        margins = OxmlElement("w:tblCellMar")
+        tbl_pr.append(margins)
+    for side, width in [("top", 80), ("bottom", 80), ("start", 120), ("end", 120)]:
+        elem = margins.find(qn(f"w:{side}"))
+        if elem is None:
+            elem = OxmlElement(f"w:{side}")
+            margins.append(elem)
+        elem.set(qn("w:w"), str(width))
+        elem.set(qn("w:type"), "dxa")
+
+    grid = tbl.tblGrid
+    for child in list(grid):
+        grid.remove(child)
+    for width in widths:
+        grid_col = OxmlElement("w:gridCol")
+        grid_col.set(qn("w:w"), str(width))
+        grid.append(grid_col)
+
+
+def shade_cell(cell, fill: str) -> None:
+    tc_pr = cell._tc.get_or_add_tcPr()
+    shd = tc_pr.find(qn("w:shd"))
+    if shd is None:
+        shd = OxmlElement("w:shd")
+        tc_pr.append(shd)
+    shd.set(qn("w:fill"), fill)
+
+
+def set_cell_width(cell, width: int) -> None:
+    cell.width = Twips(width)
+    tc_pr = cell._tc.get_or_add_tcPr()
+    tc_w = tc_pr.find(qn("w:tcW"))
+    if tc_w is None:
+        tc_w = OxmlElement("w:tcW")
+        tc_pr.append(tc_w)
+    tc_w.set(qn("w:w"), str(width))
+    tc_w.set(qn("w:type"), "dxa")
+
+
+def keep_row_intact(row, repeat_header: bool = False) -> None:
+    tr_pr = row._tr.get_or_add_trPr()
+    if repeat_header:
+        tbl_header = OxmlElement("w:tblHeader")
+        tbl_header.set(qn("w:val"), "true")
+        tr_pr.append(tbl_header)
+    cant_split = OxmlElement("w:cantSplit")
+    cant_split.set(qn("w:val"), "true")
+    tr_pr.append(cant_split)
 
 
 def add_md_table_docx(doc: Document, lines: list[str]) -> None:
@@ -1387,17 +1678,25 @@ def add_md_table_docx(doc: Document, lines: list[str]) -> None:
         rows.append(parts)
     if not rows:
         return
-    table = doc.add_table(rows=len(rows), cols=max(len(r) for r in rows))
+    column_count = max(len(r) for r in rows)
+    table = doc.add_table(rows=len(rows), cols=column_count)
     table.style = "Table Grid"
+    widths = table_widths(rows[0], column_count)
+    set_table_geometry(table, widths)
     for r_idx, row in enumerate(rows):
-        for c_idx, value in enumerate(row):
+        keep_row_intact(table.rows[r_idx], repeat_header=(r_idx == 0))
+        for c_idx in range(column_count):
+            value = row[c_idx] if c_idx < len(row) else ""
             cell = table.cell(r_idx, c_idx)
-            cell.text = clean_inline(value)
+            cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+            set_cell_width(cell, widths[c_idx])
             if r_idx == 0:
-                for para in cell.paragraphs:
-                    for run in para.runs:
-                        run.bold = True
-    doc.add_paragraph()
+                shade_cell(cell, "D9EAF7")
+            short_cell = c_idx == 0 or clean_inline(value).lower() in {"passed", "not run manual", "skipped, pytest missing"}
+            align = WD_ALIGN_PARAGRAPH.CENTER if short_cell else WD_ALIGN_PARAGRAPH.LEFT
+            set_cell_text(cell, value, bold=(r_idx == 0), size=7.6 if column_count >= 5 else 8.5, align=align)
+    spacer = doc.add_paragraph()
+    spacer.paragraph_format.space_after = Pt(4)
 
 
 def add_image_docx(doc: Document, rel_path: str, caption: str) -> None:
@@ -1415,6 +1714,36 @@ def add_image_docx(doc: Document, rel_path: str, caption: str) -> None:
     cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
     for run in cap.runs:
         run.italic = True
+
+
+def add_bookmark(paragraph, bookmark_name: str) -> None:
+    bookmark_id = abs(hash(bookmark_name)) % 2147483647
+    start = OxmlElement("w:bookmarkStart")
+    start.set(qn("w:id"), str(bookmark_id))
+    start.set(qn("w:name"), bookmark_name)
+    end = OxmlElement("w:bookmarkEnd")
+    end.set(qn("w:id"), str(bookmark_id))
+    paragraph._p.insert(0, start)
+    paragraph._p.append(end)
+
+
+def add_internal_hyperlink(paragraph, text: str, anchor: str) -> None:
+    hyperlink = OxmlElement("w:hyperlink")
+    hyperlink.set(qn("w:anchor"), anchor)
+    run = OxmlElement("w:r")
+    r_pr = OxmlElement("w:rPr")
+    color = OxmlElement("w:color")
+    color.set(qn("w:val"), "0563C1")
+    underline = OxmlElement("w:u")
+    underline.set(qn("w:val"), "single")
+    r_pr.append(color)
+    r_pr.append(underline)
+    text_elem = OxmlElement("w:t")
+    text_elem.text = text
+    run.append(r_pr)
+    run.append(text_elem)
+    hyperlink.append(run)
+    paragraph._p.append(hyperlink)
 
 
 def generate_docx() -> None:
@@ -1456,13 +1785,24 @@ def generate_docx() -> None:
                 i += 1
             continue
         if line.startswith("# "):
-            doc.add_heading(clean_inline(line[2:]), level=1)
+            title = clean_inline(line[2:])
+            para = doc.add_heading(title, level=1)
+            add_bookmark(para, heading_anchor(title))
         elif line.startswith("## "):
-            doc.add_heading(clean_inline(line[3:]), level=2)
+            title = clean_inline(line[3:])
+            para = doc.add_heading(title, level=2)
+            add_bookmark(para, heading_anchor(title))
         elif line.startswith("### "):
-            doc.add_heading(clean_inline(line[4:]), level=3)
+            title = clean_inline(line[4:])
+            para = doc.add_heading(title, level=3)
+            add_bookmark(para, heading_anchor(title))
         elif line.startswith("- "):
-            doc.add_paragraph(clean_inline(line[2:]), style="List Bullet")
+            link = re.fullmatch(r"\[([^\]]+)\]\(#([^)]+)\)", line[2:].strip())
+            para = doc.add_paragraph(style="List Bullet")
+            if link:
+                add_internal_hyperlink(para, link.group(1), link.group(2))
+            else:
+                para.add_run(clean_inline(line[2:]))
         elif re.match(r"^\d+\. ", line):
             doc.add_paragraph(clean_inline(re.sub(r"^\d+\. ", "", line)), style="List Number")
         elif line.startswith("*Figure") or line.startswith("*Table"):
@@ -1633,9 +1973,66 @@ def generate_pdf() -> int:
     return len(PdfReader(str(PDF_PATH)).pages)
 
 
-def write_notes(page_count: int) -> None:
+def export_pdf_from_docx_with_word() -> tuple[bool, str]:
+    ps = f"""
+$ErrorActionPreference = 'Stop'
+$docx = '{str(DOCX_PATH).replace("'", "''")}'
+$pdf = '{str(PDF_PATH).replace("'", "''")}'
+$word = $null
+$doc = $null
+try {{
+  $word = New-Object -ComObject Word.Application
+  $word.Visible = $false
+  $word.DisplayAlerts = 0
+  $doc = $word.Documents.Open($docx, $false, $true)
+  $doc.ExportAsFixedFormat($pdf, 17, $false, 0, 0, 1, 1, 0, $true, $true, 1, $true, $true, $false)
+  $doc.Close($false)
+  $word.Quit()
+  'WORD_EXPORT_OK'
+}} catch {{
+  if ($doc -ne $null) {{ try {{ $doc.Close($false) }} catch {{}} }}
+  if ($word -ne $null) {{ try {{ $word.Quit() }} catch {{}} }}
+  'WORD_EXPORT_FAILED=' + $_.Exception.Message
+  exit 1
+}}
+"""
+    try:
+        result = subprocess.run(
+            ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            timeout=180,
+        )
+    except Exception as exc:
+        return False, f"Microsoft Word COM export could not be started: {exc}"
+    output = (result.stdout + result.stderr).strip()
+    return result.returncode == 0, output
+
+
+def count_pdf_link_annotations() -> int:
+    try:
+        reader = PdfReader(str(PDF_PATH))
+        total = 0
+        for page in reader.pages:
+            annots = page.get("/Annots") or []
+            total += len(annots)
+        return total
+    except Exception:
+        return 0
+
+
+def write_notes(page_count: int, pdf_method: str, toc_docx_status: str, toc_pdf_status: str, table_status: str) -> None:
     screenshot_count = len(list(SCREENSHOTS.glob("*.png")))
     diagram_count = len(list(DIAGRAMS.glob("*.png")))
+    evaluation_files = [
+        "mini_cv_dataset.json",
+        "mini_jobs_dataset.json",
+        "expected_labels.json",
+        "run_mini_evaluation.py",
+        "mini_evaluation_results.json",
+        "mini_evaluation_summary.md",
+    ]
     notes = f"""# Report Generation Notes
 
 ## Purpose
@@ -1661,7 +2058,7 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 
 - Markdown source: generated by `scripts/generate_graduation_book.py`.
 - DOCX: generated with `python-docx` using A4 page settings and page-number fields.
-- PDF: generated directly with ReportLab by this script as a fallback. In the final run, the retained PDF was exported from the generated DOCX using Microsoft Word COM automation.
+- PDF: {pdf_method}.
 - Diagrams: generated as PNG files with Pillow.
 - Browser screenshots: captured from the running local Docker stack using Chrome DevTools Protocol.
 
@@ -1670,6 +2067,18 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - PDF pages: {page_count}
 - Screenshots/evidence images: {screenshot_count}
 - Diagrams: {diagram_count}
+
+## Table of Contents and Tables
+
+- DOCX TOC status: {toc_docx_status}
+- PDF TOC status: {toc_pdf_status}
+- Table formatting status: {table_status}
+
+## Mini Dataset Evaluation
+
+The mini dataset evaluation was added under `evaluation/` and uses fake synthetic CV/job records. It is a preliminary offline validation, not a production benchmark.
+
+{chr(10).join([f"- `evaluation/{name}`" for name in evaluation_files])}
 
 ## Validation Summary
 
@@ -1686,26 +2095,23 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - AI CV Analyzer syntax compilation passed.
 - AI CV Analyzer pytest was skipped/blocked because pytest was not installed in that container.
 - HTTP probes for `/`, `/api/health`, `/api/ready`, `/status`, AI CV Analyzer, and Job Miner returned 200 responses.
+- Mini evaluation script ran successfully and generated JSON plus Markdown result summaries.
 
-## Known Placeholders
+## Placeholder Review
 
-- `[Student Name 3]`
-- `[Student Name 4]`
-- `[Student Name 5]`
-
-These placeholders were intentionally kept because only two student names were provided.
+All previously listed student placeholders were removed and replaced with the final six team names.
 
 ## Known Limitations
 
-- This script creates a ReportLab PDF fallback from the Markdown source. In the final deliverable, Microsoft Word COM automation was used after script execution to export the DOCX to PDF.
+- This script creates a ReportLab PDF fallback first. Microsoft Word COM automation is then used when available to export the DOCX to PDF.
 - The Documents skill `render_docx.py` workflow was attempted after DOCX generation, but it could not render because LibreOffice/soffice was not available on the host PATH (`FileNotFoundError: [WinError 2]`).
-- The report includes a static table of contents to avoid broken Word bookmark fields.
-- The GitHub Actions status screenshot was not embedded because final PR checks are only available after pushing the branch and opening the draft PR.
+- The report uses a custom manual Table of Contents with internal DOCX hyperlinks instead of a fragile automatic Word field.
+- GitHub Actions status should be reviewed on the draft PR after every push.
 - AI evaluation results are treated as preliminary/manual smoke evidence, not as statistical accuracy claims.
 
 ## Manual Review Before Submission
 
-- Replace placeholder student names if the final team list is known.
+- Confirm supervisor name, department, academic year, and final team-name spelling before printing.
 - Open the DOCX in Microsoft Word and update visual spacing if the faculty requires a specific template.
 - Confirm the generated PDF opens and figures are readable.
 - Review the draft PR checks after GitHub Actions finish.
@@ -1717,17 +2123,30 @@ These placeholders were intentionally kept because only two student names were p
 
 def main() -> None:
     ensure_dirs()
+    mini_results = run_mini_evaluation()
     create_diagrams()
     create_terminal_evidence()
     write_references()
-    write_markdown()
+    write_markdown(mini_results)
     generate_docx()
-    page_count = generate_pdf()
-    write_notes(page_count)
+    fallback_page_count = generate_pdf()
+    export_ok, export_output = export_pdf_from_docx_with_word()
+    page_count = len(PdfReader(str(PDF_PATH)).pages)
+    if export_ok:
+        pdf_method = "exported from the generated DOCX using Microsoft Word COM automation"
+    else:
+        pdf_method = f"generated directly with ReportLab fallback; Word export failed ({export_output or 'no output'})"
+        page_count = fallback_page_count
+    link_count = count_pdf_link_annotations()
+    toc_docx_status = "custom manual TOC entries contain internal hyperlinks to bookmarked major headings"
+    toc_pdf_status = f"PDF contains {link_count} link annotations after export" if link_count else "PDF link preservation could not be confirmed from annotations"
+    table_status = "data tables use fixed DXA widths, wrapped text, repeated header rows, smaller table fonts, and split wide manual test observations into narrower tables; cover layout tables are intentionally excluded from repeated-header checks"
+    write_notes(page_count, pdf_method, toc_docx_status, toc_pdf_status, table_status)
     print(f"Generated Markdown: {MD_PATH}")
     print(f"Generated DOCX: {DOCX_PATH}")
     print(f"Generated PDF: {PDF_PATH}")
     print(f"PDF pages: {page_count}")
+    print(toc_pdf_status)
 
 
 if __name__ == "__main__":

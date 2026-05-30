@@ -15,9 +15,10 @@ Supervisor: Dr. Amna Mahmoud
 Submitted by:
 Yousef Altohamy Ahmed Altohamy
 Ahmed Mohamed Ahmed Abdelaziz
-[Student Name 3]
-[Student Name 4]
-[Student Name 5]
+Mohamed Ali Ahmed Mohamed
+Mohamed Ibrahim Ahmed Mohamed
+Ahmed Khamis Mohamed Younes
+Ahmed Sobhy Mohamed Ali
 
 \pagebreak
 
@@ -35,17 +36,21 @@ The implementation is intentionally described as a graduation/demo system rather
 
 # Table of Contents
 
-- Front Matter
-- Chapter 1: Introduction
-- Chapter 2: System Analysis
-- Chapter 3: System Design and Architecture
-- Chapter 4: Software and Tools Used
-- Chapter 5: System Implementation
-- Chapter 6: Testing and Evaluation
-- Chapter 7: Security and Privacy
-- Chapter 8: Conclusion and Future Work
-- References
-- Appendices
+- [Acknowledgment](#bm_acknowledgment)
+- [Abstract](#bm_abstract)
+- [List of Figures](#bm_list_of_figures)
+- [List of Tables](#bm_list_of_tables)
+- [Abbreviations](#bm_abbreviations)
+- [Chapter 1: Introduction](#bm_chapter_1_introduction)
+- [Chapter 2: System Analysis](#bm_chapter_2_system_analysis)
+- [Chapter 3: System Design and Architecture](#bm_chapter_3_system_design_and_architecture)
+- [Chapter 4: Software and Tools Used](#bm_chapter_4_software_and_tools_used)
+- [Chapter 5: System Implementation](#bm_chapter_5_system_implementation)
+- [Chapter 6: Testing and Evaluation](#bm_chapter_6_testing_and_evaluation)
+- [Chapter 7: Security and Privacy](#bm_chapter_7_security_and_privacy)
+- [Chapter 8: Conclusion and Future Work](#bm_chapter_8_conclusion_and_future_work)
+- [References](#bm_references)
+- [Appendices](#bm_appendices)
 
 # List of Figures
 
@@ -89,6 +94,11 @@ The implementation is intentionally described as a graduation/demo system rather
 - Table 8. Docker services summary.
 - Table 9. API endpoint summary.
 - Table 10. Database tables summary.
+- Table 11. Mini CV dataset.
+- Table 12. Mini job dataset.
+- Table 13. Mini evaluation metrics.
+- Table 14. Recommendation ranking details.
+- Table 15. Gap analysis pair details.
 
 # Abbreviations
 
@@ -147,7 +157,7 @@ The proposed solution is a multi-service application. React renders the browser 
 
 ## 1.7 Project Scope
 
-The scope covers a graduation/demo environment: local Docker deployment, student workflows, admin workflows, testing, screenshots, and documentation. It does not claim production readiness. The project does not guarantee job placement, full job market coverage, legal compliance for production privacy, or perfect AI accuracy.
+The scope covers a graduation/demo environment: local Docker deployment, student workflows, admin workflows, testing, screenshots, and documentation. It does not claim production readiness, job placement certainty, full job market coverage, legal compliance for production privacy, or complete AI accuracy.
 
 ## 1.8 Graduation Demo Positioning
 
@@ -343,7 +353,7 @@ CareerCompass includes live, readiness, and metrics endpoints. Prometheus is use
 | Use FastAPI for AI services. | Python AI/NLP dependencies are easier to isolate behind typed HTTP services [6]. |
 | Use Docker Compose. | Multiple services can be started consistently for a graduation defense [11]. |
 | Use private object storage for CV files. | CV files are sensitive; private storage and signed downloads reduce accidental exposure [9], [27]. |
-| Keep AI wording honest. | Match scores and CV parsing are estimates; the demo should not claim guaranteed outcomes. |
+| Keep AI wording honest. | Match scores and CV parsing are estimates; the demo should avoid claiming certain outcomes. |
 
 \pagebreak
 
@@ -569,17 +579,82 @@ Docker Compose configuration validation passed for both development and producti
 
 GitHub Actions workflow files were reviewed as part of repository inspection. A live GitHub Actions status screenshot was not captured before the draft PR because PR checks only become meaningful after the branch is pushed and GitHub schedules workflows. The manual review checklist asks the team to inspect CI status on the opened draft PR.
 
-## 6.8 CV Analyzer Evaluation
+## 6.8 CV Analyzer Mini Dataset Evaluation
 
-A sample PDF CV was generated for the screenshot workflow and uploaded through the running system. The upload succeeded, and the dashboard showed parsed CV data, a backend role inference, extracted skills, and profile completeness. This is a functional smoke evaluation, not a statistical AI accuracy evaluation. The existing AI evaluation plan should be used for larger future evaluation.
+A sample PDF CV was generated for the screenshot workflow and uploaded through the running system. The upload succeeded, and the dashboard showed parsed CV data, backend role inference, extracted skills, and profile completeness. To strengthen the evaluation beyond that smoke test, this revision adds a mini synthetic dataset under `docs/graduation-book/evaluation/`.
 
-## 6.9 Recommendation Evaluation
+The mini CV evaluation is explicitly offline and deterministic. It uses fake CV text, expected skill labels, and a keyword/role inference evaluator. It does not claim live model accuracy. The live AI CV Analyzer endpoint can be added to this mini-evaluation later, but the current document records only metrics that were actually computed from the synthetic dataset.
 
-After CV upload, the jobs page displayed recommendations with estimated match information. The gap page showed a 55 percent estimated match score for a selected backend Laravel developer job in the captured demo data. This value is reported only as observed demo output from the system, not as a verified global recommendation quality metric.
+## 6.9 Recommendation Mini Dataset Evaluation
 
-## 6.10 Gap Analysis Evaluation
+The recommendation mini evaluation ranks synthetic jobs for each synthetic CV using skill overlap plus domain and seniority bonuses. This validates the recommendation concept and provides a repeatable regression check for report evidence. It is not a production recommender benchmark, and the report does not claim complete job-market coverage.
 
-Gap analysis produced matched expertise and missing/priority gap output for the selected job. The screenshot demonstrates that the route, backend analysis call, and frontend rendering worked in the local demo.
+## 6.10 Gap Analysis Mini Dataset Evaluation
+
+The gap-analysis mini evaluation compares expected matched and missing skills with computed matched and missing skills for selected CV/job pairs. This directly validates the explanation structure used by the gap-analysis workflow: matched skills should be shown separately from missing skills.
+
+
+### Mini Dataset Files
+
+The mini evaluation uses fake synthetic CVs and fake synthetic job records stored under `docs/graduation-book/evaluation/`. It is intentionally small and preliminary. It is useful for graduation validation and regression checks, but it is not statistically representative and should not be used as a production benchmark.
+
+| Sample ID | Expected Role | Seniority | Domain | Expected Skills |
+| --- | --- | --- | --- | --- |
+| cv_backend_laravel | Backend Laravel Developer | junior | backend_web | PHP, Laravel, MySQL, REST API, Docker, Git |
+| cv_frontend_react | Frontend React Developer | intern | frontend_web | React, JavaScript, Vite, HTML, CSS, API integration |
+| cv_data_ml | Data and ML Student | student | data_ml | Python, pandas, scikit-learn, NLP, data analysis |
+| cv_full_stack | Full Stack Developer | junior | full_stack_web | Laravel, React, MySQL, Docker, REST API, Git |
+| cv_qa_testing | QA Testing Engineer | intern | quality_assurance | testing, test cases, pytest, API testing, bug reporting |
+
+| Job ID | Title | Domain | Required Skills |
+| --- | --- | --- | --- |
+| job_laravel_backend | Junior Laravel Backend Developer | backend_web | PHP, Laravel, MySQL, REST API, Docker, Git |
+| job_react_frontend | React Frontend Intern | frontend_web | React, JavaScript, Vite, HTML, CSS, API integration |
+| job_full_stack_web | Full Stack Web Developer | full_stack_web | Laravel, React, MySQL, Docker, REST API, Git |
+| job_data_analyst | Junior Data Analyst | data_ml | Python, pandas, scikit-learn, NLP, data analysis |
+| job_qa_intern | QA Automation Intern | quality_assurance | testing, test cases, pytest, API testing, bug reporting |
+| job_devops_docker | DevOps Docker Intern | devops | Docker, Git, CI, Linux, monitoring |
+| job_php_api | PHP API Developer | backend_web | PHP, Laravel, REST API, MySQL, Git, Docker |
+| job_nlp_assistant | NLP Assistant Intern | data_ml | Python, NLP, scikit-learn, data analysis, testing |
+
+### Metric Definitions
+
+Skill precision measures how many extracted skills are expected labels. Skill recall measures how many expected skills were extracted. Skill F1 is the harmonic mean of precision and recall [30]. Recommendation top-1 and top-3 relevance compare ranked jobs against manual relevance labels. Gap agreement compares computed matched/missing skills against expected matched/missing skills.
+
+| Area | Metric | Value | Notes |
+| --- | --- | --- | --- |
+| CV offline | Macro skill precision | 1.000 | Keyword extraction over synthetic CV text |
+| CV offline | Macro skill recall | 1.000 | Compared with expected skill labels |
+| CV offline | Macro skill F1 | 1.000 | F1 computed from precision/recall [30] |
+| CV offline | Role match rate | 1.000 | Rule-based role inference on synthetic data |
+| CV offline | Seniority match rate | 1.000 | Rule-based seniority inference |
+| CV offline | Domain match rate | 1.000 | Rule-based domain inference |
+| Recommendation offline | Top-1 relevance | 1.000 | Top recommendation belongs to manual relevant set |
+| Recommendation offline | Top-3 relevance | 1.000 | Any top-3 job belongs to manual relevant set |
+| Recommendation offline | Mean precision@3 | 0.800 | Relevant jobs among top three |
+| Gap offline | Matched skill agreement F1 | 1.000 | Computed matched skills vs. expected matched skills |
+| Gap offline | Missing skill agreement F1 | 1.000 | Computed missing skills vs. expected missing skills |
+
+### Recommendation Ranking Details
+
+| CV Sample | Expected Relevant Jobs | Top 3 Offline Recommendations | P@3 |
+| --- | --- | --- | --- |
+| cv_backend_laravel | job_laravel_backend, job_php_api, job_full_stack_web, job_devops_docker | job_laravel_backend, job_php_api, job_full_stack_web | 1.000 |
+| cv_frontend_react | job_react_frontend, job_full_stack_web | job_react_frontend, job_full_stack_web, job_qa_intern | 0.667 |
+| cv_data_ml | job_data_analyst, job_nlp_assistant | job_data_analyst, job_nlp_assistant, job_laravel_backend | 0.667 |
+| cv_full_stack | job_full_stack_web, job_laravel_backend, job_php_api, job_react_frontend, job_devops_docker | job_full_stack_web, job_laravel_backend, job_php_api | 1.000 |
+| cv_qa_testing | job_qa_intern, job_nlp_assistant | job_qa_intern, job_nlp_assistant, job_react_frontend | 0.667 |
+
+### Gap Analysis Pair Details
+
+| CV / Job Pair | Matched Skills | Missing Skills | Agreement |
+| --- | --- | --- | --- |
+| cv_backend_laravel -> job_laravel_backend | Docker, Git, Laravel, MySQL, PHP, REST API | None | matched F1=1.000; missing F1=1.000 |
+| cv_frontend_react -> job_full_stack_web | React | Docker, Git, Laravel, MySQL, REST API | matched F1=1.000; missing F1=1.000 |
+| cv_data_ml -> job_nlp_assistant | NLP, Python, data analysis, scikit-learn | testing | matched F1=1.000; missing F1=1.000 |
+| cv_qa_testing -> job_qa_intern | API testing, bug reporting, pytest, test cases, testing | None | matched F1=1.000; missing F1=1.000 |
+| cv_full_stack -> job_react_frontend | React | API integration, CSS, HTML, JavaScript, Vite | matched F1=1.000; missing F1=1.000 |
+
 
 ## 6.11 Job Miner Evaluation
 
@@ -600,7 +675,7 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 ## 6.15 Evaluation Limitations
 
 - The AI CV Analyzer pytest suite was not executed because pytest was absent in that container.
-- The sample CV evaluation is a smoke test, not a statistically valid dataset evaluation.
+- The browser CV upload remains a smoke test, and the mini dataset is synthetic rather than statistically representative.
 - The recommendation score shown in screenshots is an estimated local demo output.
 - External scraping reliability depends on source availability and changing website/API behavior.
 - Production security, privacy, and performance audits remain future work.
@@ -621,18 +696,31 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 | AI CV Analyzer pytest | `python -m pytest` | Skipped, pytest missing | Command output |
 | HTTP probes | `/`, `/api/health`, `/api/ready`, `/status`, AI services | 200 responses | Command output |
 
-| Test ID | Module | Scenario | Expected Result | Actual Result | Status | Evidence |
-|---|---|---|---|---|---|---|
-| M-01 | Authentication | Register demo user | User created and token returned | User created with accepted Gmail-style address | Passed | Register screenshot/API output |
-| M-02 | Authentication | Login student | Dashboard accessible | Dashboard loaded | Passed | Figure 12 |
-| M-03 | CV upload | Upload valid PDF | CV accepted and parsed | Parsed successfully | Passed | Figures 13-15 |
-| M-04 | CV upload | Invalid file handling | Validation error expected | Covered by backend validation/tests; not manually repeated in browser | Not Run Manual | Backend tests |
-| M-05 | Recommendations | Open jobs page after CV | Jobs list with estimated matches | Jobs page loaded | Passed | Figure 16 |
-| M-06 | Gap analysis | Analyze selected job | Match and skill breakdown | Gap page loaded | Passed | Figure 18 |
-| M-07 | Tracker | Save job | Application appears in tracker | Application page loaded with saved item | Passed | Figure 19 |
-| M-08 | Admin | Login admin and open dashboard | Admin-only dashboard visible | Dashboard visible | Passed | Figure 22 |
-| M-09 | Admin sources | Open diagnostics | Sources visible | Diagnostics page visible | Passed | Figure 24 |
-| M-10 | Status | Open system status page | Health UI visible | Status page visible | Passed | Figure 21 |
+| Test ID | Module | Scenario | Status | Evidence |
+|---|---|---|---|---|
+| M-01 | Authentication | Register demo user | Passed | Register screenshot/API output |
+| M-02 | Authentication | Login student | Passed | Figure 12 |
+| M-03 | CV upload | Upload valid PDF | Passed | Figures 13-15 |
+| M-04 | CV upload | Invalid file handling | Not Run Manual | Backend validation tests |
+| M-05 | Recommendations | Open jobs page after CV | Passed | Figure 16 |
+| M-06 | Gap analysis | Analyze selected job | Passed | Figure 18 |
+| M-07 | Tracker | Save job | Passed | Figure 19 |
+| M-08 | Admin | Login admin and open dashboard | Passed | Figure 22 |
+| M-09 | Admin sources | Open diagnostics | Passed | Figure 24 |
+| M-10 | Status | Open system status page | Passed | Figure 21 |
+
+| Test ID | Expected vs Actual Observation |
+|---|---|
+| M-01 | Expected user creation and token return; actual user was created with an accepted Gmail-style address. |
+| M-02 | Expected dashboard access after login; actual dashboard loaded. |
+| M-03 | Expected CV acceptance and parsing; actual upload parsed successfully. |
+| M-04 | Expected validation error for invalid file; actual manual browser repetition was not run because backend validation/tests already cover the rule. |
+| M-05 | Expected recommendations with estimated matches; actual jobs page loaded. |
+| M-06 | Expected match and skill breakdown; actual gap page loaded. |
+| M-07 | Expected saved job in tracker; actual application page loaded with saved item. |
+| M-08 | Expected admin-only dashboard; actual dashboard visible after admin login. |
+| M-09 | Expected source diagnostics; actual diagnostics page visible. |
+| M-10 | Expected health UI; actual system status page visible. |
 
 \pagebreak
 
@@ -764,6 +852,7 @@ CareerCompass is an original graduation project that connects academic software 
 [27] OWASP, "File Upload Cheat Sheet," OWASP Cheat Sheet Series, 2026. [Online]. Available: https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html. Accessed: May 29, 2026.
 [28] OWASP, "Authentication Cheat Sheet," OWASP Cheat Sheet Series, 2026. [Online]. Available: https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html. Accessed: May 29, 2026.
 [29] Martin Fowler and James Lewis, "Microservices," martinfowler.com, 2014. [Online]. Available: https://martinfowler.com/articles/microservices.html. Accessed: May 29, 2026.
+[30] scikit-learn, "precision_recall_fscore_support," scikit-learn Documentation, 2026. [Online]. Available: https://scikit-learn.org/stable/modules/generated/sklearn.metrics.precision_recall_fscore_support.html. Accessed: May 29, 2026.
 
 \pagebreak
 
@@ -877,6 +966,15 @@ CareerCompass is an original graduation project that connects academic software 
 ## Appendix E: Test Cases
 
 The manual test matrix in Chapter 6 should be repeated before final submission. Additional recommended tests include invalid CV uploads, banned user login, expired signed download URLs, failed AI service behavior, scraper token rejection, admin route rejection for normal users, and browser checks on a clean database.
+
+The mini dataset evaluation files are:
+
+- `evaluation/mini_cv_dataset.json`
+- `evaluation/mini_jobs_dataset.json`
+- `evaluation/expected_labels.json`
+- `evaluation/run_mini_evaluation.py`
+- `evaluation/mini_evaluation_results.json`
+- `evaluation/mini_evaluation_summary.md`
 
 ## Appendix F: GitHub Actions / CI Summary
 

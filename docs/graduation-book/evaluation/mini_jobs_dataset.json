@@ -1,0 +1,82 @@
+[
+  {
+    "job_id": "job_laravel_backend",
+    "title": "Junior Laravel Backend Developer",
+    "company": "Delta Web Labs",
+    "description": "Build Laravel APIs, MySQL queries, authentication flows, Dockerized services, and Git-based team workflows.",
+    "required_skills": ["PHP", "Laravel", "MySQL", "REST API", "Docker", "Git"],
+    "seniority": "junior",
+    "domain": "backend_web",
+    "expected_best_cv_sample_ids": ["cv_backend_laravel", "cv_full_stack"]
+  },
+  {
+    "job_id": "job_react_frontend",
+    "title": "React Frontend Intern",
+    "company": "North UI Studio",
+    "description": "Implement responsive React screens with JavaScript, Vite, HTML, CSS, components, and API integration.",
+    "required_skills": ["React", "JavaScript", "Vite", "HTML", "CSS", "API integration"],
+    "seniority": "intern",
+    "domain": "frontend_web",
+    "expected_best_cv_sample_ids": ["cv_frontend_react", "cv_full_stack"]
+  },
+  {
+    "job_id": "job_full_stack_web",
+    "title": "Full Stack Web Developer",
+    "company": "CareerTech Demo",
+    "description": "Work across Laravel, React, MySQL, Docker, REST APIs, Git, authentication, and dashboard features.",
+    "required_skills": ["Laravel", "React", "MySQL", "Docker", "REST API", "Git"],
+    "seniority": "junior",
+    "domain": "full_stack_web",
+    "expected_best_cv_sample_ids": ["cv_full_stack", "cv_backend_laravel"]
+  },
+  {
+    "job_id": "job_data_analyst",
+    "title": "Junior Data Analyst",
+    "company": "Insight Academy",
+    "description": "Analyze datasets with Python, pandas, scikit-learn, NLP preprocessing, dashboards, and evaluation metrics.",
+    "required_skills": ["Python", "pandas", "scikit-learn", "NLP", "data analysis"],
+    "seniority": "student",
+    "domain": "data_ml",
+    "expected_best_cv_sample_ids": ["cv_data_ml"]
+  },
+  {
+    "job_id": "job_qa_intern",
+    "title": "QA Automation Intern",
+    "company": "Quality Sprint",
+    "description": "Prepare test cases, execute API testing, write pytest checks, report bugs, and verify fixes.",
+    "required_skills": ["testing", "test cases", "pytest", "API testing", "bug reporting"],
+    "seniority": "intern",
+    "domain": "quality_assurance",
+    "expected_best_cv_sample_ids": ["cv_qa_testing"]
+  },
+  {
+    "job_id": "job_devops_docker",
+    "title": "DevOps Docker Intern",
+    "company": "Container Path",
+    "description": "Assist with Docker, Git, CI scripts, Linux services, monitoring, deployment notes, and troubleshooting.",
+    "required_skills": ["Docker", "Git", "CI", "Linux", "monitoring"],
+    "seniority": "intern",
+    "domain": "devops",
+    "expected_best_cv_sample_ids": ["cv_backend_laravel", "cv_full_stack"]
+  },
+  {
+    "job_id": "job_php_api",
+    "title": "PHP API Developer",
+    "company": "API House",
+    "description": "Develop PHP and Laravel REST APIs with MySQL, validation, Git workflow, and Docker-based local setup.",
+    "required_skills": ["PHP", "Laravel", "REST API", "MySQL", "Git", "Docker"],
+    "seniority": "junior",
+    "domain": "backend_web",
+    "expected_best_cv_sample_ids": ["cv_backend_laravel", "cv_full_stack"]
+  },
+  {
+    "job_id": "job_nlp_assistant",
+    "title": "NLP Assistant Intern",
+    "company": "Language Data Lab",
+    "description": "Support Python NLP experiments, text preprocessing, scikit-learn baselines, data analysis, and model evaluation.",
+    "required_skills": ["Python", "NLP", "scikit-learn", "data analysis", "testing"],
+    "seniority": "intern",
+    "domain": "data_ml",
+    "expected_best_cv_sample_ids": ["cv_data_ml", "cv_qa_testing"]
+  }
+]

@@ -1,0 +1,594 @@
+{
+  "summary": {
+    "evaluation_mode": "offline_synthetic_keyword_and_overlap_evaluation",
+    "statistical_scope": "preliminary synthetic demo dataset; not production benchmarking",
+    "cv_samples": 5,
+    "job_samples": 8,
+    "cv_analyzer_offline": {
+      "macro_skill_precision": 1.0,
+      "macro_skill_recall": 1.0,
+      "macro_skill_f1": 1.0,
+      "role_match_rate": 1.0,
+      "seniority_match_rate": 1.0,
+      "domain_match_rate": 1.0
+    },
+    "recommendation_offline": {
+      "top_1_relevance": 1.0,
+      "top_3_relevance": 1.0,
+      "mean_precision_at_3": 0.8
+    },
+    "gap_analysis_offline": {
+      "mean_matched_skill_agreement_f1": 1.0,
+      "mean_missing_skill_agreement_f1": 1.0
+    }
+  },
+  "cv_analyzer_results": [
+    {
+      "sample_id": "cv_backend_laravel",
+      "expected_skills": [
+        "Docker",
+        "Git",
+        "Laravel",
+        "MySQL",
+        "PHP",
+        "REST API"
+      ],
+      "extracted_skills_offline": [
+        "Docker",
+        "Git",
+        "Laravel",
+        "MySQL",
+        "PHP",
+        "REST API"
+      ],
+      "skill_precision": 1.0,
+      "skill_recall": 1.0,
+      "skill_f1": 1.0,
+      "expected_role": "Backend Laravel Developer",
+      "predicted_role_offline": "Backend Laravel Developer",
+      "role_match": true,
+      "expected_seniority": "junior",
+      "predicted_seniority_offline": "junior",
+      "seniority_match": true,
+      "expected_domain": "backend_web",
+      "predicted_domain_offline": "backend_web",
+      "domain_match": true
+    },
+    {
+      "sample_id": "cv_frontend_react",
+      "expected_skills": [
+        "API integration",
+        "CSS",
+        "HTML",
+        "JavaScript",
+        "React",
+        "Vite"
+      ],
+      "extracted_skills_offline": [
+        "API integration",
+        "CSS",
+        "HTML",
+        "JavaScript",
+        "React",
+        "Vite"
+      ],
+      "skill_precision": 1.0,
+      "skill_recall": 1.0,
+      "skill_f1": 1.0,
+      "expected_role": "Frontend React Developer",
+      "predicted_role_offline": "Frontend React Developer",
+      "role_match": true,
+      "expected_seniority": "intern",
+      "predicted_seniority_offline": "intern",
+      "seniority_match": true,
+      "expected_domain": "frontend_web",
+      "predicted_domain_offline": "frontend_web",
+      "domain_match": true
+    },
+    {
+      "sample_id": "cv_data_ml",
+      "expected_skills": [
+        "NLP",
+        "Python",
+        "data analysis",
+        "pandas",
+        "scikit-learn"
+      ],
+      "extracted_skills_offline": [
+        "NLP",
+        "Python",
+        "data analysis",
+        "pandas",
+        "scikit-learn"
+      ],
+      "skill_precision": 1.0,
+      "skill_recall": 1.0,
+      "skill_f1": 1.0,
+      "expected_role": "Data and ML Student",
+      "predicted_role_offline": "Data and ML Student",
+      "role_match": true,
+      "expected_seniority": "student",
+      "predicted_seniority_offline": "student",
+      "seniority_match": true,
+      "expected_domain": "data_ml",
+      "predicted_domain_offline": "data_ml",
+      "domain_match": true
+    },
+    {
+      "sample_id": "cv_full_stack",
+      "expected_skills": [
+        "Docker",
+        "Git",
+        "Laravel",
+        "MySQL",
+        "REST API",
+        "React"
+      ],
+      "extracted_skills_offline": [
+        "Docker",
+        "Git",
+        "Laravel",
+        "MySQL",
+        "REST API",
+        "React"
+      ],
+      "skill_precision": 1.0,
+      "skill_recall": 1.0,
+      "skill_f1": 1.0,
+      "expected_role": "Full Stack Developer",
+      "predicted_role_offline": "Full Stack Developer",
+      "role_match": true,
+      "expected_seniority": "junior",
+      "predicted_seniority_offline": "junior",
+      "seniority_match": true,
+      "expected_domain": "full_stack_web",
+      "predicted_domain_offline": "full_stack_web",
+      "domain_match": true
+    },
+    {
+      "sample_id": "cv_qa_testing",
+      "expected_skills": [
+        "API testing",
+        "bug reporting",
+        "pytest",
+        "test cases",
+        "testing"
+      ],
+      "extracted_skills_offline": [
+        "API testing",
+        "bug reporting",
+        "pytest",
+        "test cases",
+        "testing"
+      ],
+      "skill_precision": 1.0,
+      "skill_recall": 1.0,
+      "skill_f1": 1.0,
+      "expected_role": "QA Testing Engineer",
+      "predicted_role_offline": "QA Testing Engineer",
+      "role_match": true,
+      "expected_seniority": "intern",
+      "predicted_seniority_offline": "intern",
+      "seniority_match": true,
+      "expected_domain": "quality_assurance",
+      "predicted_domain_offline": "quality_assurance",
+      "domain_match": true
+    }
+  ],
+  "recommendation_results": [
+    {
+      "sample_id": "cv_backend_laravel",
+      "expected_relevant_job_ids": [
+        "job_laravel_backend",
+        "job_php_api",
+        "job_full_stack_web",
+        "job_devops_docker"
+      ],
+      "top_3_recommended_job_ids": [
+        "job_laravel_backend",
+        "job_php_api",
+        "job_full_stack_web"
+      ],
+      "top_1_hit": true,
+      "top_3_hit": true,
+      "precision_at_3": 1.0,
+      "ranked_jobs": [
+        {
+          "job_id": "job_laravel_backend",
+          "title": "Junior Laravel Backend Developer",
+          "score": 1.0
+        },
+        {
+          "job_id": "job_php_api",
+          "title": "PHP API Developer",
+          "score": 1.0
+        },
+        {
+          "job_id": "job_full_stack_web",
+          "title": "Full Stack Web Developer",
+          "score": 0.717
+        },
+        {
+          "job_id": "job_devops_docker",
+          "title": "DevOps Docker Intern",
+          "score": 0.303
+        },
+        {
+          "job_id": "job_react_frontend",
+          "title": "React Frontend Intern",
+          "score": 0.0
+        },
+        {
+          "job_id": "job_data_analyst",
+          "title": "Junior Data Analyst",
+          "score": 0.0
+        },
+        {
+          "job_id": "job_qa_intern",
+          "title": "QA Automation Intern",
+          "score": 0.0
+        },
+        {
+          "job_id": "job_nlp_assistant",
+          "title": "NLP Assistant Intern",
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "sample_id": "cv_frontend_react",
+      "expected_relevant_job_ids": [
+        "job_react_frontend",
+        "job_full_stack_web"
+      ],
+      "top_3_recommended_job_ids": [
+        "job_react_frontend",
+        "job_full_stack_web",
+        "job_qa_intern"
+      ],
+      "top_1_hit": true,
+      "top_3_hit": true,
+      "precision_at_3": 0.667,
+      "ranked_jobs": [
+        {
+          "job_id": "job_react_frontend",
+          "title": "React Frontend Intern",
+          "score": 1.0
+        },
+        {
+          "job_id": "job_full_stack_web",
+          "title": "Full Stack Web Developer",
+          "score": 0.133
+        },
+        {
+          "job_id": "job_qa_intern",
+          "title": "QA Automation Intern",
+          "score": 0.05
+        },
+        {
+          "job_id": "job_devops_docker",
+          "title": "DevOps Docker Intern",
+          "score": 0.05
+        },
+        {
+          "job_id": "job_nlp_assistant",
+          "title": "NLP Assistant Intern",
+          "score": 0.05
+        },
+        {
+          "job_id": "job_laravel_backend",
+          "title": "Junior Laravel Backend Developer",
+          "score": 0.0
+        },
+        {
+          "job_id": "job_data_analyst",
+          "title": "Junior Data Analyst",
+          "score": 0.0
+        },
+        {
+          "job_id": "job_php_api",
+          "title": "PHP API Developer",
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "sample_id": "cv_data_ml",
+      "expected_relevant_job_ids": [
+        "job_data_analyst",
+        "job_nlp_assistant"
+      ],
+      "top_3_recommended_job_ids": [
+        "job_data_analyst",
+        "job_nlp_assistant",
+        "job_laravel_backend"
+      ],
+      "top_1_hit": true,
+      "top_3_hit": true,
+      "precision_at_3": 0.667,
+      "ranked_jobs": [
+        {
+          "job_id": "job_data_analyst",
+          "title": "Junior Data Analyst",
+          "score": 1.0
+        },
+        {
+          "job_id": "job_nlp_assistant",
+          "title": "NLP Assistant Intern",
+          "score": 0.79
+        },
+        {
+          "job_id": "job_laravel_backend",
+          "title": "Junior Laravel Backend Developer",
+          "score": 0.0
+        },
+        {
+          "job_id": "job_react_frontend",
+          "title": "React Frontend Intern",
+          "score": 0.0
+        },
+        {
+          "job_id": "job_full_stack_web",
+          "title": "Full Stack Web Developer",
+          "score": 0.0
+        },
+        {
+          "job_id": "job_qa_intern",
+          "title": "QA Automation Intern",
+          "score": 0.0
+        },
+        {
+          "job_id": "job_devops_docker",
+          "title": "DevOps Docker Intern",
+          "score": 0.0
+        },
+        {
+          "job_id": "job_php_api",
+          "title": "PHP API Developer",
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "sample_id": "cv_full_stack",
+      "expected_relevant_job_ids": [
+        "job_full_stack_web",
+        "job_laravel_backend",
+        "job_php_api",
+        "job_react_frontend",
+        "job_devops_docker"
+      ],
+      "top_3_recommended_job_ids": [
+        "job_full_stack_web",
+        "job_laravel_backend",
+        "job_php_api"
+      ],
+      "top_1_hit": true,
+      "top_3_hit": true,
+      "precision_at_3": 1.0,
+      "ranked_jobs": [
+        {
+          "job_id": "job_full_stack_web",
+          "title": "Full Stack Web Developer",
+          "score": 1.0
+        },
+        {
+          "job_id": "job_laravel_backend",
+          "title": "Junior Laravel Backend Developer",
+          "score": 0.717
+        },
+        {
+          "job_id": "job_php_api",
+          "title": "PHP API Developer",
+          "score": 0.717
+        },
+        {
+          "job_id": "job_devops_docker",
+          "title": "DevOps Docker Intern",
+          "score": 0.303
+        },
+        {
+          "job_id": "job_react_frontend",
+          "title": "React Frontend Intern",
+          "score": 0.133
+        },
+        {
+          "job_id": "job_data_analyst",
+          "title": "Junior Data Analyst",
+          "score": 0.0
+        },
+        {
+          "job_id": "job_qa_intern",
+          "title": "QA Automation Intern",
+          "score": 0.0
+        },
+        {
+          "job_id": "job_nlp_assistant",
+          "title": "NLP Assistant Intern",
+          "score": 0.0
+        }
+      ]
+    },
+    {
+      "sample_id": "cv_qa_testing",
+      "expected_relevant_job_ids": [
+        "job_qa_intern",
+        "job_nlp_assistant"
+      ],
+      "top_3_recommended_job_ids": [
+        "job_qa_intern",
+        "job_nlp_assistant",
+        "job_react_frontend"
+      ],
+      "top_1_hit": true,
+      "top_3_hit": true,
+      "precision_at_3": 0.667,
+      "ranked_jobs": [
+        {
+          "job_id": "job_qa_intern",
+          "title": "QA Automation Intern",
+          "score": 1.0
+        },
+        {
+          "job_id": "job_nlp_assistant",
+          "title": "NLP Assistant Intern",
+          "score": 0.21
+        },
+        {
+          "job_id": "job_react_frontend",
+          "title": "React Frontend Intern",
+          "score": 0.05
+        },
+        {
+          "job_id": "job_devops_docker",
+          "title": "DevOps Docker Intern",
+          "score": 0.05
+        },
+        {
+          "job_id": "job_laravel_backend",
+          "title": "Junior Laravel Backend Developer",
+          "score": 0.0
+        },
+        {
+          "job_id": "job_full_stack_web",
+          "title": "Full Stack Web Developer",
+          "score": 0.0
+        },
+        {
+          "job_id": "job_data_analyst",
+          "title": "Junior Data Analyst",
+          "score": 0.0
+        },
+        {
+          "job_id": "job_php_api",
+          "title": "PHP API Developer",
+          "score": 0.0
+        }
+      ]
+    }
+  ],
+  "gap_analysis_results": [
+    {
+      "cv_sample_id": "cv_backend_laravel",
+      "job_id": "job_laravel_backend",
+      "expected_matched_skills": [
+        "Docker",
+        "Git",
+        "Laravel",
+        "MySQL",
+        "PHP",
+        "REST API"
+      ],
+      "computed_matched_skills": [
+        "Docker",
+        "Git",
+        "Laravel",
+        "MySQL",
+        "PHP",
+        "REST API"
+      ],
+      "expected_missing_skills": [],
+      "computed_missing_skills": [],
+      "matched_skill_agreement_f1": 1.0,
+      "missing_skill_agreement_f1": 1.0
+    },
+    {
+      "cv_sample_id": "cv_frontend_react",
+      "job_id": "job_full_stack_web",
+      "expected_matched_skills": [
+        "React"
+      ],
+      "computed_matched_skills": [
+        "React"
+      ],
+      "expected_missing_skills": [
+        "Docker",
+        "Git",
+        "Laravel",
+        "MySQL",
+        "REST API"
+      ],
+      "computed_missing_skills": [
+        "Docker",
+        "Git",
+        "Laravel",
+        "MySQL",
+        "REST API"
+      ],
+      "matched_skill_agreement_f1": 1.0,
+      "missing_skill_agreement_f1": 1.0
+    },
+    {
+      "cv_sample_id": "cv_data_ml",
+      "job_id": "job_nlp_assistant",
+      "expected_matched_skills": [
+        "NLP",
+        "Python",
+        "data analysis",
+        "scikit-learn"
+      ],
+      "computed_matched_skills": [
+        "NLP",
+        "Python",
+        "data analysis",
+        "scikit-learn"
+      ],
+      "expected_missing_skills": [
+        "testing"
+      ],
+      "computed_missing_skills": [
+        "testing"
+      ],
+      "matched_skill_agreement_f1": 1.0,
+      "missing_skill_agreement_f1": 1.0
+    },
+    {
+      "cv_sample_id": "cv_qa_testing",
+      "job_id": "job_qa_intern",
+      "expected_matched_skills": [
+        "API testing",
+        "bug reporting",
+        "pytest",
+        "test cases",
+        "testing"
+      ],
+      "computed_matched_skills": [
+        "API testing",
+        "bug reporting",
+        "pytest",
+        "test cases",
+        "testing"
+      ],
+      "expected_missing_skills": [],
+      "computed_missing_skills": [],
+      "matched_skill_agreement_f1": 1.0,
+      "missing_skill_agreement_f1": 1.0
+    },
+    {
+      "cv_sample_id": "cv_full_stack",
+      "job_id": "job_react_frontend",
+      "expected_matched_skills": [
+        "React"
+      ],
+      "computed_matched_skills": [
+        "React"
+      ],
+      "expected_missing_skills": [
+        "API integration",
+        "CSS",
+        "HTML",
+        "JavaScript",
+        "Vite"
+      ],
+      "computed_missing_skills": [
+        "API integration",
+        "CSS",
+        "HTML",
+        "JavaScript",
+        "Vite"
+      ],
+      "matched_skill_agreement_f1": 1.0,
+      "missing_skill_agreement_f1": 1.0
+    }
+  ]
+}
