@@ -48,7 +48,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] lg:min-h-screen lg:-mt-16 flex text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-950 transition-colors duration-500">
+    <div className="min-h-screen flex text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-950 transition-colors duration-500">
       
       {/* Left Column - Branding (Hidden on mobile) */}
       <div className={`hidden lg:flex lg:w-1/2 lg:min-h-screen relative overflow-hidden bg-slate-900 items-center justify-center ${isRtl ? 'order-last' : ''}`}>

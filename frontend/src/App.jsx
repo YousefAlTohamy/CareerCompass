@@ -48,6 +48,7 @@ const LoadingScreen = () => (
 
 function AnimatedRoutes() {
   const location = useLocation();
+  const isFullBleedRoute = location.pathname === '/login';
 
   return (
     <AnimatePresence mode="wait">
@@ -57,7 +58,7 @@ function AnimatedRoutes() {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
         transition={{ duration: 0.25, ease: 'easeInOut' }}
-        className="min-h-[calc(100vh-64px)]"
+        className={isFullBleedRoute ? 'min-h-screen' : 'min-h-[calc(100vh-64px)]'}
       >
         <Suspense fallback={<LoadingScreen />}>
           <Routes location={location} key={location.pathname}>
@@ -100,8 +101,10 @@ function AnimatedRoutes() {
 }
 
 function AppLayout() {
+  const location = useLocation();
   const { i18n } = useTranslation();
   const isRtl = i18n.language.startsWith('ar');
+  const isFullBleedRoute = location.pathname === '/login';
 
   return (
     <div
@@ -110,10 +113,10 @@ function AppLayout() {
       className="min-h-screen flex flex-col transition-colors duration-300"
     >
       <Navbar />
-      <div className="flex-grow pt-16">
+      <div className={isFullBleedRoute ? 'flex-grow' : 'flex-grow pt-16'}>
         <AnimatedRoutes />
       </div>
-      <Footer />
+      {!isFullBleedRoute && <Footer />}
     </div>
   );
 }
