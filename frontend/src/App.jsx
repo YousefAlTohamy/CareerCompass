@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,6 +10,7 @@ import GuestRoute from './components/GuestRoute';
 import Footer from './components/Footer';
 import { ThemeProvider } from './context/ThemeContext';
 import ScrollToTop from './components/ScrollToTop';
+import { clearChunkReloadAttempt } from './utils/chunkRecovery';
 
 const Home = lazy(() => import('./pages/Home'));
 const Login = lazy(() => import('./pages/Login'));
@@ -45,6 +46,16 @@ const LoadingScreen = () => (
     Loading...
   </div>
 );
+
+const ChunkRecoveryMarkerClearer = ({ routeKey }) => {
+  useEffect(() => {
+    // This component sits inside Suspense, so it only mounts after the lazy route resolves.
+    const timer = window.setTimeout(clearChunkReloadAttempt, 1000);
+    return () => window.clearTimeout(timer);
+  }, [routeKey]);
+
+  return null;
+};
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -94,6 +105,7 @@ function AnimatedRoutes() {
             <Route path="/status" element={<SystemStatus />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <ChunkRecoveryMarkerClearer routeKey={location.pathname} />
         </Suspense>
       </motion.div>
     </AnimatePresence>
