@@ -15,6 +15,53 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { adminAPI } from '../../api/endpoints';
 import HUDLayout from '../../components/HUDLayout';
 
+const formatChartMonthLabel = (value) => {
+  if (!value) return '';
+
+  const text = String(value);
+  const monthMatch = text.match(/^(\d{4})-(\d{2})/);
+  if (!monthMatch) return text;
+
+  const date = new Date(Number(monthMatch[1]), Number(monthMatch[2]) - 1, 1);
+  return date.toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
+};
+
+const toSafeCount = (value) => {
+  const count = Number(value);
+  return Number.isFinite(count) ? Math.max(0, count) : 0;
+};
+
+const buildJobsChartData = (stats, t) => {
+  const monthlyData = Array.isArray(stats?.jobs_by_month) && stats.jobs_by_month.length > 0
+    ? stats.jobs_by_month
+    : Array.isArray(stats?.jobs_chart_data)
+      ? stats.jobs_chart_data
+      : [];
+
+  const chartData = monthlyData
+    .map((item) => ({
+      name: formatChartMonthLabel(item.month || item.month_key || item.date || item.label),
+      count: toSafeCount(item.count ?? item.total ?? item.jobs),
+    }))
+    .filter((item) => item.name);
+
+  const totalJobs = toSafeCount(stats?.total_jobs);
+  const hasMonthlyJobs = chartData.some((item) => item.count > 0);
+
+  if (chartData.length > 0 && hasMonthlyJobs) {
+    return { data: chartData, note: null };
+  }
+
+  if (totalJobs > 0) {
+    return {
+      data: [{ name: t('admin.stored_jobs', 'Stored jobs'), count: totalJobs }],
+      note: t('admin.no_monthly_job_history', 'No monthly job history yet. Showing total stored jobs instead.'),
+    };
+  }
+
+  return { data: [], note: null };
+};
+
 export default function AdminDashboard() {
   const { t } = useTranslation();
   const [stats, setStats] = useState(null);
@@ -126,10 +173,8 @@ export default function AdminDashboard() {
     },
   ];
 
-  const chartData = stats?.jobs_by_month?.map(item => ({
-    name: item.month,
-    count: item.count
-  })) || [];
+  const jobsChart = buildJobsChartData(stats, t);
+  const chartData = jobsChart.data;
 
   return (
     <HUDLayout>
@@ -195,8 +240,8 @@ export default function AdminDashboard() {
                   <TrendingUp size={20} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Imported jobs by month</h3>
-                  <p className="text-xs text-slate-500 font-mono tracking-widest">Based on stored jobs from active scraping sources and imports.</p>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('admin.imported_jobs_by_month', 'Imported jobs by month')}</h3>
+                  <p className="text-xs text-slate-500 font-mono tracking-widest">{t('admin.imported_jobs_by_month_desc', 'Based on stored jobs from active scraping sources and imports.')}</p>
                 </div>
               </div>
             </div>
@@ -229,6 +274,7 @@ export default function AdminDashboard() {
                       tick={{ fontFamily: 'var(--cc-mono)' }}
                     />
                     <Tooltip
+                      formatter={(value) => [Number(value).toLocaleString(), t('admin.stats.jobs')]}
                       contentStyle={{
                         backgroundColor: 'var(--cc-bg-card)',
                         border: '1px solid var(--cc-border)',
@@ -260,6 +306,11 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
+            {jobsChart.note && (
+              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                {jobsChart.note}
+              </div>
+            )}
           </div>
 
           {/* System Health Sidebar */}
