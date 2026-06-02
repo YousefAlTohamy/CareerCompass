@@ -33,12 +33,32 @@ class DashboardController extends Controller
             $totalSources = ScrapingSource::count();
             $totalTargets = TargetJobRole::count();
 
-            // Calculate chart data for jobs scraped in the last 7 days
-            $jobsChartData = Job::selectRaw('DATE(created_at) as date, COUNT(*) as count')
-                ->where('created_at', '>=', now()->subDays(7))
-                ->groupBy('date')
-                ->orderBy('date', 'asc')
-                ->get();
+            // Calculate a stable monthly job-import chart for the last 6 months.
+            $chartStart = now()->startOfMonth()->subMonths(5);
+            $driverName = DB::connection()->getDriverName();
+            $monthExpression = match ($driverName) {
+                'sqlite' => "strftime('%Y-%m', created_at)",
+                'pgsql' => "TO_CHAR(created_at, 'YYYY-MM')",
+                default => "DATE_FORMAT(created_at, '%Y-%m')",
+            };
+
+            $monthlyJobCounts = Job::selectRaw("{$monthExpression} as month_key, COUNT(*) as count")
+                ->whereNotNull('created_at')
+                ->where('created_at', '>=', $chartStart)
+                ->groupBy('month_key')
+                ->orderBy('month_key', 'asc')
+                ->pluck('count', 'month_key');
+
+            $jobsByMonth = collect(range(0, 5))->map(function (int $offset) use ($chartStart, $monthlyJobCounts): array {
+                $month = $chartStart->copy()->addMonths($offset);
+                $monthKey = $month->format('Y-m');
+
+                return [
+                    'month' => $month->format('M Y'),
+                    'month_key' => $monthKey,
+                    'count' => (int) ($monthlyJobCounts[$monthKey] ?? 0),
+                ];
+            })->values();
 
             // Scraper overview metrics
             $activeSources = ScrapingSource::active()->get();
@@ -58,7 +78,8 @@ class DashboardController extends Controller
                     'total_jobs' => $totalJobs,
                     'total_sources' => $totalSources,
                     'total_targets' => $totalTargets,
-                    'jobs_chart_data' => $jobsChartData,
+                    'jobs_by_month' => $jobsByMonth,
+                    'jobs_chart_data' => $jobsByMonth,
                     'scraper_overview' => [
                         'jobs_last_24h'    => $jobs24h,
                         'avg_health_score' => $avgHealth,

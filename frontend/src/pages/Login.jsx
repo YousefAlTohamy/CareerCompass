@@ -51,11 +51,11 @@ export default function Login() {
     <div className="min-h-screen flex text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-950 transition-colors duration-500">
       
       {/* Left Column - Branding (Hidden on mobile) */}
-      <div className={`hidden lg:flex lg:w-1/2 relative overflow-hidden bg-slate-900 items-center justify-center ${isRtl ? 'order-last' : ''}`}>
+      <div className={`hidden lg:flex lg:w-1/2 lg:min-h-screen relative overflow-hidden bg-slate-900 items-center justify-center ${isRtl ? 'order-last' : ''}`}>
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/50 via-slate-900 to-emerald-900/50 z-0"></div>
         <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at center, #ffffff 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
         
-        <div className={`absolute top-10 z-10 flex items-center gap-3 ${isRtl ? 'right-10' : 'left-10'}`}>
+        <div className={`absolute top-28 z-10 flex items-center gap-3 ${isRtl ? 'right-10' : 'left-10'}`}>
           <Compass className="text-[var(--cc-primary)]" size={32} />
           <span className="text-xl font-black tracking-tight text-white">CareerCompass</span>
         </div>
@@ -82,7 +82,7 @@ export default function Login() {
       </div>
 
       {/* Right Column - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 lg:py-24 relative">
         <div className="absolute inset-0 pointer-events-none opacity-[0.02] dark:opacity-[0.05]" 
              style={{ backgroundImage: 'radial-gradient(var(--cc-primary) 0.5px, transparent 0.5px)', backgroundSize: '24px 24px' }} />
         

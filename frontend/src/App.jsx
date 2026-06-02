@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,6 +10,7 @@ import GuestRoute from './components/GuestRoute';
 import Footer from './components/Footer';
 import { ThemeProvider } from './context/ThemeContext';
 import ScrollToTop from './components/ScrollToTop';
+import { clearChunkReloadAttempt } from './utils/chunkRecovery';
 
 const Home = lazy(() => import('./pages/Home'));
 const Login = lazy(() => import('./pages/Login'));
@@ -46,8 +47,19 @@ const LoadingScreen = () => (
   </div>
 );
 
+const ChunkRecoveryMarkerClearer = ({ routeKey }) => {
+  useEffect(() => {
+    // This component sits inside Suspense, so it only mounts after the lazy route resolves.
+    const timer = window.setTimeout(clearChunkReloadAttempt, 1000);
+    return () => window.clearTimeout(timer);
+  }, [routeKey]);
+
+  return null;
+};
+
 function AnimatedRoutes() {
   const location = useLocation();
+  const isFullBleedRoute = location.pathname === '/login';
 
   return (
     <AnimatePresence mode="wait">
@@ -57,7 +69,7 @@ function AnimatedRoutes() {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
         transition={{ duration: 0.25, ease: 'easeInOut' }}
-        className="min-h-[calc(100vh-64px)]"
+        className={isFullBleedRoute ? 'min-h-screen' : 'min-h-[calc(100vh-64px)]'}
       >
         <Suspense fallback={<LoadingScreen />}>
           <Routes location={location} key={location.pathname}>
@@ -93,6 +105,7 @@ function AnimatedRoutes() {
             <Route path="/status" element={<SystemStatus />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <ChunkRecoveryMarkerClearer routeKey={location.pathname} />
         </Suspense>
       </motion.div>
     </AnimatePresence>
@@ -100,8 +113,10 @@ function AnimatedRoutes() {
 }
 
 function AppLayout() {
+  const location = useLocation();
   const { i18n } = useTranslation();
   const isRtl = i18n.language.startsWith('ar');
+  const isFullBleedRoute = location.pathname === '/login';
 
   return (
     <div
@@ -110,10 +125,10 @@ function AppLayout() {
       className="min-h-screen flex flex-col transition-colors duration-300"
     >
       <Navbar />
-      <div className="flex-grow pt-16">
+      <div className={isFullBleedRoute ? 'flex-grow' : 'flex-grow pt-16'}>
         <AnimatedRoutes />
       </div>
-      <Footer />
+      {!isFullBleedRoute && <Footer />}
     </div>
   );
 }
