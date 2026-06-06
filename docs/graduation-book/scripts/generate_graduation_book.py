@@ -134,6 +134,8 @@ REFERENCES = [
     Reference(34, "Google", "Gemini API Documentation", "Google AI for Developers", "2026", "https://ai.google.dev/gemini-api/docs", "Accessed: June 6, 2026"),
     Reference(35, "Google", "Google AI Studio", "Google AI for Developers", "2026", "https://ai.google.dev/aistudio", "Accessed: June 6, 2026"),
     Reference(36, "Google", "Google Colaboratory FAQ", "Google Research", "2026", "https://research.google.com/colaboratory/faq.html", "Accessed: June 6, 2026"),
+    Reference(37, "Jacob Devlin, Ming-Wei Chang, Kenton Lee, and Kristina Toutanova", "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding", "arXiv", "2018", "https://arxiv.org/abs/1810.04805", "Accessed: June 6, 2026"),
+    Reference(38, "PyTorch", "Dynamic Quantization", "PyTorch Tutorials", "2026", "https://docs.pytorch.org/tutorials/recipes/recipes/dynamic_quantization.html", "Accessed: June 6, 2026"),
 ]
 
 
@@ -149,25 +151,32 @@ FIGURES = [
     ("Figure 9", "AI CV Analyzer runtime flow.", "assets/diagrams/09_cv_analyzer_runtime_flow.png"),
     ("Figure 10", "AI CV Analyzer model-training workflow.", "assets/diagrams/10_cv_model_training_pipeline.png"),
     ("Figure 11", "AI CV Analyzer extraction components.", "assets/diagrams/11_cv_extraction_components.png"),
-    ("Figure 12", "Home page.", "assets/screenshots/01_home.png"),
-    ("Figure 13", "Register page.", "assets/screenshots/02_register.png"),
-    ("Figure 14", "Login page.", "assets/screenshots/03_login.png"),
-    ("Figure 15", "Student dashboard before CV upload.", "assets/screenshots/04_dashboard_before_cv_upload.png"),
-    ("Figure 16", "CV upload user interface.", "assets/screenshots/05_cv_upload_ui.png"),
-    ("Figure 17", "Dashboard after successful CV parsing.", "assets/screenshots/06_dashboard_after_cv_upload.png"),
-    ("Figure 18", "Extracted profile and skills page.", "assets/screenshots/07_extracted_profile_skills.png"),
-    ("Figure 19", "Jobs recommendations page.", "assets/screenshots/08_jobs_recommendations.png"),
-    ("Figure 20", "Job detail and inline gap panel.", "assets/screenshots/09_job_details_and_inline_gap.png"),
-    ("Figure 21", "Gap analysis page.", "assets/screenshots/10_gap_analysis.png"),
-    ("Figure 22", "Applications tracker page.", "assets/screenshots/11_applications_tracker.png"),
-    ("Figure 23", "Tools Hub preview page.", "assets/screenshots/12_tools_hub.png"),
-    ("Figure 24", "System status page.", "assets/screenshots/13_system_status.png"),
-    ("Figure 25", "Admin dashboard.", "assets/screenshots/14_admin_dashboard.png"),
-    ("Figure 26", "Admin jobs page.", "assets/screenshots/15_admin_jobs.png"),
-    ("Figure 27", "Admin sources diagnostics page.", "assets/screenshots/16_admin_sources_diagnostics.png"),
-    ("Figure 28", "Admin target roles page.", "assets/screenshots/17_admin_targets.png"),
-    ("Figure 29", "Docker services evidence.", "assets/screenshots/18_docker_containers.png"),
-    ("Figure 30", "Validation command evidence.", "assets/screenshots/19_validation_summary.png"),
+    ("Figure 12", "Layer 1 CV understanding pipeline.", "assets/diagrams/12_layer1_understanding_pipeline.png"),
+    ("Figure 13", "Layer 2 classification flow.", "assets/diagrams/13_layer2_classification_flow.png"),
+    ("Figure 14", "Layer 3 matching engine.", "assets/diagrams/14_layer3_matching_engine.png"),
+    ("Figure 15", "NER token processing and BIO tagging.", "assets/diagrams/15_ner_token_processing.png"),
+    ("Figure 16", "Seniority decision logic.", "assets/diagrams/16_seniority_decision_logic.png"),
+    ("Figure 17", "Skill canonicalization chain.", "assets/diagrams/17_canonicalization_chain.png"),
+    ("Figure 18", "Layer 3 score collapse logic.", "assets/diagrams/18_score_collapse_logic.png"),
+    ("Figure 19", "Home page.", "assets/screenshots/01_home.png"),
+    ("Figure 20", "Register page.", "assets/screenshots/02_register.png"),
+    ("Figure 21", "Login page.", "assets/screenshots/03_login.png"),
+    ("Figure 22", "Student dashboard before CV upload.", "assets/screenshots/04_dashboard_before_cv_upload.png"),
+    ("Figure 23", "CV upload user interface.", "assets/screenshots/05_cv_upload_ui.png"),
+    ("Figure 24", "Dashboard after successful CV parsing.", "assets/screenshots/06_dashboard_after_cv_upload.png"),
+    ("Figure 25", "Extracted profile and skills page.", "assets/screenshots/07_extracted_profile_skills.png"),
+    ("Figure 26", "Jobs recommendations page.", "assets/screenshots/08_jobs_recommendations.png"),
+    ("Figure 27", "Job detail and inline gap panel.", "assets/screenshots/09_job_details_and_inline_gap.png"),
+    ("Figure 28", "Gap analysis page.", "assets/screenshots/10_gap_analysis.png"),
+    ("Figure 29", "Applications tracker page.", "assets/screenshots/11_applications_tracker.png"),
+    ("Figure 30", "Tools Hub preview page.", "assets/screenshots/12_tools_hub.png"),
+    ("Figure 31", "System status page.", "assets/screenshots/13_system_status.png"),
+    ("Figure 32", "Admin dashboard.", "assets/screenshots/14_admin_dashboard.png"),
+    ("Figure 33", "Admin jobs page.", "assets/screenshots/15_admin_jobs.png"),
+    ("Figure 34", "Admin sources diagnostics page.", "assets/screenshots/16_admin_sources_diagnostics.png"),
+    ("Figure 35", "Admin target roles page.", "assets/screenshots/17_admin_targets.png"),
+    ("Figure 36", "Docker services evidence.", "assets/screenshots/18_docker_containers.png"),
+    ("Figure 37", "Validation command evidence.", "assets/screenshots/19_validation_summary.png"),
 ]
 
 TABLES = [
@@ -180,19 +189,29 @@ TABLES = [
     ("Table 7", "NER entity label schema."),
     ("Table 8", "Synthetic dataset generation workflow."),
     ("Table 9", "Model training configuration."),
-    ("Table 10", "Model evaluation evidence."),
-    ("Table 11", "Mini CV dataset."),
-    ("Table 12", "Mini job dataset."),
-    ("Table 13", "Mini evaluation metrics."),
-    ("Table 14", "Recommendation ranking details."),
-    ("Table 15", "Gap analysis pair details."),
-    ("Table 16", "Automated validation results."),
-    ("Table 17", "Manual functional evaluation matrix."),
-    ("Table 18", "Manual functional observations."),
-    ("Table 19", "Security and privacy controls."),
-    ("Table 20", "API endpoint summary."),
-    ("Table 21", "Database tables summary."),
-    ("Table 22", "Docker services summary."),
+    ("Table 10", "Layer 1 component details."),
+    ("Table 11", "Layer 2 classification engine details."),
+    ("Table 12", "Layer 3 matching engine details."),
+    ("Table 13", "Semantic embedding and TF-IDF fallback comparison."),
+    ("Table 14", "Simplified BIO tagging example."),
+    ("Table 15", "AI CV Analyzer source inventory summary."),
+    ("Table 16", "Algorithm-to-file mapping."),
+    ("Table 17", "Model evaluation evidence."),
+    ("Table 18", "NER extraction examples."),
+    ("Table 19", "Semantic matching and TF-IDF example results."),
+    ("Table 20", "Mini CV dataset."),
+    ("Table 21", "Mini job dataset."),
+    ("Table 22", "Mini evaluation metrics."),
+    ("Table 23", "Recommendation ranking details."),
+    ("Table 24", "Gap analysis pair details."),
+    ("Table 25", "Automated validation results."),
+    ("Table 26", "Manual functional evaluation matrix."),
+    ("Table 27", "Manual functional observations."),
+    ("Table 28", "Security and privacy controls."),
+    ("Table 29", "API endpoint summary."),
+    ("Table 30", "Database tables summary."),
+    ("Table 31", "Docker services summary."),
+    ("Table 32", "AI CV Analyzer function inventory summary."),
 ]
 
 
@@ -525,6 +544,164 @@ def create_diagrams() -> None:
         ],
     )
 
+    save_diagram(
+        "12_layer1_understanding_pipeline.png",
+        "Layer 1: CV Understanding Pipeline",
+        [
+            ("Upload Bytes", "Laravel sends PDF/JPEG/PNG bytes to /api/parse-cv.", (50, 150, 350, 290), "#dbeafe"),
+            ("Spatial Parser", "pdfplumber words, row grouping, gap segments, adaptive column ratio, dehyphenation.", (480, 150, 830, 290), "#fff7ed"),
+            ("OCR Fallback", "Triggered for no_text, errors, or low character density; uses PyMuPDF render + EasyOCR.", (970, 150, 1340, 290), "#fce7f3"),
+            ("Semantic Segmenter", "Exact, regex, font hint, and embedding-based header detection.", (80, 430, 420, 590), "#ede9fe"),
+            ("Advanced NER", "Overlapping chunks, local/fallback token-classification model, BIO/subword merging.", (560, 430, 900, 590), "#ecfdf5"),
+            ("Rules + Canonicalizer", "Contacts, dates, experience blocks, noise filters, skill dedupe and mapping.", (1040, 430, 1410, 590), "#cffafe"),
+            ("Layer 2 Enrichment", "Domain, seniority, and skill category metadata if classifiers load.", (330, 750, 670, 890), "#fef3c7"),
+            ("CVParseResult", "Strict profile, stats, skills, experience, analysis, metadata, and status JSON.", (870, 750, 1230, 890), "#dcfce7"),
+        ],
+        [
+            ((350, 220), (480, 220), "PDF"),
+            ((830, 220), (970, 220), "fallback"),
+            ((665, 290), (250, 430), "text"),
+            ((1155, 290), (250, 430), "OCR text"),
+            ((420, 510), (560, 510), "sections"),
+            ((900, 510), (1040, 510), "entities"),
+            ((1220, 590), (500, 750), "features"),
+            ((670, 820), (870, 820), "enrich"),
+        ],
+    )
+
+    save_diagram(
+        "13_layer2_classification_flow.png",
+        "Layer 2: Classification Flow",
+        [
+            ("Layer 1 Output", "Profile, current title, summary, skills, experience items, total years.", (60, 170, 380, 320), "#dbeafe"),
+            ("CVDomainClassifier", "Singleton wrapper around the shared SemanticEmbedder.", (500, 170, 820, 320), "#ecfdf5"),
+            ("DomainEngine", "Compares CV context to taxonomy domain descriptions using cosine similarity.", (950, 170, 1300, 320), "#ede9fe"),
+            ("SeniorityEngine", "Checks title/summary keywords, total years, and action-verb strength.", (140, 510, 470, 670), "#fff7ed"),
+            ("SkillEngine", "Buckets extracted skills into hard, soft, and management groups.", (620, 510, 950, 670), "#cffafe"),
+            ("ClassificationOrchestrator", "Writes predicted role, primary domain, seniority, and metadata.", (1080, 510, 1450, 670), "#fce7f3"),
+            ("Analysis Metadata", "domain_scores, seniority_details, categorized_skills.", (560, 790, 980, 910), "#dcfce7"),
+        ],
+        [
+            ((380, 245), (500, 245), "embedder"),
+            ((820, 245), (950, 245), "taxonomy"),
+            ((220, 320), (305, 510), "years"),
+            ((220, 320), (785, 510), "skills"),
+            ((1125, 320), (1265, 510), "scores"),
+            ((470, 590), (1080, 590), "level"),
+            ((950, 590), (1080, 590), "buckets"),
+            ((1265, 670), (770, 790), "metadata"),
+        ],
+    )
+
+    save_diagram(
+        "14_layer3_matching_engine.png",
+        "Layer 3: Matching Engine",
+        [
+            ("Parsed CV", "Profile summary, skills, seniority, primary domain, total experience.", (70, 150, 390, 300), "#dbeafe"),
+            ("Parsed JD", "Raw text, mandatory skills, bonus skills, seniority, required years, domain.", (70, 430, 390, 590), "#fff7ed"),
+            ("Component Scores", "Semantic summary similarity, skill-list similarity, domain alignment.", (540, 220, 900, 390), "#ecfdf5"),
+            ("Adaptive Weights", "intern/junior/mid/senior/lead weight profile from matching_config.json.", (1040, 170, 1400, 320), "#ede9fe"),
+            ("Constraint Validator", "Mandatory skills, years shortfall, seniority mismatch penalties.", (1040, 430, 1400, 590), "#fce7f3"),
+            ("Bonus Boost", "+2% per bonus skill, capped at +10%.", (540, 600, 900, 740), "#cffafe"),
+            ("Fit Analysis", "Verdict, summary, strengths, gaps, red flags, missing mandatory skills.", (840, 790, 1240, 920), "#dcfce7"),
+        ],
+        [
+            ((390, 225), (540, 285), "CV"),
+            ((390, 510), (540, 330), "JD"),
+            ((900, 285), (1040, 245), "base"),
+            ((900, 330), (1040, 510), "validate"),
+            ((720, 390), (720, 600), "bonus"),
+            ((1220, 590), (1040, 790), "penalty"),
+            ((720, 740), (940, 790), "boost"),
+        ],
+    )
+
+    save_diagram(
+        "15_ner_token_processing.png",
+        "NER Token Processing and BIO Tagging",
+        [
+            ("Annotated Text", "Synthetic snippets contain entity text and labels such as SKILL and ROLE.", (60, 150, 380, 300), "#dbeafe"),
+            ("Tokenizer Offsets", "bert-base-cased tokenizer returns token offsets up to max_length=512.", (520, 150, 860, 300), "#fff7ed"),
+            ("BIO Labels", "First covered token gets B-label; continuation tokens get I-label; special tokens get -100.", (1010, 150, 1370, 300), "#ede9fe"),
+            ("Runtime Chunking", "AdvancedNEREngine processes long CV text in 3500-character windows with 500-character stride.", (90, 470, 440, 630), "#ecfdf5"),
+            ("Token Classification", "Pipeline emits token labels, scores, and character spans.", (580, 470, 920, 630), "#fce7f3"),
+            ("Merge + Expand", "Subwords, I-tags, adjacent spans, and boundary expansion reconstruct entity text.", (1060, 470, 1410, 630), "#cffafe"),
+            ("Final Entities", "skills, roles, education, certifications, people/org/location fallback groups.", (560, 780, 980, 910), "#dcfce7"),
+        ],
+        [
+            ((380, 225), (520, 225), "text"),
+            ((860, 225), (1010, 225), "offsets"),
+            ((1190, 300), (265, 470), "runtime"),
+            ((440, 550), (580, 550), "chunks"),
+            ((920, 550), (1060, 550), "tokens"),
+            ((1235, 630), (770, 780), "groups"),
+        ],
+    )
+
+    save_diagram(
+        "16_seniority_decision_logic.png",
+        "Seniority Decision Logic",
+        [
+            ("Layer 1 Signals", "current_title, total_years, action_verb_score from experience bullets.", (70, 150, 430, 300), "#dbeafe"),
+            ("Title Override", "intern/trainee forces intern; other keywords map to junior/mid/senior/lead/principal.", (560, 150, 950, 300), "#fff7ed"),
+            ("Years Baseline", "<1 intern, <2 junior, <5 mid, <8 senior, <12 lead, else principal.", (1080, 150, 1480, 300), "#ecfdf5"),
+            ("Weighted Combine", "Title index 60% + years index 40%, then rounded.", (290, 500, 650, 650), "#ede9fe"),
+            ("Verb Adjustment", "Action verb score >=0.8 bumps one level; <0.2 nudges down one level.", (800, 500, 1180, 650), "#cffafe"),
+            ("Layer 2 Enrichment", "SeniorityEngine may later enrich metadata using summary/title, years, and verb strength.", (520, 780, 1050, 910), "#fce7f3"),
+        ],
+        [
+            ((430, 225), (560, 225), "title"),
+            ((950, 225), (1080, 225), "years"),
+            ((760, 300), (470, 500), "indices"),
+            ((1280, 300), (470, 500), "baseline"),
+            ((650, 575), (800, 575), "level"),
+            ((990, 650), (785, 780), "enrich"),
+        ],
+    )
+
+    save_diagram(
+        "17_canonicalization_chain.png",
+        "Skill Canonicalization Chain",
+        [
+            ("Raw NER Skills", "Global or skills-section SKILL spans from AdvancedNEREngine.", (60, 160, 360, 300), "#dbeafe"),
+            ("Overlap Filters", "Remove spans matching roles/orgs, long phrases, action-verb phrases, name tokens, blocklist noise.", (500, 160, 900, 300), "#fff7ed"),
+            ("DataCanonicalizer", "Exact variant, exact canonical, RapidFuzz, normalized key, semantic match, pass-through.", (1040, 160, 1450, 300), "#ecfdf5"),
+            ("Dedupe + Provenance", "Keep highest confidence, merge sources and raw variants, sort by confidence.", (290, 520, 680, 670), "#ede9fe"),
+            ("Experience Techs", "Block-scoped technologies are canonicalized separately for experience items.", (810, 520, 1210, 670), "#cffafe"),
+            ("SkillItem Output", "name, category hard, confidence_score, evidence for Laravel persistence and UI.", (560, 790, 980, 920), "#dcfce7"),
+        ],
+        [
+            ((360, 230), (500, 230), "filter"),
+            ((900, 230), (1040, 230), "map"),
+            ((1245, 300), (485, 520), "merge"),
+            ((1010, 670), (770, 790), "items"),
+            ((485, 670), (770, 790), "items"),
+        ],
+    )
+
+    save_diagram(
+        "18_score_collapse_logic.png",
+        "Layer 3 Score Collapse Logic",
+        [
+            ("Base Components", "semantic_score, skills_score, domain_score from SemanticEmbedder.", (80, 150, 420, 300), "#dbeafe"),
+            ("Adaptive Base", "base = semantic*w1 + skills*w2 + domain*w3 by seniority.", (560, 150, 920, 300), "#ecfdf5"),
+            ("Constraint Penalties", "Missing mandatory skills, experience shortfall, seniority mismatch; total penalty cap 80%.", (1060, 150, 1460, 300), "#fce7f3"),
+            ("Bonus Boost", "Bonus skills add +2% each, capped at +10%.", (270, 510, 610, 660), "#cffafe"),
+            ("Clamp", "final = max(0, min(1, base - penalty + bonus)).", (760, 510, 1120, 660), "#fff7ed"),
+            ("Pass Decision", "is_qualified if final*100 >= min_pass_score (50).", (1230, 510, 1530, 660), "#ede9fe"),
+            ("Hybrid Endpoint", "/api/hybrid-match blends Layer 3 semantic score 60% with TF-IDF 40% when TF-IDF is enabled.", (520, 790, 1090, 920), "#dcfce7"),
+        ],
+        [
+            ((420, 225), (560, 225), "weights"),
+            ((920, 225), (1060, 225), "validate"),
+            ((740, 300), (440, 510), "base"),
+            ((1260, 300), (940, 510), "penalty"),
+            ((610, 585), (760, 585), "bonus"),
+            ((1120, 585), (1230, 585), "score"),
+            ((945, 660), (805, 790), "optional API"),
+        ],
+    )
+
 
 def create_sequence_diagram(name: str, title: str, participants: list[str], messages: list[tuple[str, str, str]]):
     width, height = 1700, 1050
@@ -782,11 +959,11 @@ The mini evaluation uses fake synthetic CVs and fake synthetic job records store
 
 {cv_dataset_table}
 
-*Table 11. Mini CV dataset.*
+*Table 20. Mini CV dataset.*
 
 {job_dataset_table}
 
-*Table 12. Mini job dataset.*
+*Table 21. Mini job dataset.*
 
 ### Metric Definitions
 
@@ -794,19 +971,19 @@ Skill precision measures how many extracted skills are expected labels. Skill re
 
 {metric_table}
 
-*Table 13. Mini evaluation metrics.*
+*Table 22. Mini evaluation metrics.*
 
 ### Recommendation Ranking Details
 
 {recommendation_table}
 
-*Table 14. Recommendation ranking details.*
+*Table 23. Recommendation ranking details.*
 
 ### Gap Analysis Pair Details
 
 {gap_table}
 
-*Table 15. Gap analysis pair details.*
+*Table 24. Gap analysis pair details.*
 """
 
 
@@ -872,7 +1049,7 @@ The work presented in this book reflects a collaborative software engineering ef
 
 CareerCompass is a graduation/demo career guidance platform that helps students and early-career users understand their CV profile, explore imported job opportunities, and compare their current skills against job requirements. The system consists of a React and Vite frontend, a Laravel API backend, a MySQL database, a FastAPI-based CV analyzer, a FastAPI/Scrapy-based job miner, MinIO-compatible private file storage, Nginx routing, and Prometheus/Grafana monitoring. The platform supports registration, login, CV upload, AI-assisted CV parsing, normalized profile and skills storage, job recommendation, gap analysis, an application tracker, and administrator dashboards for job and source diagnostics.
 
-The AI CV Analyzer is documented as a hybrid implementation rather than a single opaque model. It combines PDF/image text extraction, OCR fallback, section segmentation, a local BERT-family token-classification model for named-entity recognition, rule-based contact/date/experience extraction, skill canonicalization, domain and seniority classification, sentence embeddings, and TF-IDF-style matching. The repository contains the exported local NER artifact and a Colab-oriented training notebook, but the committed notebook did not contain final metric output cells; therefore, the report separates reproducible evidence from model-training intent.
+The AI CV Analyzer is documented as a hybrid implementation rather than a single opaque model. It combines PDF/image text extraction, OCR fallback, section segmentation, a BERT-family token-classification path for named-entity recognition, rule-based contact/date/experience extraction, skill canonicalization, domain and seniority classification, sentence embeddings, and TF-IDF-style matching. The runtime code can load an exported local NER artifact when that ignored deployment folder is present, and a Colab-oriented training notebook documents how the artifact is produced. The committed notebook did not contain final metric output cells, and the model weights are ignored by Git; therefore, the report separates reproducible repository evidence from local deployment metadata and model-training intent.
 
 The implementation is intentionally described as a graduation/demo system rather than a production product. The AI outputs are estimates, the job data depends on imported and demo sources, and the security posture is appropriate for demonstration but requires further production hardening. Validation was performed through Docker Compose configuration checks, backend tests, frontend lint/build, Python service tests or syntax checks, HTTP probes, and manual browser screenshots. Backend tests passed with 39 tests and 297 assertions, the AI job miner tests passed with 75 tests, and the frontend build completed successfully. The AI CV analyzer container did not include pytest, so its pytest suite was marked as skipped while Python syntax compilation passed.
 
@@ -1074,7 +1251,7 @@ Laravel provides structured controllers, form requests, resources, services, mod
 
 The AI CV Analyzer is a FastAPI service. Laravel sends CV files to this service for parsing through `/api/parse-cv`. The analyzer routes PDFs and images differently, enforces timeout/error fallbacks, extracts readable text, runs structured extraction, and returns fields such as predicted role, seniority, domain, skills, strengths, gaps, red flags, confidence, document statistics, and parsing status. The backend handles statuses such as success, OCR fallback, timeout, error, empty file, and no text.
 
-The analyzer is not a pure pretrained-model wrapper and not a model built entirely from scratch. It is a hybrid pipeline. The runtime prefers a local exported token-classification model under `ai-cv-analyzer/models/ner_weights/career_compass_ner_final`; if that local artifact is unavailable, the NER engine has a fallback model path. Around that model, the team implemented practical CV-specific logic: spatial PDF parsing, OCR fallback, semantic sectioning, contact extraction, date/experience parsing, noisy-skill filtering, canonicalization, domain inference, seniority inference, and hybrid matching. PDF and OCR-related libraries are supported by external tools such as PyMuPDF, pdfplumber, and EasyOCR [22], [23], [24]. Transformer token classification and training concepts follow Hugging Face documentation [31], [32], [33].
+The analyzer is not a pure pretrained-model wrapper and not a model built entirely from scratch. It is a hybrid pipeline. The runtime prefers a local exported token-classification model under `ai-cv-analyzer/models/ner_weights/career_compass_ner_final` when that ignored deployment artifact exists; if the local artifact is unavailable, the NER engine has a fallback model path. Around that model-loading path, the team implemented practical CV-specific logic: spatial PDF parsing, OCR fallback, semantic sectioning, contact extraction, date/experience parsing, noisy-skill filtering, canonicalization, domain inference, seniority inference, and hybrid matching. PDF and OCR-related libraries are supported by external tools such as PyMuPDF, pdfplumber, and EasyOCR [22], [23], [24]. Transformer token classification and training concepts follow Hugging Face documentation [31], [32], [33].
 
 Figure 9 summarizes the runtime path from the browser upload to Laravel persistence, FastAPI parsing, model/rule extraction, and dashboard output.
 
@@ -1187,9 +1364,9 @@ GitHub Actions is configured for repository automation and CI/CD-style validatio
 
 ## 4.12 NLP / AI Libraries
 
-The project uses concepts and libraries related to text extraction, OCR, transformer token classification, TF-IDF, cosine similarity, and sentence embeddings. TF-IDF and cosine similarity are documented by scikit-learn [19], [20]. Sentence Transformers provides sentence embedding models and utilities [21]. PyMuPDF, pdfplumber, and EasyOCR support PDF/image text extraction and OCR-style workflows [22], [23], [24].
+The project uses concepts and libraries related to text extraction, OCR, transformer token classification, TF-IDF, cosine similarity, and sentence embeddings. TF-IDF and cosine similarity are documented by scikit-learn [19], [20]. Sentence Transformers provides sentence embedding models and utilities [21]. PyMuPDF, pdfplumber, and EasyOCR support PDF/image text extraction and OCR-style workflows [22], [23], [24]. The token-classification path builds on BERT-style contextual representations [37].
 
-Hugging Face Transformers is used for model loading and token-classification style inference/training [31], [32]. The training notebook uses Hugging Face Trainer concepts, token-label alignment, the `seqeval` metric family, and a BERT token-classification configuration [33]. The deployed matching layer also uses sentence embeddings and a custom TF-IDF fallback so that a service outage or weak semantic signal does not become a silent failure.
+Hugging Face Transformers is used for model loading and token-classification style inference/training [31], [32]. The training notebook uses Hugging Face Trainer concepts, token-label alignment, the `seqeval` metric family, and a BERT token-classification configuration [33]. Optional dynamic quantization is supported in the local model-loading code as an inference optimization concept [38]. The deployed matching layer also uses sentence embeddings and a custom TF-IDF fallback so that a service outage or weak semantic signal does not become a silent failure.
 
 ## 4.13 Synthetic Data and Training Tools
 
@@ -1221,9 +1398,9 @@ The register request restricts emails to selected public email domains and valid
 
 The student dashboard is implemented in `frontend/src/pages/user/Dashboard.jsx`. It presents the current profile state, CV upload/update controls, profile completeness, career identity, AI insights, and next actions. Before CV upload, it prompts the user to add a CV. After upload, it displays parsed CV availability, role inference, profile score, experience, and action buttons.
 
-{figure_markdown("Figure 15", "Student dashboard before CV upload.", "assets/screenshots/04_dashboard_before_cv_upload.png")}
+{figure_markdown("Figure 22", "Student dashboard before CV upload.", "assets/screenshots/04_dashboard_before_cv_upload.png")}
 
-{figure_markdown("Figure 17", "Dashboard after successful CV parsing.", "assets/screenshots/06_dashboard_after_cv_upload.png")}
+{figure_markdown("Figure 24", "Dashboard after successful CV parsing.", "assets/screenshots/06_dashboard_after_cv_upload.png")}
 
 ## 5.4 CV Upload and Storage
 
@@ -1231,7 +1408,7 @@ The student dashboard is implemented in `frontend/src/pages/user/Dashboard.jsx`.
 
 CV storage is handled as a private file workflow. The system supports signed download URLs, which is a better demo posture than public file exposure. OWASP recommends validating uploaded file type, extension, size, and storage handling carefully [27].
 
-{figure_markdown("Figure 16", "CV upload user interface.", "assets/screenshots/05_cv_upload_ui.png")}
+{figure_markdown("Figure 23", "CV upload user interface.", "assets/screenshots/05_cv_upload_ui.png")}
 
 ## 5.5 CV Parsing and Skill Extraction
 
@@ -1248,7 +1425,7 @@ The analyzer is implemented as layered Python code rather than one monolithic fu
 | FastAPI gateway | `ai-cv-analyzer/main.py` | Receives `/api/parse-cv` and `/api/hybrid-match` requests; handles timeout/error fallbacks. | Laravel `CvProcessingService` and `GapAnalysisService` |
 | Laravel CV service | `backend-api/app/Services/CvProcessingService.php` | Sends uploads to the analyzer, stores private CV objects, persists normalized analysis. | User profile, skills, experiences, recommendations |
 | Spatial/OCR extraction | `spatial_parser.py`, `ocr_pipeline.py` | Reads PDF text first and falls back to image/OCR when needed. | Section segmenter and NER pipeline |
-| Advanced NER | `advanced_ner.py` and local model folder | Loads the exported local token-classification model when present; chunks long CVs and groups entity spans. | Skills, roles, education, certifications |
+| Advanced NER | `advanced_ner.py` and optional ignored local model folder | Loads the exported local token-classification model when deployed; chunks long CVs and groups entity spans. | Skills, roles, education, certifications |
 | Rule engines | contact, experience, date, noise-filtering helpers | Extract contact details, experience blocks, dates, and remove title-like or noisy skill candidates. | Profile and experience persistence |
 | Canonicalization/classification | Layer 1 and Layer 2 modules | Normalize skills and infer primary domain plus seniority. | Dashboard identity card and matching |
 | Hybrid matching | Layer 3 matching modules | Combines semantic scores, skill text similarity, domain alignment, constraints, and TF-IDF fallback. | Recommendations and gap analysis |
@@ -1258,7 +1435,7 @@ The analyzer is implemented as layered Python code rather than one monolithic fu
 
 ### 5.5.2 Model Type and Customization
 
-The NER part is a fine-tuned transformer token-classification model, not a model trained from randomly initialized architecture. The notebook uses `bert-base-cased` as the base checkpoint and defines a CV-specific BIO label set. The runtime checks for the exported local model at `ai-cv-analyzer/models/ner_weights/career_compass_ner_final` and uses it when available. The repository includes that exported artifact, including model configuration, tokenizer files, training arguments, and `model.safetensors`.
+The NER part is a fine-tuned transformer token-classification design, not a model trained from randomly initialized architecture. The notebook uses `bert-base-cased` as the base checkpoint and defines a CV-specific BIO label set. The runtime checks for the exported local model at `ai-cv-analyzer/models/ner_weights/career_compass_ner_final` and uses it when available. That folder is ignored by Git, so committed repository evidence should be described as code and training workflow evidence. Local ignored metadata inspected during this documentation update identified a BERT token-classification configuration, 512-token maximum position setting, 28,996-token vocabulary, 12 transformer layers, 768 hidden size, and a cased tokenizer; the binary model weights were not copied into the report.
 
 The project customization is mainly in the data, labels, orchestration, and post-processing. The team defined CV-specific labels, generated synthetic annotated examples, cleaned entity spans, aligned character spans to tokens, exported a local model, and connected it to a CV-specific extraction pipeline. The pipeline then adds deterministic rules for contacts, dates, experience blocks, noisy skill rejection, canonical skill names, domain/seniority inference, and safer fallback statuses.
 
@@ -1304,15 +1481,144 @@ The training notebook is structured for Google Colab rather than local execution
 | Epochs and learning rate | 5 epochs, 2e-5 | Standard fine-tuning style schedule for a small NER task. | No final epoch table was available. |
 | Batch size | 16 train/eval | Balances GPU memory and throughput on Colab/T4-style runtime. | Not re-run during documentation update. |
 | Metrics | precision, recall, F1, accuracy via sequence labeling | Evaluates entity extraction quality when labels are available. | Metric code exists; final metric values were not reproducible from committed evidence. |
-| Export | `career_compass_ner_final` zip/model folder | Produces the deployable local model artifact. | Artifact exists; final metric report is absent. |
+| Export | `career_compass_ner_final` zip/model folder | Produces the deployable local model artifact. | Export path is documented, but model weights are ignored by Git and final metric report is absent. |
 
 *Table 9. Model training configuration.*
+
+### 5.5.5 Layer 1: CV Understanding Pipeline
+
+Layer 1 is responsible for turning a noisy CV file into a structured candidate profile. The runtime begins at `main.py`, which accepts the uploaded file, chooses PDF or image handling, applies timeout/error wrappers, and delegates the actual extraction to `CVOrchestrator`. The orchestrator first tries ordered PDF text extraction. The spatial parser reads words from PDF pages, groups words into rows using an adaptive tolerance, splits row segments when large x-axis gaps imply columns, removes `(cid:...)` artifacts, and falls back to plain PDF extraction when the spatial output loses too much text.
+
+If the file has little or no readable text, the OCR path renders PDF pages to images and uses EasyOCR after grayscale/blur preprocessing. After text recovery, the semantic segmenter finds CV sections, contact extraction parses email/phone/location fields, the NER engine extracts entity candidates, experience logic estimates date ranges and career signals, and the canonicalizer normalizes skills before the result is validated through strict Pydantic schema classes.
+
+{figure_markdown("Figure 12", "Layer 1 CV understanding pipeline.", "assets/diagrams/12_layer1_understanding_pipeline.png")}
+
+| Layer 1 Component | Main Files | Important Behavior | Risk or Fallback |
+|---|---|---|---|
+| API gateway | `main.py` | `/api/parse-cv`, `/api/hybrid-match`, timeout handling, health and metrics endpoints. | Timeout results are returned as explicit status dictionaries. |
+| Spatial parser | `layer1/spatial_parser.py` | Word extraction, row grouping, column ordering, dehyphenation, plain-text fallback. | Falls back when spatial output is too weak. |
+| OCR fallback | `layer1/ocr_pipeline.py`, orchestrator OCR helpers | Renders image-like PDFs, preprocesses pages, and extracts text when normal PDF parsing fails. | Triggered for short/no-text inputs. |
+| Section segmenter | `layer1/section_segmenter.py` | Header detection from patterns and optional semantic header matching. | Missing headers fall back to profile-style grouping. |
+| Contact and experience engines | `contact_extractor.py`, `experience_engine.py` | Extract emails/phones/location, date ranges, total years, skill durations, gaps, overlaps, and action-verb strength. | Ambiguous dates are treated conservatively. |
+| NER and canonicalization | `advanced_ner.py`, `canonicalizer.py` | Extracts skills/roles/education/certifications, filters noise, deduplicates, and maps skills to canonical names. | Fallback model path exists when local deployment artifact is missing. |
+| Output schema | `schema.py` | Strict typed response for profile, skills, experience, confidence, stats, and parsing status. | Invalid shapes are prevented before backend persistence. |
+
+*Table 10. Layer 1 component details.*
+
+{figure_markdown("Figure 17", "Skill canonicalization chain.", "assets/diagrams/17_canonicalization_chain.png")}
+
+### 5.5.6 Layer 2: Classification Engine
+
+Layer 2 enriches the extracted CV with a domain and seniority interpretation. The classification orchestrator reads the Layer 1 result, then combines title, experience, summary, skill categories, and taxonomy descriptions. `DomainEngine` compares CV context against taxonomy descriptions using semantic embeddings when available. `SkillEngine` separates hard, soft, and management-oriented skills using taxonomy rules. `SeniorityEngine` combines years of experience, title keywords, semantic title/summary hints, and action-verb strength.
+
+{figure_markdown("Figure 13", "Layer 2 classification flow.", "assets/diagrams/13_layer2_classification_flow.png")}
+
+{figure_markdown("Figure 16", "Seniority decision logic.", "assets/diagrams/16_seniority_decision_logic.png")}
+
+| Layer 2 Component | Main Files | Input | Output |
+|---|---|---|---|
+| Classification orchestrator | `layer2/orchestrator.py` | Parsed CV profile, skills, experience, and summary. | Adds primary domain, seniority level, skill categories, and confidence-style signals. |
+| Domain engine | `layer2/domain_engine.py`, `data/taxonomy.json` | Title, summary, and first experience titles. | Primary technical domain selected from taxonomy descriptions. |
+| Seniority engine | `layer2/seniority_engine.py` | Experience years, title, summary, and action verbs. | Intern, Junior, Mid-Level, Senior, or Lead / Manager estimate. |
+| Skill engine | `layer2/skill_engine.py` | Canonical skill names and taxonomy terms. | Hard, soft, and management skill buckets. |
+| Taxonomy loader | `layer2/utils.py` | JSON taxonomy file. | Shared configuration for domain and skill classification. |
+
+*Table 11. Layer 2 classification engine details.*
+
+### 5.5.7 Layer 3: Matching Engine
+
+Layer 3 compares a candidate profile with a job description. `JobDescriptionEngine` parses job text into seniority, required years, mandatory skills, bonus skills, domain, and summary. `IntelligentMatcher` calculates semantic similarity, skill-text similarity, and domain alignment using adaptive weights that change by seniority level. `ConstraintValidator` subtracts penalties for missing mandatory skills, experience shortfalls, and seniority mismatch. `FitAnalysisGenerator` turns the numeric result into strengths, gaps, red flags, and a verdict.
+
+{figure_markdown("Figure 14", "Layer 3 matching engine.", "assets/diagrams/14_layer3_matching_engine.png")}
+
+{figure_markdown("Figure 18", "Layer 3 score collapse logic.", "assets/diagrams/18_score_collapse_logic.png")}
+
+| Layer 3 Component | Main Files | Scoring Contribution | Explanation Contribution |
+|---|---|---|---|
+| JD parser | `job_description_engine.py` | Extracts requirements that become matching inputs. | Explains what the system understood from the job post. |
+| Semantic embedder | `embedder.py` | Summary similarity and domain-similarity fallback. | Captures meaning beyond exact keyword overlap when dependencies are available. |
+| Intelligent matcher | `similarity.py`, `matching_config.json` | Combines semantic, skill, and domain scores using seniority-aware weights. | Produces score breakdown and qualification flag. |
+| Constraint validator | `constraint_validator.py` | Applies capped penalties for mandatory gaps, experience gaps, and seniority mismatch. | Lists missing mandatory skills and mismatch reasons. |
+| Fit analysis generator | `fit_analysis_generator.py` | Converts score ranges into verdict categories. | Generates strengths, gaps, and red flags for the UI. |
+| Ranking orchestrator | `ranking_orchestrator.py` | Applies matcher repeatedly across candidates/jobs. | Sorts candidates or opportunities by explainable fit. |
+
+*Table 12. Layer 3 matching engine details.*
+
+### 5.5.8 Semantic Embedding, Caching, and TF-IDF Fallback
+
+The semantic embedder uses the configured sentence-transformer model name, with `all-MiniLM-L6-v2` as the default. The class is implemented as a singleton so that model loading is not repeated for every request. It keeps a bounded embedding cache of 2,000 entries and can optionally apply dynamic quantization through `EMBEDDER_QUANTIZE`. If the embedding stack is unavailable, it returns zero vectors and the calling code falls back to transparent lower-confidence behavior instead of pretending semantic comparison succeeded.
+
+The FastAPI `/api/hybrid-match` endpoint also combines semantic-style matching with the pure Python TF-IDF matcher when the TF-IDF module is importable. In that endpoint, semantic/adaptive scoring contributes 60 percent and TF-IDF contributes 40 percent. This gives the demo a useful exact-keyword safety check for skills such as Laravel, Docker, MySQL, React, AWS, or Kubernetes.
+
+| Method | Repository Evidence | Strength | Limitation |
+|---|---|---|---|
+| Sentence embeddings | `layer3/embedder.py` | Captures meaning even when words differ. | Requires sentence-transformer dependencies and model loading. |
+| Domain similarity | `layer3/similarity.py` | Allows related domains to receive partial credit. | Low domain similarity is cut off below the configured threshold. |
+| Skill text similarity | `layer3/similarity.py` | Compares extracted CV skills against mandatory and bonus job skills. | Quality depends on upstream extraction and canonicalization. |
+| TF-IDF fallback | `layer3/tfidf.py`, `/api/hybrid-match` | Lightweight deterministic keyword overlap. | Does not understand synonyms or phrase meaning. |
+| Constraint penalties | `constraint_validator.py` | Prevents high scores when hard requirements are missing. | Penalty weights need larger evaluation data for calibration. |
+
+*Table 13. Semantic embedding and TF-IDF fallback comparison.*
+
+### 5.5.9 NER Token Processing and BIO Tagging
+
+The training notebook uses character-span annotations and converts them into token labels. Each text sample is tokenized with offsets; special tokens are assigned `-100` so they are ignored by the loss; tokens whose offsets fall inside an entity span are assigned `B-` or `I-` labels. The cased BERT tokenizer is appropriate for CV text because names, certificates, role titles, and technology names often rely on capitalization. At runtime, long CV text is chunked with overlap, model predictions are merged, subword prefixes are cleaned, and duplicate/noisy entities are filtered before canonicalization.
+
+{figure_markdown("Figure 15", "NER token processing and BIO tagging.", "assets/diagrams/15_ner_token_processing.png")}
+
+| Simplified Text Token | BIO Label | Why It Matters |
+|---|---|---|
+| Experienced | O | Ordinary descriptive word, not extracted as an entity. |
+| Backend | B-ROLE | Start of a role phrase. |
+| Developer | I-ROLE | Continuation of the role phrase. |
+| with | O | Connector word. |
+| Laravel | B-SKILL | Skill entity. |
+| Docker | B-SKILL | Skill entity. |
+| MySQL | B-SKILL | Skill entity. |
+
+*Table 14. Simplified BIO tagging example.*
+
+### 5.5.10 AI CV Analyzer Source Code Inventory
+
+The AI CV Analyzer was audited as source code, not only as a running service. The inventory below summarizes the relevant repository areas. Full support notes are stored under `docs/graduation-book/model-analysis/`.
+
+| Area | Representative Files | Main Responsibility |
+|---|---|---|
+| FastAPI service | `main.py`, `Dockerfile`, `requirements.txt`, `.env.example` | Service startup, endpoints, container runtime, and documented configuration variables. |
+| Layer 1 understanding | `layer1/*.py`, `layer1/data/config.json` | PDF/image text extraction, OCR fallback, sectioning, NER, contact extraction, experience analysis, and canonicalization. |
+| Layer 2 classification | `layer2/*.py`, `layer2/data/taxonomy.json` | Domain, seniority, and skill-category enrichment. |
+| Layer 3 matching | `layer3/*.py`, `layer3/matching_config.json` | Job parsing, semantic/TF-IDF matching, constraints, fit explanation, and ranking. |
+| Training workflow | `training/generate_tech_dataset.py`, `clean_dataset.py`, `train_ner.ipynb` | Synthetic labeled dataset generation, cleaning, token alignment, Trainer setup, metrics code, and export. |
+| Diagnostics and tests | `scripts/verify_phase*.py`, `tests/test_service_api.py`, `tests/trace_cv.py`, manual tests | Phase checks, service API tests with fakes, tracing, and manual validation helpers. |
+| Documentation | Layer README and EXPLAIN files | Developer explanations for analyzer layers and matching logic. |
+| Ignored deployment assets | `.env`, `models/ner_weights/...` | Local secrets and model weights are intentionally ignored; only safe metadata was inspected locally. |
+
+*Table 15. AI CV Analyzer source inventory summary.*
+
+| Algorithm or Workflow | Primary File(s) | Notes |
+|---|---|---|
+| Parse-CV request routing | `main.py` | File validation, image/PDF branching, timeout and error wrappers. |
+| Ordered PDF extraction | `layer1/spatial_parser.py` | Adaptive row/column ordering and dehyphenation. |
+| OCR fallback | `layer1/ocr_pipeline.py`, `CVOrchestrator` | Used when PDF text is absent or too short. |
+| NER extraction | `layer1/advanced_ner.py` | Singleton model loading, chunked inference, entity merging, and cleanup. |
+| Skill normalization | `layer1/canonicalizer.py` | Exact, fuzzy, and semantic mapping toward canonical names. |
+| Experience calculation | `layer1/experience_engine.py` | Date ranges, total years, skill durations, gaps, overlaps, and action verbs. |
+| Seniority inference | `layer1/orchestrator.py`, `layer2/seniority_engine.py` | Combines title keywords, years, semantic hints, and action verbs. |
+| Domain classification | `layer2/domain_engine.py` | Embedding comparison against taxonomy descriptions. |
+| Job parsing | `layer3/job_description_engine.py` | Seniority, years, mandatory/bonus skills, domain, and summary extraction. |
+| Hybrid match scoring | `layer3/similarity.py`, `layer3/constraint_validator.py` | Weighted semantic/skill/domain score minus constraint penalties plus bonus boost. |
+| TF-IDF fallback | `layer3/tfidf.py`, `main.py` | Pure Python sparse cosine score used in hybrid endpoint. |
+| Fit explanation | `layer3/fit_analysis_generator.py` | Verdict, strengths, gaps, and red flags. |
+| NER training | `training/train_ner.ipynb` | BERT base checkpoint, BIO labels, token alignment, Trainer, seqeval metrics. |
+| Synthetic data generation | `training/generate_tech_dataset.py` | Gemini-based generation with key rotation and negative decoys. |
+
+*Table 16. Algorithm-to-file mapping.*
 
 ## 5.6 Profile and Skills Management
 
 The profile page reads normalized user data, profile fields, experiences, skills, and CV analysis. The system distinguishes user fields, profile fields, extracted skills, predicted role, seniority, and completeness score. Skill synchronization is handled through backend services rather than only frontend state.
 
-{figure_markdown("Figure 18", "Extracted profile and skills page.", "assets/screenshots/07_extracted_profile_skills.png")}
+{figure_markdown("Figure 25", "Extracted profile and skills page.", "assets/screenshots/07_extracted_profile_skills.png")}
 
 ## 5.7 Job Data Model
 
@@ -1322,43 +1628,43 @@ Jobs are represented in the backend through job posting models and migrations. F
 
 The job miner exposes a FastAPI service and imports jobs using configured sources. The backend protects scraper import routes with an internal service token. Admin pages expose source diagnostics, source status, testing, and target role management. The project differentiates demo/local sources, API sources, and HTML/scraping sources instead of claiming complete market coverage.
 
-{figure_markdown("Figure 27", "Admin sources diagnostics page.", "assets/screenshots/16_admin_sources_diagnostics.png")}
+{figure_markdown("Figure 34", "Admin sources diagnostics page.", "assets/screenshots/16_admin_sources_diagnostics.png")}
 
 ## 5.9 Job Recommendations
 
 The jobs page requests recommended jobs when no manual search query is active. Recommendations are based on CV/profile context when available. Matching combines normalized database data with semantic and TF-IDF-style comparison where available. TF-IDF represents text using term frequency and inverse document frequency weighting [19], while cosine similarity compares vector orientation [20].
 
-{figure_markdown("Figure 19", "Jobs recommendations page.", "assets/screenshots/08_jobs_recommendations.png")}
+{figure_markdown("Figure 26", "Jobs recommendations page.", "assets/screenshots/08_jobs_recommendations.png")}
 
 ## 5.10 Gap Analysis
 
 Gap analysis compares a selected job or target role against the user's profile and extracted skills. It returns matched skills, critical/missing skills, recommendations, match percentage, and roadmap-like guidance. The frontend displays these outputs in an explainable layout rather than a single opaque score.
 
-{figure_markdown("Figure 21", "Gap analysis page.", "assets/screenshots/10_gap_analysis.png")}
+{figure_markdown("Figure 28", "Gap analysis page.", "assets/screenshots/10_gap_analysis.png")}
 
 ## 5.11 Application Tracker
 
 The application tracker is implemented through `ApplicationController`, `ApplicationTrackerService`, and `frontend/src/pages/user/Applications.jsx`. Students can save a job, update status, view counts, and delete tracked items. The backend validates job existence and allowed statuses.
 
-{figure_markdown("Figure 22", "Applications tracker page.", "assets/screenshots/11_applications_tracker.png")}
+{figure_markdown("Figure 29", "Applications tracker page.", "assets/screenshots/11_applications_tracker.png")}
 
 ## 5.12 Admin Dashboard
 
 The admin dashboard summarizes users, imported jobs, active sources, target roles, health status, and scraping batch progress. It is protected by admin middleware and uses admin API routes.
 
-{figure_markdown("Figure 25", "Admin dashboard.", "assets/screenshots/14_admin_dashboard.png")}
+{figure_markdown("Figure 32", "Admin dashboard.", "assets/screenshots/14_admin_dashboard.png")}
 
 ## 5.13 Admin Source Diagnostics
 
 The source diagnostics page lists configured scraping sources, supports source testing, and displays quality and scraping status information. The target roles page manages role names used by scraping and market discovery.
 
-{figure_markdown("Figure 28", "Admin target roles page.", "assets/screenshots/17_admin_targets.png")}
+{figure_markdown("Figure 35", "Admin target roles page.", "assets/screenshots/17_admin_targets.png")}
 
 ## 5.14 System Health and Monitoring
 
 Health endpoints include live and readiness checks. The system status page presents service state to users, while admin health data supports operational monitoring. Metrics are available for Prometheus and dashboards are available through Grafana.
 
-{figure_markdown("Figure 24", "System status page.", "assets/screenshots/13_system_status.png")}
+{figure_markdown("Figure 31", "System status page.", "assets/screenshots/13_system_status.png")}
 
 ## 5.15 Error Handling and Fallbacks
 
@@ -1368,13 +1674,13 @@ The code includes explicit handling for CV processing failures, AI gateway conne
 
 The frontend contains English and Arabic locale files. Preview modules include CV Builder, Mock Interview, Learning Paths, Career Planner, Mentorship, Tools Hub, and Market Intelligence. The report treats these as preview modules unless tests or implementation prove production completeness.
 
-{figure_markdown("Figure 23", "Tools Hub preview page.", "assets/screenshots/12_tools_hub.png")}
+{figure_markdown("Figure 30", "Tools Hub preview page.", "assets/screenshots/12_tools_hub.png")}
 
 ## 5.17 Dockerized Runtime Flow
 
 The runtime starts through Docker Compose. Nginx exposes the app, frontend and backend containers serve UI/API flows, backend workers process queues, Python services support AI workflows, MySQL and MinIO persist state, and monitoring services observe the stack.
 
-{figure_markdown("Figure 29", "Docker services evidence.", "assets/screenshots/18_docker_containers.png")}
+{figure_markdown("Figure 36", "Docker services evidence.", "assets/screenshots/18_docker_containers.png")}
 
 \\pagebreak
 
@@ -1404,7 +1710,7 @@ The AI Job Miner pytest suite passed with 75 tests. Python syntax compilation pa
 
 Docker Compose configuration validation passed for both development and production overlay configurations. A full compose build/start was attempted; the initial full build exceeded the 15-minute command timeout, but the stack continued building and was later brought up successfully with targeted frontend/Nginx rebuild/start. All main containers reached healthy or running state during final checks.
 
-{figure_markdown("Figure 30", "Validation command evidence.", "assets/screenshots/19_validation_summary.png")}
+{figure_markdown("Figure 37", "Validation command evidence.", "assets/screenshots/19_validation_summary.png")}
 
 ## 6.7 CI/CD Validation
 
@@ -1412,54 +1718,90 @@ GitHub Actions workflow files were reviewed as part of repository inspection. A 
 
 ## 6.8 AI CV Analyzer Model Evidence
 
-The AI CV Analyzer training workflow was inspected from repository files and helper documentation, but full model training was not executed during this documentation update. The reasons are practical and evidence-based: the generator requires external Gemini API keys, the cleaned training dataset is not committed, and the notebook is designed for a Colab/T4-style GPU runtime. Therefore, this book documents the architecture, training plan, exported artifact, and available tests without inventing final model metrics.
+The AI CV Analyzer training workflow was inspected from repository files and helper documentation, but full model training was not executed during this documentation update. The reasons are practical and evidence-based: the generator requires external Gemini API keys, the cleaned training dataset is not committed, the runtime dependencies for transformer inference were not installed in the bundled documentation Python environment, and the notebook is designed for a Colab/T4-style GPU runtime. Therefore, this book documents the architecture, training plan, optional local deployment artifact, and available tests without inventing final model metrics.
 
-The notebook contains metric code for precision, recall, F1, and accuracy through sequence-labeling evaluation, but its code cells do not contain saved outputs. The local model artifact exists in the repository, yet the committed files alone do not provide the final labeled evaluation dataset or final training run log. The mini evaluation below is useful for regression-style demonstration, but it remains synthetic and deterministic rather than a production model benchmark.
+The notebook contains metric code for precision, recall, F1, and accuracy through sequence-labeling evaluation, but its code cells do not contain saved outputs. The committed files alone do not provide the final labeled evaluation dataset, final training run log, or model weights. A local ignored artifact folder was present on this workstation and safe metadata was inspected, but model binaries remain outside Git. The mini evaluation below is useful for regression-style demonstration, but it remains synthetic and deterministic rather than a production model benchmark.
 
 | Evidence Item | Status | What It Proves | What It Does Not Prove |
 |---|---|---|---|
-| Exported NER artifact | Present under `ai-cv-analyzer/models/ner_weights/career_compass_ner_final` | A local token-classification model artifact is available for runtime loading. | It does not provide a final held-out F1 score by itself. |
+| Runtime NER artifact path | Code checks `ai-cv-analyzer/models/ner_weights/career_compass_ner_final`; the folder is ignored by Git. | The service can load a local token-classification model when deployed. | It does not prove the artifact is committed or provide a final held-out F1 score. |
+| Local ignored metadata | `config.json` and tokenizer metadata were inspected locally without copying weights. | The local artifact uses a BERT token-classification configuration and cased tokenizer. | It is not a portable repository artifact. |
 | Training notebook | Present under `ai-cv-analyzer/training/train_ner.ipynb` | The training process, label map, token alignment, Trainer setup, metrics code, and export steps are documented. | It does not include committed output cells with final metrics. |
 | Dataset generator | Present under `ai-cv-analyzer/training/generate_tech_dataset.py` | Synthetic labeled data can be generated from Gemini with key rotation and negative decoys. | It was not run here because it requires API keys and would generate a large dataset. |
 | Dataset cleaner | Present under `ai-cv-analyzer/training/clean_dataset.py` | Dataset normalization, deduplication, and span validation are part of the workflow. | The cleaned dataset file itself is not committed. |
 | API tests | Present under `ai-cv-analyzer/tests/test_service_api.py` | FastAPI status handling and hybrid-match formula behavior are covered with fakes. | These tests do not measure real NER model accuracy. |
+| Dependency probe | Local bundled Python lacked `transformers`, `torch`, `sentence_transformers`, OCR/PDF packages, and Gemini client libraries. | Explains why live model inference and training were not rerun during documentation generation. | It does not reflect what the Docker image may install at runtime. |
 | Mini evaluation | Generated under `docs/graduation-book/evaluation/` | Synthetic skill/recommendation/gap logic can be checked repeatably. | It is not a statistical live-model benchmark. |
 
-*Table 10. Model evaluation evidence.*
+*Table 17. Model evaluation evidence.*
 
-## 6.9 CV Analyzer Mini Dataset Evaluation
+## 6.9 NER Extraction Examples
+
+The table below documents expected extraction behavior from the inspected NER labels and runtime post-processing. It is intentionally marked as example evidence rather than measured accuracy because transformer dependencies were not available in the local documentation runtime and the committed notebook does not include final output cells.
+
+| Example CV Text | Expected NER Entities | Downstream Use | Evidence Type |
+|---|---|---|---|
+| `Experienced Backend Developer with Laravel, Docker, and MySQL.` | ROLE: Backend Developer; SKILL: Laravel, Docker, MySQL | Predicted role, extracted skills, backend/domain matching. | Illustrative example from label schema and code path. |
+| `Graduated from Faculty of Computers and Information, Kafr El-Sheikh University.` | EDU: Faculty of Computers and Information, Kafr El-Sheikh University | Education/profile evidence. | Illustrative example from EDU label behavior. |
+| `AWS Cloud Practitioner certified with Kubernetes deployment experience.` | CERT: AWS Cloud Practitioner; SKILL: Kubernetes | Certification and cloud/DevOps skill evidence. | Illustrative example from CERT/SKILL labels. |
+| `Leadership, communication, and teamwork across agile projects.` | SOFT labels exist in training setup; runtime grouping mainly returns SKILL/ROLE/EDU/CERT. | Soft-skill interpretation is handled mostly by taxonomy and rule layers. | Limitation observed from runtime grouping code. |
+
+*Table 18. NER extraction examples.*
+
+## 6.10 Semantic Matching vs TF-IDF Fallback Examples
+
+The semantic matching path could not be executed locally during this documentation update because sentence-transformer dependencies were unavailable in the bundled Python environment. The pure Python TF-IDF matcher was executed directly as a small deterministic fallback check. It gave a positive score for overlapping backend skills and zero for an unrelated mobile-role comparison.
+
+| Pair | Semantic Path Status | TF-IDF Fallback Result | Interpretation |
+|---|---|---|---|
+| CV: `Laravel Docker MySQL REST APIs`; Job: `Backend developer with Laravel Docker MySQL` | Not executed locally; dependencies unavailable. | 0.4316 | Keyword overlap confirms a backend-oriented match signal. |
+| CV: `Flutter Dart mobile UI`; Job: `Backend developer with Laravel Docker MySQL` | Not executed locally; dependencies unavailable. | 0.0000 | No meaningful keyword overlap, so fallback does not inflate score. |
+| Expected runtime behavior | Sentence embeddings plus TF-IDF in `/api/hybrid-match` when both paths are available. | 60 percent semantic/adaptive plus 40 percent TF-IDF in that endpoint. | The fallback helps explainable matching but is not a substitute for full semantic evaluation. |
+
+*Table 19. Semantic matching and TF-IDF example results.*
+
+## 6.11 Model Evaluation Limitations
+
+- The committed notebook includes metric code but no saved metric output cells.
+- The cleaned labeled dataset used for final training is not committed.
+- The model-weight folder is ignored by Git; safe local metadata was inspected, but binary weights were not copied or benchmarked.
+- Local documentation Python did not include transformer, sentence-transformer, OCR, PDF, or Gemini packages, so live model inference and training were not rerun here.
+- The examples in Table 18 are expected-behavior examples, while the TF-IDF values in Table 19 are actual small local fallback checks.
+- A stronger final defense package should add a fixed labeled CV test set, saved per-label NER metrics, and CI-friendly inference smoke tests.
+
+## 6.12 CV Analyzer Mini Dataset Evaluation
 
 A sample PDF CV was generated for the screenshot workflow and uploaded through the running system. The upload succeeded, and the dashboard showed parsed CV data, backend role inference, extracted skills, and profile completeness. To strengthen the evaluation beyond that smoke test, this revision adds a mini synthetic dataset under `docs/graduation-book/evaluation/`.
 
 The mini CV evaluation is explicitly offline and deterministic. It uses fake CV text, expected skill labels, and a keyword/role inference evaluator. It does not claim live model accuracy. The live AI CV Analyzer endpoint can be added to this mini-evaluation later, but the current document records only metrics that were actually computed from the synthetic dataset.
 
-## 6.10 Recommendation Mini Dataset Evaluation
+## 6.13 Recommendation Mini Dataset Evaluation
 
 The recommendation mini evaluation ranks synthetic jobs for each synthetic CV using skill overlap plus domain and seniority bonuses. This validates the recommendation concept and provides a repeatable regression check for report evidence. It is not a production recommender benchmark, and the report does not claim complete job-market coverage.
 
-## 6.11 Gap Analysis Mini Dataset Evaluation
+## 6.14 Gap Analysis Mini Dataset Evaluation
 
 The gap-analysis mini evaluation compares expected matched and missing skills with computed matched and missing skills for selected CV/job pairs. This directly validates the explanation structure used by the gap-analysis workflow: matched skills should be shown separately from missing skills.
 
 {mini_eval}
 
-## 6.12 Job Miner Evaluation
+## 6.15 Job Miner Evaluation
 
 The AI Job Miner test suite passed with 75 tests. Admin source diagnostics displayed active sources and source state. The job database contained imported/demo jobs visible in the admin dashboard. Because external job sources can change or throttle scraping, long-term data quality evaluation should be repeated near the final defense.
 
-## 6.13 Application Tracker Evaluation
+## 6.16 Application Tracker Evaluation
 
 The application tracker was evaluated by saving a selected job to the tracker and loading the Applications page. The screenshot shows saved opportunity state. Backend tests also include application tracker behavior.
 
-## 6.14 Admin Dashboard Evaluation
+## 6.17 Admin Dashboard Evaluation
 
 Admin login and admin dashboard access were tested with the demo admin account. The admin dashboard, admin jobs, admin sources, and admin target roles pages were captured. The dashboard displayed 22 users, 209 imported jobs, 9 active sources, and 13 target roles at capture time.
 
-## 6.15 Performance Observations
+## 6.18 Performance Observations
 
 The local Docker stack is heavy because it runs frontend, backend, multiple Laravel workers, MySQL, MinIO, two Python AI services, Prometheus, and Grafana. Initial full build can exceed a short command timeout on a Windows laptop. Once images are built, targeted service startup and HTTP checks are practical for a graduation demo.
 
-## 6.16 Evaluation Limitations
+## 6.19 Evaluation Limitations
 
 - The AI CV Analyzer pytest suite was not executed because pytest was absent in that container.
 - The browser CV upload remains a smoke test, and the mini dataset is synthetic rather than statistically representative.
@@ -1468,7 +1810,7 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 - External scraping reliability depends on source availability and changing website/API behavior.
 - Production security, privacy, and performance audits remain future work.
 
-## 6.17 Summary of Results
+## 6.20 Summary of Results
 
 | Area | Command or Scenario | Result | Evidence |
 |---|---|---|---|
@@ -1484,22 +1826,22 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 | AI CV Analyzer pytest | `python -m pytest` | Skipped, pytest missing | Command output |
 | HTTP probes | `/`, `/api/health`, `/api/ready`, `/status`, AI services | 200 responses | Command output |
 
-*Table 16. Automated validation results.*
+*Table 25. Automated validation results.*
 
 | Test ID | Module | Scenario | Status | Evidence |
 |---|---|---|---|---|
 | M-01 | Authentication | Register demo user | Passed | Register screenshot/API output |
-| M-02 | Authentication | Login student | Passed | Figure 15 |
-| M-03 | CV upload | Upload valid PDF | Passed | Figures 16-18 |
+| M-02 | Authentication | Login student | Passed | Figure 22 |
+| M-03 | CV upload | Upload valid PDF | Passed | Figures 23-25 |
 | M-04 | CV upload | Invalid file handling | Not Run Manual | Backend validation tests |
-| M-05 | Recommendations | Open jobs page after CV | Passed | Figure 19 |
-| M-06 | Gap analysis | Analyze selected job | Passed | Figure 21 |
-| M-07 | Tracker | Save job | Passed | Figure 22 |
-| M-08 | Admin | Login admin and open dashboard | Passed | Figure 25 |
-| M-09 | Admin sources | Open diagnostics | Passed | Figure 27 |
-| M-10 | Status | Open system status page | Passed | Figure 24 |
+| M-05 | Recommendations | Open jobs page after CV | Passed | Figure 26 |
+| M-06 | Gap analysis | Analyze selected job | Passed | Figure 28 |
+| M-07 | Tracker | Save job | Passed | Figure 29 |
+| M-08 | Admin | Login admin and open dashboard | Passed | Figure 32 |
+| M-09 | Admin sources | Open diagnostics | Passed | Figure 34 |
+| M-10 | Status | Open system status page | Passed | Figure 31 |
 
-*Table 17. Manual functional evaluation matrix.*
+*Table 26. Manual functional evaluation matrix.*
 
 | Test ID | Expected vs Actual Observation |
 |---|---|
@@ -1514,7 +1856,7 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 | M-09 | Expected source diagnostics; actual diagnostics page visible. |
 | M-10 | Expected health UI; actual system status page visible. |
 
-*Table 18. Manual functional observations.*
+*Table 27. Manual functional observations.*
 
 \\pagebreak
 
@@ -1567,7 +1909,7 @@ The API client attaches request IDs, and backend logging records important event
 | Monitoring | Local Prometheus/Grafana | Auth, TLS, dashboard access control |
 | Privacy | Local demo posture | Legal review, privacy notice, data minimization |
 
-*Table 19. Security and privacy controls.*
+*Table 28. Security and privacy controls.*
 
 ## 7.10 Future Production Hardening
 
@@ -1586,7 +1928,7 @@ CareerCompass demonstrates a practical AI-assisted career guidance workflow for 
 - Built a working multi-service web application with frontend, backend, AI services, database, object storage, proxy, and monitoring.
 - Implemented student authentication, dashboard, CV upload, profile view, jobs, gap analysis, and application tracking.
 - Implemented admin dashboard, job management, source diagnostics, and target role management.
-- Documented the AI CV Analyzer runtime architecture, local NER model artifact, synthetic data-generation workflow, and Colab training notebook.
+- Documented the AI CV Analyzer runtime architecture, optional local NER artifact path, synthetic data-generation workflow, and Colab training notebook.
 - Added tests and validation commands across backend, frontend, Python services, Docker, and HTTP probes.
 - Captured browser screenshots from the running local system.
 - Generated a formal report with diagrams, references, and evaluation notes.
@@ -1600,7 +1942,7 @@ The project demonstrates practical learning in software architecture, service de
 - The system is a graduation/demo platform and not a production product.
 - Recommendation and gap analysis outputs are estimates.
 - AI evaluation needs larger labeled datasets, committed training logs, and repeatable model scoring.
-- The exported NER model artifact is available, but the repository does not include a reproducible final metric run from the training notebook.
+- The exported NER model artifact path is supported by the runtime, but model weights are ignored by Git and the repository does not include a reproducible final metric run from the training notebook.
 - External scraping sources can be unstable.
 - The AI CV Analyzer container needs pytest installed to run its test suite.
 - Security and privacy controls need production hardening before real deployment.
@@ -1646,7 +1988,7 @@ CareerCompass is an original graduation project that connects academic software 
 | Admin | `/api/v1/admin/dashboard/stats`, `/api/v1/admin/jobs`, `/api/v1/admin/scraping-sources`, `/api/v1/admin/target-roles` | Admin dashboards and diagnostics. |
 | Internal Scraper | `/api/jobs/import`, `/api/jobs/import/check`, `/api/proxies/active` | Service-token protected import routes. |
 
-*Table 20. API endpoint summary.*
+*Table 29. API endpoint summary.*
 
 ## Appendix B: Database Tables Summary
 
@@ -1664,7 +2006,7 @@ CareerCompass is an original graduation project that connects academic software 
 | target_job_roles | Target role list for scraping and market exploration. |
 | scraping_jobs | Scraping batch execution state. |
 
-*Table 21. Database tables summary.*
+*Table 30. Database tables summary.*
 
 ## Appendix C: Docker Services Summary
 
@@ -1682,11 +2024,11 @@ CareerCompass is an original graduation project that connects academic software 
 | prometheus | Metrics collection. |
 | grafana | Metrics visualization. |
 
-*Table 22. Docker services summary.*
+*Table 31. Docker services summary.*
 
 ## Appendix D: Screenshots
 
-{chr(10).join([figure_markdown(num, caption, rel_path) for num, caption, rel_path in FIGURES[11:]])}
+{chr(10).join([figure_markdown(num, caption, rel_path) for num, caption, rel_path in FIGURES[18:]])}
 
 ## Appendix E: Test Cases
 
@@ -1720,6 +2062,44 @@ The repository contains GitHub Actions workflow definitions. After the draft PR 
 11. Open Admin Dashboard, Jobs, Sources, and Target Roles.
 12. Open System Status and explain health checks.
 13. Discuss limitations and future work honestly.
+
+## Appendix H: AI CV Analyzer Deep Inventory
+
+This appendix summarizes the code audit that supports Sections 5.5 and 6.8-6.11. The detailed companion notes are stored in `docs/graduation-book/model-analysis/` and should be kept with the generated book artifacts.
+
+### H.1 Runtime Call Path
+
+1. Laravel receives the CV upload and stores the file privately.
+2. Laravel sends the uploaded file to the FastAPI analyzer `/api/parse-cv` endpoint.
+3. `main.py` chooses image or PDF handling and wraps processing in timeout/error fallbacks.
+4. `CVOrchestrator` extracts ordered text, triggers OCR fallback when needed, segments sections, runs NER, extracts contacts and dates, canonicalizes skills, and validates the strict output schema.
+5. Layer 2 enriches the result with domain, seniority, and skill-category classification.
+6. Laravel persists normalized profile, skills, experiences, and analysis metadata.
+7. Recommendations and gap analysis reuse the stored profile together with Layer 3 matching and backend services.
+
+### H.2 Function Inventory Summary
+
+| Area | Classes and Functions Audited | Main Purpose |
+|---|---|---|
+| `main.py` | `_get_orchestrator`, `health_check`, `metrics`, `hybrid_match`, `analyze_cv`, `_process_with_timeout`, `process_file`, `_timeout_result`, `_error_result` | API endpoints, service lifecycle, timeout/fallback behavior, and hybrid match composition. |
+| Layer 1 NER/contact/sections | `AdvancedNEREngine`, `extract_contacts`, `SemanticSegmenter`, `DataCanonicalizer`, `ExperienceEngine`, spatial/OCR helpers | Converts raw CV text into profile, skills, experience, and confidence-style structured data. |
+| Layer 2 classification | `ClassificationOrchestrator`, `DomainEngine`, `SeniorityEngine`, `SkillEngine`, `load_taxonomy` | Adds domain, seniority, and skill-category interpretation. |
+| Layer 3 matching | `SemanticEmbedder`, `IntelligentMatcher`, `ConstraintValidator`, `FitAnalysisGenerator`, `JobDescriptionEngine`, `RankingOrchestrator`, `tfidf.match_score` | Produces explainable job-fit scores, penalties, verdicts, and ranking behavior. |
+| Training and diagnostics | `generate_tech_dataset.py`, `clean_dataset.py`, `train_ner.ipynb`, `verify_phase*.py`, `test_service_api.py`, `trace_cv.py` | Supports synthetic dataset generation, cleaning, notebook training, phase verification, service tests, and trace output. |
+
+*Table 32. AI CV Analyzer function inventory summary.*
+
+### H.3 Training Summary
+
+The notebook trains a BERT-family token-classification model from `bert-base-cased`, maps character spans to BIO token labels, uses a 90/10 train/evaluation split with seed 42, trains for five epochs with learning rate 2e-5 and batch size 16, computes seqeval precision/recall/F1/accuracy, and exports `career_compass_ner_final`. The final cleaned dataset and final metric output are not committed.
+
+### H.4 Generated Dataset Summary
+
+The synthetic dataset script asks Google Gemini tooling to generate varied CV snippets across technical domains, rotates API keys/models from environment variables, includes negative decoys, and writes labeled examples for cleaning. The cleaner normalizes text, deduplicates exact samples, validates spans, and filters malformed or overly broad entities. This supports the training workflow, but it is separate from normal private CV upload processing.
+
+### H.5 Local Artifact and Secrets Boundary
+
+`.env` and `ai-cv-analyzer/models/` are ignored by Git. This protects secrets and avoids committing large model weights. Documentation may mention the runtime path and safe local metadata, but should not imply that the committed repository contains the model binary or private API keys.
 """
 
 
@@ -2481,11 +2861,11 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 
 ## AI CV Analyzer Documentation Update
 
-- Added model-analysis notes under `model-analysis/` to summarize runtime architecture, synthetic data generation, training-notebook inspection, and evaluation limitations.
+- Added model-analysis notes under `model-analysis/` to summarize runtime architecture, Layer 1/2/3 internals, function inventory, NER token processing, synthetic data generation, training-notebook inspection, and evaluation limitations.
 - Reviewed `D:/Graduation/model-analys-helper`; the top-level helper folders found were `docs`, `layer1`, `layer2`, and `layer3`.
 - No raw training datasets, image artifacts, or actual secrets were copied from the helper folder.
 - The training notebook was inspected but not executed because the cleaned dataset is not committed, the generation workflow depends on external Gemini API keys, and the notebook is designed for Colab GPU execution.
-- New AI diagrams were generated for runtime flow, model-training workflow, and extraction components.
+- AI diagrams were generated for runtime flow, model-training workflow, extraction components, Layer 1 understanding, Layer 2 classification, Layer 3 matching, NER token processing, seniority logic, canonicalization, and score collapse.
 
 ## Validation Summary
 
@@ -2576,7 +2956,7 @@ def main() -> None:
         "Scraper service",
         "Monitoring",
         "Privacy",
-        "Table 19. Security and privacy controls.",
+        "Table 28. Security and privacy controls.",
         "7.10 Future Production Hardening",
     ])
     section_26_start = min(section_pages.get("2.6 Functional Requirements", []) or section_pages.get("FR-01", []) or [1])
@@ -2608,18 +2988,18 @@ def main() -> None:
     )
     section_79_start = min(section_pages.get("7.9 Demo Security Limitations", []) or [1])
     section_710_start = min(section_pages.get("7.10 Future Production Hardening", []) or [section_79_start])
-    table_19_body_pages = [page for page in section_pages.get("Table 19. Security and privacy controls.", []) if page >= section_79_start]
+    table_28_body_pages = [page for page in section_pages.get("Table 28. Security and privacy controls.", []) if page >= section_79_start]
     security_row_pages = []
     for term in ["Admin account", "CV files", "Tokens", "Scraper service", "Monitoring", "Privacy"]:
         security_row_pages.extend(page for page in section_pages.get(term, []) if section_79_start <= page <= section_710_start)
     security_pages = sorted(set(
         section_pages.get("7.9 Demo Security Limitations", [])
         + security_row_pages
-        + table_19_body_pages
+        + table_28_body_pages
     ))
     security_layout_status = (
-        f"7.9 heading, security-control rows, and Table 19 caption appear on PDF page(s) {security_pages or 'not detected'}; "
-        f"7.10 starts on PDF page(s) {section_pages.get('7.10 Future Production Hardening', []) or 'not detected'} after the Table 19 caption"
+        f"7.9 heading, security-control rows, and Table 28 caption appear on PDF page(s) {security_pages or 'not detected'}; "
+        f"7.10 starts on PDF page(s) {section_pages.get('7.10 Future Production Hardening', []) or 'not detected'} after the Table 28 caption"
     )
     write_notes(
         page_count,
