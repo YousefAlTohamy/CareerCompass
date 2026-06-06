@@ -30,25 +30,25 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 
 ## Counts
 
-- PDF pages: 69
+- PDF pages: 82
 - Screenshots/evidence images: 19
-- Diagrams: 18
+- Diagrams: 28
 
 ## Table of Contents and Tables
 
 - TOC placement: standalone page immediately after the cover page
 - Front matter order: Cover -> Table of Contents -> List of Figures -> List of Tables -> Acknowledgment -> Abstract -> Abbreviations -> Chapter 1
 - Abbreviations placement: standalone page after Abstract and before Chapter 1
-- DOCX TOC status: 15 custom manual TOC entries contain internal hyperlinks to bookmarked major headings
-- DOCX List of Figures status: 37 List of Figures entries link to bookmarked figure captions
-- DOCX List of Tables status: 32 List of Tables entries link to bookmarked table captions
-- PDF TOC status: PDF contains 83 link annotations after export
+- DOCX TOC status: 16 custom manual TOC entries contain internal hyperlinks to bookmarked major headings
+- DOCX List of Figures status: 47 List of Figures entries link to bookmarked figure captions
+- DOCX List of Tables status: 43 List of Tables entries link to bookmarked table captions
+- PDF TOC status: PDF contains 104 link annotations after export
 - Table formatting status: data tables use fixed DXA widths, wrapped text, repeated header rows, smaller table fonts, and split wide manual test observations into narrower tables; cover layout tables are intentionally excluded from repeated-header checks
 - Figure caption status: explicit italic caption lines are the single visible figure-caption source; Markdown image alt text is not rendered as a visible figure caption
 - Table caption status: formal table captions are rendered below their corresponding tables and remain linked from the List of Tables
-- Section 2.6/2.7 layout status: 2.6 heading, FR-01/FR-11 rows, and Table 2 caption appear on PDF page(s) [10]; 2.7 starts on PDF page(s) [10] after the Table 2 caption
-- Section 2.9/2.10 layout status: 2.9 heading, Software Requirements rows, and Table 4 caption appear on PDF page(s) [11]; 2.10 starts on PDF page(s) [11] after the Table 4 caption
-- Section 7.9/7.10 layout status: 7.9 heading, security-control rows, and Table 28 caption appear on PDF page(s) [51]; 7.10 starts on PDF page(s) [51] after the Table 28 caption
+- Section 2.6/2.7 layout status: 2.6 heading, FR-01/FR-11 rows, and Table 2 caption appear on PDF page(s) [11]; 2.7 starts on PDF page(s) [11] after the Table 2 caption
+- Section 2.9/2.10 layout status: 2.9 heading, Software Requirements rows, and Table 4 caption appear on PDF page(s) [12]; 2.10 starts on PDF page(s) [12] after the Table 4 caption
+- Section 8.9/8.10 layout status: 8.9 heading, security-control rows, and Table 39 caption appear on PDF page(s) [64]; 8.10 starts on PDF page(s) [64] after the Table 39 caption
 
 ## Caption, Link, and Layout Verification Method
 
@@ -74,11 +74,18 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 
 ## AI CV Analyzer Documentation Update
 
+- Decision: the AI CV Analyzer is now documented as standalone Chapter 6 because it is a core technical contribution rather than only an implementation subsection.
 - Added model-analysis notes under `model-analysis/` to summarize runtime architecture, Layer 1/2/3 internals, function inventory, NER token processing, synthetic data generation, training-notebook inspection, and evaluation limitations.
 - Reviewed `D:/Graduation/model-analys-helper`; the top-level helper folders found were `docs`, `layer1`, `layer2`, and `layer3`.
 - No raw training datasets, image artifacts, or actual secrets were copied from the helper folder.
 - The training notebook was inspected but not executed because the cleaned dataset is not committed, the generation workflow depends on external Gemini API keys, and the notebook is designed for Colab GPU execution.
 - AI diagrams were generated for runtime flow, model-training workflow, extraction components, Layer 1 understanding, Layer 2 classification, Layer 3 matching, NER token processing, seniority logic, canonicalization, and score collapse.
+- New academic AI diagrams were generated for design philosophy, complete CV flow, fault tolerance, confidence/readiness signals, skill canonicalization example, fine-tuned BERT NER architecture, detailed training flow, matching formula, explainable output, and analyzer sequence.
+- Matching formula status: exact for the `IntelligentMatcher.calculate_match` score-composition path; upstream semantic/skill/domain scores still depend on model availability.
+- Dataset statistics status: final NER training counts are not available from committed evidence; only the documentation mini-evaluation dataset counts are reproducible.
+- Confidence status: the system uses confidence-style and readiness signals, not a certified hiring probability formula.
+- End-to-end walkthrough status: illustrative academic example, not a live model benchmark.
+- References review: existing references cover BERT, Hugging Face token classification/Trainer, sentence embeddings, TF-IDF/cosine similarity, Gemini/Colab, and dynamic quantization; no extra bibliography padding was added.
 
 ## Validation Summary
 

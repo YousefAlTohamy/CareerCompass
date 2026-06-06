@@ -29,45 +29,45 @@ The following paths are intentionally treated as deployment-local:
 
 | File or Folder | Purpose |
 |---|---|
-| `layer1/advanced_ner.py` | Singleton transformer NER engine, chunked inference, entity merging, name candidate extraction. |
-| `layer1/canonicalizer.py` | Skill normalization, deduplication, exact/fuzzy/semantic mapping. |
-| `layer1/contact_extractor.py` | Email, phone, and location extraction. |
-| `layer1/experience_engine.py` | Date-range parsing, total experience, skill durations, career health, action-verb scoring. |
-| `layer1/ocr_pipeline.py` | Image/PDF OCR fallback helpers. |
-| `layer1/orchestrator.py` | Coordinates extraction, OCR fallback, NLP pipeline, strict result assembly, and Layer 2 enrichment. |
-| `layer1/schema.py` | Pydantic response schema for contacts, skills, experience, analysis, stats, and status. |
-| `layer1/section_segmenter.py` | Header detection, semantic section matching, and block merging. |
-| `layer1/spatial_parser.py` | Ordered PDF text extraction using word positions, adaptive row grouping, columns, and fallback text extraction. |
-| `layer1/utils.py` | Layer 1 config loading. |
-| `layer1/data/config.json` | Section headers, canonical skill/domain cues, semantic thresholds, and extraction configuration. |
-| `layer1/EXPLAIN LAYER1/*.md`, `layer1/README.md` | Developer explanation material for the understanding layer. |
+| `core/layer1_understanding/advanced_ner.py` | Singleton transformer NER engine, chunked inference, entity merging, name candidate extraction. |
+| `core/layer1_understanding/canonicalizer.py` | Skill normalization, deduplication, exact/fuzzy/semantic mapping. |
+| `core/layer1_understanding/contact_extractor.py` | Email, phone, and location extraction. |
+| `core/layer1_understanding/experience_engine.py` | Date-range parsing, total experience, skill durations, career health, action-verb scoring. |
+| `core/layer1_understanding/ocr_pipeline.py` | Image/PDF OCR fallback helpers. |
+| `core/layer1_understanding/orchestrator.py` | Coordinates extraction, OCR fallback, NLP pipeline, strict result assembly, and Layer 2 enrichment. |
+| `core/layer1_understanding/schema.py` | Pydantic response schema for contacts, skills, experience, analysis, stats, and status. |
+| `core/layer1_understanding/section_segmenter.py` | Header detection, semantic section matching, and block merging. |
+| `core/layer1_understanding/spatial_parser.py` | Ordered PDF text extraction using word positions, adaptive row grouping, columns, and fallback text extraction. |
+| `core/layer1_understanding/utils.py` | Layer 1 config loading. |
+| `core/layer1_understanding/data/config.json` | Section headers, canonical skill/domain cues, semantic thresholds, and extraction configuration. |
+| `core/layer1_understanding/EXPLAIN LAYER1/*.md`, `core/layer1_understanding/README.md` | Developer explanation material for the understanding layer. |
 
 ## Layer 2: Classification
 
 | File or Folder | Purpose |
 |---|---|
-| `layer2/classifier.py` | Singleton CV domain classifier wrapper around semantic embedder. |
-| `layer2/domain_engine.py` | Predicts primary technical domain from title, summary, experience, and taxonomy descriptions. |
-| `layer2/orchestrator.py` | Enriches Layer 1 output with domain, seniority, and skill categories. |
-| `layer2/seniority_engine.py` | Combines years, title cues, semantic hints, and action verbs into a seniority label. |
-| `layer2/skill_engine.py` | Categorizes skills into hard, soft, and management buckets. |
-| `layer2/utils.py` | Taxonomy loading. |
-| `layer2/data/taxonomy.json` | Domain, skill, management, and soft-skill taxonomy. |
-| `layer2/EXPLAIN LAYER2/*.md`, `layer2/README.md` | Developer explanation material for classification. |
+| `core/layer2_classification/classifier.py` | Singleton CV domain classifier wrapper around semantic embedder. |
+| `core/layer2_classification/domain_engine.py` | Predicts primary technical domain from title, summary, experience, and taxonomy descriptions. |
+| `core/layer2_classification/orchestrator.py` | Enriches Layer 1 output with domain, seniority, and skill categories. |
+| `core/layer2_classification/seniority_engine.py` | Combines years, title cues, semantic hints, and action verbs into a seniority label. |
+| `core/layer2_classification/skill_engine.py` | Categorizes skills into hard, soft, and management buckets. |
+| `core/layer2_classification/utils.py` | Taxonomy loading. |
+| `core/layer2_classification/data/taxonomy.json` | Domain, skill, management, and soft-skill taxonomy. |
+| `core/layer2_classification/EXPLAIN LAYER2/*.md`, `core/layer2_classification/README.md` | Developer explanation material for classification. |
 
 ## Layer 3: Matching
 
 | File or Folder | Purpose |
 |---|---|
-| `layer3/constraint_validator.py` | Applies mandatory-skill, experience, and seniority penalties. |
-| `layer3/embedder.py` | Sentence-transformer singleton, embedding cache, similarity helper, optional quantization. |
-| `layer3/fit_analysis_generator.py` | Converts score breakdowns into summary, strengths, gaps, red flags, and verdict. |
-| `layer3/job_description_engine.py` | Parses job descriptions into seniority, years, skills, domain, and summary. |
-| `layer3/ranking_orchestrator.py` | Ranks candidate/job combinations using the matcher. |
-| `layer3/similarity.py` | Adaptive semantic/skill/domain matching and score collapse. |
-| `layer3/tfidf.py` | Pure Python TF-IDF tokenizer, vectors, cosine similarity, and fallback score. |
-| `layer3/matching_config.json` | Seniority-aware matching weights, thresholds, and penalty controls. |
-| `layer3/API_DOCUMENTATION.md`, `layer3/EXPLAIN LAYER3/*.md`, `layer3/README.md` | API and matching explanation material. |
+| `core/layer3_matching/constraint_validator.py` | Applies mandatory-skill, experience, and seniority penalties. |
+| `core/layer3_matching/embedder.py` | Sentence-transformer singleton, embedding cache, similarity helper, optional quantization. |
+| `core/layer3_matching/fit_analysis_generator.py` | Converts score breakdowns into summary, strengths, gaps, red flags, and verdict. |
+| `core/layer3_matching/job_description_engine.py` | Parses job descriptions into seniority, years, skills, domain, and summary. |
+| `core/layer3_matching/ranking_orchestrator.py` | Ranks candidate/job combinations using the matcher. |
+| `core/layer3_matching/similarity.py` | Adaptive semantic/skill/domain matching and score collapse. |
+| `core/layer3_matching/tfidf.py` | Pure Python TF-IDF tokenizer, vectors, cosine similarity, and fallback score. |
+| `core/layer3_matching/matching_config.json` | Seniority-aware matching weights, thresholds, and penalty controls. |
+| `core/layer3_matching/API_DOCUMENTATION.md`, `core/layer3_matching/EXPLAIN LAYER3/*.md`, `core/layer3_matching/README.md` | API and matching explanation material. |
 
 ## Training and Diagnostics
 

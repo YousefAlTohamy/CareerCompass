@@ -14,8 +14,8 @@ The runtime upload path is:
 2. `backend-api/app/Http/Requests/CvUploadRequest.php` validates PDF/JPEG/PNG files up to 5 MB.
 3. `backend-api/app/Services/CvProcessingService.php` forwards the file to the Python analyzer, stores the private CV object, and persists parsed profile, skills, experiences, and `cv_analyses`.
 4. `ai-cv-analyzer/main.py` exposes `/api/parse-cv`, handles timeout/error fallback, and calls the orchestrator.
-5. `ai-cv-analyzer/layer1/orchestrator.py` coordinates spatial extraction, OCR fallback, segmentation, NER, contact extraction, experience parsing, skill canonicalization, domain/seniority classification, and strict JSON output.
-6. `ai-cv-analyzer/layer3` supports hybrid matching through semantic similarity, skill matching, domain alignment, constraints, and TF-IDF fallback.
+5. `ai-cv-analyzer/core/layer1_understanding/orchestrator.py` coordinates spatial extraction, OCR fallback, segmentation, NER, contact extraction, experience parsing, skill canonicalization, domain/seniority classification, and strict JSON output.
+6. `ai-cv-analyzer/core/layer3_matching` supports hybrid matching through semantic similarity, skill matching, domain alignment, constraints, and TF-IDF fallback.
 
 ## Model Type
 

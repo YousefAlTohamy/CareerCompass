@@ -8,14 +8,14 @@ Layer 3 compares a candidate profile with a job description and produces an expl
 
 | File | Responsibility |
 |---|---|
-| `layer3/job_description_engine.py` | Extracts seniority, required years, mandatory skills, bonus skills, domain, and summary from job text. |
-| `layer3/embedder.py` | Loads sentence-transformer embeddings, caches vectors, supports optional quantization, and calculates cosine similarity. |
-| `layer3/similarity.py` | Combines semantic, skills, and domain scores with adaptive weights. |
-| `layer3/constraint_validator.py` | Applies penalties for missing mandatory skills, experience shortfalls, and seniority mismatch. |
-| `layer3/fit_analysis_generator.py` | Produces human-readable summary, strengths, gaps, red flags, and verdict. |
-| `layer3/ranking_orchestrator.py` | Ranks candidates/jobs by fit score. |
-| `layer3/tfidf.py` | Provides deterministic pure Python TF-IDF fallback matching. |
-| `layer3/matching_config.json` | Defines weights, thresholds, and penalty settings. |
+| `core/layer3_matching/job_description_engine.py` | Extracts seniority, required years, mandatory skills, bonus skills, domain, and summary from job text. |
+| `core/layer3_matching/embedder.py` | Loads sentence-transformer embeddings, caches vectors, supports optional quantization, and calculates cosine similarity. |
+| `core/layer3_matching/similarity.py` | Combines semantic, skills, and domain scores with adaptive weights. |
+| `core/layer3_matching/constraint_validator.py` | Applies penalties for missing mandatory skills, experience shortfalls, and seniority mismatch. |
+| `core/layer3_matching/fit_analysis_generator.py` | Produces human-readable summary, strengths, gaps, red flags, and verdict. |
+| `core/layer3_matching/ranking_orchestrator.py` | Ranks candidates/jobs by fit score. |
+| `core/layer3_matching/tfidf.py` | Provides deterministic pure Python TF-IDF fallback matching. |
+| `core/layer3_matching/matching_config.json` | Defines weights, thresholds, and penalty settings. |
 
 ## Job Description Parsing
 

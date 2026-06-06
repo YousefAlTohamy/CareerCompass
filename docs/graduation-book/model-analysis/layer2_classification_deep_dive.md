@@ -8,13 +8,13 @@ Layer 2 enriches the structured CV output from Layer 1. It does not re-parse the
 
 | File | Responsibility |
 |---|---|
-| `layer2/orchestrator.py` | Applies Layer 2 enrichment to the parsed CV analysis. |
-| `layer2/domain_engine.py` | Predicts primary technical domain from CV context and taxonomy descriptions. |
-| `layer2/seniority_engine.py` | Estimates seniority from years, title, summary, and action verbs. |
-| `layer2/skill_engine.py` | Categorizes skills as hard, soft, or management-related. |
-| `layer2/classifier.py` | Singleton classifier wrapper around the semantic embedder. |
-| `layer2/utils.py` | Loads taxonomy JSON. |
-| `layer2/data/taxonomy.json` | Domain, skill, soft-skill, and management taxonomy. |
+| `core/layer2_classification/orchestrator.py` | Applies Layer 2 enrichment to the parsed CV analysis. |
+| `core/layer2_classification/domain_engine.py` | Predicts primary technical domain from CV context and taxonomy descriptions. |
+| `core/layer2_classification/seniority_engine.py` | Estimates seniority from years, title, summary, and action verbs. |
+| `core/layer2_classification/skill_engine.py` | Categorizes skills as hard, soft, or management-related. |
+| `core/layer2_classification/classifier.py` | Singleton classifier wrapper around the semantic embedder. |
+| `core/layer2_classification/utils.py` | Loads taxonomy JSON. |
+| `core/layer2_classification/data/taxonomy.json` | Domain, skill, soft-skill, and management taxonomy. |
 
 ## Domain Classification
 
