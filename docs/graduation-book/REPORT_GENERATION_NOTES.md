@@ -14,6 +14,7 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - `CareerCompass_Graduation_Project_Book.docx`
 - `CareerCompass_Graduation_Project_Book.pdf`
 - `references.md`
+- `model-analysis/*.md`
 - `assets/diagrams/*.png`
 - `assets/screenshots/*.png`
 - `assets/logos/*.png`
@@ -29,9 +30,9 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 
 ## Counts
 
-- PDF pages: 52
+- PDF pages: 59
 - Screenshots/evidence images: 19
-- Diagrams: 8
+- Diagrams: 11
 
 ## Table of Contents and Tables
 
@@ -39,15 +40,15 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - Front matter order: Cover -> Table of Contents -> List of Figures -> List of Tables -> Acknowledgment -> Abstract -> Abbreviations -> Chapter 1
 - Abbreviations placement: standalone page after Abstract and before Chapter 1
 - DOCX TOC status: 15 custom manual TOC entries contain internal hyperlinks to bookmarked major headings
-- DOCX List of Figures status: 27 List of Figures entries link to bookmarked figure captions
-- DOCX List of Tables status: 17 List of Tables entries link to bookmarked table captions
-- PDF TOC status: PDF contains 58 link annotations after export
+- DOCX List of Figures status: 30 List of Figures entries link to bookmarked figure captions
+- DOCX List of Tables status: 22 List of Tables entries link to bookmarked table captions
+- PDF TOC status: PDF contains 66 link annotations after export
 - Table formatting status: data tables use fixed DXA widths, wrapped text, repeated header rows, smaller table fonts, and split wide manual test observations into narrower tables; cover layout tables are intentionally excluded from repeated-header checks
 - Figure caption status: explicit italic caption lines are the single visible figure-caption source; Markdown image alt text is not rendered as a visible figure caption
 - Table caption status: formal table captions are rendered below their corresponding tables and remain linked from the List of Tables
 - Section 2.6/2.7 layout status: 2.6 heading, FR-01/FR-11 rows, and Table 2 caption appear on PDF page(s) [10]; 2.7 starts on PDF page(s) [10] after the Table 2 caption
 - Section 2.9/2.10 layout status: 2.9 heading, Software Requirements rows, and Table 4 caption appear on PDF page(s) [11]; 2.10 starts on PDF page(s) [11] after the Table 4 caption
-- Section 7.9/7.10 layout status: 7.9 heading, security-control rows, and Table 14 caption appear on PDF page(s) [36]; 7.10 starts on PDF page(s) [36] after the Table 14 caption
+- Section 7.9/7.10 layout status: 7.9 heading, security-control rows, and Table 19 caption appear on PDF page(s) [42]; 7.10 starts on PDF page(s) [42] after the Table 19 caption
 
 ## Caption, Link, and Layout Verification Method
 
@@ -71,6 +72,14 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - `evaluation/mini_evaluation_results.json`
 - `evaluation/mini_evaluation_summary.md`
 
+## AI CV Analyzer Documentation Update
+
+- Added model-analysis notes under `model-analysis/` to summarize runtime architecture, synthetic data generation, training-notebook inspection, and evaluation limitations.
+- Reviewed `D:/Graduation/model-analys-helper`; the top-level helper folders found were `docs`, `layer1`, `layer2`, and `layer3`.
+- No raw training datasets, image artifacts, or actual secrets were copied from the helper folder.
+- The training notebook was inspected but not executed because the cleaned dataset is not committed, the generation workflow depends on external Gemini API keys, and the notebook is designed for Colab GPU execution.
+- New AI diagrams were generated for runtime flow, model-training workflow, and extraction components.
+
 ## Validation Summary
 
 - Docker Compose config passed for base and production overlay files.
@@ -87,6 +96,7 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - AI CV Analyzer pytest was skipped/blocked because pytest was not installed in that container.
 - HTTP probes for `/`, `/api/health`, `/api/ready`, `/status`, AI CV Analyzer, and Job Miner returned 200 responses.
 - Mini evaluation script ran successfully and generated JSON plus Markdown result summaries.
+- AI CV Analyzer model-training evidence was documented as inspected evidence; final model metrics were not invented because no reproducible training-output cells or cleaned held-out dataset were committed.
 
 ## Placeholder Review
 
