@@ -27,12 +27,13 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - PDF: exported from the generated DOCX using Microsoft Word COM automation.
 - Diagrams: generated as PNG files with Pillow.
 - Browser screenshots: captured from the running local Docker stack using Chrome DevTools Protocol.
+- Code and JSON examples: rendered as shaded monospace boxes in DOCX/PDF generation paths.
 
 ## Counts
 
-- PDF pages: 82
+- PDF pages: 93
 - Screenshots/evidence images: 19
-- Diagrams: 28
+- Diagrams: 30
 
 ## Table of Contents and Tables
 
@@ -40,15 +41,15 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - Front matter order: Cover -> Table of Contents -> List of Figures -> List of Tables -> Acknowledgment -> Abstract -> Abbreviations -> Chapter 1
 - Abbreviations placement: standalone page after Abstract and before Chapter 1
 - DOCX TOC status: 16 custom manual TOC entries contain internal hyperlinks to bookmarked major headings
-- DOCX List of Figures status: 47 List of Figures entries link to bookmarked figure captions
+- DOCX List of Figures status: 49 List of Figures entries link to bookmarked figure captions
 - DOCX List of Tables status: 43 List of Tables entries link to bookmarked table captions
-- PDF TOC status: PDF contains 104 link annotations after export
+- PDF TOC status: PDF contains 106 link annotations after export
 - Table formatting status: data tables use fixed DXA widths, wrapped text, repeated header rows, smaller table fonts, and split wide manual test observations into narrower tables; cover layout tables are intentionally excluded from repeated-header checks
 - Figure caption status: explicit italic caption lines are the single visible figure-caption source; Markdown image alt text is not rendered as a visible figure caption
 - Table caption status: formal table captions are rendered below their corresponding tables and remain linked from the List of Tables
 - Section 2.6/2.7 layout status: 2.6 heading, FR-01/FR-11 rows, and Table 2 caption appear on PDF page(s) [11]; 2.7 starts on PDF page(s) [11] after the Table 2 caption
 - Section 2.9/2.10 layout status: 2.9 heading, Software Requirements rows, and Table 4 caption appear on PDF page(s) [12]; 2.10 starts on PDF page(s) [12] after the Table 4 caption
-- Section 8.9/8.10 layout status: 8.9 heading, security-control rows, and Table 39 caption appear on PDF page(s) [64]; 8.10 starts on PDF page(s) [64] after the Table 39 caption
+- Section 8.9/8.10 layout status: 8.9 heading, security-control rows, and Table 39 caption appear on PDF page(s) [69]; 8.10 starts on PDF page(s) [69] after the Table 39 caption
 
 ## Caption, Link, and Layout Verification Method
 
@@ -71,6 +72,17 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - `evaluation/run_mini_evaluation.py`
 - `evaluation/mini_evaluation_results.json`
 - `evaluation/mini_evaluation_summary.md`
+- `evaluation/ai_cv_analyzer_smoke_samples.json`
+- `evaluation/run_ai_cv_analyzer_smoke_eval.py`
+- `evaluation/ai_cv_analyzer_smoke_results.json`
+- `evaluation/ai_cv_analyzer_smoke_summary.md`
+
+## AI CV Analyzer Smoke Evaluation
+
+- A deterministic text-only smoke evaluation was added for the AI CV Analyzer evidence pass.
+- The smoke evaluation uses five fake CV samples: backend, data analyst, frontend, DevOps/cloud, and low-information/noisy text.
+- It measures only reproducible local checks: expected skill extraction, role/domain/seniority labels, parsing-status classification, dependency availability, and TF-IDF fallback availability.
+- It is not described as a final transformer NER benchmark because the committed repository does not include the final cleaned labeled dataset, saved training metric output, or model weights.
 
 ## AI CV Analyzer Documentation Update
 
@@ -83,9 +95,17 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - New academic AI diagrams were generated for design philosophy, complete CV flow, fault tolerance, confidence/readiness signals, skill canonicalization example, fine-tuned BERT NER architecture, detailed training flow, matching formula, explainable output, and analyzer sequence.
 - Matching formula status: exact for the `IntelligentMatcher.calculate_match` score-composition path; upstream semantic/skill/domain scores still depend on model availability.
 - Dataset statistics status: final NER training counts are not available from committed evidence; only the documentation mini-evaluation dataset counts are reproducible.
+- Dataset evidence diagram status: generated a dataset evidence availability diagram instead of a fake label distribution chart.
+- NER label distribution chart status: not generated because no committed final labeled training dataset exists to count labels honestly.
 - Confidence status: the system uses confidence-style and readiness signals, not a certified hiring probability formula.
+- Raw CV walkthrough status: includes raw CV fragment, Layer 1/2/3 tables, and an illustrative schema JSON block based on the actual analyzer response structure.
+- API appendix status: expanded from endpoint summary to request/response/error JSON examples for upload, parse-cv, hybrid-match, recommendations, gap analysis, and health/readiness.
+- Quick Start status: added examiner commands, local URLs, demo admin environment values, validation commands, and troubleshooting notes.
+- Preview features status: clarified CV Builder, Mock Interview, Learning Paths, Career Planner, Mentorship, Tools Hub, and Market Intelligence as preview/future modules where appropriate.
+- Screenshot duplication decision: reviewed and kept separate screenshots because they document different states and preserve figure traceability.
+- ERD/System Architecture review: ERD was updated against current migrations/table names; high-level and Docker architecture diagrams were reviewed and retained as clear.
 - End-to-end walkthrough status: illustrative academic example, not a live model benchmark.
-- References review: existing references cover BERT, Hugging Face token classification/Trainer, sentence embeddings, TF-IDF/cosine similarity, Gemini/Colab, and dynamic quantization; no extra bibliography padding was added.
+- References review: existing references cover BERT, Hugging Face token classification/Trainer, sentence embeddings, TF-IDF/cosine similarity, Gemini/Colab, dynamic quantization, and OpenAPI-style API documentation.
 
 ## Validation Summary
 
@@ -103,6 +123,7 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - AI CV Analyzer pytest was skipped/blocked because pytest was not installed in that container.
 - HTTP probes for `/`, `/api/health`, `/api/ready`, `/status`, AI CV Analyzer, and Job Miner returned 200 responses.
 - Mini evaluation script ran successfully and generated JSON plus Markdown result summaries.
+- AI CV Analyzer smoke evaluation script ran successfully and generated JSON plus Markdown result summaries.
 - AI CV Analyzer model-training evidence was documented as inspected evidence; final model metrics were not invented because no reproducible training-output cells or cleaned held-out dataset were committed.
 
 ## Placeholder Review

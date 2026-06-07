@@ -1,0 +1,191 @@
+{
+  "evaluation_mode": "deterministic_text_smoke_evaluation",
+  "statistical_scope": "5 manually labeled smoke samples; not a full NER or production benchmark",
+  "runtime_boundary": "Full analyzer import is probed, but the measured metrics use deterministic text rules because model/PDF dependencies may be unavailable.",
+  "sample_count": 5,
+  "dependency_probe": {
+    "packages_available": {
+      "pdfplumber": false,
+      "transformers": false,
+      "torch": false,
+      "sentence_transformers": false,
+      "easyocr": false,
+      "pydantic": true
+    },
+    "full_analyzer_import": {
+      "ok": false,
+      "error": "ModuleNotFoundError: No module named 'pdfplumber'"
+    },
+    "tfidf_probe": {
+      "ok": true,
+      "score": 0.5101,
+      "error": null
+    }
+  },
+  "summary": {
+    "macro_skill_precision": 0.971,
+    "macro_skill_recall": 1.0,
+    "macro_skill_f1": 0.985,
+    "role_match_rate": 1.0,
+    "domain_match_rate": 1.0,
+    "seniority_match_rate": 0.8,
+    "parsing_status_match_rate": 1.0
+  },
+  "sample_results": [
+    {
+      "sample_id": "smoke_backend_laravel",
+      "expected_skills": [
+        "PHP",
+        "Laravel",
+        "MySQL",
+        "REST APIs",
+        "Docker",
+        "Git"
+      ],
+      "actual_skills": [
+        "PHP",
+        "Laravel",
+        "MySQL",
+        "REST APIs",
+        "Docker",
+        "Git"
+      ],
+      "skill_precision": 1.0,
+      "skill_recall": 1.0,
+      "skill_f1": 1.0,
+      "expected_role": "Backend Developer",
+      "actual_role": "Backend Developer",
+      "role_match": true,
+      "expected_domain": "Backend Development",
+      "actual_domain": "Backend Development",
+      "domain_match": true,
+      "expected_seniority": "junior",
+      "actual_seniority": "intern",
+      "seniority_match": false,
+      "expected_parsing_status": "success",
+      "actual_parsing_status": "success",
+      "parsing_status_match": true
+    },
+    {
+      "sample_id": "smoke_data_analyst",
+      "expected_skills": [
+        "Python",
+        "pandas",
+        "SQL",
+        "Power BI",
+        "scikit-learn"
+      ],
+      "actual_skills": [
+        "Python",
+        "pandas",
+        "SQL",
+        "Power BI",
+        "scikit-learn"
+      ],
+      "skill_precision": 1.0,
+      "skill_recall": 1.0,
+      "skill_f1": 1.0,
+      "expected_role": "Data Analyst",
+      "actual_role": "Data Analyst",
+      "role_match": true,
+      "expected_domain": "Data Analytics",
+      "actual_domain": "Data Analytics",
+      "domain_match": true,
+      "expected_seniority": "intern",
+      "actual_seniority": "intern",
+      "seniority_match": true,
+      "expected_parsing_status": "success",
+      "actual_parsing_status": "success",
+      "parsing_status_match": true
+    },
+    {
+      "sample_id": "smoke_frontend_react",
+      "expected_skills": [
+        "React",
+        "JavaScript",
+        "HTML",
+        "CSS",
+        "Vite",
+        "API integration"
+      ],
+      "actual_skills": [
+        "REST APIs",
+        "React",
+        "JavaScript",
+        "HTML",
+        "CSS",
+        "Vite",
+        "API integration"
+      ],
+      "skill_precision": 0.857,
+      "skill_recall": 1.0,
+      "skill_f1": 0.923,
+      "expected_role": "Frontend Developer",
+      "actual_role": "Frontend Developer",
+      "role_match": true,
+      "expected_domain": "Frontend Development",
+      "actual_domain": "Frontend Development",
+      "domain_match": true,
+      "expected_seniority": "junior",
+      "actual_seniority": "junior",
+      "seniority_match": true,
+      "expected_parsing_status": "success",
+      "actual_parsing_status": "success",
+      "parsing_status_match": true
+    },
+    {
+      "sample_id": "smoke_devops_cloud",
+      "expected_skills": [
+        "Docker",
+        "Kubernetes",
+        "AWS",
+        "Terraform",
+        "Linux",
+        "CI/CD"
+      ],
+      "actual_skills": [
+        "Docker",
+        "Kubernetes",
+        "AWS",
+        "Terraform",
+        "Linux",
+        "CI/CD"
+      ],
+      "skill_precision": 1.0,
+      "skill_recall": 1.0,
+      "skill_f1": 1.0,
+      "expected_role": "DevOps Engineer",
+      "actual_role": "DevOps Engineer",
+      "role_match": true,
+      "expected_domain": "DevOps and Cloud",
+      "actual_domain": "DevOps and Cloud",
+      "domain_match": true,
+      "expected_seniority": "mid",
+      "actual_seniority": "mid",
+      "seniority_match": true,
+      "expected_parsing_status": "success",
+      "actual_parsing_status": "success",
+      "parsing_status_match": true
+    },
+    {
+      "sample_id": "smoke_low_information",
+      "expected_skills": [],
+      "actual_skills": [],
+      "skill_precision": 1.0,
+      "skill_recall": 1.0,
+      "skill_f1": 1.0,
+      "expected_role": null,
+      "actual_role": null,
+      "role_match": true,
+      "expected_domain": null,
+      "actual_domain": null,
+      "domain_match": true,
+      "expected_seniority": null,
+      "actual_seniority": null,
+      "seniority_match": true,
+      "expected_parsing_status": "low_information",
+      "actual_parsing_status": "low_information",
+      "parsing_status_match": true
+    }
+  ]
+}

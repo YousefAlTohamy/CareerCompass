@@ -9,6 +9,7 @@ The repository includes:
 - A synthetic dataset generator and cleaner.
 - API tests for FastAPI status behavior and hybrid-match scoring.
 - Graduation-book mini evaluation files for deterministic synthetic CV/job/gap checks.
+- Graduation-book AI CV Analyzer smoke evaluation files for deterministic text-sample checks.
 
 The local artifact folder itself is ignored by Git. Safe metadata was inspected on this workstation, but model binaries are not part of the committed repository evidence.
 
@@ -26,7 +27,7 @@ The repository did not include:
 
 The training notebook defines sequence-labeling metrics, but this update did not produce final model metrics. The graduation book should therefore avoid high-accuracy claims unless the team later commits a reproducible labeled dataset and final training/evaluation output.
 
-The existing mini evaluation is useful as a synthetic regression check for skill, recommendation, and gap-analysis logic. It is not evidence of production NER accuracy.
+The existing mini evaluation is useful as a synthetic regression check for skill, recommendation, and gap-analysis logic. The AI CV Analyzer smoke evaluation is useful as a five-sample deterministic text check with dependency probing. Neither is evidence of production NER accuracy.
 
 ## Recommended Next Evaluation
 

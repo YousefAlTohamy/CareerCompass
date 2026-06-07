@@ -1,0 +1,62 @@
+[
+  {
+    "sample_id": "smoke_backend_laravel",
+    "description": "Backend developer CV fragment with web API skills.",
+    "cv_text": "Junior Backend Developer. Built REST APIs using Laravel and PHP, designed MySQL tables, deployed services with Docker, and used Git in a student internship.",
+    "expected": {
+      "skills": ["PHP", "Laravel", "MySQL", "REST APIs", "Docker", "Git"],
+      "role": "Backend Developer",
+      "domain": "Backend Development",
+      "seniority": "junior",
+      "parsing_status": "success"
+    }
+  },
+  {
+    "sample_id": "smoke_data_analyst",
+    "description": "Data analyst CV fragment with Python analytics skills.",
+    "cv_text": "Data Analyst Intern using Python, pandas, SQL, Power BI, scikit-learn, notebooks, dashboards, and text preprocessing for university analytics projects.",
+    "expected": {
+      "skills": ["Python", "pandas", "SQL", "Power BI", "scikit-learn"],
+      "role": "Data Analyst",
+      "domain": "Data Analytics",
+      "seniority": "intern",
+      "parsing_status": "success"
+    }
+  },
+  {
+    "sample_id": "smoke_frontend_react",
+    "description": "Frontend developer CV fragment with React UI skills.",
+    "cv_text": "Frontend Developer with React, JavaScript, HTML, CSS, Vite, responsive UI work, API integration, and accessibility-focused dashboard components.",
+    "expected": {
+      "skills": ["React", "JavaScript", "HTML", "CSS", "Vite", "API integration"],
+      "role": "Frontend Developer",
+      "domain": "Frontend Development",
+      "seniority": "junior",
+      "parsing_status": "success"
+    }
+  },
+  {
+    "sample_id": "smoke_devops_cloud",
+    "description": "DevOps/cloud CV fragment with infrastructure skills.",
+    "cv_text": "DevOps Engineer with 2 years of experience using Docker, Kubernetes, AWS, Terraform, Linux, CI/CD pipelines, monitoring, and deployment automation.",
+    "expected": {
+      "skills": ["Docker", "Kubernetes", "AWS", "Terraform", "Linux", "CI/CD"],
+      "role": "DevOps Engineer",
+      "domain": "DevOps and Cloud",
+      "seniority": "mid",
+      "parsing_status": "success"
+    }
+  },
+  {
+    "sample_id": "smoke_low_information",
+    "description": "Low-information CV-like fragment with no measurable technical evidence.",
+    "cv_text": "Candidate profile. Hard worker. Available soon. Looking for a good opportunity.",
+    "expected": {
+      "skills": [],
+      "role": null,
+      "domain": null,
+      "seniority": null,
+      "parsing_status": "low_information"
+    }
+  }
+]
