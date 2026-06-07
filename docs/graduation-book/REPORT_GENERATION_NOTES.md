@@ -15,6 +15,7 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - `CareerCompass_Graduation_Project_Book.pdf`
 - `references.md`
 - `model-analysis/*.md`
+- `job-mining-analysis/*.md`
 - `model-analysis/colab_train_ner_results.pdf`
 - `assets/diagrams/*.png`
 - `assets/screenshots/*.png`
@@ -32,25 +33,25 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 
 ## Counts
 
-- PDF pages: 96
+- PDF pages: 115
 - Screenshots/evidence images: 19
-- Diagrams: 31
+- Diagrams: 41
 
 ## Table of Contents and Tables
 
 - TOC placement: standalone page immediately after the cover page
 - Front matter order: Cover -> Table of Contents -> List of Figures -> List of Tables -> Acknowledgment -> Abstract -> Abbreviations -> Chapter 1
 - Abbreviations placement: standalone page after Abstract and before Chapter 1
-- DOCX TOC status: 16 custom manual TOC entries contain internal hyperlinks to bookmarked major headings
-- DOCX List of Figures status: 50 List of Figures entries link to bookmarked figure captions
-- DOCX List of Tables status: 46 List of Tables entries link to bookmarked table captions
-- PDF TOC status: PDF contains 110 link annotations after export
+- DOCX TOC status: 17 custom manual TOC entries contain internal hyperlinks to bookmarked major headings
+- DOCX List of Figures status: 60 List of Figures entries link to bookmarked figure captions
+- DOCX List of Tables status: 56 List of Tables entries link to bookmarked table captions
+- PDF TOC status: PDF contains 130 link annotations after export
 - Table formatting status: data tables use fixed DXA widths, wrapped text, repeated header rows, smaller table fonts, and split wide manual test observations into narrower tables; cover layout tables are intentionally excluded from repeated-header checks
 - Figure caption status: explicit italic caption lines are the single visible figure-caption source; Markdown image alt text is not rendered as a visible figure caption
 - Table caption status: formal table captions are rendered below their corresponding tables and remain linked from the List of Tables
 - Section 2.6/2.7 layout status: 2.6 heading, FR-01/FR-11 rows, and Table 2 caption appear on PDF page(s) [12]; 2.7 starts on PDF page(s) [12] after the Table 2 caption
 - Section 2.9/2.10 layout status: 2.9 heading, Software Requirements rows, and Table 4 caption appear on PDF page(s) [13]; 2.10 starts on PDF page(s) [13] after the Table 4 caption
-- Section 8.9/8.10 layout status: 8.9 heading, security-control rows, and Table 39 caption appear on PDF page(s) [72]; 8.10 starts on PDF page(s) [72] after the Table 39 caption
+- Section 9.9/9.10 layout status: 9.9 heading, security-control rows, and Table 52 caption appear on PDF page(s) [87]; 9.10 starts on PDF page(s) [87] after the Table 52 caption
 
 ## Caption, Link, and Layout Verification Method
 
@@ -120,21 +121,35 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - End-to-end walkthrough status: illustrative academic example, not a live model benchmark.
 - References review: existing references cover BERT, Hugging Face token classification/Trainer, sentence embeddings, TF-IDF/cosine similarity, Gemini/Colab, dynamic quantization, and OpenAPI-style API documentation.
 
+## AI Job Miner Documentation Update
+
+- Decision: the AI Job Miner and scraping subsystem is now documented as standalone Chapter 7 because it has a distinct runtime service, queue workflow, import contract, diagnostics model, and ethical boundary.
+- Added support notes under `job-mining-analysis/` for source inventory, function inventory, runtime flow, API contracts, evaluation summary, and limitations.
+- Chapter restructuring status: Testing and Evaluation is Chapter 8, Security and Privacy is Chapter 9, and Conclusion/Future Work is Chapter 10.
+- New scraping diagrams generated: design philosophy, complete mining flow, runtime architecture, sequence diagram, lifecycle, source management, import/deduplication, failed URL flow, security boundaries, and validation evidence.
+- Code areas audited: `ai-job-miner/`, scraping jobs, `JobController`, `ScrapedJobController`, admin source/target/dashboard controllers, request validation, models, migrations, seeders, frontend admin/user APIs, and Docker Compose service wiring.
+- Source coverage language: the report distinguishes deterministic demo/local sources, API adapters, HTML adapters, and unsupported/external-risk sources without claiming whole-market reach.
+- Evaluation language: scraping evidence is recorded as tests, compile/config/health checks, form-request validation, admin diagnostics, and screenshots, not as source success rates unless rerun and recorded.
+- Ethics language: the chapter explicitly covers rate limits, external instability, API keys, proxy configuration, robots/terms considerations, and demo scope.
+
 ## Validation Summary
 
-- Docker Compose config passed for base and production overlay files.
-- Docker stack was built and started; final service check showed application containers healthy or running.
-- Backend composer install passed.
-- `php artisan config:clear` passed.
-- `php artisan route:list` passed with 131 routes.
-- `php artisan migrate --force --no-interaction` passed with nothing to migrate.
-- `php artisan test` passed with 39 tests and 297 assertions.
-- Frontend ESLint passed with 9 warnings and 0 errors.
-- Frontend Vite build passed with 2904 modules transformed.
-- AI Job Miner pytest passed with 75 tests.
-- AI CV Analyzer syntax compilation passed.
-- AI CV Analyzer pytest was skipped/blocked because pytest was not installed in that container.
-- HTTP probes for `/`, `/api/health`, `/api/ready`, `/status`, AI CV Analyzer, and Job Miner returned 200 responses.
+- Branch check passed on `docs/graduation-book`; the only unrelated untracked file remained `docs/REVERSE_ENGINEERING_SYSTEM_WALKTHROUGH.md`.
+- `git diff --check` and `git diff --cached --check` completed without whitespace errors; Git reported line-ending normalization warnings only.
+- Report generation ran successfully with the bundled Python runtime and produced Markdown, DOCX, and PDF artifacts.
+- Generated PDF page count: 115; generated PDF link annotations: PDF contains 130 link annotations after export.
+- DOCX structural scan found internal hyperlinks/bookmarks for the custom TOC/List of Figures/List of Tables with no missing anchors after the Figure 54 fix.
+- JSON code-fence validation parsed 30 JSON blocks successfully.
+- All ten new scraping diagrams exist and are referenced by the generated Markdown.
+- Placeholder/typo/bookmark/caption/overclaim scans returned no matches.
+- `python -m py_compile docs/graduation-book/scripts/generate_graduation_book.py` passed using the bundled Python runtime.
+- `python -m compileall ai-job-miner` passed.
+- `python -m compileall ai-cv-analyzer` passed with a non-fatal `.pytest_cache` listing warning from compileall output.
+- `python -m compileall ai-cv-analyzer/training` passed.
+- `docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet` passed.
+- AI Job Miner pytest was skipped/blocked in this environment because the available Python runtime did not include `pytest`, no repo virtualenv/pytest executable was found, and Docker Desktop was not running for container-based test execution.
+- Runtime health checks for Docker containers and `http://localhost:8003/health` were blocked because Docker Desktop was not running and the job-miner service was unreachable.
+- Backend and frontend tests were not rerun in this pass because no backend or frontend application code was changed.
 - Mini evaluation script ran successfully and generated JSON plus Markdown result summaries.
 - AI CV Analyzer smoke evaluation script ran successfully and generated JSON plus Markdown result summaries.
 - AI CV Analyzer model-training evidence was documented as inspected evidence; Colab-run overall metrics were added from the exported PDF, while per-label metrics and confusion-matrix values were not invented because they are not visible in the PDF.
