@@ -141,7 +141,7 @@ Ahmed Sobhy Mohamed Ali
 - [Table 28. Colab NER training run configuration.](#bm_table_28)
 - [Table 29. Colab NER epoch metrics.](#bm_table_29)
 - [Table 30. Colab NER final metric summary.](#bm_table_30)
-- [Table 31. Job miner source inventory.](#bm_table_31)
+- [Table 31. Job mining design decisions.](#bm_table_31)
 - [Table 32. Scraping runtime component map.](#bm_table_32)
 - [Table 33. On-demand scraping lifecycle states.](#bm_table_33)
 - [Table 34. Source management and target-role controls.](#bm_table_34)
@@ -182,7 +182,7 @@ CareerCompass is a graduation/demo career guidance platform that helps students 
 
 The AI CV Analyzer is documented as a hybrid implementation rather than a single opaque model. It combines PDF/image text extraction, OCR fallback, section segmentation, a BERT-family token-classification path for named-entity recognition, rule-based contact/date/experience extraction, skill canonicalization, domain and seniority classification, sentence embeddings, and TF-IDF-style matching. The runtime code can load an exported local NER artifact when that ignored deployment folder is present, and a Colab-oriented training notebook documents how the artifact is produced. A user-provided exported Colab PDF now records the overall NER training metrics, while the cleaned dataset content and model weights remain outside Git; therefore, the report separates recorded training-run evidence from repository-alone reproducibility and production benchmark claims.
 
-The implementation is intentionally described as a graduation/demo system rather than a production product. The AI outputs are estimates, the job data depends on imported and demo sources, and the security posture is appropriate for demonstration but requires further production hardening. Validation was performed through Docker Compose configuration checks, backend tests, frontend lint/build, Python service tests or syntax checks, HTTP probes, and manual browser screenshots. Backend tests passed with 39 tests and 297 assertions, the AI job miner tests passed with 75 tests, and the frontend build completed successfully. The AI CV analyzer container did not include pytest, so its pytest suite was marked as skipped while Python syntax compilation passed.
+The implementation is intentionally described as a graduation/demo system rather than a production product. The AI outputs are estimates, the job data depends on imported and demo sources, and the security posture is appropriate for demonstration but requires further production hardening. Validation was performed through Docker Compose configuration checks, backend/frontend evidence from earlier passes, Python syntax checks, containerized AI Job Miner tests, service health probes, a deterministic demo-source smoke check, and manual browser screenshots. Backend tests previously passed with 39 tests and 297 assertions, the AI Job Miner container test suite passed with 75 tests in the final cleanup pass, and frontend lint/build evidence remains recorded from the earlier validation pass. The AI CV Analyzer pytest suite was not rerun in this cleanup pass, while Python syntax compilation passed.
 
 \pagebreak
 
@@ -1358,7 +1358,7 @@ The implementation separates responsibilities deliberately. Laravel remains the 
 | Why queues? | `ProcessOnDemandJobScraping` and market scraping jobs run on the scraping queue. | External sources can timeout, block, or return malformed data. |
 | Why diagnostics? | Admin pages show source status, source tests, target roles, failed URLs, and batch progress. | Operators need evidence instead of assuming sources are healthy. |
 
-*Table 31. Job miner source inventory.*
+*Table 31. Job mining design decisions.*
 
 ## 7.3 AI Job Miner Runtime Architecture
 
@@ -1432,21 +1432,7 @@ Target roles are implemented through `TargetJobRoleController`, `TargetJobRole`,
 
 *Table 34. Source management and target-role controls.*
 
-![Admin dashboard.](assets/screenshots/14_admin_dashboard.png)
-
-*Figure 44. Admin dashboard.*
-
-![Admin jobs page.](assets/screenshots/15_admin_jobs.png)
-
-*Figure 45. Admin jobs page.*
-
-![Admin sources diagnostics page.](assets/screenshots/16_admin_sources_diagnostics.png)
-
-*Figure 46. Admin sources diagnostics page.*
-
-![Admin target roles page.](assets/screenshots/17_admin_targets.png)
-
-*Figure 47. Admin target roles page.*
+The admin operational evidence is already shown in Figures 44-47: dashboard, jobs, source diagnostics, and target roles. This chapter refers to those screenshots instead of repeating them, so Chapter 7 can focus on architecture, flows, and implementation behavior.
 
 ## 7.7 Laravel Import Pipeline and Deduplication
 
@@ -1582,10 +1568,11 @@ The strongest current scraping evidence is architectural and test evidence, not 
 
 | Evidence | Result to Record | What It Proves | Limitation |
 |---|---|---|---|
-| `python -m compileall ai-job-miner` | Recorded in final validation pass. | Python syntax/importability for the service files. | Not runtime source success. |
-| `python -m pytest` in `ai-job-miner` | Recorded in final validation pass if dependencies are available. | Service logic and adapter parser behavior under tests. | Mocked tests may not hit real websites. |
-| `/health` | Recorded only if the local stack is running. | FastAPI service is alive. | Not source coverage or data quality. |
-| Docker Compose config | Recorded in final validation pass. | Service wiring, tokens, workers, and ports are valid YAML/config. | Not external scraping success. |
+| `python -m compileall ai-job-miner` | Passed using the bundled Python runtime. | Python syntax/importability for the service files. | Not runtime source success. |
+| `python -m pytest` in `ai-job-miner` | Passed inside the running container: 75 tests, 1 warning. | Service logic and adapter parser behavior under tests. | Mocked tests do not prove real website availability. |
+| `/health` and `/metrics` | AI Job Miner `/health` returned 200 with `{"status":"ok","service":"CareerCompass Job Miner"}`; `/metrics` returned Prometheus-style scraper counters. | FastAPI job-miner service is alive and exposes basic scraper metrics. | Not source coverage or data quality. |
+| Docker Compose config | Passed for base plus production overlay. | Service wiring, tokens, workers, and ports are valid YAML/config. | Not external scraping success. |
+| Deterministic demo scrape | Protected `/scrape` call using `CareerCompass Demo Jobs` returned `SUCCESS`, previewed 3 jobs, stored 3, and reported 0 failed URLs; smoke rows were cleaned afterward. | Demo adapter and Laravel import path can work together without external websites. | Direct service call bypassed the queue worker, so the temporary `ScrapingJob` status stayed pending and was not status-polling evidence. |
 | Import API validation | Documented from form requests and controller code. | Laravel accepts structured payloads and rejects unsafe data. | Not a complete benchmark. |
 | Admin diagnostics screenshots | Figures 44-47. | Admin UI supports source, job, dashboard, and target-role operations. | Point-in-time demo evidence. |
 
@@ -1635,11 +1622,11 @@ The frontend was validated using the existing `frontend/node_modules` and the bu
 
 ## 8.5 Python Services Testing
 
-The AI Job Miner pytest suite passed with 75 tests. Python syntax compilation passed for both AI services. The AI CV Analyzer pytest command could not run because pytest was not installed in that container; this is recorded as a skipped/blocked validation step rather than a failure of the application code.
+Python syntax compilation passed for both AI services. The AI Job Miner pytest suite was rerun inside the running `ai-job-miner` Docker container and passed with 75 tests and 1 warning. The local bundled Python runtime still did not include pytest, so the successful pytest evidence is specifically container-based. The AI CV Analyzer pytest suite was not rerun in this cleanup pass; AI CV Analyzer syntax compilation passed, and earlier smoke/Colab evidence remains documented separately.
 
 ## 8.6 Docker and Integration Testing
 
-Docker Compose configuration validation passed for both development and production overlay configurations. A full compose build/start was attempted; the initial full build exceeded the 15-minute command timeout, but the stack continued building and was later brought up successfully with targeted frontend/Nginx rebuild/start. All main containers reached healthy or running state during final checks.
+Docker Desktop was initially unavailable to the shell, then was started through `docker desktop start`. Docker Compose configuration validation passed for the base plus production overlay files. `docker compose up -d` was used without a rebuild to start the existing local stack. After startup settled, `docker compose ps` showed the main app containers running, with backend, frontend, Nginx, job miner, database, and queue workers healthy. Health probes returned 200 for `/api/health`, `/api/ready`, `/status`, AI Job Miner `/health`, and the AI CV Analyzer root endpoint. These checks prove service availability in the local demo stack, not external source reliability.
 
 ![Validation command evidence.](assets/screenshots/19_validation_summary.png)
 
@@ -1867,17 +1854,17 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 
 | Area | Command or Scenario | Result | Evidence |
 |---|---|---|---|
-| Docker config | `docker compose config --quiet` | Passed | Terminal evidence |
-| Docker prod config | `docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet` | Passed | Terminal evidence |
-| Backend dependencies | `composer install --no-interaction --prefer-dist` | Passed | Command output |
-| Backend routes | `php artisan route:list` | Passed, 131 routes | Command output |
-| Backend tests | `php artisan test` | Passed, 39 tests, 297 assertions | Command output |
-| Frontend lint | ESLint | Passed, 9 warnings, 0 errors | Command output |
-| Frontend build | Vite build | Passed, 2904 modules transformed | Command output |
-| AI Job Miner tests | `python -m pytest` | Passed, 75 tests | Command output |
-| AI CV Analyzer syntax | `python -m compileall .` | Passed | Command output |
-| AI CV Analyzer pytest | `python -m pytest` | Skipped, pytest missing | Command output |
-| HTTP probes | `/`, `/api/health`, `/api/ready`, `/status`, AI services | 200 responses | Command output |
+| Docker config | `docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet` | Passed | Final cleanup command output |
+| Docker stack | `docker desktop start`; `docker compose up -d`; `docker compose ps` | Running; main app containers healthy after startup settled | Service availability evidence |
+| Backend routes | `php artisan route:list` | Previously passed, 131 routes | Earlier validation evidence retained |
+| Backend tests | `php artisan test` | Previously passed, 39 tests, 297 assertions | Earlier validation evidence retained; backend code unchanged in cleanup pass |
+| Frontend lint | ESLint | Previously passed, 9 warnings, 0 errors | Earlier validation evidence retained; frontend code unchanged in cleanup pass |
+| Frontend build | Vite build | Previously passed, 2904 modules transformed | Earlier validation evidence retained; frontend code unchanged in cleanup pass |
+| AI Job Miner tests | `docker compose exec -T ai-job-miner python -m pytest` | Passed, 75 tests, 1 warning | Fresh container command output |
+| AI Job Miner demo scrape | Protected `/scrape` call with demo/local source | SUCCESS; previewed 3, stored 3, failed URLs 0; smoke rows cleaned afterward | Validates demo adapter plus Laravel import path, not queue status polling |
+| AI CV Analyzer syntax | `python -m compileall ai-cv-analyzer` | Passed with non-fatal `.pytest_cache` listing warning | Final cleanup command output |
+| AI CV Analyzer pytest | Not rerun | Skipped in cleanup pass | Colab/smoke evidence retained separately |
+| HTTP probes | `/api/health`, `/api/ready`, `/status`, `:8003/health`, `:8000/` | 200 responses after Docker startup settled | Service availability only, not external scraping success |
 
 *Table 49. Automated validation results.*
 

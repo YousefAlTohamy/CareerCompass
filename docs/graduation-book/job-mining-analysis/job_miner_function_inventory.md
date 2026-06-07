@@ -67,7 +67,7 @@ This inventory maps the job-mining behavior to concrete files, classes, and func
 | Model / Table | Important Fields |
 |---|---|
 | `Job` / `job_postings` | `title`, `company`, `description`, `requirements`, `url`, `source`, `scraping_source_id`, `skills`, `work_type`, `job_type`; unique URL and title/company constraints. |
-| `ScrapingJob` / `scraping_jobs` | `status`, `type`, `query`, `scraping_source_id`, `jobs_found`, `jobs_stored`, `jobs_duplicated`, `discovered_count`, `failed_count`, `processing_time_ms`, `error_message`. |
+| `ScrapingJob` / `scraping_jobs` | `job_title`, `status`, `type`, `jobs_found`, `jobs_stored`, `jobs_duplicated`, `discovered_count`, `failed_count`, `processing_time_ms`, `error_message`. Source identity is associated through source records, adapter payloads, and failed URL records rather than a `scraping_jobs.scraping_source_id` column. |
 | `ScrapingSource` / `scraping_sources` | `name`, `endpoint`, `method`, `type`, `mode`, `status`, `headers`, `params`, support metadata and health scoring helpers. |
 | `ScrapingFailedUrl` / `scraping_failed_urls` | `scraping_job_id`, `scraping_source_id`, `url`, `error_message`, `retried`, `failed_at`. |
 | `TargetJobRole` / `target_job_roles` | Role/search-query records and active flag. |

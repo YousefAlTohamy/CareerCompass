@@ -16,7 +16,7 @@ The scraping runtime is deliberately split between Laravel and the Python AI Job
 ## On-Demand Runtime Flow
 
 1. A student or frontend feature calls `POST /api/v1/jobs/scrape` or `POST /api/v1/jobs/scrape-if-missing`.
-2. `JobController` validates the request, optionally checks whether stored usable jobs already exist, creates a pending `ScrapingJob`, and dispatches `ProcessOnDemandJobScraping`.
+2. `JobController` validates the request, optionally checks whether stored usable jobs already exist, creates a pending `ScrapingJob` keyed by `job_title`, and dispatches `ProcessOnDemandJobScraping`.
 3. The queue worker runs on the `scraping` queue. Docker production wiring starts `backend-worker-scraping` with `queue:work database --queue=scraping --timeout=1200`.
 4. `ScraperClient` calls AI Job Miner `/scrape` using `SCRAPER_SERVICE_URL`, `SCRAPER_SERVICE_TIMEOUT`, and `X-Scraper-Service-Token`.
 5. AI Job Miner selects the adapter from source metadata, query, and source type. Demo/local data is deterministic; API and HTML sources are external and can fail.
@@ -29,7 +29,7 @@ The scraping runtime is deliberately split between Laravel and the Python AI Job
 1. Admin target roles and active scraping sources are read from Laravel.
 2. `TargetJobRoleController::runFullScraping` computes runnable source/role pairs and skips unsupported or missing-credential sources.
 3. Laravel dispatches a batch of `ProcessMarketScrapingCategory` jobs to the scraping queue.
-4. Each category job creates its own `ScrapingJob`, calls AI Job Miner, imports accepted jobs, records classifications, and updates source cache/status.
+4. Each category job creates its own `ScrapingJob`, calls AI Job Miner with the selected source payload, imports accepted jobs, records classifications, and updates source cache/status.
 5. The admin dashboard polls batch progress and failed URLs.
 
 ## Docker Runtime Evidence

@@ -18,10 +18,13 @@ This summary distinguishes tests that were executed from claims that would requi
 | Command / Check | Result Recorded in This Pass |
 |---|---|
 | `python -m compileall ai-job-miner` | Passed using the bundled Python runtime. |
-| `cd ai-job-miner; python -m pytest` | Blocked: the available Python runtime did not include `pytest`, no repo virtualenv/pytest executable was found, and Docker Desktop was not running for container-based test execution. |
+| `cd ai-job-miner; python -m pytest` | Local bundled Python was blocked because it did not include `pytest`; container equivalent passed. |
+| `docker compose exec -T ai-job-miner python -m pytest` | Passed: 75 tests, 1 warning. |
 | `docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet` | Passed. |
-| `GET http://localhost:8003/health` | Blocked: Docker Desktop was not running and the service was unreachable. |
-| DOCX/PDF structural validation | Passed: PDF has 115 pages and 130 link annotations; DOCX internal hyperlink/bookmark scan found no missing anchors. |
+| `GET http://localhost:8003/health` | Passed: HTTP 200 with `{"status":"ok","service":"CareerCompass Job Miner"}` after Docker Desktop startup. |
+| `GET http://localhost:8003/metrics` | Passed: HTTP 200 with Prometheus-style scraper counters. |
+| Deterministic demo `/scrape` smoke | Passed: protected demo-source call returned `SUCCESS`, previewed 3 jobs, stored 3 through Laravel import, failed URLs 0; temporary smoke rows were cleaned afterward. |
+| DOCX/PDF structural validation | Passed: PDF has 113 pages and 130 link annotations; DOCX internal hyperlink/bookmark scan found no missing anchors. |
 | JSON examples | Passed: 30 JSON code fences parsed successfully. |
 | New scraping diagrams | Passed: all ten new diagram files exist and are referenced by the generated Markdown. |
 

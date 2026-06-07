@@ -33,7 +33,7 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 
 ## Counts
 
-- PDF pages: 115
+- PDF pages: 113
 - Screenshots/evidence images: 19
 - Diagrams: 41
 
@@ -51,7 +51,7 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - Table caption status: formal table captions are rendered below their corresponding tables and remain linked from the List of Tables
 - Section 2.6/2.7 layout status: 2.6 heading, FR-01/FR-11 rows, and Table 2 caption appear on PDF page(s) [12]; 2.7 starts on PDF page(s) [12] after the Table 2 caption
 - Section 2.9/2.10 layout status: 2.9 heading, Software Requirements rows, and Table 4 caption appear on PDF page(s) [13]; 2.10 starts on PDF page(s) [13] after the Table 4 caption
-- Section 9.9/9.10 layout status: 9.9 heading, security-control rows, and Table 52 caption appear on PDF page(s) [87]; 9.10 starts on PDF page(s) [87] after the Table 52 caption
+- Section 9.9/9.10 layout status: 9.9 heading, security-control rows, and Table 52 caption appear on PDF page(s) [85]; 9.10 starts on PDF page(s) [85] after the Table 52 caption
 
 ## Caption, Link, and Layout Verification Method
 
@@ -128,6 +128,8 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - Chapter restructuring status: Testing and Evaluation is Chapter 8, Security and Privacy is Chapter 9, and Conclusion/Future Work is Chapter 10.
 - New scraping diagrams generated: design philosophy, complete mining flow, runtime architecture, sequence diagram, lifecycle, source management, import/deduplication, failed URL flow, security boundaries, and validation evidence.
 - Code areas audited: `ai-job-miner/`, scraping jobs, `JobController`, `ScrapedJobController`, admin source/target/dashboard controllers, request validation, models, migrations, seeders, frontend admin/user APIs, and Docker Compose service wiring.
+- Cleanup status: Chapter 7 no longer repeats the admin dashboard/jobs/sources/targets screenshots; it cross-references Figures 44-47 instead.
+- Accuracy fix: Table 31 now describes job mining design decisions, and `scraping_jobs` documentation now reflects the actual `job_title`/status/counter schema rather than implying a source-id column.
 - Source coverage language: the report distinguishes deterministic demo/local sources, API adapters, HTML adapters, and unsupported/external-risk sources without claiming whole-market reach.
 - Evaluation language: scraping evidence is recorded as tests, compile/config/health checks, form-request validation, admin diagnostics, and screenshots, not as source success rates unless rerun and recorded.
 - Ethics language: the chapter explicitly covers rate limits, external instability, API keys, proxy configuration, robots/terms considerations, and demo scope.
@@ -137,7 +139,7 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - Branch check passed on `docs/graduation-book`; the only unrelated untracked file remained `docs/REVERSE_ENGINEERING_SYSTEM_WALKTHROUGH.md`.
 - `git diff --check` and `git diff --cached --check` completed without whitespace errors; Git reported line-ending normalization warnings only.
 - Report generation ran successfully with the bundled Python runtime and produced Markdown, DOCX, and PDF artifacts.
-- Generated PDF page count: 115; generated PDF link annotations: PDF contains 130 link annotations after export.
+- Generated PDF page count: 113; generated PDF link annotations: PDF contains 130 link annotations after export.
 - DOCX structural scan found internal hyperlinks/bookmarks for the custom TOC/List of Figures/List of Tables with no missing anchors after the Figure 54 fix.
 - JSON code-fence validation parsed 30 JSON blocks successfully.
 - All ten new scraping diagrams exist and are referenced by the generated Markdown.
@@ -147,8 +149,11 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - `python -m compileall ai-cv-analyzer` passed with a non-fatal `.pytest_cache` listing warning from compileall output.
 - `python -m compileall ai-cv-analyzer/training` passed.
 - `docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet` passed.
-- AI Job Miner pytest was skipped/blocked in this environment because the available Python runtime did not include `pytest`, no repo virtualenv/pytest executable was found, and Docker Desktop was not running for container-based test execution.
-- Runtime health checks for Docker containers and `http://localhost:8003/health` were blocked because Docker Desktop was not running and the job-miner service was unreachable.
+- Docker Desktop was started with `docker desktop start`; `docker compose up -d` started the existing local stack without a rebuild.
+- `docker compose ps` showed the main app containers running; backend, frontend, Nginx, job miner, database, and queue workers were healthy after startup settled.
+- Runtime health probes returned HTTP 200 for `/api/health`, `/api/ready`, `/status`, AI Job Miner `/health`, and the AI CV Analyzer root endpoint. AI CV Analyzer `/health` returned 404, so the root endpoint is the verified liveness endpoint for that service in this pass.
+- Local bundled Python still lacked `pytest`, but `docker compose exec -T ai-job-miner python -m pytest` passed with 75 tests and 1 warning.
+- Deterministic demo-source scrape smoke passed: protected AI Job Miner `/scrape` with `CareerCompass Demo Jobs` returned `SUCCESS`, previewed 3 jobs, stored 3 through Laravel import, and reported 0 failed URLs. The temporary smoke rows were cleaned from the local database afterward. Because this called the service directly, it validates the demo adapter plus import path, not queue status polling.
 - Backend and frontend tests were not rerun in this pass because no backend or frontend application code was changed.
 - Mini evaluation script ran successfully and generated JSON plus Markdown result summaries.
 - AI CV Analyzer smoke evaluation script ran successfully and generated JSON plus Markdown result summaries.
