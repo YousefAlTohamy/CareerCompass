@@ -59,4 +59,4 @@ This table is a simplified explanation. It is not a committed live inference out
 
 ## Training Evidence Limitations
 
-The notebook includes the training and metric logic, but committed cells do not contain final metric outputs. The cleaned training dataset is not committed. The optional local model artifact path is ignored by Git, so live model quality should be evaluated later with a fixed labeled dataset and a supplied artifact.
+The notebook includes the training and metric logic, and the exported Colab PDF now records overall final-epoch metrics. The cleaned training dataset content is not committed, and the optional local model artifact path is ignored by Git. Live model quality should still be evaluated later with a fixed labeled dataset, per-label metrics, a confusion matrix, and a supplied artifact.

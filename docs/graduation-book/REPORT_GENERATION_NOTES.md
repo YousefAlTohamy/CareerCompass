@@ -15,6 +15,7 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - `CareerCompass_Graduation_Project_Book.pdf`
 - `references.md`
 - `model-analysis/*.md`
+- `model-analysis/colab_train_ner_results.pdf`
 - `assets/diagrams/*.png`
 - `assets/screenshots/*.png`
 - `assets/logos/*.png`
@@ -31,9 +32,9 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 
 ## Counts
 
-- PDF pages: 93
+- PDF pages: 96
 - Screenshots/evidence images: 19
-- Diagrams: 30
+- Diagrams: 31
 
 ## Table of Contents and Tables
 
@@ -41,15 +42,15 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - Front matter order: Cover -> Table of Contents -> List of Figures -> List of Tables -> Acknowledgment -> Abstract -> Abbreviations -> Chapter 1
 - Abbreviations placement: standalone page after Abstract and before Chapter 1
 - DOCX TOC status: 16 custom manual TOC entries contain internal hyperlinks to bookmarked major headings
-- DOCX List of Figures status: 49 List of Figures entries link to bookmarked figure captions
-- DOCX List of Tables status: 43 List of Tables entries link to bookmarked table captions
-- PDF TOC status: PDF contains 106 link annotations after export
+- DOCX List of Figures status: 50 List of Figures entries link to bookmarked figure captions
+- DOCX List of Tables status: 46 List of Tables entries link to bookmarked table captions
+- PDF TOC status: PDF contains 110 link annotations after export
 - Table formatting status: data tables use fixed DXA widths, wrapped text, repeated header rows, smaller table fonts, and split wide manual test observations into narrower tables; cover layout tables are intentionally excluded from repeated-header checks
 - Figure caption status: explicit italic caption lines are the single visible figure-caption source; Markdown image alt text is not rendered as a visible figure caption
 - Table caption status: formal table captions are rendered below their corresponding tables and remain linked from the List of Tables
-- Section 2.6/2.7 layout status: 2.6 heading, FR-01/FR-11 rows, and Table 2 caption appear on PDF page(s) [11]; 2.7 starts on PDF page(s) [11] after the Table 2 caption
-- Section 2.9/2.10 layout status: 2.9 heading, Software Requirements rows, and Table 4 caption appear on PDF page(s) [12]; 2.10 starts on PDF page(s) [12] after the Table 4 caption
-- Section 8.9/8.10 layout status: 8.9 heading, security-control rows, and Table 39 caption appear on PDF page(s) [69]; 8.10 starts on PDF page(s) [69] after the Table 39 caption
+- Section 2.6/2.7 layout status: 2.6 heading, FR-01/FR-11 rows, and Table 2 caption appear on PDF page(s) [12]; 2.7 starts on PDF page(s) [12] after the Table 2 caption
+- Section 2.9/2.10 layout status: 2.9 heading, Software Requirements rows, and Table 4 caption appear on PDF page(s) [13]; 2.10 starts on PDF page(s) [13] after the Table 4 caption
+- Section 8.9/8.10 layout status: 8.9 heading, security-control rows, and Table 39 caption appear on PDF page(s) [72]; 8.10 starts on PDF page(s) [72] after the Table 39 caption
 
 ## Caption, Link, and Layout Verification Method
 
@@ -82,7 +83,18 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - A deterministic text-only smoke evaluation was added for the AI CV Analyzer evidence pass.
 - The smoke evaluation uses five fake CV samples: backend, data analyst, frontend, DevOps/cloud, and low-information/noisy text.
 - It measures only reproducible local checks: expected skill extraction, role/domain/seniority labels, parsing-status classification, dependency availability, and TF-IDF fallback availability.
-- It is not described as a final transformer NER benchmark because the committed repository does not include the final cleaned labeled dataset, saved training metric output, or model weights.
+- It is not described as a final transformer NER benchmark because it does not run the transformer weights and the repository does not include the final cleaned labeled dataset or model weights.
+
+## Colab NER Training Results Evidence
+
+- The user-provided exported Colab PDF was copied to `model-analysis/colab_train_ner_results.pdf`.
+- A metric summary was added at `model-analysis/colab_ner_training_results_summary.md`.
+- PDF extraction note: the PDF is image-based, so `pypdf` extracted no text; pages were rendered for visual inspection using `pypdfium2`.
+- Secret scan/inspection result: no actual API keys, bearer tokens, passwords, or secret values were found. The PDF only shows an optional missing `HF_TOKEN` warning.
+- Visible dataset evidence from the PDF: 45,911 total rows, 41,319 train rows, 4,592 test rows, 11 BIO labels, test size 0.1, seed 42.
+- Visible final epoch metrics from the PDF: precision 0.933307, recall 0.940521, F1 0.936900, accuracy 0.976376, training loss 0.037280, validation loss 0.068058.
+- Per-label metrics status: not visible in the PDF, so no per-label table or support-distribution chart was invented.
+- Confusion matrix status: not visible in the PDF, so no confusion-matrix chart was generated.
 
 ## AI CV Analyzer Documentation Update
 
@@ -90,13 +102,14 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - Added model-analysis notes under `model-analysis/` to summarize runtime architecture, Layer 1/2/3 internals, function inventory, NER token processing, synthetic data generation, training-notebook inspection, and evaluation limitations.
 - Reviewed `D:/Graduation/model-analys-helper`; the top-level helper folders found were `docs`, `layer1`, `layer2`, and `layer3`.
 - No raw training datasets, image artifacts, or actual secrets were copied from the helper folder.
-- The training notebook was inspected but not executed because the cleaned dataset is not committed, the generation workflow depends on external Gemini API keys, and the notebook is designed for Colab GPU execution.
+- The training notebook and exported Colab PDF were inspected; the notebook was not re-executed because the cleaned dataset is not committed, the generation workflow depends on external Gemini API keys, and the notebook is designed for Colab GPU execution.
 - AI diagrams were generated for runtime flow, model-training workflow, extraction components, Layer 1 understanding, Layer 2 classification, Layer 3 matching, NER token processing, seniority logic, canonicalization, and score collapse.
 - New academic AI diagrams were generated for design philosophy, complete CV flow, fault tolerance, confidence/readiness signals, skill canonicalization example, fine-tuned BERT NER architecture, detailed training flow, matching formula, explainable output, and analyzer sequence.
 - Matching formula status: exact for the `IntelligentMatcher.calculate_match` score-composition path; upstream semantic/skill/domain scores still depend on model availability.
-- Dataset statistics status: final NER training counts are not available from committed evidence; only the documentation mini-evaluation dataset counts are reproducible.
-- Dataset evidence diagram status: generated a dataset evidence availability diagram instead of a fake label distribution chart.
-- NER label distribution chart status: not generated because no committed final labeled training dataset exists to count labels honestly.
+- Dataset statistics status: Colab PDF records train/test row counts; dataset content remains unavailable from committed evidence.
+- Dataset evidence diagram status: updated the dataset evidence availability diagram to include Colab PDF evidence.
+- Colab metrics visualization status: generated a final-epoch metrics bar chart from PDF-visible values.
+- NER label distribution chart status: not generated because per-label support counts are not visible in the PDF and no committed final labeled training dataset exists to count labels honestly.
 - Confidence status: the system uses confidence-style and readiness signals, not a certified hiring probability formula.
 - Raw CV walkthrough status: includes raw CV fragment, Layer 1/2/3 tables, and an illustrative schema JSON block based on the actual analyzer response structure.
 - API appendix status: expanded from endpoint summary to request/response/error JSON examples for upload, parse-cv, hybrid-match, recommendations, gap analysis, and health/readiness.
@@ -124,7 +137,7 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - HTTP probes for `/`, `/api/health`, `/api/ready`, `/status`, AI CV Analyzer, and Job Miner returned 200 responses.
 - Mini evaluation script ran successfully and generated JSON plus Markdown result summaries.
 - AI CV Analyzer smoke evaluation script ran successfully and generated JSON plus Markdown result summaries.
-- AI CV Analyzer model-training evidence was documented as inspected evidence; final model metrics were not invented because no reproducible training-output cells or cleaned held-out dataset were committed.
+- AI CV Analyzer model-training evidence was documented as inspected evidence; Colab-run overall metrics were added from the exported PDF, while per-label metrics and confusion-matrix values were not invented because they are not visible in the PDF.
 
 ## Placeholder Review
 

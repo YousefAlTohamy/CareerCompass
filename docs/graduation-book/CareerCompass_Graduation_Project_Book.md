@@ -94,6 +94,7 @@ Ahmed Sobhy Mohamed Ali
 - [Figure 47. Admin target roles page.](#bm_figure_47)
 - [Figure 48. Docker services evidence.](#bm_figure_48)
 - [Figure 49. Validation command evidence.](#bm_figure_49)
+- [Figure 50. Colab NER final epoch metrics.](#bm_figure_50)
 
 \pagebreak
 
@@ -142,6 +143,9 @@ Ahmed Sobhy Mohamed Ali
 - [Table 41. Database tables summary.](#bm_table_41)
 - [Table 42. Docker services summary.](#bm_table_42)
 - [Table 43. AI CV Analyzer function inventory summary.](#bm_table_43)
+- [Table 44. Colab NER training run configuration.](#bm_table_44)
+- [Table 45. Colab NER epoch metrics.](#bm_table_45)
+- [Table 46. Colab NER final metric summary.](#bm_table_46)
 
 \pagebreak
 
@@ -155,7 +159,7 @@ The work presented in this book reflects a collaborative software engineering ef
 
 CareerCompass is a graduation/demo career guidance platform that helps students and early-career users understand their CV profile, explore imported job opportunities, and compare their current skills against job requirements. The system consists of a React and Vite frontend, a Laravel API backend, a MySQL database, a FastAPI-based CV analyzer, a FastAPI/Scrapy-based job miner, MinIO-compatible private file storage, Nginx routing, and Prometheus/Grafana monitoring. The platform supports registration, login, CV upload, AI-assisted CV parsing, normalized profile and skills storage, job recommendation, gap analysis, an application tracker, and administrator dashboards for job and source diagnostics.
 
-The AI CV Analyzer is documented as a hybrid implementation rather than a single opaque model. It combines PDF/image text extraction, OCR fallback, section segmentation, a BERT-family token-classification path for named-entity recognition, rule-based contact/date/experience extraction, skill canonicalization, domain and seniority classification, sentence embeddings, and TF-IDF-style matching. The runtime code can load an exported local NER artifact when that ignored deployment folder is present, and a Colab-oriented training notebook documents how the artifact is produced. The committed notebook did not contain final metric output cells, and the model weights are ignored by Git; therefore, the report separates reproducible repository evidence from local deployment metadata and model-training intent.
+The AI CV Analyzer is documented as a hybrid implementation rather than a single opaque model. It combines PDF/image text extraction, OCR fallback, section segmentation, a BERT-family token-classification path for named-entity recognition, rule-based contact/date/experience extraction, skill canonicalization, domain and seniority classification, sentence embeddings, and TF-IDF-style matching. The runtime code can load an exported local NER artifact when that ignored deployment folder is present, and a Colab-oriented training notebook documents how the artifact is produced. A user-provided exported Colab PDF now records the overall NER training metrics, while the cleaned dataset content and model weights remain outside Git; therefore, the report separates recorded training-run evidence from repository-alone reproducibility and production benchmark claims.
 
 The implementation is intentionally described as a graduation/demo system rather than a production product. The AI outputs are estimates, the job data depends on imported and demo sources, and the security posture is appropriate for demonstration but requires further production hardening. Validation was performed through Docker Compose configuration checks, backend tests, frontend lint/build, Python service tests or syntax checks, HTTP probes, and manual browser screenshots. Backend tests passed with 39 tests and 297 assertions, the AI job miner tests passed with 75 tests, and the frontend build completed successfully. The AI CV analyzer container did not include pytest, so its pytest suite was marked as skipped while Python syntax compilation passed.
 
@@ -608,14 +612,14 @@ The training notebook is structured for Google Colab rather than local execution
 
 | Setting | Value Found in Notebook or Docs | Purpose | Evidence Limitation |
 |---|---|---|---|
-| Base checkpoint | `bert-base-cased` | Provides pretrained language representations for token classification. | Training run output was not committed. |
+| Base checkpoint | `bert-base-cased` | Provides pretrained language representations for token classification. | Confirmed by training notebook and Colab PDF. |
 | Labels | O plus B/I for SKILL, ROLE, EDU, CERT, SOFT | Encodes CV entity spans using BIO tagging. | Label map is reproducible from notebook/config. |
-| Split | 90 percent train, 10 percent test, seed 42 | Creates a repeatable train/evaluation split. | Requires cleaned dataset file, which is not committed. |
+| Split | 90 percent train, 10 percent test, seed 42 | Creates a repeatable train/evaluation split. | Colab PDF records 41,319 train rows and 4,592 test rows; dataset content is not committed. |
 | Max length | 512 tokens | Fits BERT token-classification input limits. | Long runtime CVs are handled through chunking separately. |
 | Epochs and learning rate | 5 epochs, 2e-5 | Standard fine-tuning style schedule for a small NER task. | No final epoch table was available. |
-| Batch size | 16 train/eval | Balances GPU memory and throughput on Colab/T4-style runtime. | Not re-run during documentation update. |
-| Metrics | precision, recall, F1, accuracy via sequence labeling | Evaluates entity extraction quality when labels are available. | Metric code exists; final metric values were not reproducible from committed evidence. |
-| Export | `career_compass_ner_final` zip/model folder | Produces the deployable local model artifact. | Export path is documented, but model weights are ignored by Git and final metric report is absent. |
+| Batch size | 16 train/eval | Balances GPU memory and throughput on Colab/T4-style runtime. | Visible in the exported Colab PDF. |
+| Metrics | precision, recall, F1, accuracy via sequence labeling | Evaluates entity extraction quality when labels are available. | Colab PDF records overall metrics; per-label report is not visible. |
+| Export | `career_compass_ner_final` zip/model folder | Produces the deployable local model artifact. | Export success is visible in the PDF, but model weights are ignored by Git. |
 
 *Table 9. Model training configuration.*
 
@@ -973,7 +977,7 @@ Skill extraction is noisy because the same skill can appear in different forms. 
 
 ## 6.7 Fine-Tuned BERT NER Architecture
 
-The NER architecture is a fine-tuning workflow, not a from-scratch language model. The training notebook uses `bert-base-cased`, tokenizes CV text with offsets, aligns character-span annotations to BIO token labels, trains a token-classification head, and exports `career_compass_ner_final`. At runtime, `AdvancedNEREngine` can load local ignored model weights if supplied; those weights are not committed to Git, and no final F1 or accuracy is claimed without reproducible output.
+The NER architecture is a fine-tuning workflow, not a from-scratch language model. The training notebook uses `bert-base-cased`, tokenizes CV text with offsets, aligns character-span annotations to BIO token labels, trains a token-classification head, and exports `career_compass_ner_final`. At runtime, `AdvancedNEREngine` can load local ignored model weights if supplied; those weights are not committed to Git. A user-provided Colab export now provides recorded training-run metrics, but the repository alone still does not contain the final dataset, model weights, or a fully reproducible benchmark package.
 
 ![Fine-tuned BERT NER architecture.](assets/diagrams/24_fine_tuned_bert_ner_architecture.png)
 
@@ -989,7 +993,7 @@ Synthetic training data is used because labeled CV NER data is not naturally ava
 
 *Figure 25. Detailed NER training pipeline.*
 
-The documentation pass also reviewed committed evaluation evidence and generated a dataset transparency note under `docs/graduation-book/model-analysis/dataset_statistics.md`. Because the final cleaned training dataset and training metric logs are not committed, the report does not include a fake NER label-distribution chart. Instead, Figure 29 records what evidence is available and what remains unavailable for reproducible academic review.
+The documentation pass also reviewed committed evaluation evidence and generated a dataset transparency note under `docs/graduation-book/model-analysis/dataset_statistics.md`. The user-provided Colab PDF gives recorded training-run output cells, including split counts and overall validation metrics. However, the cleaned dataset content and model weights are still not committed, and the PDF does not show per-label support counts. Therefore, the report includes the verified Colab metrics but still avoids a fake per-label distribution chart. Figure 29 records which evidence is available and what remains unavailable for reproducible academic review.
 
 ![Dataset evidence availability summary.](assets/diagrams/29_dataset_evidence_availability.png)
 
@@ -997,16 +1001,70 @@ The documentation pass also reviewed committed evaluation evidence and generated
 
 | Dataset Statistic | Status | Reason |
 |---|---|---|
-| Cleaned NER training samples | Not reproducible from committed repo | The notebook references a cleaned dataset file, but the dataset is not committed. |
-| Entity counts by label | Not available from committed evidence | Final cleaned training data is absent. |
-| Final train/test sample counts | Not available from committed evidence | The split is 90/10 with seed 42, but counts depend on the missing dataset. |
+| Cleaned NER training samples | 45,911 rows recorded in Colab PDF | The PDF shows the generated rows loaded from `train_real_tech_cleaned.json`; the dataset content itself is not committed. |
+| Recorded train split | 41,319 rows | Visible in the exported Colab PDF; split uses test size 0.1 and seed 42. |
+| Recorded test split | 4,592 rows | Visible in the exported Colab PDF and used for the notebook evaluation output. |
+| Entity counts by label | Not visible in the PDF | The PDF shows labels but not per-label support counts. |
 | Negative decoy count | Not available from committed evidence | Generator/cleaner support decoys, but final generated data is absent. |
 | Mini evaluation CV samples | 5 | Generated documentation mini dataset under `docs/graduation-book/evaluation/`; separate from NER training. |
 | Mini evaluation job samples | 8 | Generated documentation mini dataset; not a production benchmark. |
 | AI CV Analyzer smoke samples | 5 | Deterministic text-only smoke set created for this evidence pass; evaluates parser-style labels and dependency availability, not transformer weights. |
-| Final NER label distribution chart | Not generated | No committed final labeled dataset exists to count SKILL/ROLE/EDU/CERT/SOFT/O labels honestly. |
+| Final NER label distribution chart | Not generated | No per-label support counts are visible in the PDF, and no committed final labeled dataset exists to count SKILL/ROLE/EDU/CERT/SOFT/O labels honestly. |
 
 *Table 20. Dataset availability and transparency.*
+
+### 6.8.1 Colab NER Fine-Tuning Results
+
+The team exported the Google Colab notebook `train_ner.ipynb` as a PDF with visible output cells. This PDF was copied into `docs/graduation-book/model-analysis/colab_train_ner_results.pdf` after inspection. It is treated as supporting training evidence for the NER fine-tuning process. The PDF shows the notebook title `train_ner.ipynb - Colab`, timestamp `6/7/26, 3:55 AM`, the heading `CareerCompass AI Engine: Global Skill NER training (Autonomous)`, and a synthetic data augmentation strategy. It also shows the cleaned dataset path `train_real_tech_cleaned.json`, 11 BIO labels, train/test row counts, tokenization completion, model initialization from `bert-base-cased`, training arguments, and epoch-level metrics.
+
+These numbers improve the academic evidence for the training workflow, but they should be interpreted carefully. They are Colab-run validation outputs for the generated/synthetic dataset and notebook split visible in the PDF. They are not production accuracy, not a large real-world CV benchmark, and not reproducible from the repository alone unless the same dataset, runtime, and exported model artifacts are supplied.
+
+| Parameter | Value from Colab PDF | Source |
+|---|---|---|
+| Notebook | `train_ner.ipynb - Colab` | PDF header |
+| Export timestamp | `6/7/26, 3:55 AM` | PDF header |
+| Dataset file | `train_real_tech_cleaned.json` | PDF data-loading cell |
+| Total loaded rows | 45,911 | PDF dataset output |
+| Train rows | 41,319 | PDF dataset output |
+| Test rows | 4,592 | PDF dataset output |
+| Split | test size 0.1, seed 42 | PDF data-loading cell |
+| Base checkpoint | `bert-base-cased` | PDF model initialization cell |
+| Labels | O plus B/I for SKILL, ROLE, EDU, CERT, SOFT | PDF label configuration cell |
+| Max length | 512 tokens | PDF tokenization cell |
+| Epochs | 5 | PDF training arguments |
+| Learning rate | 2e-5 | PDF training arguments |
+| Batch size | 16 train / 16 eval | PDF training arguments |
+| Weight decay | 0.01 | PDF training arguments |
+| Best model metric | F1 | PDF training arguments |
+
+*Table 44. Colab NER training run configuration.*
+
+| Epoch | Training Loss | Validation Loss | Precision | Recall | F1 | Accuracy |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 0.077623 | 0.069118 | 0.921027 | 0.928206 | 0.924603 | 0.973227 |
+| 2 | 0.061530 | 0.064051 | 0.915886 | 0.941504 | 0.928518 | 0.974912 |
+| 3 | 0.053831 | 0.063463 | 0.928387 | 0.943469 | 0.935867 | 0.976233 |
+| 4 | 0.044553 | 0.064025 | 0.932287 | 0.937967 | 0.935118 | 0.977018 |
+| 5 | 0.037280 | 0.068058 | 0.933307 | 0.940521 | 0.936900 | 0.976376 |
+
+*Table 45. Colab NER epoch metrics.*
+
+| Metric | Final Epoch Value | Source |
+|---|---:|---|
+| Precision | 0.933307 | Colab PDF output, epoch 5 |
+| Recall | 0.940521 | Colab PDF output, epoch 5 |
+| F1-score | 0.936900 | Colab PDF output, epoch 5 |
+| Accuracy | 0.976376 | Colab PDF output, epoch 5 |
+| Training loss | 0.037280 | Colab PDF output, epoch 5 |
+| Validation loss | 0.068058 | Colab PDF output, epoch 5 |
+
+*Table 46. Colab NER final metric summary.*
+
+![Colab NER final epoch metrics.](assets/diagrams/31_colab_ner_metrics.png)
+
+*Figure 50. Colab NER final epoch metrics.*
+
+No per-label classification report or confusion matrix is visible in the PDF. Therefore, this report does not invent per-label SKILL/ROLE/EDU/CERT/SOFT support, precision, recall, F1, or a confusion-matrix chart.
 
 ## 6.9 Matching Score Formula and Penalty Logic
 
@@ -1240,7 +1298,7 @@ The limitations below make the AI contribution more academically honest, not wea
 
 - OCR quality affects scanned or image-heavy CV extraction.
 - Synthetic data may not cover all real CV styles, languages, layouts, and informal wording.
-- The final cleaned NER dataset and final training metric logs are not committed, so final NER benchmark metrics were not reproducible from repository evidence.
+- The Colab PDF provides recorded NER training-run metrics, but the final cleaned NER dataset and exported model weights are not committed, so the run is not reproducible from repository files alone.
 - More real or human-reviewed labeled CV data is needed for trustworthy per-label precision, recall, and F1.
 - A larger fixed benchmark should evaluate parsing, role prediction, domain classification, seniority, matching, and gap analysis together.
 - Arabic and multilingual CV support can be improved beyond the current UI localization.
@@ -1251,7 +1309,7 @@ The limitations below make the AI contribution more academically honest, not wea
 
 ## 6.16 AI Chapter Summary
 
-The standalone AI chapter was added because the analyzer is a core project contribution. The system is best described as a transparent, layered hybrid analyzer for a graduation/demo environment. It does not claim production-grade AI accuracy, a certified hiring probability, or reproducible final NER metrics from committed evidence. Its academic value is the integration of document recovery, NER, rules, canonicalization, classification, matching, explanation, and honest fallback behavior.
+The standalone AI chapter was added because the analyzer is a core project contribution. The system is best described as a transparent, layered hybrid analyzer for a graduation/demo environment. It does not claim production-grade AI accuracy, a certified hiring probability, or repository-alone reproducible final NER benchmarking. The new Colab PDF strengthens training-run evidence, while the academic value remains the integration of document recovery, NER, rules, canonicalization, classification, matching, explanation, and honest fallback behavior.
 
 \pagebreak
 
@@ -1291,15 +1349,16 @@ GitHub Actions workflow files were reviewed as part of repository inspection. A 
 
 ## 7.8 AI CV Analyzer Model Evidence
 
-The AI CV Analyzer training workflow was inspected from repository files and helper documentation, but full model training was not executed during this documentation update. The reasons are practical and evidence-based: the generator requires external Gemini API keys, the cleaned training dataset is not committed, the runtime dependencies for transformer inference were not installed in the bundled documentation Python environment, and the notebook is designed for a Colab/T4-style GPU runtime. Therefore, this book documents the architecture, training plan, optional local deployment artifact, and available tests without inventing final model metrics.
+The AI CV Analyzer training workflow was inspected from repository files, helper documentation, and the exported Colab training-results PDF. Full model training was not rerun during this documentation update because the generator requires external Gemini API keys, the cleaned training dataset content is not committed, the runtime dependencies for transformer inference were not installed in the bundled documentation Python environment, and the notebook is designed for a Colab/T4-style GPU runtime.
 
-The notebook contains metric code for precision, recall, F1, and accuracy through sequence-labeling evaluation, but its code cells do not contain saved outputs. The committed files alone do not provide the final labeled evaluation dataset, final training run log, or model weights. A local ignored artifact folder was present on this workstation and safe metadata was inspected, but model binaries remain outside Git. The mini evaluation below is useful for regression-style demonstration, but it remains synthetic and deterministic rather than a production model benchmark.
+The important distinction is reproducibility scope. The repository alone still does not provide the final labeled evaluation dataset, final model weights, or a one-command reproducible training run. However, the user-provided Colab PDF does provide recorded output cells from the actual notebook run, including train/test counts and overall epoch metrics. Those values are reported as Colab-run training evidence on the generated/synthetic notebook split, not as production accuracy. A local ignored artifact folder was present on this workstation and safe metadata was inspected, but model binaries remain outside Git. The mini evaluation below remains useful for regression-style demonstration, but it is separate from the Colab NER training metrics.
 
 | Evidence Item | Status | What It Proves | What It Does Not Prove |
 |---|---|---|---|
 | Runtime NER artifact path | Code checks `ai-cv-analyzer/models/ner_weights/career_compass_ner_final`; the folder is ignored by Git. | The service can load a local token-classification model when deployed. | It does not prove the artifact is committed or provide a final held-out F1 score. |
 | Local ignored metadata | `config.json` and tokenizer metadata were inspected locally without copying weights. | The local artifact uses a BERT token-classification configuration and cased tokenizer. | It is not a portable repository artifact. |
-| Training notebook | Present under `ai-cv-analyzer/training/train_ner.ipynb` | The training process, label map, token alignment, Trainer setup, metrics code, and export steps are documented. | It does not include committed output cells with final metrics. |
+| Training notebook | Present under `ai-cv-analyzer/training/train_ner.ipynb` | The training process, label map, token alignment, Trainer setup, metrics code, and export steps are documented. | It does not include the cleaned dataset or model weights. |
+| Colab training-results PDF | Exported PDF under `docs/graduation-book/model-analysis/colab_train_ner_results.pdf` | Shows recorded NER fine-tuning/evaluation outputs: 41,319 train rows, 4,592 test rows, and final epoch precision 0.933307, recall 0.940521, F1 0.936900, accuracy 0.976376. | It does not prove readiness for real deployment and may not be reproducible without the same dataset, runtime, and model artifacts. |
 | Dataset generator | Present under `ai-cv-analyzer/training/generate_tech_dataset.py` | Synthetic labeled data can be generated from Gemini with key rotation and negative decoys. | It was not run here because it requires API keys and would generate a large dataset. |
 | Dataset cleaner | Present under `ai-cv-analyzer/training/clean_dataset.py` | Dataset normalization, deduplication, and span validation are part of the workflow. | The cleaned dataset file itself is not committed. |
 | API tests | Present under `ai-cv-analyzer/tests/test_service_api.py` | FastAPI status handling and hybrid-match formula behavior are covered with fakes. | These tests do not measure real NER model accuracy. |
@@ -1310,7 +1369,7 @@ The notebook contains metric code for precision, recall, F1, and accuracy throug
 
 ## 7.9 NER Extraction Examples
 
-The table below documents expected extraction behavior from the inspected NER labels and runtime post-processing. It is intentionally marked as example evidence rather than measured accuracy because transformer dependencies were not available in the local documentation runtime and the committed notebook does not include final output cells.
+The table below documents expected extraction behavior from the inspected NER labels and runtime post-processing. It is intentionally marked as example evidence rather than measured per-label accuracy because transformer dependencies were not available in the local documentation runtime and the Colab PDF reports overall metrics rather than a per-label classification report.
 
 | Example CV Text | Expected NER Entities | Downstream Use | Evidence Type |
 |---|---|---|---|
@@ -1335,10 +1394,11 @@ The semantic matching path could not be executed locally during this documentati
 
 ## 7.11 Model Evaluation Limitations
 
-- The committed notebook includes metric code but no saved metric output cells.
+- The Colab PDF provides recorded overall training-run metrics, but the repository alone still does not include the dataset/model artifacts needed to reproduce the run.
 - The cleaned labeled dataset used for final training is not committed.
 - The model-weight folder is ignored by Git; safe local metadata was inspected, but binary weights were not copied or benchmarked.
 - Local documentation Python did not include transformer, sentence-transformer, OCR, PDF, or Gemini packages, so live model inference and training were not rerun here.
+- The Colab PDF does not show a per-label classification report, per-label support counts, or a confusion matrix.
 - The examples in Table 29 are expected-behavior examples, while the TF-IDF values in Table 30 are actual small local fallback checks.
 - A stronger final defense package should add a fixed labeled CV test set, saved per-label NER metrics, and CI-friendly inference smoke tests.
 
@@ -1494,7 +1554,8 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 
 - The AI CV Analyzer pytest suite was not executed because pytest was absent in that container.
 - The browser CV upload remains a smoke test, and the mini dataset is synthetic rather than statistically representative.
-- The AI CV Analyzer training notebook was inspected, but full model training was not executed because the cleaned training dataset and external generation keys are not committed and the workflow is designed for Colab GPU execution.
+- The AI CV Analyzer training notebook and exported Colab PDF were inspected, but full model training was not rerun because the cleaned training dataset and external generation keys are not committed and the workflow is designed for Colab GPU execution.
+- The Colab metrics are recorded training-run evidence on the notebook split, not a production benchmark on a large real-world CV dataset.
 - The AI CV Analyzer smoke evaluation uses five deterministic text samples and does not measure the transformer NER model weights.
 - The recommendation score shown in screenshots is an estimated local demo output.
 - External scraping reliability depends on source availability and changing website/API behavior.
@@ -1631,9 +1692,9 @@ The project demonstrates practical learning in software architecture, service de
 
 - The system is a graduation/demo platform and not a production product.
 - Recommendation and gap analysis outputs are estimates.
-- AI evaluation needs larger labeled datasets, committed training logs, and repeatable model scoring.
+- AI evaluation needs larger labeled datasets, committed training artifacts, per-label reports, and repeatable model scoring.
 - The exported NER model artifact path is supported by the runtime, but model weights are ignored by Git and the repository does not include a reproducible final metric run from the training notebook.
-- The final labeled NER dataset was not available in committed evidence, so label distribution and final per-label NER precision/recall/F1 were not claimed.
+- The Colab PDF records overall NER training metrics, but the final labeled NER dataset was not available in committed evidence, so label distribution and final per-label NER precision/recall/F1 were not claimed.
 - OCR and PDF text-recovery quality can affect scanned CVs, image-heavy layouts, multi-column documents, and unusual fonts.
 - Synthetic training examples may not represent all real student CV styles, Arabic/multilingual CVs, or informal job-market wording.
 - External scraping sources can be unstable.
@@ -2032,10 +2093,12 @@ docker compose exec backend-api php artisan migrate --seed
 
 The demo admin account is seeded from environment variables. The current example values are:
 
-```text
-DEMO_ADMIN_EMAIL=careercompassadmin@gmail.com
-DEMO_ADMIN_PASSWORD=CareerCompassAdmin2026
-```
+| Variable | Demo Value |
+|---|---|
+| `DEMO_ADMIN_EMAIL` | `careercompassadmin@gmail.com` |
+| `DEMO_ADMIN_PASSWORD` | `CareerCompassAdmin2026` |
+
+*Demo admin environment values.*
 
 Student demo flow:
 
@@ -2240,7 +2303,7 @@ This appendix summarizes the code audit that supports Sections 5.5, Chapter 6, a
 
 ### I.3 Training Summary
 
-The notebook trains a BERT-family token-classification model from `bert-base-cased`, maps character spans to BIO token labels, uses a 90/10 train/evaluation split with seed 42, trains for five epochs with learning rate 2e-5 and batch size 16, computes seqeval precision/recall/F1/accuracy, and exports `career_compass_ner_final`. The final cleaned dataset and final metric output are not committed.
+The notebook trains a BERT-family token-classification model from `bert-base-cased`, maps character spans to BIO token labels, uses a 90/10 train/evaluation split with seed 42, trains for five epochs with learning rate 2e-5 and batch size 16, computes seqeval precision/recall/F1/accuracy, and exports `career_compass_ner_final`. The exported Colab PDF records overall final-epoch metrics: precision 0.933307, recall 0.940521, F1 0.936900, and accuracy 0.976376. The final cleaned dataset content and model weights are not committed.
 
 ### I.4 Generated Dataset Summary
 

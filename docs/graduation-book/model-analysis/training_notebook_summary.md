@@ -4,7 +4,7 @@
 
 File: `ai-cv-analyzer/training/train_ner.ipynb`
 
-The notebook was inspected as a training workflow artifact. It was not executed during this documentation update.
+The notebook was inspected as a training workflow artifact. It was not executed during this documentation update. A user-provided exported Colab PDF with output cells was also inspected and copied to `docs/graduation-book/model-analysis/colab_train_ner_results.pdf`.
 
 ## Training Flow
 
@@ -47,4 +47,16 @@ The notebook is structured for Google Colab:
 
 Training was not executed locally because the notebook is designed for a Colab/GPU runtime, the cleaned dataset file is not committed, and the upstream generator requires external Gemini API keys.
 
-The notebook contains metric code, but the committed notebook does not contain final output cells with reproducible metric values.
+The exported Colab PDF records the following visible split counts and final-epoch metrics:
+
+| Item | Value |
+|---|---:|
+| Total loaded rows | 45,911 |
+| Train rows | 41,319 |
+| Test rows | 4,592 |
+| Final precision | 0.933307 |
+| Final recall | 0.940521 |
+| Final F1 | 0.936900 |
+| Final accuracy | 0.976376 |
+
+These are Colab-run evidence values, not repository-alone reproducible results, because the cleaned dataset content and exported model weights are not committed.

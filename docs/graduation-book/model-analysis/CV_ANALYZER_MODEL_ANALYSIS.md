@@ -2,7 +2,7 @@
 
 ## Scope
 
-This note summarizes the AI CV Analyzer evidence used to expand the graduation book. It is based on repository files and the external helper documentation folder at `D:/Graduation/model-analys-helper`.
+This note summarizes the AI CV Analyzer evidence used to expand the graduation book. It is based on repository files, the external helper documentation folder at `D:/Graduation/model-analys-helper`, and the user-provided exported Colab training-results PDF.
 
 The helper folder existed and contained four top-level folders: `docs`, `layer1`, `layer2`, and `layer3`. Only documentation insight was used. No raw dataset files, images, model weights, or secrets were copied into `docs/graduation-book`.
 
@@ -42,6 +42,10 @@ The team-specific customization is visible in:
 - Skill canonicalization and domain/seniority classifiers.
 - Laravel persistence and frontend visualization of parsed results.
 
+## Recorded Colab Training Evidence
+
+The exported Colab PDF `docs/graduation-book/model-analysis/colab_train_ner_results.pdf` shows output cells from `train_ner.ipynb - Colab`. Visible evidence includes 45,911 loaded rows, a 41,319/4,592 train/test split, 11 BIO labels, `bert-base-cased`, five epochs, learning rate 2e-5, batch size 16, and final epoch metrics: precision 0.933307, recall 0.940521, F1 0.936900, and accuracy 0.976376.
+
 ## Evidence Limitation
 
-The repository contains the model-loading code and training workflow, but it does not contain committed model weights, a committed cleaned training dataset, or notebook output cells with final metrics. The graduation book therefore documents the model and training pipeline without claiming an unverified F1 score.
+The repository contains the model-loading code, training workflow, and now the exported Colab metric evidence. It still does not contain committed model weights, committed cleaned training dataset content, per-label metric output, or a confusion matrix. The graduation book therefore reports the Colab-run metrics as training evidence while avoiding production-accuracy or repository-alone reproducibility claims.
