@@ -24,10 +24,12 @@ This summary distinguishes tests that were executed from claims that would requi
 | `GET http://localhost:8003/health` | Passed: HTTP 200 with `{"status":"ok","service":"CareerCompass Job Miner"}` after Docker Desktop startup. |
 | `GET http://localhost:8003/metrics` | Passed: HTTP 200 with Prometheus-style scraper counters. |
 | Deterministic demo `/scrape` smoke | Passed: protected demo-source call returned `SUCCESS`, previewed 3 jobs, stored 3 through Laravel import, failed URLs 0; temporary smoke rows were cleaned afterward. |
-| DOCX/PDF structural validation | Passed: PDF has 113 pages and 130 link annotations; DOCX internal hyperlink/bookmark scan found no missing anchors. |
+| DOCX/PDF structural validation | Passed: PDF has 115 pages and 132 link annotations; DOCX internal hyperlink/bookmark scan found no missing anchors. |
 | JSON examples | Passed: 30 JSON code fences parsed successfully. |
 | New scraping diagrams | Passed: all ten new diagram files exist and are referenced by the generated Markdown. |
 
 ## Honest Evaluation Boundary
+
+The deterministic smoke test used the internal protected `/scrape` contract to validate the demo adapter and Laravel import path. A full authenticated `/jobs/scrape-if-missing` queue lifecycle with browser polling remains a recommended final demonstration check because it exercises the user-facing queue trigger and status-polling path.
 
 No source success rates, coverage percentages, website reliability scores, or complete labor-market claims should be included unless they are reproduced from tests/logs near final submission. The current chapter can honestly claim adapter support, validation logic, queue architecture, and admin diagnostics because those are present in code.

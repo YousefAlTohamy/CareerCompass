@@ -199,16 +199,18 @@ FIGURES = [
     ("Figure 48", "Docker services evidence.", "assets/screenshots/18_docker_containers.png"),
     ("Figure 49", "Validation command evidence.", "assets/screenshots/19_validation_summary.png"),
     ("Figure 50", "Colab NER final epoch metrics.", "assets/diagrams/31_colab_ner_metrics.png"),
-    ("Figure 51", "Job mining design philosophy.", "assets/diagrams/32_job_mining_design_philosophy.png"),
-    ("Figure 52", "Complete job mining flow.", "assets/diagrams/33_complete_job_mining_flow.png"),
-    ("Figure 53", "AI Job Miner runtime architecture.", "assets/diagrams/34_scraping_runtime_architecture.png"),
-    ("Figure 54", "Scraping sequence diagram.", "assets/diagrams/35_scraping_sequence_diagram.png"),
-    ("Figure 55", "Scraping job lifecycle.", "assets/diagrams/36_scraping_job_lifecycle.png"),
-    ("Figure 56", "Source management and target-role flow.", "assets/diagrams/37_source_management_flow.png"),
-    ("Figure 57", "Job import and deduplication flow.", "assets/diagrams/38_job_import_deduplication_flow.png"),
-    ("Figure 58", "Failed URL and retry flow.", "assets/diagrams/39_scraping_failure_dlq_flow.png"),
-    ("Figure 59", "Scraping security boundaries.", "assets/diagrams/40_scraping_security_boundaries.png"),
-    ("Figure 60", "Scraping validation evidence.", "assets/diagrams/41_scraping_validation_evidence.png"),
+    ("Figure 51", "Colab NER epoch performance trend.", "assets/diagrams/61_colab_ner_epoch_performance.png"),
+    ("Figure 52", "Colab NER training and validation loss curve.", "assets/diagrams/62_colab_ner_loss_curve.png"),
+    ("Figure 53", "Job mining design philosophy.", "assets/diagrams/32_job_mining_design_philosophy.png"),
+    ("Figure 54", "AI Job Miner runtime architecture.", "assets/diagrams/34_scraping_runtime_architecture.png"),
+    ("Figure 55", "Complete job mining flow.", "assets/diagrams/33_complete_job_mining_flow.png"),
+    ("Figure 56", "Scraping sequence diagram.", "assets/diagrams/35_scraping_sequence_diagram.png"),
+    ("Figure 57", "Scraping job lifecycle.", "assets/diagrams/36_scraping_job_lifecycle.png"),
+    ("Figure 58", "Source management and target-role flow.", "assets/diagrams/37_source_management_flow.png"),
+    ("Figure 59", "Job import and deduplication flow.", "assets/diagrams/38_job_import_deduplication_flow.png"),
+    ("Figure 60", "Failed URL and retry flow.", "assets/diagrams/39_scraping_failure_dlq_flow.png"),
+    ("Figure 61", "Scraping security boundaries.", "assets/diagrams/40_scraping_security_boundaries.png"),
+    ("Figure 62", "Scraping validation evidence.", "assets/diagrams/41_scraping_validation_evidence.png"),
 ]
 
 TABLES = [
@@ -240,8 +242,8 @@ TABLES = [
     ("Table 26", "Layer 3 matching evidence example."),
     ("Table 27", "AI approach comparison."),
     ("Table 28", "Colab NER training run configuration."),
-    ("Table 29", "Colab NER epoch metrics."),
-    ("Table 30", "Colab NER final metric summary."),
+    ("Table 29", "Colab NER final metric summary."),
+    ("Table 30", "AI CV Analyzer output schema sections."),
     ("Table 31", "Job mining design decisions."),
     ("Table 32", "Scraping runtime component map."),
     ("Table 33", "On-demand scraping lifecycle states."),
@@ -268,6 +270,14 @@ TABLES = [
     ("Table 54", "Database tables summary."),
     ("Table 55", "Docker services summary."),
     ("Table 56", "AI CV Analyzer function inventory summary."),
+]
+
+COLAB_NER_EPOCHS = [
+    {"epoch": 1, "training_loss": 0.077623, "validation_loss": 0.069118, "precision": 0.921027, "recall": 0.928206, "f1": 0.924603, "accuracy": 0.973227},
+    {"epoch": 2, "training_loss": 0.061530, "validation_loss": 0.064051, "precision": 0.915886, "recall": 0.941504, "f1": 0.928518, "accuracy": 0.974912},
+    {"epoch": 3, "training_loss": 0.053831, "validation_loss": 0.063463, "precision": 0.928387, "recall": 0.943469, "f1": 0.935867, "accuracy": 0.976233},
+    {"epoch": 4, "training_loss": 0.044553, "validation_loss": 0.064025, "precision": 0.932287, "recall": 0.937967, "f1": 0.935118, "accuracy": 0.977018},
+    {"epoch": 5, "training_loss": 0.037280, "validation_loss": 0.068058, "precision": 0.933307, "recall": 0.940521, "f1": 0.936900, "accuracy": 0.976376},
 ]
 
 
@@ -449,10 +459,10 @@ def create_smoke_metrics_diagram() -> None:
 
 def create_colab_ner_metrics_diagram() -> None:
     metrics = [
-        ("Precision", 0.933307, "#2563eb"),
-        ("Recall", 0.940521, "#0891b2"),
-        ("F1", 0.936900, "#059669"),
-        ("Accuracy", 0.976376, "#7c3aed"),
+        ("Precision", COLAB_NER_EPOCHS[-1]["precision"], "#2563eb"),
+        ("Recall", COLAB_NER_EPOCHS[-1]["recall"], "#0891b2"),
+        ("F1", COLAB_NER_EPOCHS[-1]["f1"], "#059669"),
+        ("Accuracy", COLAB_NER_EPOCHS[-1]["accuracy"], "#7c3aed"),
     ]
     img = PILImage.new("RGB", (1600, 1000), "#f8fafc")
     draw = ImageDraw.Draw(img)
@@ -480,6 +490,94 @@ def create_colab_ner_metrics_diagram() -> None:
     draw.rounded_rectangle((150, 850, 1450, 940), radius=14, fill="#e0f2fe", outline="#0284c7", width=2)
     draw.text((180, 872), "Source: exported train_ner.ipynb Colab PDF, final epoch row. Validation evidence, not production accuracy.", fill="#0c4a6e", font=load_font(21, True))
     img.save(DIAGRAMS / "31_colab_ner_metrics.png")
+
+
+def _draw_line_chart(
+    filename: str,
+    title: str,
+    series: list[tuple[str, list[float], str]],
+    y_min: float,
+    y_max: float,
+    ticks: list[float],
+    value_suffix: str,
+    footnote: str,
+) -> None:
+    img = PILImage.new("RGB", (1700, 1050), "#f8fafc")
+    draw = ImageDraw.Draw(img)
+    draw.rectangle((0, 0, 1700, 100), fill="#0f172a")
+    draw.text((48, 30), title, fill="white", font=load_font(34, True))
+
+    axis_left, axis_top, axis_right, axis_bottom = 180, 190, 1500, 790
+    draw.rectangle((axis_left, axis_top, axis_right, axis_bottom), fill="#ffffff", outline="#cbd5e1", width=2)
+    draw.line((axis_left, axis_bottom, axis_right, axis_bottom), fill="#334155", width=3)
+    draw.line((axis_left, axis_top, axis_left, axis_bottom), fill="#334155", width=3)
+
+    def map_y(value: float) -> int:
+        clamped = max(y_min, min(y_max, value))
+        return axis_bottom - int((axis_bottom - axis_top) * ((clamped - y_min) / (y_max - y_min)))
+
+    epochs = [row["epoch"] for row in COLAB_NER_EPOCHS]
+    x_gap = (axis_right - axis_left) / (len(epochs) - 1)
+    x_points = [int(axis_left + idx * x_gap) for idx in range(len(epochs))]
+
+    for tick in ticks:
+        y = map_y(tick)
+        draw.line((axis_left, y, axis_right, y), fill="#e2e8f0", width=1)
+        label = f"{tick * 100:.0f}%" if value_suffix == "%" else f"{tick:.3f}"
+        draw.text((70, y - 12), label, fill="#475569", font=load_font(18, True))
+
+    for x, epoch in zip(x_points, epochs):
+        draw.line((x, axis_bottom, x, axis_bottom + 8), fill="#334155", width=2)
+        draw.text((x - 12, axis_bottom + 24), str(epoch), fill="#334155", font=load_font(19, True))
+    draw.text((780, 850), "Epoch", fill="#334155", font=load_font(22, True))
+
+    legend_x, legend_y = 1510, 230
+    for i, (label, values, color) in enumerate(series):
+        points = [(x, map_y(value)) for x, value in zip(x_points, values)]
+        draw.line(points, fill=color, width=5)
+        for x, y in points:
+            draw.ellipse((x - 8, y - 8, x + 8, y + 8), fill=color, outline="#ffffff", width=2)
+        y = legend_y + i * 48
+        draw.rounded_rectangle((legend_x, y, legend_x + 34, y + 18), radius=5, fill=color)
+        draw.text((legend_x + 46, y - 4), label, fill="#0f172a", font=load_font(19, True))
+
+    draw.rounded_rectangle((150, 900, 1550, 985), radius=14, fill="#ecfeff", outline="#0891b2", width=2)
+    draw.text((180, 922), footnote, fill="#164e63", font=load_font(21, True))
+    img.save(DIAGRAMS / filename)
+
+
+def create_colab_ner_epoch_performance_diagram() -> None:
+    _draw_line_chart(
+        "61_colab_ner_epoch_performance.png",
+        "Colab NER Epoch Performance Trend",
+        [
+            ("Precision", [row["precision"] for row in COLAB_NER_EPOCHS], "#2563eb"),
+            ("Recall", [row["recall"] for row in COLAB_NER_EPOCHS], "#0891b2"),
+            ("F1", [row["f1"] for row in COLAB_NER_EPOCHS], "#059669"),
+            ("Accuracy", [row["accuracy"] for row in COLAB_NER_EPOCHS], "#7c3aed"),
+        ],
+        0.90,
+        0.985,
+        [0.90, 0.92, 0.94, 0.96, 0.98],
+        "%",
+        "Overall metrics are from seqeval output in the exported Colab run; no per-label matrix is inferred.",
+    )
+
+
+def create_colab_ner_loss_curve_diagram() -> None:
+    _draw_line_chart(
+        "62_colab_ner_loss_curve.png",
+        "Colab NER Training and Validation Loss",
+        [
+            ("Training Loss", [row["training_loss"] for row in COLAB_NER_EPOCHS], "#dc2626"),
+            ("Validation Loss", [row["validation_loss"] for row in COLAB_NER_EPOCHS], "#ea580c"),
+        ],
+        0.03,
+        0.08,
+        [0.03, 0.04, 0.05, 0.06, 0.07, 0.08],
+        "",
+        "Trainer loss values describe the token-classification objective; they are not a custom loss formula.",
+    )
 
 
 def create_job_mining_diagrams() -> None:
@@ -1341,6 +1439,8 @@ def create_diagrams() -> None:
     create_dataset_evidence_diagram()
     create_smoke_metrics_diagram()
     create_colab_ner_metrics_diagram()
+    create_colab_ner_epoch_performance_diagram()
+    create_colab_ner_loss_curve_diagram()
     create_job_mining_diagrams()
 
 
@@ -2584,15 +2684,17 @@ These numbers improve the academic evidence for the training workflow, but they 
 
 *Table 28. Colab NER training run configuration.*
 
-| Epoch | Training Loss | Validation Loss | Precision | Recall | F1 | Accuracy |
-|---:|---:|---:|---:|---:|---:|---:|
-| 1 | 0.077623 | 0.069118 | 0.921027 | 0.928206 | 0.924603 | 0.973227 |
-| 2 | 0.061530 | 0.064051 | 0.915886 | 0.941504 | 0.928518 | 0.974912 |
-| 3 | 0.053831 | 0.063463 | 0.928387 | 0.943469 | 0.935867 | 0.976233 |
-| 4 | 0.044553 | 0.064025 | 0.932287 | 0.937967 | 0.935118 | 0.977018 |
-| 5 | 0.037280 | 0.068058 | 0.933307 | 0.940521 | 0.936900 | 0.976376 |
+The full epoch-by-epoch numeric table is retained in `docs/graduation-book/model-analysis/colab_ner_training_results_summary.md`. In the main chapter, the same verified values are shown as charts so the trend is easier to read in the PDF.
 
-*Table 29. Colab NER epoch metrics.*
+{figure_markdown("Figure 50", "Colab NER final epoch metrics.", "assets/diagrams/31_colab_ner_metrics.png")}
+
+{figure_markdown("Figure 51", "Colab NER epoch performance trend.", "assets/diagrams/61_colab_ner_epoch_performance.png")}
+
+The performance chart shows that the overall F1 score increases from 0.924603 at epoch 1 to 0.936900 at epoch 5, while accuracy remains high throughout the run. These values are overall `seqeval` metrics from the notebook validation split; they are not per-label SKILL/ROLE/EDU/CERT/SOFT metrics.
+
+{figure_markdown("Figure 52", "Colab NER training and validation loss curve.", "assets/diagrams/62_colab_ner_loss_curve.png")}
+
+The notebook uses Hugging Face `Trainer` with `AutoModelForTokenClassification` and a token-classification dataset. It does not define a custom loss function in the visible code, so this report treats the reported training and validation loss as the Trainer's token-classification objective values rather than a separately designed loss formula. Training loss decreases steadily from 0.077623 to 0.037280. Validation loss remains low, with the lowest visible value at epoch 3 (0.063463) and a small increase by epoch 5 (0.068058). The final epoch still has the strongest visible F1 score, but the validation-loss movement is a reason to interpret the run cautiously rather than overclaiming model generalization.
 
 | Metric | Final Epoch Value | Source |
 |---|---:|---|
@@ -2603,11 +2705,9 @@ These numbers improve the academic evidence for the training workflow, but they 
 | Training loss | 0.037280 | Colab PDF output, epoch 5 |
 | Validation loss | 0.068058 | Colab PDF output, epoch 5 |
 
-*Table 30. Colab NER final metric summary.*
+*Table 29. Colab NER final metric summary.*
 
-{figure_markdown("Figure 50", "Colab NER final epoch metrics.", "assets/diagrams/31_colab_ner_metrics.png")}
-
-No per-label classification report or confusion matrix is visible in the PDF. Therefore, this report does not invent per-label SKILL/ROLE/EDU/CERT/SOFT support, precision, recall, F1, or a confusion-matrix chart.
+No per-label classification report or confusion matrix is visible in the exported Colab PDF, and the attached notebook output does not contain `classification_report`, `confusion_matrix`, `sklearn.metrics`, or matrix-like output cells. Therefore, this report does not invent per-label SKILL/ROLE/EDU/CERT/SOFT support, precision, recall, F1, or a confusion-matrix chart. Future training exports should save a token-level or entity-level confusion matrix plus a per-label classification report with support counts.
 
 ## 6.9 Matching Score Formula and Penalty Logic
 
@@ -2684,122 +2784,112 @@ The following complexity statements are approximate code-level descriptions, not
 
 The example below is an illustrative walkthrough designed for examiner readability. It is not a live model benchmark. It uses a small CV fragment and a small job description to show how the three layers cooperate. Because the full transformer/OCR runtime dependencies were not available in the documentation Python environment, the JSON block is labeled as an illustrative schema example based on the actual `schema.py` response structure rather than a live model run.
 
-Raw CV fragment:
+Sanitized raw CV fragment:
 
 ```text
-Ahmed Mohamed
-Backend Developer
-Skills: Laravel, Docker, MySQL, REST APIs
-Experience: Backend Intern at TechWave, 2024-2025
+Demo Student
+Laravel Backend Developer
+Skills: Laravel, MySQL, RESTful APIs
+Experience: Backend Developer at Demo Company, 2025-2026
 Education: Computer Science
 ```
 
 | Raw Evidence | Extracted Output | Schema Area |
 |---|---|---|
-| `Backend Developer` | Predicted role/title evidence. | `profile.current_title`, `analysis.predicted_role` |
-| `Laravel, Docker, MySQL, REST APIs` | Four hard technical skills. | `skills.items[]` |
-| `Backend Intern at TechWave, 2024-2025` | One experience item with company, title, period, and technologies. | `experience.items[]` |
+| `Laravel Backend Developer` | Predicted role/title evidence. | `profile.current_title`, `analysis.predicted_role` |
+| `Laravel, MySQL, RESTful APIs` | Hard technical skills. | `skills.items[]` |
+| `Backend Developer at Demo Company, 2025-2026` | One experience item with company, title, period, and technologies. | `experience.items[]` |
 | `Computer Science` | Education evidence. | Profile/education metadata when recovered |
 | Text CV fragment | Successful text parsing path; no OCR needed in this example. | `parsing_status`, `stats`, `analysis.metadata` |
 
 *Table 24. Raw CV fragment extraction example.*
 
-Illustrative structured response:
+Illustrative sanitized output based on an actual analyzer response structure:
 
 ```json
 {{
   "parsing_status": "success",
   "profile": {{
-    "full_name": "Ahmed Mohamed",
-    "current_title": "Backend Developer",
-    "email": null,
-    "phone": null,
-    "location": null,
-    "summary": null
+    "full_name": "Demo Student",
+    "current_title": "Laravel Backend Developer",
+    "alternative_titles": ["Backend Developer"],
+    "headline": "Professional Summary",
+    "contact": {{
+      "email": "student@example.com", "phone": "+20XXXXXXXXXX",
+      "location": "Giza, Egypt",
+      "linkedin_url": "https://example.com/linkedin",
+      "github_url": "https://example.com/github", "portfolio_url": null
+    }},
+    "summary": "Redacted summary text for a backend-focused student CV.",
+    "confidence_score": 0.93
   }},
-  "stats": {{
-    "page_count": 1,
-    "char_count": 168,
-    "word_count": 24,
-    "language_hint": "en"
-  }},
+  "stats": {{"page_count": 2, "char_count": 4110, "word_count": 498, "language_hint": null}},
   "skills": {{
     "items": [
-      {{
-        "name": "Laravel",
-        "category": "hard",
-        "confidence_score": 0.65,
-        "evidence": "ner_or_rule"
-      }},
-      {{
-        "name": "Docker",
-        "category": "hard",
-        "confidence_score": 0.65,
-        "evidence": "ner_or_rule"
-      }},
-      {{
-        "name": "MySQL",
-        "category": "hard",
-        "confidence_score": 0.65,
-        "evidence": "ner_or_rule"
-      }},
-      {{
-        "name": "REST APIs",
-        "category": "hard",
-        "confidence_score": 0.65,
-        "evidence": "ner_or_rule"
-      }}
+      {{"confidence_score": 0.65, "name": "Laravel", "category": "hard", "evidence": "ner"}},
+      {{"confidence_score": 0.65, "name": "MySQL", "category": "hard", "evidence": "ner"}},
+      {{"confidence_score": 0.65, "name": "RESTful APIs", "category": "hard", "evidence": "rule"}}
     ],
     "confidence_score": 0.65
   }},
   "experience": {{
     "items": [
       {{
-        "title": "Backend Intern",
-        "company": "TechWave",
-        "start_date": "2024-01-01",
-        "end_date": "2025-01-01",
-        "is_current": false,
-        "description": [
-          "Built REST APIs."
-        ],
-        "technologies": [
-          "Laravel",
-          "Docker",
-          "MySQL"
-        ],
-        "confidence_score": 0.85
+        "confidence_score": 0.85, "title": "Backend Developer",
+        "company": "Demo Company", "location": "Remote",
+        "start_date": "2025-12-01", "end_date": "2026-01-01", "is_current": false,
+        "description": ["Developed Laravel APIs and database-backed features."],
+        "technologies": ["Laravel", "MySQL"]
       }}
     ],
     "confidence_score": 0.85
   }},
   "analysis": {{
-    "predicted_role": "Backend Developer",
-    "seniority": "junior",
-    "primary_domain": "Backend Development",
-    "strengths": [
-      "Relevant backend API and database evidence."
-    ],
-    "gaps": [],
-    "red_flags": [],
+    "summary": null,
+    "predicted_role": "Laravel Backend Developer",
+    "seniority": "Intern",
+    "primary_domain": "Full Stack Development",
+    "strengths": ["Diverse technical portfolio with multiple backend technologies."],
+    "gaps": [], "red_flags": [],
     "confidence_score": 0.75,
     "metadata": {{
-      "experience": {{
-        "total_experience_years": 1.0
+      "segmentation": {{
+        "found_sections": ["profile_summary", "experience", "projects", "skills", "education"],
+        "sections_missing": [], "anomalies": []
       }},
-      "extraction": {{
-        "source": "pdf_text"
+      "experience": {{"total_experience_years": 0.08, "action_verb_score": 0.3, "gap_details": []}},
+      "extraction": {{"source": "spatial", "spatial_status": "ok", "word_count_spatial": 499}},
+      "layer2": {{
+        "seniority_details": {{"level": "Intern", "semantic_match": "Intern"}},
+        "categorized_skills": {{
+          "hard_skills": ["Laravel", "MySQL", "RESTful APIs"],
+          "soft_skills": [], "management_skills": []
+        }},
+        "domain_scores": {{"Backend Development": 0.3338, "Full Stack Development": 0.4616}}
       }}
-    }}
+    }},
+    "domain_scores": {{"Backend Development": 0.3338, "Full Stack Development": 0.4616}}
   }}
 }}
 ```
 
+| Section | Meaning |
+|---|---|
+| `profile` | Normalized identity, contact, title, headline, summary, and confidence data. |
+| `stats` | Document-level counts such as pages, characters, words, and language hint. |
+| `skills` | Extracted and categorized skill items with confidence and evidence source. |
+| `experience` | Parsed work-history items, dates, descriptions, technologies, and confidence. |
+| `analysis` | Predicted role, seniority, domain, strengths, gaps, red flags, and confidence. |
+| `analysis.metadata.segmentation` | CV sections detected or missing during document understanding. |
+| `analysis.metadata.layer2` | Classification details such as seniority reasoning, categorized skills, and domain scores. |
+
+*Table 30. AI CV Analyzer output schema sections.*
+
 | Classification | Result | Reason |
 |---|---|---|
-| Domain | Backend Development | Backend role plus Laravel, MySQL, REST API evidence. |
-| Seniority | Intern/Junior style estimate | Internship evidence and limited years. |
-| Skill category | Hard technical skills | Laravel, Docker, MySQL, and APIs are technical implementation skills. |
+| Domain | Full Stack Development | The sanitized sample preserves the attached schema's multi-domain scoring style, with backend and frontend scores visible. |
+| Seniority | Intern | Short recorded experience and the Layer 2 seniority detail support an early-career estimate. |
+| Skill category | Hard technical skills | Laravel, MySQL, and RESTful APIs are technical implementation skills. |
 
 *Table 25. Layer 2 interpretation example.*
 
@@ -2862,7 +2952,7 @@ The chapter uses the term "job mining" instead of claiming unrestricted web scra
 
 The implementation separates responsibilities deliberately. Laravel remains the trusted application backend and system of record. It owns authentication, authorization, job records, skill synchronization, admin controls, and user-facing APIs. The Python AI Job Miner service owns network-heavy adapter work, public API parsing, HTML parsing, Scrapy execution, adapter quality checks, and callback payload construction. Queue workers sit between them so slow and failure-prone network work does not block normal browser requests.
 
-{figure_markdown("Figure 51", "Job mining design philosophy.", "assets/diagrams/32_job_mining_design_philosophy.png")}
+{figure_markdown("Figure 53", "Job mining design philosophy.", "assets/diagrams/32_job_mining_design_philosophy.png")}
 
 | Design Question | CareerCompass Decision | Reason |
 |---|---|---|
@@ -2878,7 +2968,7 @@ The implementation separates responsibilities deliberately. Laravel remains the 
 
 The deployed runtime uses Docker Compose service separation. The AI Job Miner service is named `cc-job-miner`, maps host port `8003` to container port `8000`, and exposes `/health`. Laravel reaches it through `SCRAPER_SERVICE_URL`, while the scraper calls Laravel callback endpoints through `LARAVEL_API_BASE_URL`. The production overlay also defines `backend-worker-scraping`, which runs the database queue with the `scraping` queue name and a longer timeout than ordinary request work.
 
-{figure_markdown("Figure 53", "AI Job Miner runtime architecture.", "assets/diagrams/34_scraping_runtime_architecture.png")}
+{figure_markdown("Figure 54", "AI Job Miner runtime architecture.", "assets/diagrams/34_scraping_runtime_architecture.png")}
 
 | Component | Implementation Evidence | Runtime Role |
 |---|---|---|
@@ -2896,17 +2986,17 @@ The deployed runtime uses Docker Compose service separation. The AI Job Miner se
 
 The complete flow starts with a user search or an admin target role. Laravel checks whether usable stored jobs already exist. If stored data is enough for the user workflow, Laravel returns it. If not, Laravel creates a `ScrapingJob` record, dispatches a background worker, calls AI Job Miner, receives candidate jobs through protected import endpoints, deduplicates and stores them, syncs required skills, and exposes status through polling/dashboard endpoints.
 
-{figure_markdown("Figure 52", "Complete job mining flow.", "assets/diagrams/33_complete_job_mining_flow.png")}
+{figure_markdown("Figure 55", "Complete job mining flow.", "assets/diagrams/33_complete_job_mining_flow.png")}
 
 The important architectural point is that the Python service does not directly become the database owner. It is an ingestion service. Candidate jobs become CareerCompass jobs only after Laravel form requests validate the payload and the import transaction completes.
 
-{figure_markdown("Figure 54", "Scraping sequence diagram.", "assets/diagrams/35_scraping_sequence_diagram.png")}
+{figure_markdown("Figure 56", "Scraping sequence diagram.", "assets/diagrams/35_scraping_sequence_diagram.png")}
 
 ## 7.5 On-Demand Scraping and Status Polling
 
 On-demand scraping is implemented in `JobController`. `scrapeAndStore` accepts a query and maximum result count, creates a pending `ScrapingJob`, dispatches `ProcessOnDemandJobScraping`, and returns the scraping job ID. `scrapeJobTitleIfMissing` first checks whether public usable jobs with a matching title already exist. If jobs exist, it returns `data_exists: true`; otherwise it queues a scrape and returns a polling URL. `checkScrapingStatus` returns the lifecycle state, counters, completed timestamp, matching stored jobs, or an error message.
 
-{figure_markdown("Figure 55", "Scraping job lifecycle.", "assets/diagrams/36_scraping_job_lifecycle.png")}
+{figure_markdown("Figure 57", "Scraping job lifecycle.", "assets/diagrams/36_scraping_job_lifecycle.png")}
 
 | Status | Meaning | User/Admin Behavior |
 |---|---|---|
@@ -2923,7 +3013,7 @@ Admin source management is implemented through `ScrapingSourceController`, `Scra
 
 Target roles are implemented through `TargetJobRoleController`, `TargetJobRole`, and `AdminTargets.jsx`. A full scraping run combines active target roles with active/runnable sources. Unsupported sources and sources missing required credentials are skipped instead of being counted as successful.
 
-{figure_markdown("Figure 56", "Source management and target-role flow.", "assets/diagrams/37_source_management_flow.png")}
+{figure_markdown("Figure 58", "Source management and target-role flow.", "assets/diagrams/37_source_management_flow.png")}
 
 | Control | Code Evidence | Purpose |
 |---|---|---|
@@ -2942,7 +3032,7 @@ The admin operational evidence is already shown in Figures 44-47: dashboard, job
 
 The import pipeline is centered in `ScrapedJobController::import`. It runs inside a database transaction and applies a layered duplicate strategy. First it checks URL, which is the strongest available source identity. Then it checks title/company candidates, including original and title-case variants. Finally it checks squished lowercase title/company values. If a job already exists, Laravel updates it; otherwise it creates a new `job_postings` record. `SkillSyncService` then normalizes and links required skills without detaching prior evidence.
 
-{figure_markdown("Figure 57", "Job import and deduplication flow.", "assets/diagrams/38_job_import_deduplication_flow.png")}
+{figure_markdown("Figure 59", "Job import and deduplication flow.", "assets/diagrams/38_job_import_deduplication_flow.png")}
 
 | Deduplication Stage | Evidence | Reason |
 |---|---|---|
@@ -2960,7 +3050,7 @@ The current duplicate strategy is appropriate for a demo system, but a stronger 
 
 The failure path uses `ScrapingFailedUrl` records as a lightweight dead-letter style store. AI Job Miner reports failed source URLs to `POST /api/v1/jobs/import/failed`; Laravel validates the payload with `ReportScrapingFailureRequest` and stores URL, optional source/job IDs, error message, retried flag, and failed timestamp. Admin dashboard routes expose failed URLs for a scraping job.
 
-{figure_markdown("Figure 58", "Failed URL and retry flow.", "assets/diagrams/39_scraping_failure_dlq_flow.png")}
+{figure_markdown("Figure 60", "Failed URL and retry flow.", "assets/diagrams/39_scraping_failure_dlq_flow.png")}
 
 | Failure Type | Handling | User/Admin Visibility |
 |---|---|---|
@@ -2984,7 +3074,7 @@ The diagnostic design is especially important for external sources. Public APIs 
 
 Scraping uses multiple security boundaries. User and admin actions go through authenticated Laravel routes. Laravel-to-miner calls use `X-Scraper-Service-Token` on AI Job Miner `/scrape`. Miner-to-Laravel callbacks use the protected `scraper.token` middleware and `throttle:scraper`; in the current Laravel middleware this is checked through the bearer token against `SCRAPY_API_TOKEN`. Import logs are redacted by `ScrapedJobController::redactForLogs`, and the Python service redacts token/API-key-like fields in adapter output.
 
-{figure_markdown("Figure 59", "Scraping security boundaries.", "assets/diagrams/40_scraping_security_boundaries.png")}
+{figure_markdown("Figure 61", "Scraping security boundaries.", "assets/diagrams/40_scraping_security_boundaries.png")}
 
 | Control | Code / Configuration Evidence | Purpose |
 |---|---|---|
@@ -3060,7 +3150,7 @@ Internal import example:
 
 The strongest current scraping evidence is architectural and test evidence, not live market coverage evidence. The repository includes AI Job Miner tests for service auth, health, metrics, adapter parsing, classification, redaction, blocked/empty outcomes, and skill extraction helpers. Laravel validates imports through form requests and transactions. Docker Compose wires the `ai-job-miner` service, long-running scraping worker, tokens, and callback URLs.
 
-{figure_markdown("Figure 60", "Scraping validation evidence.", "assets/diagrams/41_scraping_validation_evidence.png")}
+{figure_markdown("Figure 62", "Scraping validation evidence.", "assets/diagrams/41_scraping_validation_evidence.png")}
 
 | Evidence | Result to Record | What It Proves | Limitation |
 |---|---|---|---|
@@ -3073,6 +3163,23 @@ The strongest current scraping evidence is architectural and test evidence, not 
 | Admin diagnostics screenshots | Figures 44-47. | Admin UI supports source, job, dashboard, and target-role operations. | Point-in-time demo evidence. |
 
 *Table 39. Scraping validation evidence.*
+
+The final smoke test used a direct protected `/scrape` request to validate the deterministic demo adapter and Laravel import path. A full authenticated `/jobs/scrape-if-missing` queue lifecycle with browser polling remains a recommended final demonstration check because it exercises the user-facing queue trigger and status-polling path rather than only the internal scraper contract.
+
+| Component | Primary Evidence | Summary |
+|---|---|---|
+| FastAPI service/API layer | `ai-job-miner/service_api.py` | Provides `/health`, `/metrics`, and protected `/scrape` orchestration. |
+| Demo/local adapter | `CareerCompass Demo Jobs` source path and tests | Deterministic source used for safe smoke evidence without external websites. |
+| Adzuna/API adapter | Adzuna source code and environment keys | Optional external API source when credentials and quotas are configured. |
+| HTML/Scrapy-related path | `ai_job_miner/settings.py`, spiders, pipelines | Public-page crawling path with robots/delay/retry configuration boundaries. |
+| Laravel JobController | `JobController` | Starts on-demand scraping and exposes status polling. |
+| Laravel ScrapedJobController | `ScrapedJobController` | Validates imports, checks duplicates, records failures, and redacts logs. |
+| Queue jobs | `ProcessOnDemandJobScraping`, market scraping jobs | Move long network tasks out of browser request time. |
+| Skill sync | `SkillSyncService` | Connects imported job requirements to canonical skills. |
+| Admin source/target controllers | `ScrapingSourceController`, `TargetJobRoleController` | Manage active sources, diagnostics, target roles, and full-run triggers. |
+| Frontend admin/user pages | `frontend/src/pages/admin`, user job pages | Surface jobs, sources, targets, status, and retry/diagnostic views. |
+
+*AI Job Miner Source and Function Inventory Summary.*
 
 No source coverage percentage, success rate, or every-job-board claim is made. External-source behavior should be retested shortly before the final defense if the team wants live demonstration evidence.
 
@@ -3363,7 +3470,7 @@ The project demonstrates practical learning in software architecture, service de
 - The system is a graduation/demo platform and not a production product.
 - Recommendation and gap analysis outputs are estimates.
 - AI evaluation needs larger labeled datasets, committed training artifacts, per-label reports, and repeatable model scoring.
-- The exported NER model artifact path is supported by the runtime, but model weights are ignored by Git and the repository does not include a reproducible final metric run from the training notebook.
+- The exported NER model artifact path is supported by the runtime. The repository includes the exported Colab PDF with recorded overall NER metrics, but it does not include the cleaned dataset and model weights required to rerun the same training experiment from repository files alone.
 - The Colab PDF records overall NER training metrics, but the final labeled NER dataset was not available in committed evidence, so label distribution and final per-label NER precision/recall/F1 were not claimed.
 - OCR and PDF text-recovery quality can affect scanned CVs, image-heavy layouts, multi-column documents, and unusual fonts.
 - Synthetic training examples may not represent all real student CV styles, Arabic/multilingual CVs, or informal job-market wording.
@@ -3496,9 +3603,9 @@ Response example:
 {{
   "parsing_status": "success",
   "profile": {{
-    "full_name": "Ahmed Mohamed",
+    "full_name": "Demo Student",
     "current_title": "Backend Developer",
-    "email": "ahmed@example.com"
+    "email": "student@example.com"
   }},
   "stats": {{
     "page_count": 1,
@@ -4977,7 +5084,9 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - Visible dataset evidence from the PDF: 45,911 total rows, 41,319 train rows, 4,592 test rows, 11 BIO labels, test size 0.1, seed 42.
 - Visible final epoch metrics from the PDF: precision 0.933307, recall 0.940521, F1 0.936900, accuracy 0.976376, training loss 0.037280, validation loss 0.068058.
 - Per-label metrics status: not visible in the PDF, so no per-label table or support-distribution chart was invented.
-- Confusion matrix status: not visible in the PDF, so no confusion-matrix chart was generated.
+- Colab visualization status: generated/updated final metrics, epoch performance, and loss-curve charts from the verified visible metrics.
+- Loss-function status: the notebook uses Hugging Face `Trainer` with `AutoModelForTokenClassification` and does not define a custom loss; the report treats losses as Trainer-reported token-classification objective values.
+- Confusion matrix status: not visible in the PDF and not present in the attached notebook outputs/source terms, so no confusion-matrix chart was generated.
 
 ## AI CV Analyzer Documentation Update
 
@@ -4991,10 +5100,10 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - Matching formula status: exact for the `IntelligentMatcher.calculate_match` score-composition path; upstream semantic/skill/domain scores still depend on model availability.
 - Dataset statistics status: Colab PDF records train/test row counts; dataset content remains unavailable from committed evidence.
 - Dataset evidence diagram status: updated the dataset evidence availability diagram to include Colab PDF evidence.
-- Colab metrics visualization status: generated a final-epoch metrics bar chart from PDF-visible values.
+- Colab metrics visualization status: generated a final-epoch metrics bar chart, epoch performance trend chart, and training/validation loss curve from PDF-visible values.
 - NER label distribution chart status: not generated because per-label support counts are not visible in the PDF and no committed final labeled training dataset exists to count labels honestly.
 - Confidence status: the system uses confidence-style and readiness signals, not a certified hiring probability formula.
-- Raw CV walkthrough status: includes raw CV fragment, Layer 1/2/3 tables, and an illustrative schema JSON block based on the actual analyzer response structure.
+- Raw CV walkthrough status: includes a sanitized raw CV fragment, Layer 1/2/3 tables, an illustrative schema JSON block based on the attached actual analyzer response shape, and a top-level output-section summary. Personal email, phone, profile URLs, name, and raw CV text were replaced with placeholders or redacted text.
 - API appendix status: expanded from endpoint summary to request/response/error JSON examples for upload, parse-cv, hybrid-match, recommendations, gap analysis, and health/readiness.
 - Quick Start status: added examiner commands, local URLs, demo admin environment values, validation commands, and troubleshooting notes.
 - Preview features status: clarified CV Builder, Mock Interview, Learning Paths, Career Planner, Mentorship, Tools Hub, and Market Intelligence as preview/future modules where appropriate.
@@ -5014,6 +5123,7 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - Accuracy fix: Table 31 now describes job mining design decisions, and `scraping_jobs` documentation now reflects the actual `job_title`/status/counter schema rather than implying a source-id column.
 - Source coverage language: the report distinguishes deterministic demo/local sources, API adapters, HTML adapters, and unsupported/external-risk sources without claiming whole-market reach.
 - Evaluation language: scraping evidence is recorded as tests, compile/config/health checks, form-request validation, admin diagnostics, and screenshots, not as source success rates unless rerun and recorded.
+- Queue lifecycle note: the deterministic demo smoke validates the protected `/scrape` adapter/import path; a full authenticated `/jobs/scrape-if-missing` queue lifecycle with browser polling remains a recommended final demonstration check.
 - Ethics language: the chapter explicitly covers rate limits, external instability, API keys, proxy configuration, robots/terms considerations, and demo scope.
 
 ## Validation Summary
@@ -5022,7 +5132,7 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - `git diff --check` and `git diff --cached --check` completed without whitespace errors; Git reported line-ending normalization warnings only.
 - Report generation ran successfully with the bundled Python runtime and produced Markdown, DOCX, and PDF artifacts.
 - Generated PDF page count: {page_count}; generated PDF link annotations: {toc_pdf_status}.
-- DOCX structural scan found internal hyperlinks/bookmarks for the custom TOC/List of Figures/List of Tables with no missing anchors after the Figure 54 fix.
+- DOCX structural scan found internal hyperlinks/bookmarks for the custom TOC/List of Figures/List of Tables with no missing anchors after figure/table anchor checks.
 - JSON code-fence validation parsed 30 JSON blocks successfully.
 - All ten new scraping diagrams exist and are referenced by the generated Markdown.
 - Placeholder/typo/bookmark/caption/overclaim scans returned no matches.

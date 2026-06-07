@@ -96,16 +96,18 @@ Ahmed Sobhy Mohamed Ali
 - [Figure 48. Docker services evidence.](#bm_figure_48)
 - [Figure 49. Validation command evidence.](#bm_figure_49)
 - [Figure 50. Colab NER final epoch metrics.](#bm_figure_50)
-- [Figure 51. Job mining design philosophy.](#bm_figure_51)
-- [Figure 52. Complete job mining flow.](#bm_figure_52)
-- [Figure 53. AI Job Miner runtime architecture.](#bm_figure_53)
-- [Figure 54. Scraping sequence diagram.](#bm_figure_54)
-- [Figure 55. Scraping job lifecycle.](#bm_figure_55)
-- [Figure 56. Source management and target-role flow.](#bm_figure_56)
-- [Figure 57. Job import and deduplication flow.](#bm_figure_57)
-- [Figure 58. Failed URL and retry flow.](#bm_figure_58)
-- [Figure 59. Scraping security boundaries.](#bm_figure_59)
-- [Figure 60. Scraping validation evidence.](#bm_figure_60)
+- [Figure 51. Colab NER epoch performance trend.](#bm_figure_51)
+- [Figure 52. Colab NER training and validation loss curve.](#bm_figure_52)
+- [Figure 53. Job mining design philosophy.](#bm_figure_53)
+- [Figure 54. AI Job Miner runtime architecture.](#bm_figure_54)
+- [Figure 55. Complete job mining flow.](#bm_figure_55)
+- [Figure 56. Scraping sequence diagram.](#bm_figure_56)
+- [Figure 57. Scraping job lifecycle.](#bm_figure_57)
+- [Figure 58. Source management and target-role flow.](#bm_figure_58)
+- [Figure 59. Job import and deduplication flow.](#bm_figure_59)
+- [Figure 60. Failed URL and retry flow.](#bm_figure_60)
+- [Figure 61. Scraping security boundaries.](#bm_figure_61)
+- [Figure 62. Scraping validation evidence.](#bm_figure_62)
 
 \pagebreak
 
@@ -139,8 +141,8 @@ Ahmed Sobhy Mohamed Ali
 - [Table 26. Layer 3 matching evidence example.](#bm_table_26)
 - [Table 27. AI approach comparison.](#bm_table_27)
 - [Table 28. Colab NER training run configuration.](#bm_table_28)
-- [Table 29. Colab NER epoch metrics.](#bm_table_29)
-- [Table 30. Colab NER final metric summary.](#bm_table_30)
+- [Table 29. Colab NER final metric summary.](#bm_table_29)
+- [Table 30. AI CV Analyzer output schema sections.](#bm_table_30)
 - [Table 31. Job mining design decisions.](#bm_table_31)
 - [Table 32. Scraping runtime component map.](#bm_table_32)
 - [Table 33. On-demand scraping lifecycle states.](#bm_table_33)
@@ -1060,15 +1062,23 @@ These numbers improve the academic evidence for the training workflow, but they 
 
 *Table 28. Colab NER training run configuration.*
 
-| Epoch | Training Loss | Validation Loss | Precision | Recall | F1 | Accuracy |
-|---:|---:|---:|---:|---:|---:|---:|
-| 1 | 0.077623 | 0.069118 | 0.921027 | 0.928206 | 0.924603 | 0.973227 |
-| 2 | 0.061530 | 0.064051 | 0.915886 | 0.941504 | 0.928518 | 0.974912 |
-| 3 | 0.053831 | 0.063463 | 0.928387 | 0.943469 | 0.935867 | 0.976233 |
-| 4 | 0.044553 | 0.064025 | 0.932287 | 0.937967 | 0.935118 | 0.977018 |
-| 5 | 0.037280 | 0.068058 | 0.933307 | 0.940521 | 0.936900 | 0.976376 |
+The full epoch-by-epoch numeric table is retained in `docs/graduation-book/model-analysis/colab_ner_training_results_summary.md`. In the main chapter, the same verified values are shown as charts so the trend is easier to read in the PDF.
 
-*Table 29. Colab NER epoch metrics.*
+![Colab NER final epoch metrics.](assets/diagrams/31_colab_ner_metrics.png)
+
+*Figure 50. Colab NER final epoch metrics.*
+
+![Colab NER epoch performance trend.](assets/diagrams/61_colab_ner_epoch_performance.png)
+
+*Figure 51. Colab NER epoch performance trend.*
+
+The performance chart shows that the overall F1 score increases from 0.924603 at epoch 1 to 0.936900 at epoch 5, while accuracy remains high throughout the run. These values are overall `seqeval` metrics from the notebook validation split; they are not per-label SKILL/ROLE/EDU/CERT/SOFT metrics.
+
+![Colab NER training and validation loss curve.](assets/diagrams/62_colab_ner_loss_curve.png)
+
+*Figure 52. Colab NER training and validation loss curve.*
+
+The notebook uses Hugging Face `Trainer` with `AutoModelForTokenClassification` and a token-classification dataset. It does not define a custom loss function in the visible code, so this report treats the reported training and validation loss as the Trainer's token-classification objective values rather than a separately designed loss formula. Training loss decreases steadily from 0.077623 to 0.037280. Validation loss remains low, with the lowest visible value at epoch 3 (0.063463) and a small increase by epoch 5 (0.068058). The final epoch still has the strongest visible F1 score, but the validation-loss movement is a reason to interpret the run cautiously rather than overclaiming model generalization.
 
 | Metric | Final Epoch Value | Source |
 |---|---:|---|
@@ -1079,13 +1089,9 @@ These numbers improve the academic evidence for the training workflow, but they 
 | Training loss | 0.037280 | Colab PDF output, epoch 5 |
 | Validation loss | 0.068058 | Colab PDF output, epoch 5 |
 
-*Table 30. Colab NER final metric summary.*
+*Table 29. Colab NER final metric summary.*
 
-![Colab NER final epoch metrics.](assets/diagrams/31_colab_ner_metrics.png)
-
-*Figure 50. Colab NER final epoch metrics.*
-
-No per-label classification report or confusion matrix is visible in the PDF. Therefore, this report does not invent per-label SKILL/ROLE/EDU/CERT/SOFT support, precision, recall, F1, or a confusion-matrix chart.
+No per-label classification report or confusion matrix is visible in the exported Colab PDF, and the attached notebook output does not contain `classification_report`, `confusion_matrix`, `sklearn.metrics`, or matrix-like output cells. Therefore, this report does not invent per-label SKILL/ROLE/EDU/CERT/SOFT support, precision, recall, F1, or a confusion-matrix chart. Future training exports should save a token-level or entity-level confusion matrix plus a per-label classification report with support counts.
 
 ## 6.9 Matching Score Formula and Penalty Logic
 
@@ -1168,122 +1174,112 @@ The following complexity statements are approximate code-level descriptions, not
 
 The example below is an illustrative walkthrough designed for examiner readability. It is not a live model benchmark. It uses a small CV fragment and a small job description to show how the three layers cooperate. Because the full transformer/OCR runtime dependencies were not available in the documentation Python environment, the JSON block is labeled as an illustrative schema example based on the actual `schema.py` response structure rather than a live model run.
 
-Raw CV fragment:
+Sanitized raw CV fragment:
 
 ```text
-Ahmed Mohamed
-Backend Developer
-Skills: Laravel, Docker, MySQL, REST APIs
-Experience: Backend Intern at TechWave, 2024-2025
+Demo Student
+Laravel Backend Developer
+Skills: Laravel, MySQL, RESTful APIs
+Experience: Backend Developer at Demo Company, 2025-2026
 Education: Computer Science
 ```
 
 | Raw Evidence | Extracted Output | Schema Area |
 |---|---|---|
-| `Backend Developer` | Predicted role/title evidence. | `profile.current_title`, `analysis.predicted_role` |
-| `Laravel, Docker, MySQL, REST APIs` | Four hard technical skills. | `skills.items[]` |
-| `Backend Intern at TechWave, 2024-2025` | One experience item with company, title, period, and technologies. | `experience.items[]` |
+| `Laravel Backend Developer` | Predicted role/title evidence. | `profile.current_title`, `analysis.predicted_role` |
+| `Laravel, MySQL, RESTful APIs` | Hard technical skills. | `skills.items[]` |
+| `Backend Developer at Demo Company, 2025-2026` | One experience item with company, title, period, and technologies. | `experience.items[]` |
 | `Computer Science` | Education evidence. | Profile/education metadata when recovered |
 | Text CV fragment | Successful text parsing path; no OCR needed in this example. | `parsing_status`, `stats`, `analysis.metadata` |
 
 *Table 24. Raw CV fragment extraction example.*
 
-Illustrative structured response:
+Illustrative sanitized output based on an actual analyzer response structure:
 
 ```json
 {
   "parsing_status": "success",
   "profile": {
-    "full_name": "Ahmed Mohamed",
-    "current_title": "Backend Developer",
-    "email": null,
-    "phone": null,
-    "location": null,
-    "summary": null
+    "full_name": "Demo Student",
+    "current_title": "Laravel Backend Developer",
+    "alternative_titles": ["Backend Developer"],
+    "headline": "Professional Summary",
+    "contact": {
+      "email": "student@example.com", "phone": "+20XXXXXXXXXX",
+      "location": "Giza, Egypt",
+      "linkedin_url": "https://example.com/linkedin",
+      "github_url": "https://example.com/github", "portfolio_url": null
+    },
+    "summary": "Redacted summary text for a backend-focused student CV.",
+    "confidence_score": 0.93
   },
-  "stats": {
-    "page_count": 1,
-    "char_count": 168,
-    "word_count": 24,
-    "language_hint": "en"
-  },
+  "stats": {"page_count": 2, "char_count": 4110, "word_count": 498, "language_hint": null},
   "skills": {
     "items": [
-      {
-        "name": "Laravel",
-        "category": "hard",
-        "confidence_score": 0.65,
-        "evidence": "ner_or_rule"
-      },
-      {
-        "name": "Docker",
-        "category": "hard",
-        "confidence_score": 0.65,
-        "evidence": "ner_or_rule"
-      },
-      {
-        "name": "MySQL",
-        "category": "hard",
-        "confidence_score": 0.65,
-        "evidence": "ner_or_rule"
-      },
-      {
-        "name": "REST APIs",
-        "category": "hard",
-        "confidence_score": 0.65,
-        "evidence": "ner_or_rule"
-      }
+      {"confidence_score": 0.65, "name": "Laravel", "category": "hard", "evidence": "ner"},
+      {"confidence_score": 0.65, "name": "MySQL", "category": "hard", "evidence": "ner"},
+      {"confidence_score": 0.65, "name": "RESTful APIs", "category": "hard", "evidence": "rule"}
     ],
     "confidence_score": 0.65
   },
   "experience": {
     "items": [
       {
-        "title": "Backend Intern",
-        "company": "TechWave",
-        "start_date": "2024-01-01",
-        "end_date": "2025-01-01",
-        "is_current": false,
-        "description": [
-          "Built REST APIs."
-        ],
-        "technologies": [
-          "Laravel",
-          "Docker",
-          "MySQL"
-        ],
-        "confidence_score": 0.85
+        "confidence_score": 0.85, "title": "Backend Developer",
+        "company": "Demo Company", "location": "Remote",
+        "start_date": "2025-12-01", "end_date": "2026-01-01", "is_current": false,
+        "description": ["Developed Laravel APIs and database-backed features."],
+        "technologies": ["Laravel", "MySQL"]
       }
     ],
     "confidence_score": 0.85
   },
   "analysis": {
-    "predicted_role": "Backend Developer",
-    "seniority": "junior",
-    "primary_domain": "Backend Development",
-    "strengths": [
-      "Relevant backend API and database evidence."
-    ],
-    "gaps": [],
-    "red_flags": [],
+    "summary": null,
+    "predicted_role": "Laravel Backend Developer",
+    "seniority": "Intern",
+    "primary_domain": "Full Stack Development",
+    "strengths": ["Diverse technical portfolio with multiple backend technologies."],
+    "gaps": [], "red_flags": [],
     "confidence_score": 0.75,
     "metadata": {
-      "experience": {
-        "total_experience_years": 1.0
+      "segmentation": {
+        "found_sections": ["profile_summary", "experience", "projects", "skills", "education"],
+        "sections_missing": [], "anomalies": []
       },
-      "extraction": {
-        "source": "pdf_text"
+      "experience": {"total_experience_years": 0.08, "action_verb_score": 0.3, "gap_details": []},
+      "extraction": {"source": "spatial", "spatial_status": "ok", "word_count_spatial": 499},
+      "layer2": {
+        "seniority_details": {"level": "Intern", "semantic_match": "Intern"},
+        "categorized_skills": {
+          "hard_skills": ["Laravel", "MySQL", "RESTful APIs"],
+          "soft_skills": [], "management_skills": []
+        },
+        "domain_scores": {"Backend Development": 0.3338, "Full Stack Development": 0.4616}
       }
-    }
+    },
+    "domain_scores": {"Backend Development": 0.3338, "Full Stack Development": 0.4616}
   }
 }
 ```
 
+| Section | Meaning |
+|---|---|
+| `profile` | Normalized identity, contact, title, headline, summary, and confidence data. |
+| `stats` | Document-level counts such as pages, characters, words, and language hint. |
+| `skills` | Extracted and categorized skill items with confidence and evidence source. |
+| `experience` | Parsed work-history items, dates, descriptions, technologies, and confidence. |
+| `analysis` | Predicted role, seniority, domain, strengths, gaps, red flags, and confidence. |
+| `analysis.metadata.segmentation` | CV sections detected or missing during document understanding. |
+| `analysis.metadata.layer2` | Classification details such as seniority reasoning, categorized skills, and domain scores. |
+
+*Table 30. AI CV Analyzer output schema sections.*
+
 | Classification | Result | Reason |
 |---|---|---|
-| Domain | Backend Development | Backend role plus Laravel, MySQL, REST API evidence. |
-| Seniority | Intern/Junior style estimate | Internship evidence and limited years. |
-| Skill category | Hard technical skills | Laravel, Docker, MySQL, and APIs are technical implementation skills. |
+| Domain | Full Stack Development | The sanitized sample preserves the attached schema's multi-domain scoring style, with backend and frontend scores visible. |
+| Seniority | Intern | Short recorded experience and the Layer 2 seniority detail support an early-career estimate. |
+| Skill category | Hard technical skills | Laravel, MySQL, and RESTful APIs are technical implementation skills. |
 
 *Table 25. Layer 2 interpretation example.*
 
@@ -1348,7 +1344,7 @@ The implementation separates responsibilities deliberately. Laravel remains the 
 
 ![Job mining design philosophy.](assets/diagrams/32_job_mining_design_philosophy.png)
 
-*Figure 51. Job mining design philosophy.*
+*Figure 53. Job mining design philosophy.*
 
 | Design Question | CareerCompass Decision | Reason |
 |---|---|---|
@@ -1366,7 +1362,7 @@ The deployed runtime uses Docker Compose service separation. The AI Job Miner se
 
 ![AI Job Miner runtime architecture.](assets/diagrams/34_scraping_runtime_architecture.png)
 
-*Figure 53. AI Job Miner runtime architecture.*
+*Figure 54. AI Job Miner runtime architecture.*
 
 | Component | Implementation Evidence | Runtime Role |
 |---|---|---|
@@ -1386,13 +1382,13 @@ The complete flow starts with a user search or an admin target role. Laravel che
 
 ![Complete job mining flow.](assets/diagrams/33_complete_job_mining_flow.png)
 
-*Figure 52. Complete job mining flow.*
+*Figure 55. Complete job mining flow.*
 
 The important architectural point is that the Python service does not directly become the database owner. It is an ingestion service. Candidate jobs become CareerCompass jobs only after Laravel form requests validate the payload and the import transaction completes.
 
 ![Scraping sequence diagram.](assets/diagrams/35_scraping_sequence_diagram.png)
 
-*Figure 54. Scraping sequence diagram.*
+*Figure 56. Scraping sequence diagram.*
 
 ## 7.5 On-Demand Scraping and Status Polling
 
@@ -1400,7 +1396,7 @@ On-demand scraping is implemented in `JobController`. `scrapeAndStore` accepts a
 
 ![Scraping job lifecycle.](assets/diagrams/36_scraping_job_lifecycle.png)
 
-*Figure 55. Scraping job lifecycle.*
+*Figure 57. Scraping job lifecycle.*
 
 | Status | Meaning | User/Admin Behavior |
 |---|---|---|
@@ -1419,7 +1415,7 @@ Target roles are implemented through `TargetJobRoleController`, `TargetJobRole`,
 
 ![Source management and target-role flow.](assets/diagrams/37_source_management_flow.png)
 
-*Figure 56. Source management and target-role flow.*
+*Figure 58. Source management and target-role flow.*
 
 | Control | Code Evidence | Purpose |
 |---|---|---|
@@ -1440,7 +1436,7 @@ The import pipeline is centered in `ScrapedJobController::import`. It runs insid
 
 ![Job import and deduplication flow.](assets/diagrams/38_job_import_deduplication_flow.png)
 
-*Figure 57. Job import and deduplication flow.*
+*Figure 59. Job import and deduplication flow.*
 
 | Deduplication Stage | Evidence | Reason |
 |---|---|---|
@@ -1460,7 +1456,7 @@ The failure path uses `ScrapingFailedUrl` records as a lightweight dead-letter s
 
 ![Failed URL and retry flow.](assets/diagrams/39_scraping_failure_dlq_flow.png)
 
-*Figure 58. Failed URL and retry flow.*
+*Figure 60. Failed URL and retry flow.*
 
 | Failure Type | Handling | User/Admin Visibility |
 |---|---|---|
@@ -1486,7 +1482,7 @@ Scraping uses multiple security boundaries. User and admin actions go through au
 
 ![Scraping security boundaries.](assets/diagrams/40_scraping_security_boundaries.png)
 
-*Figure 59. Scraping security boundaries.*
+*Figure 61. Scraping security boundaries.*
 
 | Control | Code / Configuration Evidence | Purpose |
 |---|---|---|
@@ -1564,7 +1560,7 @@ The strongest current scraping evidence is architectural and test evidence, not 
 
 ![Scraping validation evidence.](assets/diagrams/41_scraping_validation_evidence.png)
 
-*Figure 60. Scraping validation evidence.*
+*Figure 62. Scraping validation evidence.*
 
 | Evidence | Result to Record | What It Proves | Limitation |
 |---|---|---|---|
@@ -1577,6 +1573,23 @@ The strongest current scraping evidence is architectural and test evidence, not 
 | Admin diagnostics screenshots | Figures 44-47. | Admin UI supports source, job, dashboard, and target-role operations. | Point-in-time demo evidence. |
 
 *Table 39. Scraping validation evidence.*
+
+The final smoke test used a direct protected `/scrape` request to validate the deterministic demo adapter and Laravel import path. A full authenticated `/jobs/scrape-if-missing` queue lifecycle with browser polling remains a recommended final demonstration check because it exercises the user-facing queue trigger and status-polling path rather than only the internal scraper contract.
+
+| Component | Primary Evidence | Summary |
+|---|---|---|
+| FastAPI service/API layer | `ai-job-miner/service_api.py` | Provides `/health`, `/metrics`, and protected `/scrape` orchestration. |
+| Demo/local adapter | `CareerCompass Demo Jobs` source path and tests | Deterministic source used for safe smoke evidence without external websites. |
+| Adzuna/API adapter | Adzuna source code and environment keys | Optional external API source when credentials and quotas are configured. |
+| HTML/Scrapy-related path | `ai_job_miner/settings.py`, spiders, pipelines | Public-page crawling path with robots/delay/retry configuration boundaries. |
+| Laravel JobController | `JobController` | Starts on-demand scraping and exposes status polling. |
+| Laravel ScrapedJobController | `ScrapedJobController` | Validates imports, checks duplicates, records failures, and redacts logs. |
+| Queue jobs | `ProcessOnDemandJobScraping`, market scraping jobs | Move long network tasks out of browser request time. |
+| Skill sync | `SkillSyncService` | Connects imported job requirements to canonical skills. |
+| Admin source/target controllers | `ScrapingSourceController`, `TargetJobRoleController` | Manage active sources, diagnostics, target roles, and full-run triggers. |
+| Frontend admin/user pages | `frontend/src/pages/admin`, user job pages | Surface jobs, sources, targets, status, and retry/diagnostic views. |
+
+*AI Job Miner Source and Function Inventory Summary.*
 
 No source coverage percentage, success rate, or every-job-board claim is made. External-source behavior should be retested shortly before the final defense if the team wants live demonstration evidence.
 
@@ -1983,7 +1996,7 @@ The project demonstrates practical learning in software architecture, service de
 - The system is a graduation/demo platform and not a production product.
 - Recommendation and gap analysis outputs are estimates.
 - AI evaluation needs larger labeled datasets, committed training artifacts, per-label reports, and repeatable model scoring.
-- The exported NER model artifact path is supported by the runtime, but model weights are ignored by Git and the repository does not include a reproducible final metric run from the training notebook.
+- The exported NER model artifact path is supported by the runtime. The repository includes the exported Colab PDF with recorded overall NER metrics, but it does not include the cleaned dataset and model weights required to rerun the same training experiment from repository files alone.
 - The Colab PDF records overall NER training metrics, but the final labeled NER dataset was not available in committed evidence, so label distribution and final per-label NER precision/recall/F1 were not claimed.
 - OCR and PDF text-recovery quality can affect scanned CVs, image-heavy layouts, multi-column documents, and unusual fonts.
 - Synthetic training examples may not represent all real student CV styles, Arabic/multilingual CVs, or informal job-market wording.
@@ -2156,9 +2169,9 @@ Response example:
 {
   "parsing_status": "success",
   "profile": {
-    "full_name": "Ahmed Mohamed",
+    "full_name": "Demo Student",
     "current_title": "Backend Developer",
-    "email": "ahmed@example.com"
+    "email": "student@example.com"
   },
   "stats": {
     "page_count": 1,

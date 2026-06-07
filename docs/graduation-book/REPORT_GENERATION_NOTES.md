@@ -33,9 +33,9 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 
 ## Counts
 
-- PDF pages: 113
+- PDF pages: 115
 - Screenshots/evidence images: 19
-- Diagrams: 41
+- Diagrams: 43
 
 ## Table of Contents and Tables
 
@@ -43,15 +43,15 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - Front matter order: Cover -> Table of Contents -> List of Figures -> List of Tables -> Acknowledgment -> Abstract -> Abbreviations -> Chapter 1
 - Abbreviations placement: standalone page after Abstract and before Chapter 1
 - DOCX TOC status: 17 custom manual TOC entries contain internal hyperlinks to bookmarked major headings
-- DOCX List of Figures status: 60 List of Figures entries link to bookmarked figure captions
+- DOCX List of Figures status: 62 List of Figures entries link to bookmarked figure captions
 - DOCX List of Tables status: 56 List of Tables entries link to bookmarked table captions
-- PDF TOC status: PDF contains 130 link annotations after export
+- PDF TOC status: PDF contains 132 link annotations after export
 - Table formatting status: data tables use fixed DXA widths, wrapped text, repeated header rows, smaller table fonts, and split wide manual test observations into narrower tables; cover layout tables are intentionally excluded from repeated-header checks
 - Figure caption status: explicit italic caption lines are the single visible figure-caption source; Markdown image alt text is not rendered as a visible figure caption
 - Table caption status: formal table captions are rendered below their corresponding tables and remain linked from the List of Tables
 - Section 2.6/2.7 layout status: 2.6 heading, FR-01/FR-11 rows, and Table 2 caption appear on PDF page(s) [12]; 2.7 starts on PDF page(s) [12] after the Table 2 caption
 - Section 2.9/2.10 layout status: 2.9 heading, Software Requirements rows, and Table 4 caption appear on PDF page(s) [13]; 2.10 starts on PDF page(s) [13] after the Table 4 caption
-- Section 9.9/9.10 layout status: 9.9 heading, security-control rows, and Table 52 caption appear on PDF page(s) [85]; 9.10 starts on PDF page(s) [85] after the Table 52 caption
+- Section 9.9/9.10 layout status: 9.9 heading, security-control rows, and Table 52 caption appear on PDF page(s) [87]; 9.10 starts on PDF page(s) [87] after the Table 52 caption
 
 ## Caption, Link, and Layout Verification Method
 
@@ -95,7 +95,9 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - Visible dataset evidence from the PDF: 45,911 total rows, 41,319 train rows, 4,592 test rows, 11 BIO labels, test size 0.1, seed 42.
 - Visible final epoch metrics from the PDF: precision 0.933307, recall 0.940521, F1 0.936900, accuracy 0.976376, training loss 0.037280, validation loss 0.068058.
 - Per-label metrics status: not visible in the PDF, so no per-label table or support-distribution chart was invented.
-- Confusion matrix status: not visible in the PDF, so no confusion-matrix chart was generated.
+- Colab visualization status: generated/updated final metrics, epoch performance, and loss-curve charts from the verified visible metrics.
+- Loss-function status: the notebook uses Hugging Face `Trainer` with `AutoModelForTokenClassification` and does not define a custom loss; the report treats losses as Trainer-reported token-classification objective values.
+- Confusion matrix status: not visible in the PDF and not present in the attached notebook outputs/source terms, so no confusion-matrix chart was generated.
 
 ## AI CV Analyzer Documentation Update
 
@@ -109,10 +111,10 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - Matching formula status: exact for the `IntelligentMatcher.calculate_match` score-composition path; upstream semantic/skill/domain scores still depend on model availability.
 - Dataset statistics status: Colab PDF records train/test row counts; dataset content remains unavailable from committed evidence.
 - Dataset evidence diagram status: updated the dataset evidence availability diagram to include Colab PDF evidence.
-- Colab metrics visualization status: generated a final-epoch metrics bar chart from PDF-visible values.
+- Colab metrics visualization status: generated a final-epoch metrics bar chart, epoch performance trend chart, and training/validation loss curve from PDF-visible values.
 - NER label distribution chart status: not generated because per-label support counts are not visible in the PDF and no committed final labeled training dataset exists to count labels honestly.
 - Confidence status: the system uses confidence-style and readiness signals, not a certified hiring probability formula.
-- Raw CV walkthrough status: includes raw CV fragment, Layer 1/2/3 tables, and an illustrative schema JSON block based on the actual analyzer response structure.
+- Raw CV walkthrough status: includes a sanitized raw CV fragment, Layer 1/2/3 tables, an illustrative schema JSON block based on the attached actual analyzer response shape, and a top-level output-section summary. Personal email, phone, profile URLs, name, and raw CV text were replaced with placeholders or redacted text.
 - API appendix status: expanded from endpoint summary to request/response/error JSON examples for upload, parse-cv, hybrid-match, recommendations, gap analysis, and health/readiness.
 - Quick Start status: added examiner commands, local URLs, demo admin environment values, validation commands, and troubleshooting notes.
 - Preview features status: clarified CV Builder, Mock Interview, Learning Paths, Career Planner, Mentorship, Tools Hub, and Market Intelligence as preview/future modules where appropriate.
@@ -132,6 +134,7 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - Accuracy fix: Table 31 now describes job mining design decisions, and `scraping_jobs` documentation now reflects the actual `job_title`/status/counter schema rather than implying a source-id column.
 - Source coverage language: the report distinguishes deterministic demo/local sources, API adapters, HTML adapters, and unsupported/external-risk sources without claiming whole-market reach.
 - Evaluation language: scraping evidence is recorded as tests, compile/config/health checks, form-request validation, admin diagnostics, and screenshots, not as source success rates unless rerun and recorded.
+- Queue lifecycle note: the deterministic demo smoke validates the protected `/scrape` adapter/import path; a full authenticated `/jobs/scrape-if-missing` queue lifecycle with browser polling remains a recommended final demonstration check.
 - Ethics language: the chapter explicitly covers rate limits, external instability, API keys, proxy configuration, robots/terms considerations, and demo scope.
 
 ## Validation Summary
@@ -139,8 +142,8 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - Branch check passed on `docs/graduation-book`; the only unrelated untracked file remained `docs/REVERSE_ENGINEERING_SYSTEM_WALKTHROUGH.md`.
 - `git diff --check` and `git diff --cached --check` completed without whitespace errors; Git reported line-ending normalization warnings only.
 - Report generation ran successfully with the bundled Python runtime and produced Markdown, DOCX, and PDF artifacts.
-- Generated PDF page count: 113; generated PDF link annotations: PDF contains 130 link annotations after export.
-- DOCX structural scan found internal hyperlinks/bookmarks for the custom TOC/List of Figures/List of Tables with no missing anchors after the Figure 54 fix.
+- Generated PDF page count: 115; generated PDF link annotations: PDF contains 132 link annotations after export.
+- DOCX structural scan found internal hyperlinks/bookmarks for the custom TOC/List of Figures/List of Tables with no missing anchors after figure/table anchor checks.
 - JSON code-fence validation parsed 30 JSON blocks successfully.
 - All ten new scraping diagrams exist and are referenced by the generated Markdown.
 - Placeholder/typo/bookmark/caption/overclaim scans returned no matches.

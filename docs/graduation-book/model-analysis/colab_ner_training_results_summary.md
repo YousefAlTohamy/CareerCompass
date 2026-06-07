@@ -64,12 +64,27 @@ The final epoch row in the PDF reports:
 | Training loss | 0.037280 |
 | Validation loss | 0.068058 |
 
+## Visualization Added to Main Report
+
+- `assets/diagrams/31_colab_ner_metrics.png` shows the final precision, recall, F1-score, and accuracy values.
+- `assets/diagrams/61_colab_ner_epoch_performance.png` shows precision, recall, F1-score, and accuracy across epochs 1-5.
+- `assets/diagrams/62_colab_ner_loss_curve.png` shows training loss and validation loss across epochs 1-5.
+
+The epoch table remains in this support note so exact numeric values are still available without crowding the main chapter. The main report uses the charts for readability.
+
+## Loss Interpretation
+
+The attached notebook uses Hugging Face `Trainer` with `AutoModelForTokenClassification`, a token-classification dataset, and `seqeval` overall metrics. The visible notebook code does not define a custom loss function. Therefore, the report treats the recorded training and validation losses as Trainer-reported token-classification objective values, not as a separately designed custom loss formula.
+
+Training loss decreases steadily from 0.077623 to 0.037280. Validation loss remains low, with the lowest visible value at epoch 3 (0.063463) and a small increase by epoch 5 (0.068058). The final epoch reports the strongest visible F1-score, but the validation-loss movement should be interpreted cautiously.
+
 ## Unavailable from the PDF
 
 - No per-label SKILL/ROLE/EDU/CERT/SOFT classification report is visible in the PDF.
 - No confusion matrix is visible in the PDF.
 - No per-label support counts are visible beyond the overall train/test row counts.
 - The PDF does not include the cleaned dataset content or model weights.
+- The attached notebook was searched for `classification_report`, `confusion_matrix`, `sklearn.metrics`, matrix-like output terms, and image outputs; none were present. Therefore, no confusion matrix was recreated.
 
 ## Interpretation Boundary
 
