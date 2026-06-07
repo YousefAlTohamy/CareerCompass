@@ -26,7 +26,6 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.platypus import (
     Image,
-    KeepTogether,
     PageBreak,
     Paragraph,
     Preformatted,
@@ -200,7 +199,7 @@ FIGURES = [
     ("Figure 46", "Admin sources diagnostics page.", "assets/screenshots/16_admin_sources_diagnostics.png"),
     ("Figure 47", "Admin target roles page.", "assets/screenshots/17_admin_targets.png"),
     ("Figure 48", "Docker services evidence.", "assets/screenshots/18_docker_containers.png"),
-    ("Figure 49", "Validation evidence summary.", "assets/screenshots/19_validation_summary.png"),
+    ("Figure 49", "Validation command evidence.", "assets/screenshots/19_validation_summary.png"),
     ("Figure 50", "Colab NER final epoch metrics.", "assets/diagrams/31_colab_ner_metrics.png"),
     ("Figure 51", "Colab NER epoch performance trend.", "assets/diagrams/61_colab_ner_epoch_performance.png"),
     ("Figure 52", "Colab NER training and validation loss curve.", "assets/diagrams/62_colab_ner_loss_curve.png"),
@@ -299,25 +298,6 @@ def ensure_dirs() -> None:
         folder.mkdir(parents=True, exist_ok=True)
 
 
-def create_brand_assets() -> None:
-    """Create a small print-friendly CareerCompass mark for the cover."""
-    logo_path = LOGOS / "careercompass_logo.png"
-    img = PILImage.new("RGBA", (900, 260), (255, 255, 255, 0))
-    draw = ImageDraw.Draw(img)
-    navy = "#0f172a"
-    blue = "#0ea5e9"
-    muted = "#475569"
-    draw.rounded_rectangle((20, 30, 210, 220), radius=44, fill=navy)
-    draw.ellipse((58, 68, 172, 182), outline="white", width=8)
-    draw.polygon([(146, 84), (126, 146), (64, 166), (84, 104)], fill="#bae6fd", outline="white")
-    draw.line((58, 125, 172, 125), fill="#38bdf8", width=3)
-    draw.line((115, 68, 115, 182), fill="#38bdf8", width=3)
-    draw.text((250, 58), "CareerCompass", fill=navy, font=load_font(54, True))
-    draw.text((254, 128), "AI-Powered Career Guidance and Job Mining Platform", fill=muted, font=load_font(25))
-    draw.line((254, 178, 790, 178), fill=blue, width=5)
-    img.save(logo_path)
-
-
 def heading_anchor(text: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
     return f"bm_{slug or 'section'}"
@@ -376,14 +356,14 @@ def wrap_text(draw: ImageDraw.ImageDraw, text: str, font, max_width: int) -> lis
 def rounded_box(draw, box, title, subtitle="", fill="#ffffff", outline="#1d4ed8", text="#0f172a"):
     x1, y1, x2, y2 = box
     draw.rounded_rectangle(box, radius=18, fill=fill, outline=outline, width=3)
-    title_font = load_font(28, True)
-    sub_font = load_font(20)
+    title_font = load_font(24, True)
+    sub_font = load_font(17)
     draw.text((x1 + 18, y1 + 18), title, fill=text, font=title_font)
     if subtitle:
         y = y1 + 52
         for line in wrap_text(draw, subtitle, sub_font, x2 - x1 - 36):
             draw.text((x1 + 18, y), line, fill="#334155", font=sub_font)
-            y += 26
+            y += 22
 
 
 def arrow(draw, start, end, color="#0f766e", width=4):
@@ -613,44 +593,27 @@ def create_colab_ner_loss_curve_diagram() -> None:
 
 
 def create_frontend_backend_database_diagrams() -> None:
-    img = PILImage.new("RGB", (1800, 1100), "#f8fafc")
-    draw = ImageDraw.Draw(img)
-    draw.rectangle((0, 0, 1800, 96), fill="#0f172a")
-    draw.text((44, 28), "Frontend Route and Layout Architecture", fill="white", font=load_font(34, True))
-    intro_font = load_font(30)
-    intro_y = 126
-    for line in wrap_text(draw, "React Router keeps public, student, admin, and preview screens separated through route guards.", intro_font, 1620):
-        draw.text((80, intro_y), line, fill="#334155", font=intro_font)
-        intro_y += 36
-
-    lanes = [
-        ("1", "App Shell", "Router, theme, auth, navbar, footer", (80, 210, 420, 390), "#dbeafe"),
-        ("2", "Public Routes", "Home, login, register, status, policies", (520, 190, 900, 360), "#ecfdf5"),
-        ("3", "Student Routes", "Dashboard, jobs, gaps, profile, applications", (520, 440, 900, 630), "#fef3c7"),
-        ("4", "Preview Screens", "CV builder, mock interview, learning, tools", (520, 720, 900, 910), "#fff7ed"),
-        ("5", "Route Guards", "GuestRoute and ProtectedRoute redirects", (1040, 190, 1480, 360), "#fee2e2"),
-        ("6", "Admin Routes", "Dashboard, jobs, users, sources, targets", (1040, 440, 1480, 630), "#ede9fe"),
-        ("7", "UI Evidence", "Screenshots for student, admin, status, preview", (1040, 720, 1480, 910), "#cffafe"),
-    ]
-    for number, title_text, body, box, fill in lanes:
-        x1, y1, x2, y2 = box
-        draw.rounded_rectangle(box, radius=22, fill=fill, outline="#2563eb", width=3)
-        draw.ellipse((x1 + 20, y1 + 18, x1 + 64, y1 + 62), fill="#0f172a")
-        draw.text((x1 + 36, y1 + 25), number, fill="white", font=load_font(24, True))
-        draw.text((x1 + 82, y1 + 20), title_text, fill="#0f172a", font=load_font(32, True))
-        y = y1 + 74
-        for line in wrap_text(draw, body, load_font(28), x2 - x1 - 44):
-            draw.text((x1 + 22, y), line, fill="#334155", font=load_font(28))
-            y += 36
-
-    # Larger unlabeled arrows keep the routing structure readable in print.
-    arrow(draw, (420, 300), (520, 275), color="#0f766e", width=4)
-    arrow(draw, (420, 300), (520, 535), color="#0f766e", width=4)
-    arrow(draw, (420, 300), (520, 815), color="#0f766e", width=4)
-    arrow(draw, (900, 275), (1040, 275), color="#0f766e", width=4)
-    arrow(draw, (900, 535), (1040, 535), color="#0f766e", width=4)
-    arrow(draw, (900, 815), (1040, 815), color="#0f766e", width=4)
-    img.save(DIAGRAMS / "66_frontend_route_layout_architecture.png")
+    save_diagram(
+        "66_frontend_route_layout_architecture.png",
+        "Frontend Route and Layout Architecture",
+        [
+            ("App Shell", "App.jsx wraps Router, ThemeProvider, AuthProvider, Navbar, Footer, Suspense, and ErrorBoundary.", (70, 150, 430, 300), "#dbeafe"),
+            ("Public Routes", "Home, Login, Register, About, Privacy, Terms, and System Status.", (560, 120, 910, 260), "#ecfdf5"),
+            ("Student Routes", "Dashboard, Jobs, Gap Analysis, Profile, Settings, Market, Applications.", (560, 350, 910, 520), "#fef3c7"),
+            ("Preview Screens", "CV Builder, Mock Interview, Learning Paths, Career Planner, Mentorship, Tools Hub.", (560, 610, 910, 780), "#fff7ed"),
+            ("Admin Routes", "Admin dashboard, jobs, users, sources, target roles, and detail pages.", (1060, 350, 1420, 520), "#ede9fe"),
+            ("Route Guards", "GuestRoute redirects logged-in users; ProtectedRoute enforces auth and admin role separation.", (1060, 120, 1420, 260), "#fee2e2"),
+            ("UI Evidence", "Screenshots show rendered student, admin, system status, and preview-module pages.", (1060, 610, 1420, 780), "#cffafe"),
+        ],
+        [
+            ((430, 225), (560, 190), "routes"),
+            ((430, 225), (560, 430), "student"),
+            ((430, 225), (560, 690), "preview"),
+            ((910, 430), (1060, 430), "admin"),
+            ((1060, 190), (910, 190), "guards"),
+            ((910, 690), (1060, 690), "evidence"),
+        ],
+    )
 
     save_diagram(
         "67_frontend_api_auth_flow.png",
@@ -1589,65 +1552,29 @@ def create_diagrams() -> None:
 
 
 def create_sequence_diagram(name: str, title: str, participants: list[str], messages: list[tuple[str, str, str]]):
-    width, height = 1900, 1250
+    width, height = 1700, 1050
     img = PILImage.new("RGB", (width, height), "#f8fafc")
     draw = ImageDraw.Draw(img)
     draw.rectangle((0, 0, width, 96), fill="#0f172a")
     draw.text((44, 28), title, fill="white", font=load_font(34, True))
-
-    # Print-friendly replacement for compressed lifeline diagrams. Each card
-    # preserves the same ordered message while avoiding tiny arrow labels.
-    participant_font = load_font(26, True)
-    legend_text = "Participants: " + "  |  ".join(participants)
-    legend_lines = wrap_text(draw, legend_text, participant_font, width - 110)
-    y = 120
-    for line in legend_lines[:2]:
-        draw.text((56, y), line, fill="#334155", font=participant_font)
-        y += 34
-
-    cols = 3
-    card_w = 560
-    card_h = 205
-    x0 = 70
-    y0 = 205
-    x_gap = 50
-    y_gap = 44
-    title_font = load_font(31, True)
-    body_font = load_font(30)
-    route_font = load_font(22, True)
-    num_font = load_font(25, True)
-    centers: list[tuple[int, int]] = []
-
-    for idx, (src, dst, label) in enumerate(messages, start=1):
-        row = (idx - 1) // cols
-        col = (idx - 1) % cols
-        x1 = x0 + col * (card_w + x_gap)
-        y1 = y0 + row * (card_h + y_gap)
-        x2 = x1 + card_w
-        y2 = y1 + card_h
-        fill = ["#dbeafe", "#ecfdf5", "#fef3c7", "#ede9fe"][row % 4]
-        draw.rounded_rectangle((x1, y1, x2, y2), radius=18, fill=fill, outline="#2563eb", width=3)
-        draw.ellipse((x1 + 16, y1 + 16, x1 + 58, y1 + 58), fill="#0f172a")
-        draw.text((x1 + 29 - (6 if idx >= 10 else 0), y1 + 22), str(idx), fill="white", font=num_font)
-        route = f"{src} -> {dst}"
-        route_y = y1 + 18
-        for route_line in wrap_text(draw, route, title_font, card_w - 92)[:2]:
-            draw.text((x1 + 74, route_y), route_line, fill="#0f172a", font=title_font)
-            route_y += 36
-        y_text = max(y1 + 78, route_y + 2)
-        for line in wrap_text(draw, label, body_font, card_w - 44):
-            draw.text((x1 + 22, y_text), line, fill="#334155", font=body_font)
-            y_text += 36
-        centers.append(((x1 + x2) // 2, (y1 + y2) // 2))
-
-    for idx in range(len(centers) - 1):
-        c1 = centers[idx]
-        c2 = centers[idx + 1]
-        if (idx + 1) % cols != 0:
-            arrow(draw, (c1[0] + card_w // 2 - 26, c1[1]), (c2[0] - card_w // 2 + 26, c2[1]), color="#0f766e", width=3)
-
-    footer = "Numbered cards preserve request/response order; detailed endpoint and persistence behavior is explained in the chapter text."
-    draw.text((70, height - 58), footer, fill="#475569", font=route_font)
+    x_positions = {}
+    gap = (width - 160) // (len(participants) - 1)
+    for i, participant in enumerate(participants):
+        x = 80 + i * gap
+        x_positions[participant] = x
+        draw.rounded_rectangle((x - 90, 130, x + 90, 190), radius=12, fill="#dbeafe", outline="#2563eb", width=2)
+        draw.text((x - 78, 150), participant, fill="#0f172a", font=load_font(18, True))
+        draw.line((x, 190, x, height - 80), fill="#94a3b8", width=2)
+    y = 240
+    for src, dst, label in messages:
+        sx, dx = x_positions[src], x_positions[dst]
+        arrow(draw, (sx, y), (dx, y), color="#0f766e", width=3)
+        label_font = load_font(15)
+        tx = min(sx, dx) + 12
+        for line in wrap_text(draw, label, label_font, abs(dx - sx) - 24):
+            draw.text((tx, y - 26), line, fill="#334155", font=label_font)
+            y += 2
+        y += 72
     img.save(DIAGRAMS / name)
 
 
@@ -1706,73 +1633,27 @@ def command_text(command: list[str]) -> str:
 
 
 def text_image(path: Path, title: str, lines: Iterable[str]) -> None:
-    img = PILImage.new("RGB", (1600, 1000), "#f8fafc")
+    img = PILImage.new("RGB", (1600, 1000), "#0f172a")
     draw = ImageDraw.Draw(img)
     title_font = load_font(34, True)
-    mono = ImageFont.truetype("C:/Windows/Fonts/consola.ttf", 22) if Path("C:/Windows/Fonts/consola.ttf").exists() else load_font(21)
-    draw.rectangle((0, 0, 1600, 96), fill="#0f172a")
-    draw.text((48, 30), title, fill="white", font=title_font)
+    mono = ImageFont.truetype("C:/Windows/Fonts/consola.ttf", 19) if Path("C:/Windows/Fonts/consola.ttf").exists() else load_font(18)
+    draw.text((48, 36), title, fill="#e0f2fe", font=title_font)
     y = 105
     for raw in lines:
         for line in str(raw).splitlines() or [""]:
             if y > 960:
                 break
-            draw.text((48, y), line[:118], fill="#1e293b", font=mono)
-            y += 34
+            draw.text((48, y), line[:145], fill="#e2e8f0", font=mono)
+            y += 28
         if y > 960:
             break
     img.save(path)
 
 
-def evidence_table_image(path: Path, title: str, columns: list[str], rows: list[list[str]]) -> None:
-    img = PILImage.new("RGB", (1800, 1150), "#f8fafc")
-    draw = ImageDraw.Draw(img)
-    draw.rectangle((0, 0, 1800, 100), fill="#0f172a")
-    draw.text((50, 30), title, fill="white", font=load_font(34, True))
-    widths = [420, 280, 940] if len(columns) == 3 else [360] * len(columns)
-    x_positions = [70]
-    for width in widths[:-1]:
-        x_positions.append(x_positions[-1] + width)
-    header_y = 145
-    row_h = 86
-    header_fill = "#dbeafe"
-    border = "#94a3b8"
-    for idx, column in enumerate(columns):
-        x1 = x_positions[idx]
-        x2 = x1 + widths[idx]
-        draw.rectangle((x1, header_y, x2, header_y + 58), fill=header_fill, outline=border, width=2)
-        draw.text((x1 + 16, header_y + 16), column, fill="#0f172a", font=load_font(22, True))
-    y = header_y + 58
-    for row_idx, row in enumerate(rows[:10]):
-        max_lines = 1
-        wrapped_cells: list[list[str]] = []
-        for idx, cell in enumerate(row):
-            font = load_font(20)
-            lines = wrap_text(draw, str(cell), font, widths[idx] - 32)
-            wrapped_cells.append(lines[:2])
-            max_lines = max(max_lines, min(2, len(lines)))
-        height = max(row_h, 36 + max_lines * 30)
-        for idx, lines in enumerate(wrapped_cells):
-            x1 = x_positions[idx]
-            x2 = x1 + widths[idx]
-            fill = "#ffffff" if row_idx % 2 == 0 else "#f8fafc"
-            draw.rectangle((x1, y, x2, y + height), fill=fill, outline=border, width=1)
-            ty = y + 16
-            for line in lines:
-                draw.text((x1 + 16, ty), line, fill="#334155", font=load_font(20))
-                ty += 30
-        y += height
-        if y > 1060:
-            break
-    draw.text((70, 1090), "Generated as a readable evidence table; full command output remains available from the local validation logs.", fill="#64748b", font=load_font(17))
-    img.save(path)
-
-
 def create_terminal_evidence() -> None:
-    ps_json = command_text(["docker", "compose", "ps", "--format", "json"])
     ps_text = command_text(["docker", "compose", "-f", "docker-compose.yml", "-f", "docker-compose.prod.yml", "ps"])
     ps_path = SCREENSHOTS / "18_docker_containers.png"
-    ps_lower = (ps_json + ps_text).lower()
+    ps_lower = ps_text.lower()
     docker_daemon_unavailable = any(
         marker in ps_lower
         for marker in [
@@ -1783,50 +1664,31 @@ def create_terminal_evidence() -> None:
     )
     # Keep the previously captured running-services evidence when this local machine cannot reach Docker.
     if not docker_daemon_unavailable or not ps_path.exists():
-        services: dict[str, dict] = {}
-        for line in ps_json.splitlines():
-            try:
-                item = json.loads(line)
-            except Exception:
-                continue
-            service = item.get("Service") or item.get("Name") or "service"
-            services[str(service)] = item
-        preferred = [
-            ("nginx", "Public HTTP gateway, host port 80."),
-            ("frontend", "React/Vite frontend, host port 5173."),
-            ("backend-api", "Laravel API container, internal FPM port 9000."),
-            ("backend-worker-scraping", "Long-running scraping queue worker."),
-            ("ai-cv-analyzer", "FastAPI CV analyzer, host port 8000."),
-            ("ai-job-miner", "FastAPI job miner, host port 8003."),
-            ("db", "MySQL database, host port 3306."),
-            ("minio", "Private object storage, host ports 9000/9001."),
-            ("prometheus", "Metrics collection, host port 9090."),
-            ("grafana", "Operational dashboard, host port 3000."),
-        ]
-        service_rows: list[list[str]] = []
-        for service, role in preferred:
-            item = services.get(service)
-            if not item:
-                continue
-            state = item.get("State") or item.get("Status") or "unknown"
-            health = item.get("Health")
-            status = f"{state}" + (f" / {health}" if health else "")
-            service_rows.append([service, status, role])
-        if not service_rows:
-            service_rows = [[line[:42], "reported", "Raw compose output line retained in generated evidence."] for line in ps_text.splitlines()[1:11]]
-        evidence_table_image(ps_path, "Docker Compose Services Evidence", ["Service", "Status", "Evidence"], service_rows)
-
-    validation_rows = [
-        ["Compose config", "PASSED", "Base plus production overlay YAML/config validated."],
-        ["Laravel health", "200", "/api/health returned ok; /api/ready reported database, cache, AI, and scraper checks."],
-        ["Frontend status", "200", "/status returned the React/Vite page HTML."],
-        ["AI Job Miner", "PASSED", "/health returned ok; container pytest passed with 75 tests and 1 warning."],
-        ["AI CV Analyzer", "PASSED", "Root endpoint returned operational; Python syntax compilation passed."],
-        ["Backend tests", "RETAINED", "Earlier container validation passed 39 tests and 297 assertions; app code was not changed in this documentation pass."],
-        ["Frontend build", "RETAINED", "Earlier ESLint/build evidence passed with warnings documented; frontend app code was not changed in this documentation pass."],
-        ["Document build", "PASSED", "Markdown, DOCX, PDF, bookmarks, links, JSON examples, and image references were structurally validated."],
+        text_image(
+            ps_path,
+            "Docker Compose Services Evidence",
+            ps_text.splitlines(),
+        )
+    validation_lines = [
+        "Validation summary captured for the graduation book:",
+        "",
+        "docker compose config --quiet: PASSED",
+        "docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet: PASSED",
+        "docker compose up -d --build: stack built; full initial build exceeded 15 minutes, then targeted rebuild/start completed",
+        "composer install in backend-api container: PASSED",
+        "php artisan config:clear: PASSED",
+        "php artisan route:list: PASSED (131 routes)",
+        "php artisan migrate --force --no-interaction: PASSED (nothing to migrate)",
+        "php artisan test: PASSED (39 tests, 297 assertions)",
+        "frontend ESLint: PASSED with 9 warnings and 0 errors",
+        "frontend Vite build: PASSED (2904 modules transformed)",
+        "ai-job-miner pytest: PASSED (75 passed)",
+        "ai-cv-analyzer compileall: PASSED",
+        "ai-job-miner compileall: PASSED",
+        "ai-cv-analyzer pytest: SKIPPED/blocked because pytest is not installed in that container",
+        "HTTP probes: /, /api/health, /api/ready, /status, AI CV Analyzer root, and Job Miner health returned 200",
     ]
-    evidence_table_image(SCREENSHOTS / "19_validation_summary.png", "Validation Evidence Summary", ["Check", "Result", "Meaning / Boundary"], validation_rows)
+    text_image(SCREENSHOTS / "19_validation_summary.png", "Validation Command Evidence", validation_lines)
 
 
 def references_markdown() -> str:
@@ -3506,7 +3368,7 @@ The final smoke test used a direct protected `/scrape` request to validate the d
 | Admin source/target controllers | `ScrapingSourceController`, `TargetJobRoleController` | Manage active sources, diagnostics, target roles, and full-run triggers. |
 | Frontend admin/user pages | `frontend/src/pages/admin`, user job pages | Surface jobs, sources, targets, status, and retry/diagnostic views. |
 
-AI Job Miner source and function inventory summary.
+*AI Job Miner Source and Function Inventory Summary.*
 
 No source coverage percentage, success rate, or every-job-board claim is made. External-source behavior should be retested shortly before the final defense if the team wants live demonstration evidence.
 
@@ -3556,9 +3418,9 @@ Python syntax compilation passed for both AI services. The AI Job Miner pytest s
 
 ## 8.6 Docker and Integration Testing
 
-Docker was available during the final publishing QA pass, and Docker Compose configuration validation passed for the base plus production overlay files. The existing local stack was already running, so no rebuild was performed. `docker compose ps` showed the main app containers running, with backend, frontend, Nginx, job miner, database, and queue workers healthy. Health probes returned 200 for `/api/health`, `/api/ready`, `/status`, AI Job Miner `/health`, and the AI CV Analyzer root endpoint. These checks prove service availability in the local demo stack, not external source reliability.
+Docker Desktop was initially unavailable to the shell, then was started through `docker desktop start`. Docker Compose configuration validation passed for the base plus production overlay files. `docker compose up -d` was used without a rebuild to start the existing local stack. After startup settled, `docker compose ps` showed the main app containers running, with backend, frontend, Nginx, job miner, database, and queue workers healthy. Health probes returned 200 for `/api/health`, `/api/ready`, `/status`, AI Job Miner `/health`, and the AI CV Analyzer root endpoint. These checks prove service availability in the local demo stack, not external source reliability.
 
-{figure_markdown("Figure 49", "Validation evidence summary.", "assets/screenshots/19_validation_summary.png")}
+{figure_markdown("Figure 49", "Validation command evidence.", "assets/screenshots/19_validation_summary.png")}
 
 ### 8.6.1 Module Validation Coverage Matrix
 
@@ -3895,17 +3757,17 @@ Login response example:
   "success": true,
   "message": "Login successful",
   "data": {{
+    "token": "<user-token>",
     "user": {{
       "id": 7,
       "name": "Demo Student",
       "email": "student@example.com",
-      "role": "user",
+      "role": "student",
       "profile": {{
         "headline": "Backend Developer",
         "location": "Giza, Egypt"
       }}
-    }},
-    "token": "<user-token>"
+    }}
   }}
 }}
 ```
@@ -3922,28 +3784,19 @@ Current user response example:
 
 ```json
 {{
+  "success": true,
   "data": {{
     "id": 7,
     "name": "Demo Student",
     "email": "student@example.com",
-    "role": "user",
-    "job_title": "Backend Developer",
-    "headline": "Backend Developer",
-    "location": "Giza, Egypt",
-    "phone": "+20XXXXXXXXXX",
-    "linkedin_url": "https://example.com/linkedin",
-    "github_url": "https://example.com/github",
+    "role": "student",
     "profile": {{
       "headline": "Backend Developer",
       "location": "Giza, Egypt",
-      "contact_info": {{
-        "phone": "+20XXXXXXXXXX",
-        "linkedin_url": "https://example.com/linkedin",
-        "github_url": "https://example.com/github"
-      }}
-    }},
-    "experiences": [],
-    "skills": []
+      "phone": "+20XXXXXXXXXX",
+      "linkedin": "https://example.com/linkedin",
+      "github": "https://example.com/github"
+    }}
   }}
 }}
 ```
@@ -4165,11 +4018,9 @@ Successful response example:
 ```json
 {{
   "success": true,
-  "message": "Jobs scraping dispatched to background process",
-  "data": {{
-    "query": "Backend Developer",
-    "scraping_job_id": 42
-  }}
+  "message": "Scraping job started.",
+  "scraping_job_id": 42,
+  "status": "pending"
 }}
 ```
 
@@ -4205,7 +4056,7 @@ Existing-data response example:
 {{
   "success": true,
   "data_exists": true,
-  "message": "Job data already available",
+  "message": "Jobs already exist for this title.",
   "jobs_count": 5
 }}
 ```
@@ -4216,7 +4067,6 @@ Queued response example:
 {{
   "success": true,
   "data_exists": false,
-  "message": "Analyzing market data for this role. Please wait...",
   "scraping_job_id": 43,
   "status": "pending",
   "poll_url": "/api/v1/scraping-status/43"
@@ -4230,21 +4080,15 @@ Status response example:
 ```json
 {{
   "success": true,
-  "scraping_job_id": 43,
-  "job_title": "Laravel Developer",
   "status": "completed",
-  "type": "on_demand",
-  "started_at": "2026-06-07T18:00:00Z",
-  "results": {{
-    "jobs_found": 8,
-    "jobs_stored": 5,
-    "jobs_duplicated": 3,
-    "discovered_count": 8,
-    "failed_count": 0,
-    "processing_time_ms": 12640,
-    "completed_at": "2026-06-07T18:00:12Z"
-  }},
-  "jobs": [
+  "scraping_job_id": 43,
+  "jobs_found": 8,
+  "jobs_stored": 5,
+  "jobs_duplicated": 3,
+  "discovered_count": 8,
+  "failed_count": 0,
+  "processing_time_ms": 12640,
+  "data": [
     {{
       "id": 101,
       "title": "Junior Backend Developer",
@@ -4653,14 +4497,18 @@ The screenshot set was reviewed during this pass. Some dashboard states are simi
 
 The manual test matrix in Chapter 8 should be repeated before final submission. Additional recommended tests include invalid CV uploads, banned user login, expired signed download URLs, failed AI service behavior, scraper token rejection, admin route rejection for normal users, and browser checks on a clean database.
 
-| Evaluation Support Artifact | Purpose | Repository Traceability |
-|---|---|---|
-| Mini CV/job dataset | Provides deterministic synthetic CV and job records for offline recommendation and gap-analysis checks. | `evaluation/mini_cv_dataset.json`, `evaluation/mini_jobs_dataset.json`, `evaluation/expected_labels.json` |
-| Mini evaluation runner | Executes repeatable keyword/overlap checks and writes machine-readable plus human-readable summaries. | `evaluation/run_mini_evaluation.py`, result JSON and summary Markdown |
-| AI CV Analyzer smoke samples | Provides fake text-only CV examples across backend, data, frontend, DevOps, and noisy/low-information cases. | `evaluation/ai_cv_analyzer_smoke_samples.json` |
-| AI CV Analyzer smoke runner | Checks extraction expectations, role/domain/seniority behavior, dependency availability, and fallback boundaries. | `evaluation/run_ai_cv_analyzer_smoke_eval.py`, result JSON and summary Markdown |
+The mini dataset evaluation files are:
 
-Evaluation support artifact summary.
+- `evaluation/mini_cv_dataset.json`
+- `evaluation/mini_jobs_dataset.json`
+- `evaluation/expected_labels.json`
+- `evaluation/run_mini_evaluation.py`
+- `evaluation/mini_evaluation_results.json`
+- `evaluation/mini_evaluation_summary.md`
+- `evaluation/ai_cv_analyzer_smoke_samples.json`
+- `evaluation/run_ai_cv_analyzer_smoke_eval.py`
+- `evaluation/ai_cv_analyzer_smoke_results.json`
+- `evaluation/ai_cv_analyzer_smoke_summary.md`
 
 ## Appendix G: GitHub Actions / CI Summary
 
@@ -4722,20 +4570,16 @@ The synthetic dataset script asks Google Gemini tooling to generate varied CV sn
 
 ## Appendix J: AI Job Miner Deep Inventory
 
-This appendix converts the repository audit notes into a compact reader-facing summary. The detailed companion files remain in `docs/graduation-book/job-mining-analysis/` for traceability, but the important evidence is summarized below so the printed book is useful on its own.
+The detailed scraping/job-mining audit files are stored in `docs/graduation-book/job-mining-analysis/`:
 
-| Audit Area | What It Captures | Related Evidence in the Book |
-|---|---|---|
-| Source inventory | Demo/local source, API adapters, HTML/Scrapy-related paths, unsupported/external-risk configurations, and credential-gated sources. | Chapter 7 source management, ethics, and limitation sections. |
-| Function inventory | FastAPI service entry points, adapter orchestration, classification helpers, Laravel controllers, queue jobs, services, and frontend admin pages. | Chapter 7 architecture, sequence, import, and admin diagnostics diagrams. |
-| Runtime flow | On-demand scraping, full/admin runs, protected service calls, Laravel import callbacks, database updates, and status polling. | Figures 53-57 and Table 38. |
-| API contracts | Authenticated user scraping endpoints, internal scraper import/check/failure endpoints, proxy route, and admin source/target endpoints. | Chapter 7 API contract summary and Appendix A examples. |
-| Evaluation summary | Compile checks, container pytest, health probes, deterministic demo-source smoke evidence, and validation boundaries. | Chapter 8 validation evidence and Table 44. |
-| Limitations and ethics | External site instability, API keys, rate limits, proxy risks, robots/terms considerations, data freshness, and duplicate-detection boundaries. | Section 7.13 and Chapter 9 security/privacy discussion. |
+- `job_miner_source_inventory.md`
+- `job_miner_function_inventory.md`
+- `scraping_runtime_flow.md`
+- `scraping_api_contracts.md`
+- `scraping_evaluation_summary.md`
+- `scraping_limitations.md`
 
-AI Job Miner audit support summary.
-
-The appendix intentionally avoids copying large code blocks or raw path lists. Its purpose is to preserve the audit trail while keeping the graduation book readable in print.
+These notes support Chapter 7. They summarize actual source adapters, FastAPI endpoints, Laravel queue jobs, import validation, database models, frontend admin integration, API contracts, evaluation boundaries, and ethical limitations without copying large code blocks into the report.
 """
 
 
@@ -4809,23 +4653,11 @@ def add_cover(doc: Document) -> None:
         run.bold = bold
 
     doc.add_paragraph()
-    brand = doc.add_paragraph()
-    brand.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    brand_logo = LOGOS / "careercompass_logo.png"
-    if brand_logo.exists():
-        brand.add_run().add_picture(str(brand_logo), width=Inches(3.8))
-    accent = doc.add_paragraph()
-    accent.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    accent_run = accent.add_run("Graduation / Demo Technical Report")
-    accent_run.font.name = "Calibri"
-    accent_run.font.size = Pt(12)
-    accent_run.font.color.rgb = RGBColor(71, 85, 105)
-
     title = doc.add_paragraph()
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     run = title.add_run(PROJECT_TITLE)
     run.font.name = "Calibri"
-    run.font.size = Pt(20)
+    run.font.size = Pt(22)
     run.bold = True
     run.font.color.rgb = RGBColor(15, 23, 42)
 
@@ -5039,15 +4871,12 @@ def add_image_docx(doc: Document, rel_path: str, caption: str, bookmark_name: st
         return
     para = doc.add_paragraph()
     para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    para.paragraph_format.keep_with_next = True
-    para.paragraph_format.keep_together = True
     try:
-        para.add_run().add_picture(str(image_path), width=Inches(6.45))
+        para.add_run().add_picture(str(image_path), width=Inches(6.1))
     except Exception:
         para.add_run(f"[Unable to insert image: {rel_path}]")
     cap = doc.add_paragraph(caption)
     cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    cap.paragraph_format.keep_together = True
     if bookmark_name:
         add_bookmark(cap, bookmark_name)
     for run in cap.runs:
@@ -5229,14 +5058,8 @@ def add_pdf_cover(story: list) -> None:
     center = para_style("center", 13, bold=True, align=TA_CENTER)
     for line in [UNIVERSITY, FACULTY, DEPARTMENT, "Graduation Project Book", ACADEMIC_YEAR]:
         story.append(Paragraph(html.escape(line), center))
-    story.append(Spacer(1, 0.55 * cm))
-    brand_logo = LOGOS / "careercompass_logo.png"
-    if brand_logo.exists():
-        story.append(Image(str(brand_logo), width=7.2 * cm, height=2.08 * cm, hAlign="CENTER"))
-        story.append(Spacer(1, 0.2 * cm))
-    story.append(Paragraph("Graduation / Demo Technical Report", para_style("pdf-cover-subtle", 11, bold=False, align=TA_CENTER)))
-    story.append(Spacer(1, 0.55 * cm))
-    story.append(Paragraph(html.escape(PROJECT_TITLE), para_style("pdf-title", 18, leading=23, bold=True, align=TA_CENTER)))
+    story.append(Spacer(1, 1.0 * cm))
+    story.append(Paragraph(html.escape(PROJECT_TITLE), para_style("pdf-title", 20, leading=25, bold=True, align=TA_CENTER)))
     story.append(Paragraph(html.escape(SHORT_NAME), para_style("pdf-short", 16, bold=True, align=TA_CENTER)))
     story.append(Spacer(1, 1.0 * cm))
     story.append(Paragraph("Submitted by:", center))
@@ -5255,15 +5078,12 @@ def add_pdf_image(story: list, rel_path: str, caption: str) -> None:
         return
     with PILImage.open(image_path) as img:
         w, h = img.size
-    max_w = 17.0 * cm
-    max_h = 10.8 * cm
+    max_w = 16.2 * cm
+    max_h = 10.2 * cm
     ratio = min(max_w / w, max_h / h)
-    figure = [
-        Image(str(image_path), width=w * ratio, height=h * ratio),
-        Paragraph(html.escape(caption), para_style("caption", 9, align=TA_CENTER)),
-        Spacer(1, 0.2 * cm),
-    ]
-    story.append(KeepTogether(figure))
+    story.append(Image(str(image_path), width=w * ratio, height=h * ratio))
+    story.append(Paragraph(html.escape(caption), para_style("caption", 9, align=TA_CENTER)))
+    story.append(Spacer(1, 0.2 * cm))
 
 
 def add_md_table_pdf(story: list, lines: list[str]) -> None:
@@ -5666,17 +5486,6 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - New diagrams generated for this pass: frontend route/layout architecture, frontend API/auth flow, Laravel backend request lifecycle, and database relationship rationale.
 - References review: React Router and Axios official documentation references were added because the route tree and centralized API client are now discussed explicitly.
 
-## Final Visual / Print Readability QA Update
-
-- Cover update: added a subtle generated CareerCompass compass wordmark and restrained technical-report subtitle while keeping university/faculty logos, academic title, supervisor, and team names.
-- Diagram readability update: regenerated sequence-style diagrams as numbered print-friendly flow cards to avoid cropped participant labels, tiny arrow labels, and cramped lifelines.
-- Frontend route diagram update: simplified labels, removed tiny arrow labels, and enlarged card text for A4 readability.
-- Evidence figure update: replaced dark terminal-style evidence screenshots with light report-native evidence tables for Docker services and validation status.
-- Figure layout update: widened inserted figures within the page margins and set figure paragraphs to keep captions with images where possible.
-- Appendix cleanup: converted path-only evaluation/job-mining appendix lists into compact reader-facing summary tables while retaining repository traceability.
-- API truth pass: verified health/readiness/status, AI service health, login, current user, job listing, and admin dashboard response shapes against the running local stack; updated auth/current-user and scraping response examples to match runtime/controller structures.
-- Visual QA method: PDF pages were rasterized with `pypdfium2` for selected cover, diagram, validation, appendix, and API pages because LibreOffice/`soffice` remains unavailable for DOCX render-to-PNG QA.
-
 ## Validation Summary
 
 - Branch check passed on `docs/graduation-book`; the only unrelated untracked file remained `docs/REVERSE_ENGINEERING_SYSTEM_WALKTHROUGH.md`.
@@ -5729,7 +5538,6 @@ All previously listed student placeholders were removed and replaced with the fi
 
 def main() -> None:
     ensure_dirs()
-    create_brand_assets()
     mini_results = run_mini_evaluation()
     smoke_results = run_smoke_evaluation()
     create_diagrams()

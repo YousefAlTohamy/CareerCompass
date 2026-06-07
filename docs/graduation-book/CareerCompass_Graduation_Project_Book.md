@@ -94,7 +94,7 @@ Ahmed Sobhy Mohamed Ali
 - [Figure 46. Admin sources diagnostics page.](#bm_figure_46)
 - [Figure 47. Admin target roles page.](#bm_figure_47)
 - [Figure 48. Docker services evidence.](#bm_figure_48)
-- [Figure 49. Validation evidence summary.](#bm_figure_49)
+- [Figure 49. Validation command evidence.](#bm_figure_49)
 - [Figure 50. Colab NER final epoch metrics.](#bm_figure_50)
 - [Figure 51. Colab NER epoch performance trend.](#bm_figure_51)
 - [Figure 52. Colab NER training and validation loss curve.](#bm_figure_52)
@@ -1689,7 +1689,7 @@ The final smoke test used a direct protected `/scrape` request to validate the d
 | Admin source/target controllers | `ScrapingSourceController`, `TargetJobRoleController` | Manage active sources, diagnostics, target roles, and full-run triggers. |
 | Frontend admin/user pages | `frontend/src/pages/admin`, user job pages | Surface jobs, sources, targets, status, and retry/diagnostic views. |
 
-AI Job Miner source and function inventory summary.
+*AI Job Miner Source and Function Inventory Summary.*
 
 No source coverage percentage, success rate, or every-job-board claim is made. External-source behavior should be retested shortly before the final defense if the team wants live demonstration evidence.
 
@@ -1739,11 +1739,11 @@ Python syntax compilation passed for both AI services. The AI Job Miner pytest s
 
 ## 8.6 Docker and Integration Testing
 
-Docker was available during the final publishing QA pass, and Docker Compose configuration validation passed for the base plus production overlay files. The existing local stack was already running, so no rebuild was performed. `docker compose ps` showed the main app containers running, with backend, frontend, Nginx, job miner, database, and queue workers healthy. Health probes returned 200 for `/api/health`, `/api/ready`, `/status`, AI Job Miner `/health`, and the AI CV Analyzer root endpoint. These checks prove service availability in the local demo stack, not external source reliability.
+Docker Desktop was initially unavailable to the shell, then was started through `docker desktop start`. Docker Compose configuration validation passed for the base plus production overlay files. `docker compose up -d` was used without a rebuild to start the existing local stack. After startup settled, `docker compose ps` showed the main app containers running, with backend, frontend, Nginx, job miner, database, and queue workers healthy. Health probes returned 200 for `/api/health`, `/api/ready`, `/status`, AI Job Miner `/health`, and the AI CV Analyzer root endpoint. These checks prove service availability in the local demo stack, not external source reliability.
 
-![Validation evidence summary.](assets/screenshots/19_validation_summary.png)
+![Validation command evidence.](assets/screenshots/19_validation_summary.png)
 
-*Figure 49. Validation evidence summary.*
+*Figure 49. Validation command evidence.*
 
 ### 8.6.1 Module Validation Coverage Matrix
 
@@ -2236,17 +2236,17 @@ Login response example:
   "success": true,
   "message": "Login successful",
   "data": {
+    "token": "<user-token>",
     "user": {
       "id": 7,
       "name": "Demo Student",
       "email": "student@example.com",
-      "role": "user",
+      "role": "student",
       "profile": {
         "headline": "Backend Developer",
         "location": "Giza, Egypt"
       }
-    },
-    "token": "<user-token>"
+    }
   }
 }
 ```
@@ -2263,28 +2263,19 @@ Current user response example:
 
 ```json
 {
+  "success": true,
   "data": {
     "id": 7,
     "name": "Demo Student",
     "email": "student@example.com",
-    "role": "user",
-    "job_title": "Backend Developer",
-    "headline": "Backend Developer",
-    "location": "Giza, Egypt",
-    "phone": "+20XXXXXXXXXX",
-    "linkedin_url": "https://example.com/linkedin",
-    "github_url": "https://example.com/github",
+    "role": "student",
     "profile": {
       "headline": "Backend Developer",
       "location": "Giza, Egypt",
-      "contact_info": {
-        "phone": "+20XXXXXXXXXX",
-        "linkedin_url": "https://example.com/linkedin",
-        "github_url": "https://example.com/github"
-      }
-    },
-    "experiences": [],
-    "skills": []
+      "phone": "+20XXXXXXXXXX",
+      "linkedin": "https://example.com/linkedin",
+      "github": "https://example.com/github"
+    }
   }
 }
 ```
@@ -2506,11 +2497,9 @@ Successful response example:
 ```json
 {
   "success": true,
-  "message": "Jobs scraping dispatched to background process",
-  "data": {
-    "query": "Backend Developer",
-    "scraping_job_id": 42
-  }
+  "message": "Scraping job started.",
+  "scraping_job_id": 42,
+  "status": "pending"
 }
 ```
 
@@ -2546,7 +2535,7 @@ Existing-data response example:
 {
   "success": true,
   "data_exists": true,
-  "message": "Job data already available",
+  "message": "Jobs already exist for this title.",
   "jobs_count": 5
 }
 ```
@@ -2557,7 +2546,6 @@ Queued response example:
 {
   "success": true,
   "data_exists": false,
-  "message": "Analyzing market data for this role. Please wait...",
   "scraping_job_id": 43,
   "status": "pending",
   "poll_url": "/api/v1/scraping-status/43"
@@ -2571,21 +2559,15 @@ Status response example:
 ```json
 {
   "success": true,
-  "scraping_job_id": 43,
-  "job_title": "Laravel Developer",
   "status": "completed",
-  "type": "on_demand",
-  "started_at": "2026-06-07T18:00:00Z",
-  "results": {
-    "jobs_found": 8,
-    "jobs_stored": 5,
-    "jobs_duplicated": 3,
-    "discovered_count": 8,
-    "failed_count": 0,
-    "processing_time_ms": 12640,
-    "completed_at": "2026-06-07T18:00:12Z"
-  },
-  "jobs": [
+  "scraping_job_id": 43,
+  "jobs_found": 8,
+  "jobs_stored": 5,
+  "jobs_duplicated": 3,
+  "discovered_count": 8,
+  "failed_count": 0,
+  "processing_time_ms": 12640,
+  "data": [
     {
       "id": 101,
       "title": "Junior Backend Developer",
@@ -3042,22 +3024,26 @@ The screenshot set was reviewed during this pass. Some dashboard states are simi
 ![Docker services evidence.](assets/screenshots/18_docker_containers.png)
 
 *Figure 48. Docker services evidence.*
-![Validation evidence summary.](assets/screenshots/19_validation_summary.png)
+![Validation command evidence.](assets/screenshots/19_validation_summary.png)
 
-*Figure 49. Validation evidence summary.*
+*Figure 49. Validation command evidence.*
 
 ## Appendix F: Test Cases
 
 The manual test matrix in Chapter 8 should be repeated before final submission. Additional recommended tests include invalid CV uploads, banned user login, expired signed download URLs, failed AI service behavior, scraper token rejection, admin route rejection for normal users, and browser checks on a clean database.
 
-| Evaluation Support Artifact | Purpose | Repository Traceability |
-|---|---|---|
-| Mini CV/job dataset | Provides deterministic synthetic CV and job records for offline recommendation and gap-analysis checks. | `evaluation/mini_cv_dataset.json`, `evaluation/mini_jobs_dataset.json`, `evaluation/expected_labels.json` |
-| Mini evaluation runner | Executes repeatable keyword/overlap checks and writes machine-readable plus human-readable summaries. | `evaluation/run_mini_evaluation.py`, result JSON and summary Markdown |
-| AI CV Analyzer smoke samples | Provides fake text-only CV examples across backend, data, frontend, DevOps, and noisy/low-information cases. | `evaluation/ai_cv_analyzer_smoke_samples.json` |
-| AI CV Analyzer smoke runner | Checks extraction expectations, role/domain/seniority behavior, dependency availability, and fallback boundaries. | `evaluation/run_ai_cv_analyzer_smoke_eval.py`, result JSON and summary Markdown |
+The mini dataset evaluation files are:
 
-Evaluation support artifact summary.
+- `evaluation/mini_cv_dataset.json`
+- `evaluation/mini_jobs_dataset.json`
+- `evaluation/expected_labels.json`
+- `evaluation/run_mini_evaluation.py`
+- `evaluation/mini_evaluation_results.json`
+- `evaluation/mini_evaluation_summary.md`
+- `evaluation/ai_cv_analyzer_smoke_samples.json`
+- `evaluation/run_ai_cv_analyzer_smoke_eval.py`
+- `evaluation/ai_cv_analyzer_smoke_results.json`
+- `evaluation/ai_cv_analyzer_smoke_summary.md`
 
 ## Appendix G: GitHub Actions / CI Summary
 
@@ -3119,17 +3105,13 @@ The synthetic dataset script asks Google Gemini tooling to generate varied CV sn
 
 ## Appendix J: AI Job Miner Deep Inventory
 
-This appendix converts the repository audit notes into a compact reader-facing summary. The detailed companion files remain in `docs/graduation-book/job-mining-analysis/` for traceability, but the important evidence is summarized below so the printed book is useful on its own.
+The detailed scraping/job-mining audit files are stored in `docs/graduation-book/job-mining-analysis/`:
 
-| Audit Area | What It Captures | Related Evidence in the Book |
-|---|---|---|
-| Source inventory | Demo/local source, API adapters, HTML/Scrapy-related paths, unsupported/external-risk configurations, and credential-gated sources. | Chapter 7 source management, ethics, and limitation sections. |
-| Function inventory | FastAPI service entry points, adapter orchestration, classification helpers, Laravel controllers, queue jobs, services, and frontend admin pages. | Chapter 7 architecture, sequence, import, and admin diagnostics diagrams. |
-| Runtime flow | On-demand scraping, full/admin runs, protected service calls, Laravel import callbacks, database updates, and status polling. | Figures 53-57 and Table 38. |
-| API contracts | Authenticated user scraping endpoints, internal scraper import/check/failure endpoints, proxy route, and admin source/target endpoints. | Chapter 7 API contract summary and Appendix A examples. |
-| Evaluation summary | Compile checks, container pytest, health probes, deterministic demo-source smoke evidence, and validation boundaries. | Chapter 8 validation evidence and Table 44. |
-| Limitations and ethics | External site instability, API keys, rate limits, proxy risks, robots/terms considerations, data freshness, and duplicate-detection boundaries. | Section 7.13 and Chapter 9 security/privacy discussion. |
+- `job_miner_source_inventory.md`
+- `job_miner_function_inventory.md`
+- `scraping_runtime_flow.md`
+- `scraping_api_contracts.md`
+- `scraping_evaluation_summary.md`
+- `scraping_limitations.md`
 
-AI Job Miner audit support summary.
-
-The appendix intentionally avoids copying large code blocks or raw path lists. Its purpose is to preserve the audit trail while keeping the graduation book readable in print.
+These notes support Chapter 7. They summarize actual source adapters, FastAPI endpoints, Laravel queue jobs, import validation, database models, frontend admin integration, API contracts, evaluation boundaries, and ethical limitations without copying large code blocks into the report.
