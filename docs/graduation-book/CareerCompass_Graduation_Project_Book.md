@@ -108,6 +108,10 @@ Ahmed Sobhy Mohamed Ali
 - [Figure 60. Failed URL and retry flow.](#bm_figure_60)
 - [Figure 61. Scraping security boundaries.](#bm_figure_61)
 - [Figure 62. Scraping validation evidence.](#bm_figure_62)
+- [Figure 63. Frontend route and layout architecture.](#bm_figure_63)
+- [Figure 64. Frontend API and authentication flow.](#bm_figure_64)
+- [Figure 65. Laravel backend request lifecycle.](#bm_figure_65)
+- [Figure 66. Database relationship rationale.](#bm_figure_66)
 
 \pagebreak
 
@@ -116,59 +120,65 @@ Ahmed Sobhy Mohamed Ali
 - [Table 1. Stakeholder summary.](#bm_table_1)
 - [Table 2. Functional requirements summary.](#bm_table_2)
 - [Table 3. Non-functional requirements summary.](#bm_table_3)
-- [Table 4. Hardware and software environment.](#bm_table_4)
-- [Table 5. Design decisions summary.](#bm_table_5)
-- [Table 6. AI CV Analyzer components.](#bm_table_6)
-- [Table 7. NER entity label schema.](#bm_table_7)
-- [Table 8. Synthetic dataset generation workflow.](#bm_table_8)
-- [Table 9. Model training configuration.](#bm_table_9)
-- [Table 10. Layer 1 component details.](#bm_table_10)
-- [Table 11. Layer 2 classification engine details.](#bm_table_11)
-- [Table 12. Layer 3 matching engine details.](#bm_table_12)
-- [Table 13. Semantic embedding and TF-IDF fallback comparison.](#bm_table_13)
-- [Table 14. Simplified BIO tagging example.](#bm_table_14)
-- [Table 15. AI CV Analyzer source inventory summary.](#bm_table_15)
-- [Table 16. Algorithm-to-file mapping.](#bm_table_16)
-- [Table 17. AI design alternatives comparison.](#bm_table_17)
-- [Table 18. Confidence and readiness signal summary.](#bm_table_18)
-- [Table 19. Skill canonicalization example.](#bm_table_19)
-- [Table 20. Dataset availability and transparency.](#bm_table_20)
-- [Table 21. Seniority-aware matching weights.](#bm_table_21)
-- [Table 22. Recommendation explanation output types.](#bm_table_22)
-- [Table 23. Computational complexity overview.](#bm_table_23)
-- [Table 24. Raw CV fragment extraction example.](#bm_table_24)
-- [Table 25. Layer 2 interpretation example.](#bm_table_25)
-- [Table 26. Layer 3 matching evidence example.](#bm_table_26)
-- [Table 27. AI approach comparison.](#bm_table_27)
-- [Table 28. Colab NER training run configuration.](#bm_table_28)
-- [Table 29. Colab NER final metric summary.](#bm_table_29)
-- [Table 30. AI CV Analyzer output schema sections.](#bm_table_30)
-- [Table 31. Job mining design decisions.](#bm_table_31)
-- [Table 32. Scraping runtime component map.](#bm_table_32)
-- [Table 33. On-demand scraping lifecycle states.](#bm_table_33)
-- [Table 34. Source management and target-role controls.](#bm_table_34)
-- [Table 35. Import and deduplication stages.](#bm_table_35)
-- [Table 36. Failed URL and operational failure handling.](#bm_table_36)
-- [Table 37. Scraping security and configuration controls.](#bm_table_37)
-- [Table 38. Job mining API contract summary.](#bm_table_38)
-- [Table 39. Scraping validation evidence.](#bm_table_39)
-- [Table 40. Scraping limitations, ethics, and future work.](#bm_table_40)
-- [Table 41. Model evaluation evidence.](#bm_table_41)
-- [Table 42. NER extraction examples.](#bm_table_42)
-- [Table 43. Semantic matching and TF-IDF example results.](#bm_table_43)
-- [Table 44. Mini CV dataset.](#bm_table_44)
-- [Table 45. Mini job dataset.](#bm_table_45)
-- [Table 46. Mini evaluation metrics.](#bm_table_46)
-- [Table 47. Recommendation ranking details.](#bm_table_47)
-- [Table 48. Gap analysis pair details.](#bm_table_48)
-- [Table 49. Automated validation results.](#bm_table_49)
-- [Table 50. Manual functional evaluation matrix.](#bm_table_50)
-- [Table 51. Manual functional observations.](#bm_table_51)
-- [Table 52. Security and privacy controls.](#bm_table_52)
-- [Table 53. API endpoint summary.](#bm_table_53)
-- [Table 54. Database tables summary.](#bm_table_54)
-- [Table 55. Docker services summary.](#bm_table_55)
-- [Table 56. AI CV Analyzer function inventory summary.](#bm_table_56)
+- [Table 4. Software environment summary.](#bm_table_4)
+- [Table 5. Backend module responsibility summary.](#bm_table_5)
+- [Table 6. Laravel validation and protection mapping.](#bm_table_6)
+- [Table 7. Database design rationale.](#bm_table_7)
+- [Table 8. Data integrity mechanisms.](#bm_table_8)
+- [Table 9. Main ERD relationship notes.](#bm_table_9)
+- [Table 10. Design decisions summary.](#bm_table_10)
+- [Table 11. AI CV Analyzer components.](#bm_table_11)
+- [Table 12. NER entity label schema.](#bm_table_12)
+- [Table 13. Synthetic dataset generation workflow.](#bm_table_13)
+- [Table 14. Model training configuration.](#bm_table_14)
+- [Table 15. Layer 1 component details.](#bm_table_15)
+- [Table 16. Layer 2 classification engine details.](#bm_table_16)
+- [Table 17. Layer 3 matching engine details.](#bm_table_17)
+- [Table 18. Semantic embedding and TF-IDF fallback comparison.](#bm_table_18)
+- [Table 19. Simplified BIO tagging example.](#bm_table_19)
+- [Table 20. AI CV Analyzer source inventory summary.](#bm_table_20)
+- [Table 21. Algorithm-to-file mapping.](#bm_table_21)
+- [Table 22. AI design alternatives comparison.](#bm_table_22)
+- [Table 23. Confidence and readiness signal summary.](#bm_table_23)
+- [Table 24. Skill canonicalization example.](#bm_table_24)
+- [Table 25. Dataset availability and transparency.](#bm_table_25)
+- [Table 26. Seniority-aware matching weights.](#bm_table_26)
+- [Table 27. Recommendation explanation output types.](#bm_table_27)
+- [Table 28. Computational complexity overview.](#bm_table_28)
+- [Table 29. Raw CV fragment extraction example.](#bm_table_29)
+- [Table 30. Layer 2 interpretation example.](#bm_table_30)
+- [Table 31. Layer 3 matching evidence example.](#bm_table_31)
+- [Table 32. AI approach comparison.](#bm_table_32)
+- [Table 33. Colab NER training run configuration.](#bm_table_33)
+- [Table 34. Colab NER final metric summary.](#bm_table_34)
+- [Table 35. AI CV Analyzer output schema sections.](#bm_table_35)
+- [Table 36. Job mining design decisions.](#bm_table_36)
+- [Table 37. Scraping runtime component map.](#bm_table_37)
+- [Table 38. On-demand scraping lifecycle states.](#bm_table_38)
+- [Table 39. Source management and target-role controls.](#bm_table_39)
+- [Table 40. Import and deduplication stages.](#bm_table_40)
+- [Table 41. Failed URL and operational failure handling.](#bm_table_41)
+- [Table 42. Scraping security and configuration controls.](#bm_table_42)
+- [Table 43. Job mining API contract summary.](#bm_table_43)
+- [Table 44. Scraping validation evidence.](#bm_table_44)
+- [Table 45. Scraping limitations, ethics, and future work.](#bm_table_45)
+- [Table 46. Module validation coverage matrix.](#bm_table_46)
+- [Table 47. Model evaluation evidence.](#bm_table_47)
+- [Table 48. NER extraction examples.](#bm_table_48)
+- [Table 49. Semantic matching and TF-IDF example results.](#bm_table_49)
+- [Table 50. Mini CV dataset.](#bm_table_50)
+- [Table 51. Mini job dataset.](#bm_table_51)
+- [Table 52. Mini evaluation metrics.](#bm_table_52)
+- [Table 53. Recommendation ranking details.](#bm_table_53)
+- [Table 54. Gap analysis pair details.](#bm_table_54)
+- [Table 55. Automated validation results.](#bm_table_55)
+- [Table 56. Manual functional evaluation matrix.](#bm_table_56)
+- [Table 57. Manual functional observations.](#bm_table_57)
+- [Table 58. Security and privacy controls.](#bm_table_58)
+- [Table 59. API endpoint summary.](#bm_table_59)
+- [Table 60. Database tables summary.](#bm_table_60)
+- [Table 61. Docker services summary.](#bm_table_61)
+- [Table 62. AI CV Analyzer function inventory summary.](#bm_table_62)
 
 \pagebreak
 
@@ -342,7 +352,7 @@ For local demonstration, a developer machine capable of running Docker Desktop a
 | Infrastructure | Docker, Docker Compose, Nginx, Prometheus, Grafana. |
 | Testing | PHPUnit/Pest-style Laravel tests, pytest for Python, ESLint and Vite build. |
 
-*Table 4. Hardware and software environment.*
+*Table 4. Software environment summary.*
 
 ## 2.10 Input and Output Flow
 
@@ -374,15 +384,60 @@ The high-level architecture is shown in Figure 1. Browser users interact with th
 
 ## 3.3 Frontend Architecture
 
-The frontend is implemented with React and organized around routes in `frontend/src/App.jsx`. Public pages include Home, Login, Register, About, Privacy, Terms, and System Status. Protected student routes include Dashboard, Jobs, Gap Analysis, Profile, Settings, Market Intelligence, Applications, CV Builder, Mock Interview, Learning, Career Planner, Mentorship, and Tools Hub. Protected admin routes include Admin Dashboard, Jobs, Users, Sources, and Target Roles.
+The frontend is implemented with React and organized around React Router routes in `frontend/src/App.jsx` [42]. Public pages include Home, Login, Register, About, Privacy, Terms, and System Status. Protected student routes include Dashboard, Jobs, Gap Analysis, Profile, Settings, Market Intelligence, Applications, CV Builder, Mock Interview, Learning, Career Planner, Mentorship, and Tools Hub. Protected admin routes include Admin Dashboard, Jobs, Users, Sources, and Target Roles.
 
-The frontend API layer is located under `frontend/src/api`. Axios is configured in `client.js`, including base URL resolution, bearer token injection, request IDs, retry behavior for safe GET requests, and 401 handling. Authentication state is managed by `AuthContext.jsx`, which stores the user and token in local storage. Localization files exist under `frontend/src/locales`.
+Figure 63 shows how the route tree is divided. This separation matters because the student experience is focused on career guidance, while the admin experience is focused on operating data, users, sources, targets, and diagnostics. The preview modules are included as graduation and future-extension screens; they demonstrate the intended product direction but should not be described as complete production modules.
+
+![Frontend route and layout architecture.](assets/diagrams/66_frontend_route_layout_architecture.png)
+
+*Figure 63. Frontend route and layout architecture.*
+
+The frontend API layer is located under `frontend/src/api`. Axios is configured in `client.js`, including base URL resolution, bearer token injection, request IDs, retry behavior for safe GET/HEAD requests, and 401 handling [43]. Authentication state is managed by `AuthContext.jsx`, which stores the user and token in local storage and refreshes the current user through `/user`. Route guards in `ProtectedRoute.jsx` and `GuestRoute.jsx` redirect unauthenticated users, keep admin-only routes behind role checks, and prevent logged-in users from returning to guest-only screens. Localization files exist under `frontend/src/locales`, and `i18n.js` uses browser language detection with English fallback.
+
+![Frontend API and authentication flow.](assets/diagrams/67_frontend_api_auth_flow.png)
+
+*Figure 64. Frontend API and authentication flow.*
 
 ## 3.4 Backend API Architecture
 
 The backend is a Laravel API. Routes are defined in `backend-api/routes/api.php` and are registered both at `/api` and `/api/v1`. The API includes public health/readiness/metrics endpoints, guest authentication routes, public job listing routes, internal scraper import routes protected by a service token, authenticated student routes, and admin routes protected by middleware.
 
 Laravel provides structured controllers, form requests, resources, services, models, migrations, seeders, and tests. This aligns with Laravel's documented framework responsibilities, including routing, validation, database access, queues, and testing [1], [3].
+
+Figure 65 summarizes the normal Laravel request lifecycle and the asynchronous branch used for longer tasks such as CV processing and job mining. The main design point is that controllers do not directly own every behavior: form requests validate input, services isolate reusable work, Eloquent models persist records, resources shape JSON responses, and queue workers handle tasks that should not block the browser.
+
+![Laravel backend request lifecycle.](assets/diagrams/68_laravel_backend_request_lifecycle.png)
+
+*Figure 65. Laravel backend request lifecycle.*
+
+| Backend Module | Main Files / Components | Responsibility | Evidence |
+|---|---|---|---|
+| Authentication | `routes/api.php`, `AuthController`, `RegisterRequest`, `LoginRequest`, `UserResource` | Registration, login, logout, current-user lookup, profile update, and token lifecycle. | Guest auth routes, Sanctum tokens, throttled login group. |
+| CV Upload and Processing | `CvController`, `CvUploadRequest`, `CvProcessingService`, `CvStorageService` | Validate CV files, store private file metadata, call the AI CV Analyzer, and persist analysis/profile/skill updates. | `/upload-cv`, signed CV file route, `cv_analyses` storage fields. |
+| Profile and Skills | `User`, `UserProfile`, `Skill`, `user_skills`, `SkillSyncService` | Keep extracted skills and profile evidence normalized for matching. | Eloquent relationships and many-to-many skill pivots. |
+| Jobs and Recommendations | `JobController`, `JobResource`, `Job`, `job_postings`, `job_skills` | Public job listing, details, recommendations, and job-skill requirements. | Public `/jobs` routes plus authenticated recommendation routes. |
+| Gap Analysis | `GapAnalysisController`, `GapAnalysisService`, `GapAnalysisResource` | Compare a user's evidence against job or role requirements. | `/gap-analysis/job/{jobId}` and `/gap-analysis/role/{roleId}`. |
+| Application Tracking | `ApplicationController`, `ApplicationTrackerService`, `Application`, `ApplicationResource` | Save and update opportunities across saved/applied/interviewing-style statuses. | Authenticated `applications` resource routes. |
+| Admin Operations | `Admin\DashboardController`, `AdminJobController`, `AdminUserController`, `ScrapingSourceController`, `TargetJobRoleController` | Admin statistics, users, jobs, scraping sources, diagnostics, and target roles. | Admin route group protected by `admin` middleware. |
+| Scraping Import | `ScrapedJobController`, `VerifyScraperToken`, import request classes | Protected duplicate checks, imports, failure reports, and proxy access for scraper integration. | `scraper.token` and `throttle:scraper` route group. |
+| Health and Metrics | `HealthController`, `MetricsController`, monitoring middleware | Liveness, readiness, and metrics surfaces for local operations. | `/health`, `/ready`, `/metrics`, and `/status`. |
+| Queues and Workers | `ProcessOnDemandJobScraping`, market scraping jobs, Docker workers | Move long network or service calls out of request time. | Queue jobs and dedicated worker services. |
+| File Storage | `CvStorageService`, signed CV file route, `cv_analyses` metadata | Keep uploaded CV binaries out of public MySQL fields and expose only signed access. | Private storage path, disk, checksum, MIME, and size metadata. |
+
+*Table 5. Backend module responsibility summary.*
+
+| Risk / Input Boundary | Control | Example Files |
+|---|---|---|
+| Invalid login or registration payload | Form requests, guest auth routes, and login throttling. | `RegisterRequest`, `LoginRequest`, `routes/api.php` |
+| Invalid CV file upload | File validation, upload throttling, private storage, and status-aware error handling. | `CvUploadRequest`, `CvController`, `CvStorageService` |
+| Unauthenticated user routes | Sanctum bearer-token middleware and current-user refresh. | `auth:sanctum`, `AuthController::user` |
+| Non-admin access to admin routes | Backend `admin` middleware plus frontend role-based route guards. | `routes/api.php`, `ProtectedRoute.jsx` |
+| Invalid scraper import payload | Service-token middleware, scraper throttling, and import form requests. | `VerifyScraperToken`, `StoreScrapedJobRequest`, `CheckScrapedJobRequest`, `ReportScrapingFailureRequest` |
+| Duplicate scraped jobs | URL and title/company checks inside a transaction before create/update. | `ScrapedJobController`, `job_postings` migration |
+| Private CV file access | Signed route and storage service rather than public direct file paths. | `/cv-files/{cvAnalysis}`, `CvStorageService` |
+| Request tracing and debugging | Frontend request IDs and backend request-id middleware. | `client.js`, `RequestIdMiddleware` |
+
+*Table 6. Laravel validation and protection mapping.*
 
 ## 3.5 AI CV Analyzer Architecture
 
@@ -404,6 +459,37 @@ The AI Job Miner is a FastAPI service with scraping and import support. It inclu
 
 MySQL stores users, user profiles, skills, user-skill pivots, experience records, CV analyses, job postings, job-skill pivots, applications, scraping sources, target job roles, scraping jobs, failed URLs, and related metadata. MySQL is a relational database system documented by Oracle [8]. The Laravel migrations define schema constraints, indexes, foreign keys, and unique combinations such as job title/company uniqueness.
 
+Figure 66 explains the relationship rationale behind the schema. The database is deliberately normalized around users, reusable skills, job requirements, CV analysis evidence, and job-mining operations. This keeps matching logic explainable: the system can compare a user's normalized skills against job-required skills while preserving the CV and scraping evidence that produced those records.
+
+![Database relationship rationale.](assets/diagrams/69_database_relationship_rationale.png)
+
+*Figure 66. Database relationship rationale.*
+
+| Area | Tables | Design Reason |
+|---|---|---|
+| User identity and profile | `users`, `user_profiles`, `personal_access_tokens` | Separates authentication/token data from CV-derived profile data. |
+| User skills and experience | `skills`, `user_skills`, `user_experiences` | Supports normalized skill matching and structured career evidence. |
+| CV analysis | `cv_analyses` | Stores parsing status, extracted metadata, model evidence, and private file references. |
+| Jobs and requirements | `job_postings`, `job_skills` | Separates job records from reusable required skills. |
+| Applications | `applications` | Tracks saved/applied opportunities for each user and job. |
+| Job mining operations | `scraping_jobs`, `scraping_sources`, `scraping_failed_urls`, `target_job_roles` | Preserves operational scraping state, source configuration, target roles, and failure evidence. |
+| Runtime infrastructure | `jobs`, `job_batches`, `cache`, `sessions` | Supports queues, batches, cache, sessions, and repeatable local demonstration behavior. |
+
+*Table 7. Database design rationale.*
+
+| Data Integrity Mechanism | Purpose | Code / Schema Evidence |
+|---|---|---|
+| Foreign keys | Keep user, job, application, skill, scraping, and source records consistent. | Migration `foreignId(...)->constrained()` and `nullOnDelete()` definitions. |
+| Unique identity fields | Prevent duplicate core identities. | `users.email`, `skills.name`, `user_profiles.user_id`, `cv_analyses.user_id`. |
+| Pivot uniqueness | Prevent repeated skill links while allowing many-to-many matching. | Unique pairs on `user_skills` and `job_skills`. |
+| Job duplicate constraints | Reduce duplicate imported jobs at the database layer. | Unique `url` and unique `title`/`company` combination in `job_postings`. |
+| Application uniqueness | Prevent a user from tracking the same job repeatedly. | Unique `user_id`/`job_id` pair in `applications`. |
+| Operational indexes | Make status, source, and retry queries practical for dashboards. | Indexes on scraping status/type/source/created and failed-URL retry fields. |
+| Private object references | Avoid storing CV binary files directly in MySQL. | `cv_analyses` storage disk/path/checksum/size/MIME metadata. |
+| Form request validation | Reject malformed payloads before persistence. | Laravel `app/Http/Requests` classes. |
+
+*Table 8. Data integrity mechanisms.*
+
 ## 3.8 ERD
 
 Figure 8 summarizes the main database tables and relationships. It is not a complete replacement for migrations, but it provides a readable graduation-book view of the data model. The final diagram was reviewed against migrations and updated to show the actual `user_profiles`, `user_experiences`, `user_skills`, and `job_skills` relationships.
@@ -411,6 +497,20 @@ Figure 8 summarizes the main database tables and relationships. It is not a comp
 ![ERD and database summary diagram.](assets/diagrams/08_erd.png)
 
 *Figure 8. ERD and database summary diagram.*
+
+| Relationship | Meaning |
+|---|---|
+| `users` -> `user_profiles` | One user has one profile; profile data is kept separate from authentication data. |
+| `users` -> `user_experiences` | One user can have many structured experience records. |
+| `users` <-> `skills` | Many-to-many relationship through `user_skills`, including confidence/evidence metadata. |
+| `users` -> `cv_analyses` | CV analysis records preserve parsing status, extracted evidence, storage metadata, and model output. |
+| `job_postings` <-> `skills` | Many-to-many relationship through `job_skills`, including required/importance metadata. |
+| `users` <-> `job_postings` | Users track opportunities through `applications`; the application row stores user-specific status and notes. |
+| `job_postings` -> `scraping_sources` | Imported jobs can reference their source configuration while remaining available if the source is later disabled. |
+| `scraping_jobs` -> `scraping_failed_urls` | Failed URLs can be associated with an operational scraping run for diagnostics. |
+| `target_job_roles` -> scraping workflows | Active target roles guide full scraping runs; they are operational configuration, not a direct job foreign key. |
+
+*Table 9. Main ERD relationship notes.*
 
 ## 3.9 Data Flow Diagrams
 
@@ -463,7 +563,7 @@ CareerCompass includes live, readiness, and metrics endpoints. Prometheus is use
 | Use private object storage for CV files. | CV files are sensitive; private storage and signed downloads reduce accidental exposure [9], [27]. |
 | Keep AI wording honest. | Match scores and CV parsing are estimates; the demo should avoid claiming certain outcomes. |
 
-*Table 5. Design decisions summary.*
+*Table 10. Design decisions summary.*
 
 \pagebreak
 
@@ -590,7 +690,7 @@ The analyzer is implemented as layered Python code rather than one monolithic fu
 | Hybrid matching | Layer 3 matching modules | Combines semantic scores, skill text similarity, domain alignment, constraints, and TF-IDF fallback. | Recommendations and gap analysis |
 | Frontend display | `Dashboard.jsx`, `AiInsights.jsx` | Shows upload status, confidence-style signals, role/seniority, and extracted skills. | Student-facing CV feedback |
 
-*Table 6. AI CV Analyzer components.*
+*Table 11. AI CV Analyzer components.*
 
 ### 5.5.2 Model Type and Customization
 
@@ -607,7 +707,7 @@ The project customization is mainly in the data, labels, orchestration, and post
 | CERT | B-CERT, I-CERT | Certification such as AWS Cloud Practitioner. | Used as certification evidence. |
 | SOFT | B-SOFT, I-SOFT | Soft skill phrase such as leadership or communication. | Present in training configuration; the runtime NER grouping mainly returns SKILL, ROLE, EDU, and CERT. |
 
-*Table 7. NER entity label schema.*
+*Table 12. NER entity label schema.*
 
 ### 5.5.3 Synthetic Dataset Generation
 
@@ -623,7 +723,7 @@ The dataset generator is designed to call the Gemini API through API keys stored
 | Cleaning | `clean_dataset.py` | Normalizes whitespace, deduplicates exact text, validates entity text, filters long skill spans. | Documented as a data-quality gate before training. |
 | Output | Training docs and scripts | Expected cleaned JSON/JSONL input for notebook training. | Dataset files were not present in the repository, so metrics cannot be reproduced from repo files alone. |
 
-*Table 8. Synthetic dataset generation workflow.*
+*Table 13. Synthetic dataset generation workflow.*
 
 ### 5.5.4 Training Notebook Workflow
 
@@ -644,7 +744,7 @@ The training notebook is structured for Google Colab rather than local execution
 | Metrics | precision, recall, F1, accuracy via sequence labeling | Evaluates entity extraction quality when labels are available. | Colab PDF records overall metrics; per-label report is not visible. |
 | Export | `career_compass_ner_final` zip/model folder | Produces the deployable local model artifact. | Export success is visible in the PDF, but model weights are ignored by Git. |
 
-*Table 9. Model training configuration.*
+*Table 14. Model training configuration.*
 
 ### 5.5.5 Layer 1: CV Understanding Pipeline
 
@@ -666,7 +766,7 @@ If the file has little or no readable text, the OCR path renders PDF pages to im
 | NER and canonicalization | `advanced_ner.py`, `canonicalizer.py` | Extracts skills/roles/education/certifications, filters noise, deduplicates, and maps skills to canonical names. | Fallback model path exists when local deployment artifact is missing. |
 | Output schema | `schema.py` | Strict typed response for profile, skills, experience, confidence, stats, and parsing status. | Invalid shapes are prevented before backend persistence. |
 
-*Table 10. Layer 1 component details.*
+*Table 15. Layer 1 component details.*
 
 ![Skill canonicalization chain.](assets/diagrams/17_canonicalization_chain.png)
 
@@ -692,7 +792,7 @@ Layer 2 enriches the extracted CV with a domain and seniority interpretation. Th
 | Skill engine | `core/layer2_classification/skill_engine.py` | Canonical skill names and taxonomy terms. | Hard, soft, and management skill buckets. |
 | Taxonomy loader | `core/layer2_classification/utils.py` | JSON taxonomy file. | Shared configuration for domain and skill classification. |
 
-*Table 11. Layer 2 classification engine details.*
+*Table 16. Layer 2 classification engine details.*
 
 ### 5.5.7 Layer 3: Matching Engine
 
@@ -715,7 +815,7 @@ Layer 3 compares a candidate profile with a job description. `JobDescriptionEngi
 | Fit analysis generator | `fit_analysis_generator.py` | Converts score ranges into verdict categories. | Generates strengths, gaps, and red flags for the UI. |
 | Ranking orchestrator | `ranking_orchestrator.py` | Applies matcher repeatedly across candidates/jobs. | Sorts candidates or opportunities by explainable fit. |
 
-*Table 12. Layer 3 matching engine details.*
+*Table 17. Layer 3 matching engine details.*
 
 ### 5.5.8 Semantic Embedding, Caching, and TF-IDF Fallback
 
@@ -731,7 +831,7 @@ The FastAPI `/api/hybrid-match` endpoint also combines semantic-style matching w
 | TF-IDF fallback | `core/layer3_matching/tfidf.py`, `/api/hybrid-match` | Lightweight deterministic keyword overlap. | Does not understand synonyms or phrase meaning. |
 | Constraint penalties | `constraint_validator.py` | Prevents high scores when hard requirements are missing. | Penalty weights need larger evaluation data for calibration. |
 
-*Table 13. Semantic embedding and TF-IDF fallback comparison.*
+*Table 18. Semantic embedding and TF-IDF fallback comparison.*
 
 ### 5.5.9 NER Token Processing and BIO Tagging
 
@@ -751,7 +851,7 @@ The training notebook uses character-span annotations and converts them into tok
 | Docker | B-SKILL | Skill entity. |
 | MySQL | B-SKILL | Skill entity. |
 
-*Table 14. Simplified BIO tagging example.*
+*Table 19. Simplified BIO tagging example.*
 
 ### 5.5.10 AI CV Analyzer Source Code Inventory
 
@@ -768,7 +868,7 @@ The AI CV Analyzer was audited as source code, not only as a running service. Th
 | Documentation | Layer README and EXPLAIN files | Developer explanations for analyzer layers and matching logic. |
 | Ignored deployment assets | `.env`, `models/ner_weights/...` | Local secrets and model weights are intentionally ignored; only safe metadata was inspected locally. |
 
-*Table 15. AI CV Analyzer source inventory summary.*
+*Table 20. AI CV Analyzer source inventory summary.*
 
 | Algorithm or Workflow | Primary File(s) | Notes |
 |---|---|---|
@@ -787,7 +887,7 @@ The AI CV Analyzer was audited as source code, not only as a running service. Th
 | NER training | `training/train_ner.ipynb` | BERT base checkpoint, BIO labels, token alignment, Trainer, seqeval metrics. |
 | Synthetic data generation | `training/generate_tech_dataset.py` | Gemini-based generation with key rotation and negative decoys. |
 
-*Table 16. Algorithm-to-file mapping.*
+*Table 21. Algorithm-to-file mapping.*
 
 ## 5.6 Profile and Skills Management
 
@@ -915,7 +1015,7 @@ The implemented design is therefore hybrid. NER extracts structured candidates, 
 | Pure rules | Predictable and easy to inspect. | Brittle when CVs use new wording, layouts, and aliases. | Used for safety, contacts, dates, validation, and fallback behavior. |
 | Hybrid layered AI | Combines learned extraction, deterministic checks, semantic signals, and explanation. | More components must be tested and documented. | Chosen because it fits noisy CVs and graduation-demo transparency. |
 
-*Table 17. AI design alternatives comparison.*
+*Table 22. AI design alternatives comparison.*
 
 ## 6.3 Complete CV Processing Flow
 
@@ -978,7 +1078,7 @@ These formulas are intentionally described as signals. They help the dashboard e
 | Experience signal | `Dashboard.jsx` | Total parsed years mapped to a display percentage using a three-year reference. | Career Readiness Snapshot. | It is a UI signal, not a universal seniority formula. |
 | Extraction metadata | Layer 1 metadata and Laravel analysis metadata | Source, spatial status, segmentation, gaps, action-verb and experience details. | Debugging, review, and future evaluation. | Metadata quality depends on successful text recovery. |
 
-*Table 18. Confidence and readiness signal summary.*
+*Table 23. Confidence and readiness signal summary.*
 
 ## 6.6 Skill Canonicalization With Practical Example
 
@@ -996,7 +1096,7 @@ Skill extraction is noisy because the same skill can appear in different forms. 
 | React.js | React | Illustrative framework alias normalization. |
 | React JS | React | Illustrative punctuation and spacing normalization. |
 
-*Table 19. Skill canonicalization example.*
+*Table 24. Skill canonicalization example.*
 
 ## 6.7 Fine-Tuned BERT NER Architecture
 
@@ -1006,7 +1106,7 @@ The NER architecture is a fine-tuning workflow, not a from-scratch language mode
 
 *Figure 24. Fine-tuned BERT NER architecture.*
 
-The simplified BIO example in Table 14 remains valid for examiner explanation: `Backend` can start a ROLE entity, `Developer` can continue it, and `Laravel` or `Docker` can start SKILL entities. The actual model sees tokenized subwords and offsets rather than only human-readable words.
+The simplified BIO example in Table 19 remains valid for examiner explanation: `Backend` can start a ROLE entity, `Developer` can continue it, and `Laravel` or `Docker` can start SKILL entities. The actual model sees tokenized subwords and offsets rather than only human-readable words.
 
 ## 6.8 Detailed Training Pipeline
 
@@ -1034,7 +1134,7 @@ The documentation pass also reviewed committed evaluation evidence and generated
 | AI CV Analyzer smoke samples | 5 | Deterministic text-only smoke set created for this evidence pass; evaluates parser-style labels and dependency availability, not transformer weights. |
 | Final NER label distribution chart | Not generated | No per-label support counts are visible in the PDF, and no committed final labeled dataset exists to count SKILL/ROLE/EDU/CERT/SOFT/O labels honestly. |
 
-*Table 20. Dataset availability and transparency.*
+*Table 25. Dataset availability and transparency.*
 
 ### 6.8.1 Colab NER Fine-Tuning Results
 
@@ -1060,7 +1160,7 @@ These numbers improve the academic evidence for the training workflow, but they 
 | Weight decay | 0.01 | PDF training arguments |
 | Best model metric | F1 | PDF training arguments |
 
-*Table 28. Colab NER training run configuration.*
+*Table 33. Colab NER training run configuration.*
 
 The full epoch-by-epoch numeric table is retained in `docs/graduation-book/model-analysis/colab_ner_training_results_summary.md`. In the main chapter, the same verified values are shown as charts so the trend is easier to read in the PDF.
 
@@ -1089,7 +1189,7 @@ The notebook uses Hugging Face `Trainer` with `AutoModelForTokenClassification` 
 | Training loss | 0.037280 | Colab PDF output, epoch 5 |
 | Validation loss | 0.068058 | Colab PDF output, epoch 5 |
 
-*Table 29. Colab NER final metric summary.*
+*Table 34. Colab NER final metric summary.*
 
 No per-label classification report or confusion matrix is visible in the exported Colab PDF, and the attached notebook output does not contain `classification_report`, `confusion_matrix`, `sklearn.metrics`, or matrix-like output cells. Therefore, this report does not invent per-label SKILL/ROLE/EDU/CERT/SOFT support, precision, recall, F1, or a confusion-matrix chart. Future training exports should save a token-level or entity-level confusion matrix plus a per-label classification report with support counts.
 
@@ -1122,7 +1222,7 @@ MatchScorePercent = round(FinalScore * 100, 2)
 | lead | 0.20 | 0.20 | 0.60 | Leadership roles emphasize domain/role alignment. |
 | default | 0.35 | 0.35 | 0.30 | Fallback profile. |
 
-*Table 21. Seniority-aware matching weights.*
+*Table 26. Seniority-aware matching weights.*
 
 Constraint penalties are also code-derived. Missing mandatory skills subtract 15 percent each, capped at 50 percent. Experience shortfall subtracts a proportional penalty capped at 30 percent. Seniority mismatch subtracts 20 percent. Total validation penalty is capped at 80 percent. Bonus skills add 2 percent each, capped at 10 percent. The `/api/hybrid-match` endpoint additionally blends the Layer 3 semantic/adaptive result with TF-IDF when TF-IDF is available: 60 percent semantic/adaptive and 40 percent TF-IDF.
 
@@ -1143,7 +1243,7 @@ The analyzer does not only return a single percentage. It also returns supportin
 | Verdict | Strong Match or Potential Fit | Converts score ranges into readable guidance. |
 | Gaps | Experience shortfall or missing mandatory skills | Explains why a candidate may need improvement before applying. |
 
-*Table 22. Recommendation explanation output types.*
+*Table 27. Recommendation explanation output types.*
 
 ## 6.11 AI Analyzer Sequence
 
@@ -1168,7 +1268,7 @@ The following complexity statements are approximate code-level descriptions, not
 | Ranking many jobs | O(j x match_cost) | j jobs require repeated matching or backend fallback comparison. |
 | TF-IDF fallback | O(t) vectorization plus sparse cosine | Depends on token count t in the two texts. |
 
-*Table 23. Computational complexity overview.*
+*Table 28. Computational complexity overview.*
 
 ## 6.13 Raw CV Input to Structured Output Example
 
@@ -1192,7 +1292,7 @@ Education: Computer Science
 | `Computer Science` | Education evidence. | Profile/education metadata when recovered |
 | Text CV fragment | Successful text parsing path; no OCR needed in this example. | `parsing_status`, `stats`, `analysis.metadata` |
 
-*Table 24. Raw CV fragment extraction example.*
+*Table 29. Raw CV fragment extraction example.*
 
 Illustrative sanitized output based on an actual analyzer response structure:
 
@@ -1273,7 +1373,7 @@ Illustrative sanitized output based on an actual analyzer response structure:
 | `analysis.metadata.segmentation` | CV sections detected or missing during document understanding. |
 | `analysis.metadata.layer2` | Classification details such as seniority reasoning, categorized skills, and domain scores. |
 
-*Table 30. AI CV Analyzer output schema sections.*
+*Table 35. AI CV Analyzer output schema sections.*
 
 | Classification | Result | Reason |
 |---|---|---|
@@ -1281,7 +1381,7 @@ Illustrative sanitized output based on an actual analyzer response structure:
 | Seniority | Intern | Short recorded experience and the Layer 2 seniority detail support an early-career estimate. |
 | Skill category | Hard technical skills | Laravel, MySQL, and RESTful APIs are technical implementation skills. |
 
-*Table 25. Layer 2 interpretation example.*
+*Table 30. Layer 2 interpretation example.*
 
 Example job: Junior Backend Developer requiring Laravel, MySQL, Docker, and REST APIs.
 
@@ -1292,7 +1392,7 @@ Example job: Junior Backend Developer requiring Laravel, MySQL, Docker, and REST
 | Fit interpretation | Good illustrative fit for a junior backend role |
 | Explanation | Skill overlap is strong; seniority appears compatible; final production score would require live matcher execution. |
 
-*Table 26. Layer 3 matching evidence example.*
+*Table 31. Layer 3 matching evidence example.*
 
 ## 6.14 Why Not Use a Direct LLM-Only Approach?
 
@@ -1307,7 +1407,7 @@ Direct LLM analysis can be powerful, especially for summarizing complex CVs and 
 | Can explain textually but may hallucinate unsupported fields. | Outputs structured strengths, gaps, red flags, metadata, and confidence-style signals from code paths. |
 | May be faster to prototype but harder to reproduce academically. | Fits Docker-based graduation evaluation and component-level evidence. |
 
-*Table 27. AI approach comparison.*
+*Table 32. AI approach comparison.*
 
 ## 6.15 AI Analyzer Limitations and Future Work
 
@@ -1354,7 +1454,7 @@ The implementation separates responsibilities deliberately. Laravel remains the 
 | Why queues? | `ProcessOnDemandJobScraping` and market scraping jobs run on the scraping queue. | External sources can timeout, block, or return malformed data. |
 | Why diagnostics? | Admin pages show source status, source tests, target roles, failed URLs, and batch progress. | Operators need evidence instead of assuming sources are healthy. |
 
-*Table 31. Job mining design decisions.*
+*Table 36. Job mining design decisions.*
 
 ## 7.3 AI Job Miner Runtime Architecture
 
@@ -1374,7 +1474,7 @@ The deployed runtime uses Docker Compose service separation. The AI Job Miner se
 | MySQL | migrations and models for jobs, sources, target roles, scraping jobs, failed URLs | Stores accepted jobs and operational state. |
 | Optional proxies | `InternalProxyController`, `SCRAPER_USE_PROXIES` | Supplies active proxies only through a protected internal route when enabled. |
 
-*Table 32. Scraping runtime component map.*
+*Table 37. Scraping runtime component map.*
 
 ## 7.4 Complete Job Mining Flow
 
@@ -1405,7 +1505,7 @@ On-demand scraping is implemented in `JobController`. `scrapeAndStore` accepts a
 | completed | The worker finished and stored counters such as `jobs_found`, `jobs_stored`, `jobs_duplicated`, `discovered_count`, `failed_count`, and `processing_time_ms`. | Display imported/stored jobs and final metrics. |
 | failed | The run ended with an unrecoverable error or failed-only outcome and `error_message` is stored. | Show an error and use admin diagnostics/manual review. |
 
-*Table 33. On-demand scraping lifecycle states.*
+*Table 38. On-demand scraping lifecycle states.*
 
 ## 7.6 Source Management and Target Roles
 
@@ -1426,7 +1526,7 @@ Target roles are implemented through `TargetJobRoleController`, `TargetJobRole`,
 | Full scraping run | `runFullScraping`, `ProcessMarketScrapingCategory` | Queue source/target pairs and record per-run `ScrapingJob` status. |
 | Admin evidence | Figures 44-47 | Dashboard, jobs, source diagnostics, and target-role screens show the operator workflow. |
 
-*Table 34. Source management and target-role controls.*
+*Table 39. Source management and target-role controls.*
 
 The admin operational evidence is already shown in Figures 44-47: dashboard, jobs, source diagnostics, and target roles. This chapter refers to those screenshots instead of repeating them, so Chapter 7 can focus on architecture, flows, and implementation behavior.
 
@@ -1446,7 +1546,7 @@ The import pipeline is centered in `ScrapedJobController::import`. It runs insid
 | Update or create | Import runs inside `DB::transaction` | Keeps lookup, save, and skill sync atomic. |
 | Skill sync | `SkillSyncService::syncJobSkills(..., detaching: false)` | Preserves and extends job-skill matching evidence. |
 
-*Table 35. Import and deduplication stages.*
+*Table 40. Import and deduplication stages.*
 
 The current duplicate strategy is appropriate for a demo system, but a stronger production importer should add source-specific IDs, canonical URLs, content hashes, expiration states, and reviewed merge rules.
 
@@ -1466,7 +1566,7 @@ The failure path uses `ScrapingFailedUrl` records as a lightweight dead-letter s
 | Source disabled or unsupported | Source is skipped before full run or reported as adapter missing/config required. | Admin source status and planned/skipped run summary. |
 | Missing internal token | `scraper.token` middleware rejects Laravel import callbacks. | Request rejected; should be reviewed through logs/config. |
 
-*Table 36. Failed URL and operational failure handling.*
+*Table 41. Failed URL and operational failure handling.*
 
 The current `retry-failures` admin endpoint marks selected failed URLs as retried. It does not yet dispatch a targeted re-fetch job. The book therefore describes it as operational retry marking, not as a complete production DLQ processor.
 
@@ -1495,7 +1595,7 @@ Scraping uses multiple security boundaries. User and admin actions go through au
 | Rate-limit configuration | `SCRAPER_RATE_LIMIT_PER_MINUTE` and Scrapy delay/retry settings | Documents conservative runtime policy, but source-specific terms still matter. |
 | Robots and terms | Scrapy `ROBOTSTXT_OBEY = True`; RFC 9309 context [41] | Ethical scraping requires respecting source rules and terms. |
 
-*Table 37. Scraping security and configuration controls.*
+*Table 42. Scraping security and configuration controls.*
 
 ## 7.11 Job Mining API Contracts
 
@@ -1513,7 +1613,7 @@ The scraping API surface has three groups: authenticated user endpoints, protect
 | Scraper service | `POST /scrape` on AI Job Miner | `X-Scraper-Service-Token: <internal-token>` | Execute adapter work for Laravel worker. |
 | Admin | `/api/v1/admin/scraping-sources*`, `/api/v1/admin/target-roles*`, `/api/v1/admin/scraping/run-full` | User token plus admin middleware | Manage sources, target roles, diagnostics, and full runs. |
 
-*Table 38. Job mining API contract summary.*
+*Table 43. Job mining API contract summary.*
 
 On-demand request example:
 
@@ -1572,7 +1672,7 @@ The strongest current scraping evidence is architectural and test evidence, not 
 | Import API validation | Documented from form requests and controller code. | Laravel accepts structured payloads and rejects unsafe data. | Not a complete benchmark. |
 | Admin diagnostics screenshots | Figures 44-47. | Admin UI supports source, job, dashboard, and target-role operations. | Point-in-time demo evidence. |
 
-*Table 39. Scraping validation evidence.*
+*Table 44. Scraping validation evidence.*
 
 The final smoke test used a direct protected `/scrape` request to validate the deterministic demo adapter and Laravel import path. A full authenticated `/jobs/scrape-if-missing` queue lifecycle with browser polling remains a recommended final demonstration check because it exercises the user-facing queue trigger and status-polling path rather than only the internal scraper contract.
 
@@ -1609,7 +1709,7 @@ The scraping subsystem is useful because it connects CV analysis to job requirem
 | Failed URLs | Failed URL records and retry marking. | Add targeted DLQ reprocessing with attempt counts. |
 | Evaluation | Tests and structural validation. | Add reproducible live-source health checks without inflated claims. |
 
-*Table 40. Scraping limitations, ethics, and future work.*
+*Table 45. Scraping limitations, ethics, and future work.*
 
 Ethical operation should respect robots.txt and website/API terms, prefer official APIs where available, avoid private/login/CAPTCHA bypasses, keep request rates conservative, and avoid presenting imported data as exhaustive or assured. This framing keeps the system useful for a graduation demonstration while making its real boundaries clear.
 
@@ -1645,6 +1745,24 @@ Docker Desktop was initially unavailable to the shell, then was started through 
 
 *Figure 49. Validation command evidence.*
 
+### 8.6.1 Module Validation Coverage Matrix
+
+The following matrix summarizes validation coverage by system area. Items marked as previously passed are preserved from the latest documented validation notes rather than claimed as fresh reruns in this backend/frontend/database polish pass.
+
+| System Area | Evidence | Latest Result | Limitation |
+|---|---|---|---|
+| Laravel backend | Container route list, migrations, and test suite evidence. | Previously passed: 131 routes and 39 tests / 297 assertions. | Not rerun in this polish pass because application code was not changed. |
+| Database, migrations, and seeders | Migration inspection, ERD review, and backend migration/test evidence. | Schema relationships and constraints were re-reviewed against migrations. | A destructive fresh migration reset was not performed in this pass. |
+| React frontend | ESLint and Vite production build evidence. | Previously passed with 9 lint warnings, 0 errors, and 2904 Vite modules transformed. | Frontend source was inspected; build was not rerun unless noted in generation notes. |
+| AI CV Analyzer | `compileall`, Colab output PDF, model-analysis notes, and API examples. | Syntax compilation passed in this validation; Colab metrics remain recorded evidence. | Full training and live model inference were not rerun from repository files alone. |
+| AI Job Miner | Container pytest, compileall, service health, and deterministic demo scrape. | 75 tests passed with 1 warning in container validation. | Tests do not prove live external website availability. |
+| Docker runtime | Compose config and local health probes. | Compose config and local health endpoints passed in this validation pass. | Health checks prove availability, not business correctness or external-source success. |
+| API health/readiness | `/api/health`, `/api/ready`, `/status`, service health endpoints. | Returned 200 in this validation pass. | These are shallow liveness/readiness probes. |
+| PDF/DOCX generation | Generator run, structural checks, link/bookmark inspection, and PDF page count. | Revalidated after every documentation generation pass. | Visual manual review is still recommended for final submission. |
+| GitHub Actions | Workflow files and PR checklist. | Manual PR review remains required after push. | CI status depends on GitHub scheduling after branch updates. |
+
+*Table 46. Module validation coverage matrix.*
+
 ## 8.7 CI/CD Validation
 
 GitHub Actions workflow files were reviewed as part of repository inspection. A live GitHub Actions status screenshot was not captured before the draft PR because PR checks only become meaningful after the branch is pushed and GitHub schedules workflows. The manual review checklist asks the team to inspect CI status on the opened draft PR.
@@ -1667,7 +1785,7 @@ The important distinction is reproducibility scope. The repository alone still d
 | Dependency probe | Local bundled Python lacked `transformers`, `torch`, `sentence_transformers`, OCR/PDF packages, and Gemini client libraries. | Explains why live model inference and training were not rerun during documentation generation. | It does not reflect what the Docker image may install at runtime. |
 | Mini evaluation | Generated under `docs/graduation-book/evaluation/` | Synthetic skill/recommendation/gap logic can be checked repeatably. | It is not a statistical live-model benchmark. |
 
-*Table 41. Model evaluation evidence.*
+*Table 47. Model evaluation evidence.*
 
 ## 8.9 NER Extraction Examples
 
@@ -1680,7 +1798,7 @@ The table below documents expected extraction behavior from the inspected NER la
 | `AWS Cloud Practitioner certified with Kubernetes deployment experience.` | CERT: AWS Cloud Practitioner; SKILL: Kubernetes | Certification and cloud/DevOps skill evidence. | Illustrative example from CERT/SKILL labels. |
 | `Leadership, communication, and teamwork across agile projects.` | SOFT labels exist in training setup; runtime grouping mainly returns SKILL/ROLE/EDU/CERT. | Soft-skill interpretation is handled mostly by taxonomy and rule layers. | Limitation observed from runtime grouping code. |
 
-*Table 42. NER extraction examples.*
+*Table 48. NER extraction examples.*
 
 ## 8.10 Semantic Matching vs TF-IDF Fallback Examples
 
@@ -1692,7 +1810,7 @@ The semantic matching path could not be executed locally during this documentati
 | CV: `Flutter Dart mobile UI`; Job: `Backend developer with Laravel Docker MySQL` | Not executed locally; dependencies unavailable. | 0.0000 | No meaningful keyword overlap, so fallback does not inflate score. |
 | Expected runtime behavior | Sentence embeddings plus TF-IDF in `/api/hybrid-match` when both paths are available. | 60 percent semantic/adaptive plus 40 percent TF-IDF in that endpoint. | The fallback helps explainable matching but is not a substitute for full semantic evaluation. |
 
-*Table 43. Semantic matching and TF-IDF example results.*
+*Table 49. Semantic matching and TF-IDF example results.*
 
 ## 8.11 Model Evaluation Limitations
 
@@ -1701,7 +1819,7 @@ The semantic matching path could not be executed locally during this documentati
 - The model-weight folder is ignored by Git; safe local metadata was inspected, but binary weights were not copied or benchmarked.
 - Local documentation Python did not include transformer, sentence-transformer, OCR, PDF, or Gemini packages, so live model inference and training were not rerun here.
 - The Colab PDF does not show a per-label classification report, per-label support counts, or a confusion matrix.
-- The examples in Table 42 are expected-behavior examples, while the TF-IDF values in Table 43 are actual small local fallback checks.
+- The examples in Table 48 are expected-behavior examples, while the TF-IDF values in Table 49 are actual small local fallback checks.
 - A stronger final defense package should add a fixed labeled CV test set, saved per-label NER metrics, and CI-friendly inference smoke tests.
 
 ## 8.12 CV Analyzer Mini Dataset Evaluation
@@ -1731,7 +1849,7 @@ The mini evaluation uses fake synthetic CVs and fake synthetic job records store
 | cv_full_stack | Full Stack Developer | junior | full_stack_web | Laravel, React, MySQL, Docker, REST API, Git |
 | cv_qa_testing | QA Testing Engineer | intern | quality_assurance | testing, test cases, pytest, API testing, bug reporting |
 
-*Table 44. Mini CV dataset.*
+*Table 50. Mini CV dataset.*
 
 | Job ID | Title | Domain | Required Skills |
 | --- | --- | --- | --- |
@@ -1744,7 +1862,7 @@ The mini evaluation uses fake synthetic CVs and fake synthetic job records store
 | job_php_api | PHP API Developer | backend_web | PHP, Laravel, REST API, MySQL, Git, Docker |
 | job_nlp_assistant | NLP Assistant Intern | data_ml | Python, NLP, scikit-learn, data analysis, testing |
 
-*Table 45. Mini job dataset.*
+*Table 51. Mini job dataset.*
 
 ### Metric Definitions
 
@@ -1764,7 +1882,7 @@ Skill precision measures how many extracted skills are expected labels. Skill re
 | Gap offline | Matched skill agreement F1 | 1.000 | Computed matched skills vs. expected matched skills |
 | Gap offline | Missing skill agreement F1 | 1.000 | Computed missing skills vs. expected missing skills |
 
-*Table 46. Mini evaluation metrics.*
+*Table 52. Mini evaluation metrics.*
 
 ### Recommendation Ranking Details
 
@@ -1776,7 +1894,7 @@ Skill precision measures how many extracted skills are expected labels. Skill re
 | cv_full_stack | job_full_stack_web, job_laravel_backend, job_php_api, job_react_frontend, job_devops_docker | job_full_stack_web, job_laravel_backend, job_php_api | 1.000 |
 | cv_qa_testing | job_qa_intern, job_nlp_assistant | job_qa_intern, job_nlp_assistant, job_react_frontend | 0.667 |
 
-*Table 47. Recommendation ranking details.*
+*Table 53. Recommendation ranking details.*
 
 ### Gap Analysis Pair Details
 
@@ -1788,7 +1906,7 @@ Skill precision measures how many extracted skills are expected labels. Skill re
 | cv_qa_testing -> job_qa_intern | API testing, bug reporting, pytest, test cases, testing | None | matched F1=1.000; missing F1=1.000 |
 | cv_full_stack -> job_react_frontend | React | API integration, CSS, HTML, JavaScript, Vite | matched F1=1.000; missing F1=1.000 |
 
-*Table 48. Gap analysis pair details.*
+*Table 54. Gap analysis pair details.*
 
 
 
@@ -1879,7 +1997,7 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 | AI CV Analyzer pytest | Not rerun | Skipped in cleanup pass | Colab/smoke evidence retained separately |
 | HTTP probes | `/api/health`, `/api/ready`, `/status`, `:8003/health`, `:8000/` | 200 responses after Docker startup settled | Service availability only, not external scraping success |
 
-*Table 49. Automated validation results.*
+*Table 55. Automated validation results.*
 
 | Test ID | Module | Scenario | Status | Evidence |
 |---|---|---|---|---|
@@ -1894,7 +2012,7 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 | M-09 | Admin sources | Open diagnostics | Passed | Figure 46 |
 | M-10 | Status | Open system status page | Passed | Figure 43 |
 
-*Table 50. Manual functional evaluation matrix.*
+*Table 56. Manual functional evaluation matrix.*
 
 | Test ID | Expected vs Actual Observation |
 |---|---|
@@ -1909,7 +2027,7 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 | M-09 | Expected source diagnostics; actual diagnostics page visible. |
 | M-10 | Expected health UI; actual system status page visible. |
 
-*Table 51. Manual functional observations.*
+*Table 57. Manual functional observations.*
 
 \pagebreak
 
@@ -1962,7 +2080,7 @@ The API client attaches request IDs, and backend logging records important event
 | Monitoring | Local Prometheus/Grafana | Auth, TLS, dashboard access control |
 | Privacy | Local demo posture | Legal review, privacy notice, data minimization |
 
-*Table 52. Security and privacy controls.*
+*Table 58. Security and privacy controls.*
 
 ## 9.10 Future Production Hardening
 
@@ -2072,6 +2190,8 @@ CareerCompass is an original graduation project that connects academic software 
 [39] OpenAPI Initiative, "OpenAPI Specification," OpenAPI Documentation, 2026. [Online]. Available: https://spec.openapis.org/oas/latest.html. Accessed: June 7, 2026.
 [40] Adzuna, "Adzuna Developer API," Adzuna Developer Portal, 2026. [Online]. Available: https://developer.adzuna.com/. Accessed: June 7, 2026.
 [41] IETF, "RFC 9309: Robots Exclusion Protocol," RFC Editor, 2022. [Online]. Available: https://www.rfc-editor.org/rfc/rfc9309. Accessed: June 7, 2026.
+[42] React Router, "Routing," React Router Documentation, 2026. [Online]. Available: https://reactrouter.com/start/declarative/routing. Accessed: June 7, 2026.
+[43] Axios, "First steps," Axios Documentation, 2026. [Online]. Available: https://axios-http.com/docs/intro. Accessed: June 7, 2026.
 
 \pagebreak
 
@@ -2092,9 +2212,75 @@ This appendix expands the endpoint summary with JSON-oriented examples. The exam
 | Admin | `/api/v1/admin/dashboard/stats`, `/api/v1/admin/dashboard/batch-progress`, `/api/v1/admin/dashboard/failed-urls/{scrapingJobId}`, `/api/v1/admin/dashboard/retry-failures`, `/api/v1/admin/scraping-sources`, `/api/v1/admin/target-roles`, `/api/v1/admin/scraping/run-full` | Admin dashboards, diagnostics, source management, target roles, full runs, and failed URL operations. |
 | Internal Scraper | `/api/v1/jobs/import`, `/api/v1/jobs/import/check`, `/api/v1/jobs/import/failed`, `/api/v1/proxies/active` | Service-token protected import, duplicate check, failure report, and proxy routes. |
 
-*Table 53. API endpoint summary.*
+*Table 59. API endpoint summary.*
 
-### A.1 Student CV Upload Endpoint
+### A.1 Core Authentication and Current User Endpoints
+
+Login method and URL: `POST /api/v1/login`
+
+Purpose: Authenticate a student or admin user and issue a bearer token for later API calls.
+
+Login request example:
+
+```json
+{
+  "email": "student@example.com",
+  "password": "<password>"
+}
+```
+
+Login response example:
+
+```json
+{
+  "success": true,
+  "message": "Login successful",
+  "data": {
+    "token": "<user-token>",
+    "user": {
+      "id": 7,
+      "name": "Demo Student",
+      "email": "student@example.com",
+      "role": "student",
+      "profile": {
+        "headline": "Backend Developer",
+        "location": "Giza, Egypt"
+      }
+    }
+  }
+}
+```
+
+Current user method and URL: `GET /api/v1/user`
+
+Request header:
+
+```text
+Authorization: Bearer <user-token>
+```
+
+Current user response example:
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 7,
+    "name": "Demo Student",
+    "email": "student@example.com",
+    "role": "student",
+    "profile": {
+      "headline": "Backend Developer",
+      "location": "Giza, Egypt",
+      "phone": "+20XXXXXXXXXX",
+      "linkedin": "https://example.com/linkedin",
+      "github": "https://example.com/github"
+    }
+  }
+}
+```
+
+### A.2 Student CV Upload Endpoint
 
 Method and URL: `POST /api/v1/upload-cv`
 
@@ -2149,7 +2335,7 @@ Error response example:
 }
 ```
 
-### A.2 AI Analyzer Parse-CV Endpoint
+### A.3 AI Analyzer Parse-CV Endpoint
 
 Method and URL: `POST /api/parse-cv`
 
@@ -2210,7 +2396,7 @@ Error response example:
 }
 ```
 
-### A.3 AI Hybrid Match Endpoint
+### A.4 AI Hybrid Match Endpoint
 
 Method and URL: `POST /api/hybrid-match`
 
@@ -2249,7 +2435,7 @@ Validation error example:
 }
 ```
 
-### A.4 Recommended Jobs Endpoint
+### A.5 Recommended Jobs Endpoint
 
 Method and URL: `GET /api/v1/jobs/recommended`
 
@@ -2286,7 +2472,7 @@ Response example:
 }
 ```
 
-### A.5 On-Demand Job Scraping Endpoint
+### A.6 On-Demand Job Scraping Endpoint
 
 Method and URL: `POST /api/v1/jobs/scrape`
 
@@ -2328,7 +2514,7 @@ Validation error example:
 }
 ```
 
-### A.6 Scrape If Missing and Status Polling
+### A.7 Scrape If Missing and Status Polling
 
 Method and URL: `POST /api/v1/jobs/scrape-if-missing`
 
@@ -2391,7 +2577,7 @@ Status response example:
 }
 ```
 
-### A.7 Internal Scraper Duplicate Check and Import
+### A.8 Internal Scraper Duplicate Check and Import
 
 These Laravel endpoints are protected by `scraper.token` and `throttle:scraper`. In the current middleware, the scraper supplies `Authorization: Bearer <internal-token>`.
 
@@ -2448,7 +2634,7 @@ Response example:
 }
 ```
 
-### A.8 Failed URL Reporting, Proxies, and Admin Scraping
+### A.9 Failed URL Reporting, Proxies, and Admin Scraping
 
 Method and URL: `POST /api/v1/jobs/import/failed`
 
@@ -2502,7 +2688,7 @@ Example full-run response shape:
 }
 ```
 
-### A.9 Gap Analysis Endpoint
+### A.10 Gap Analysis Endpoint
 
 Method and URL: `GET /api/v1/gap-analysis/job/{jobId}`
 
@@ -2555,7 +2741,82 @@ Error response example:
 }
 ```
 
-### A.10 Health and Readiness Endpoints
+### A.11 Application Tracking Endpoint
+
+Method and URL: `POST /api/v1/applications`
+
+Purpose: Let an authenticated student save or update an opportunity status without changing the shared job record.
+
+Request example:
+
+```json
+{
+  "job_id": 101,
+  "status": "saved",
+  "notes": "Review Laravel and Docker requirements before applying."
+}
+```
+
+Response example:
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 55,
+    "job_id": 101,
+    "status": "saved",
+    "notes": "Review Laravel and Docker requirements before applying.",
+    "job": {
+      "title": "Junior Backend Developer",
+      "company": "DemoTech"
+    }
+  }
+}
+```
+
+### A.12 Admin Dashboard Summary Endpoint
+
+Method and URL: `GET /api/v1/admin/dashboard/stats`
+
+Purpose: Give administrators a compact operational summary of users, jobs, CV activity, scraping runs, and source state.
+
+Request example:
+
+```text
+Authorization: Bearer <admin-token>
+Accept: application/json
+```
+
+Response example:
+
+```json
+{
+  "success": true,
+  "data": {
+    "total_students": 39,
+    "total_jobs": 128,
+    "total_sources": 4,
+    "total_targets": 12,
+    "jobs_by_month": [
+      {
+        "month": "Jun 2026",
+        "month_key": "2026-06",
+        "count": 18
+      }
+    ],
+    "scraper_overview": {
+      "jobs_last_24h": 3,
+      "avg_health_score": 91.5,
+      "active_sources": 4,
+      "total_sources": 4,
+      "recent_failures": 0
+    }
+  }
+}
+```
+
+### A.13 Health and Readiness Endpoints
 
 Methods and URLs: `GET /api/health`, `GET /api/ready`
 
@@ -2685,7 +2946,7 @@ cd ..
 | scraping_failed_urls | Failed source URL diagnostics and retry marker records. |
 | scraping_proxies | Optional active proxy definitions protected by internal scraper token. |
 
-*Table 54. Database tables summary.*
+*Table 60. Database tables summary.*
 
 ## Appendix D: Docker Services Summary
 
@@ -2703,7 +2964,7 @@ cd ..
 | prometheus | Metrics collection. |
 | grafana | Metrics visualization. |
 
-*Table 55. Docker services summary.*
+*Table 61. Docker services summary.*
 
 ## Appendix E: Screenshots
 
@@ -2828,7 +3089,7 @@ This appendix summarizes the code audit that supports Sections 5.5, Chapter 6, a
 | Layer 3 matching | `SemanticEmbedder`, `IntelligentMatcher`, `ConstraintValidator`, `FitAnalysisGenerator`, `JobDescriptionEngine`, `RankingOrchestrator`, `tfidf.match_score` | Produces explainable job-fit scores, penalties, verdicts, and ranking behavior. |
 | Training and diagnostics | `generate_tech_dataset.py`, `clean_dataset.py`, `train_ner.ipynb`, `verify_phase*.py`, `test_service_api.py`, `trace_cv.py` | Supports synthetic dataset generation, cleaning, notebook training, phase verification, service tests, and trace output. |
 
-*Table 56. AI CV Analyzer function inventory summary.*
+*Table 62. AI CV Analyzer function inventory summary.*
 
 ### I.3 Training Summary
 

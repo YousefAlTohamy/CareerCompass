@@ -33,9 +33,9 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 
 ## Counts
 
-- PDF pages: 115
+- PDF pages: 123
 - Screenshots/evidence images: 19
-- Diagrams: 43
+- Diagrams: 47
 
 ## Table of Contents and Tables
 
@@ -43,15 +43,15 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - Front matter order: Cover -> Table of Contents -> List of Figures -> List of Tables -> Acknowledgment -> Abstract -> Abbreviations -> Chapter 1
 - Abbreviations placement: standalone page after Abstract and before Chapter 1
 - DOCX TOC status: 17 custom manual TOC entries contain internal hyperlinks to bookmarked major headings
-- DOCX List of Figures status: 62 List of Figures entries link to bookmarked figure captions
-- DOCX List of Tables status: 56 List of Tables entries link to bookmarked table captions
-- PDF TOC status: PDF contains 132 link annotations after export
+- DOCX List of Figures status: 66 List of Figures entries link to bookmarked figure captions
+- DOCX List of Tables status: 62 List of Tables entries link to bookmarked table captions
+- PDF TOC status: PDF contains 142 link annotations after export
 - Table formatting status: data tables use fixed DXA widths, wrapped text, repeated header rows, smaller table fonts, and split wide manual test observations into narrower tables; cover layout tables are intentionally excluded from repeated-header checks
 - Figure caption status: explicit italic caption lines are the single visible figure-caption source; Markdown image alt text is not rendered as a visible figure caption
 - Table caption status: formal table captions are rendered below their corresponding tables and remain linked from the List of Tables
 - Section 2.6/2.7 layout status: 2.6 heading, FR-01/FR-11 rows, and Table 2 caption appear on PDF page(s) [12]; 2.7 starts on PDF page(s) [12] after the Table 2 caption
 - Section 2.9/2.10 layout status: 2.9 heading, Software Requirements rows, and Table 4 caption appear on PDF page(s) [13]; 2.10 starts on PDF page(s) [13] after the Table 4 caption
-- Section 9.9/9.10 layout status: 9.9 heading, security-control rows, and Table 52 caption appear on PDF page(s) [87]; 9.10 starts on PDF page(s) [87] after the Table 52 caption
+- Section 9.9/9.10 layout status: 9.9 heading, security-control rows, and Table 58 caption appear on PDF page(s) [94]; 9.10 starts on PDF page(s) [94] after the Table 58 caption
 
 ## Caption, Link, and Layout Verification Method
 
@@ -131,29 +131,41 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - New scraping diagrams generated: design philosophy, complete mining flow, runtime architecture, sequence diagram, lifecycle, source management, import/deduplication, failed URL flow, security boundaries, and validation evidence.
 - Code areas audited: `ai-job-miner/`, scraping jobs, `JobController`, `ScrapedJobController`, admin source/target/dashboard controllers, request validation, models, migrations, seeders, frontend admin/user APIs, and Docker Compose service wiring.
 - Cleanup status: Chapter 7 no longer repeats the admin dashboard/jobs/sources/targets screenshots; it cross-references Figures 44-47 instead.
-- Accuracy fix: Table 31 now describes job mining design decisions, and `scraping_jobs` documentation now reflects the actual `job_title`/status/counter schema rather than implying a source-id column.
+- Accuracy fix: Table 36 now describes job mining design decisions, and `scraping_jobs` documentation now reflects the actual `job_title`/status/counter schema rather than implying a source-id column.
 - Source coverage language: the report distinguishes deterministic demo/local sources, API adapters, HTML adapters, and unsupported/external-risk sources without claiming whole-market reach.
 - Evaluation language: scraping evidence is recorded as tests, compile/config/health checks, form-request validation, admin diagnostics, and screenshots, not as source success rates unless rerun and recorded.
 - Queue lifecycle note: the deterministic demo smoke validates the protected `/scrape` adapter/import path; a full authenticated `/jobs/scrape-if-missing` queue lifecycle with browser polling remains a recommended final demonstration check.
 - Ethics language: the chapter explicitly covers rate limits, external instability, API keys, proxy configuration, robots/terms considerations, and demo scope.
+
+## Backend / Frontend / Database Documentation Update
+
+- Decision: this polish pass strengthens the non-AI system documentation without expanding it into another oversized deep-dive chapter.
+- Frontend update: Chapter 3 now includes a route/layout architecture diagram and an API/authentication flow diagram based on `frontend/src/App.jsx`, route guards, `AuthContext.jsx`, the Axios API client, and localization files.
+- Backend update: Chapter 3 now includes a Laravel request lifecycle diagram, a backend module responsibility table, and a concise validation/protection mapping grounded in route groups, middleware, form requests, controllers, services, models, resources, queues, and storage services.
+- Database/ERD update: Chapter 3 now adds database design rationale, relationship notes, and data-integrity mechanisms based on migrations and model relationships.
+- API appendix update: added compact core backend examples for login, current user, application tracking, and admin dashboard stats while keeping existing AI and scraping examples intact.
+- Testing chapter update: added a module validation coverage matrix so previous backend/frontend evidence is clearly distinguished from checks rerun in later documentation passes.
+- Caption cleanup: Table 4 now uses the accurate caption `Software environment summary`.
+- New diagrams generated for this pass: frontend route/layout architecture, frontend API/auth flow, Laravel backend request lifecycle, and database relationship rationale.
+- References review: React Router and Axios official documentation references were added because the route tree and centralized API client are now discussed explicitly.
 
 ## Validation Summary
 
 - Branch check passed on `docs/graduation-book`; the only unrelated untracked file remained `docs/REVERSE_ENGINEERING_SYSTEM_WALKTHROUGH.md`.
 - `git diff --check` and `git diff --cached --check` completed without whitespace errors; Git reported line-ending normalization warnings only.
 - Report generation ran successfully with the bundled Python runtime and produced Markdown, DOCX, and PDF artifacts.
-- Generated PDF page count: 115; generated PDF link annotations: PDF contains 132 link annotations after export.
+- Generated PDF page count: 123; generated PDF link annotations: PDF contains 142 link annotations after export.
 - DOCX structural scan found internal hyperlinks/bookmarks for the custom TOC/List of Figures/List of Tables with no missing anchors after figure/table anchor checks.
-- JSON code-fence validation parsed 30 JSON blocks successfully.
-- All ten new scraping diagrams exist and are referenced by the generated Markdown.
+- JSON code-fence validation parsed 36 JSON blocks successfully.
+- All ten scraping diagrams and the four new backend/frontend/database diagrams exist and are referenced by the generated Markdown.
 - Placeholder/typo/bookmark/caption/overclaim scans returned no matches.
 - `python -m py_compile docs/graduation-book/scripts/generate_graduation_book.py` passed using the bundled Python runtime.
 - `python -m compileall ai-job-miner` passed.
 - `python -m compileall ai-cv-analyzer` passed with a non-fatal `.pytest_cache` listing warning from compileall output.
 - `python -m compileall ai-cv-analyzer/training` passed.
 - `docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet` passed.
-- Docker Desktop was started with `docker desktop start`; `docker compose up -d` started the existing local stack without a rebuild.
-- `docker compose ps` showed the main app containers running; backend, frontend, Nginx, job miner, database, and queue workers were healthy after startup settled.
+- Docker runtime was available in this pass; the stack was already running, so no rebuild was performed.
+- `docker compose ps` showed the main app containers running; backend, frontend, Nginx, job miner, database, and queue workers were healthy.
 - Runtime health probes returned HTTP 200 for `/api/health`, `/api/ready`, `/status`, AI Job Miner `/health`, and the AI CV Analyzer root endpoint. AI CV Analyzer `/health` returned 404, so the root endpoint is the verified liveness endpoint for that service in this pass.
 - Local bundled Python still lacked `pytest`, but `docker compose exec -T ai-job-miner python -m pytest` passed with 75 tests and 1 warning.
 - Deterministic demo-source scrape smoke passed: protected AI Job Miner `/scrape` with `CareerCompass Demo Jobs` returned `SUCCESS`, previewed 3 jobs, stored 3 through Laravel import, and reported 0 failed URLs. The temporary smoke rows were cleaned from the local database afterward. Because this called the service directly, it validates the demo adapter plus import path, not queue status polling.

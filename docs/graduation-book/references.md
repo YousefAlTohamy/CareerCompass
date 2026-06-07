@@ -41,3 +41,5 @@
 [39] OpenAPI Initiative, "OpenAPI Specification," OpenAPI Documentation, 2026. [Online]. Available: https://spec.openapis.org/oas/latest.html. Accessed: June 7, 2026.
 [40] Adzuna, "Adzuna Developer API," Adzuna Developer Portal, 2026. [Online]. Available: https://developer.adzuna.com/. Accessed: June 7, 2026.
 [41] IETF, "RFC 9309: Robots Exclusion Protocol," RFC Editor, 2022. [Online]. Available: https://www.rfc-editor.org/rfc/rfc9309. Accessed: June 7, 2026.
+[42] React Router, "Routing," React Router Documentation, 2026. [Online]. Available: https://reactrouter.com/start/declarative/routing. Accessed: June 7, 2026.
+[43] Axios, "First steps," Axios Documentation, 2026. [Online]. Available: https://axios-http.com/docs/intro. Accessed: June 7, 2026.
