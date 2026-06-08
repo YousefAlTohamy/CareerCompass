@@ -33,7 +33,7 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 
 ## Counts
 
-- PDF pages: 123
+- PDF pages: 126
 - Screenshots/evidence images: 19
 - Diagrams: 47
 
@@ -51,7 +51,7 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - Table caption status: formal table captions are rendered below their corresponding tables and remain linked from the List of Tables
 - Section 2.6/2.7 layout status: 2.6 heading, FR-01/FR-11 rows, and Table 2 caption appear on PDF page(s) [12]; 2.7 starts on PDF page(s) [12] after the Table 2 caption
 - Section 2.9/2.10 layout status: 2.9 heading, Software Requirements rows, and Table 4 caption appear on PDF page(s) [13]; 2.10 starts on PDF page(s) [13] after the Table 4 caption
-- Section 9.9/9.10 layout status: 9.9 heading, security-control rows, and Table 58 caption appear on PDF page(s) [94]; 9.10 starts on PDF page(s) [94] after the Table 58 caption
+- Section 9.9/9.10 layout status: 9.9 heading, security-control rows, and Table 58 caption appear on PDF page(s) [96]; 9.10 starts on PDF page(s) [96] after the Table 58 caption
 
 ## Caption, Link, and Layout Verification Method
 
@@ -154,7 +154,7 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - Branch check passed on `docs/graduation-book`; the only unrelated untracked file remained `docs/REVERSE_ENGINEERING_SYSTEM_WALKTHROUGH.md`.
 - `git diff --check` and `git diff --cached --check` completed without whitespace errors; Git reported line-ending normalization warnings only.
 - Report generation ran successfully with the bundled Python runtime and produced Markdown, DOCX, and PDF artifacts.
-- Generated PDF page count: 123; generated PDF link annotations: PDF contains 142 link annotations after export.
+- Generated PDF page count: 126; generated PDF link annotations: PDF contains 142 link annotations after export.
 - DOCX structural scan found internal hyperlinks/bookmarks for the custom TOC/List of Figures/List of Tables with no missing anchors after figure/table anchor checks.
 - JSON code-fence validation parsed 36 JSON blocks successfully.
 - All ten scraping diagrams and the four new backend/frontend/database diagrams exist and are referenced by the generated Markdown.
