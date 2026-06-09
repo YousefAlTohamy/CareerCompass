@@ -72,7 +72,7 @@ Ahmed Sobhy Mohamed Ali
 - [Figure 24. Fine-tuned BERT NER architecture.](#bm_figure_24)
 - [Figure 25. Detailed NER training pipeline.](#bm_figure_25)
 - [Figure 26. Matching formula and penalty flow.](#bm_figure_26)
-- [Figure 27. Explainable AI recommendation output.](#bm_figure_27)
+- [Figure 27. Explainable AI fit output.](#bm_figure_27)
 - [Figure 28. AI analyzer sequence diagram.](#bm_figure_28)
 - [Figure 29. Dataset evidence availability.](#bm_figure_29)
 - [Figure 30. AI CV Analyzer smoke evaluation metrics.](#bm_figure_30)
@@ -143,7 +143,7 @@ Ahmed Sobhy Mohamed Ali
 - [Table 24. Skill canonicalization example.](#bm_table_24)
 - [Table 25. Dataset availability and transparency.](#bm_table_25)
 - [Table 26. Seniority-aware matching weights.](#bm_table_26)
-- [Table 27. Recommendation explanation output types.](#bm_table_27)
+- [Table 27. Fit explanation output types.](#bm_table_27)
 - [Table 28. Computational complexity overview.](#bm_table_28)
 - [Table 29. Raw CV fragment extraction example.](#bm_table_29)
 - [Table 30. Layer 2 interpretation example.](#bm_table_30)
@@ -1246,24 +1246,24 @@ MatchScorePercent = round(FinalScore * 100, 2)
 
 Constraint penalties are also code-derived. Missing mandatory skills subtract 15 percent each, capped at 50 percent. Experience shortfall subtracts a proportional penalty capped at 30 percent. Seniority mismatch subtracts 20 percent. Total validation penalty is capped at 80 percent. Bonus skills add 2 percent each, capped at 10 percent. The `/api/hybrid-match` endpoint additionally blends the Layer 3 semantic/adaptive result with TF-IDF when TF-IDF is available: 60 percent semantic/adaptive and 40 percent TF-IDF.
 
-## 6.10 Explainable AI Recommendation Output
+## 6.10 Explainable AI Fit Output
 
-The analyzer does not only return a single percentage. It also returns supporting evidence that can be shown to users and examiners: score breakdowns, missing mandatory skills, strengths, gaps, red flags, and a fit verdict. This is important academically because it makes the recommendation process inspectable rather than opaque.
+The analyzer does not only return a single percentage. It also returns supporting evidence that can be shown to users and examiners: score breakdowns, missing mandatory skills, strengths, gaps, red flags, and a fit verdict. This is important academically because it makes the fit-analysis process inspectable rather than opaque.
 
-![Explainable AI recommendation output.](assets/diagrams/27_explainable_ai_output.png)
+![Explainable AI fit output.](assets/diagrams/27_explainable_ai_output.png)
 
-*Figure 27. Explainable AI recommendation output.*
+*Figure 27. Explainable AI fit output.*
 
 | Output Type | Example | Why It Helps |
 |---|---|---|
 | Score | 78 percent | Gives a quick summary of estimated fit. |
-| Matched skills | Laravel, Docker, MySQL | Shows evidence supporting the recommendation. |
+| Matched skills | Laravel, Docker, MySQL | Shows evidence supporting the fit score. |
 | Missing skills | Kubernetes | Turns the gap into a learning target. |
 | Red flags | Significant seniority mismatch | Warns that a numeric score should not be read alone. |
 | Verdict | Strong Match or Potential Fit | Converts score ranges into readable guidance. |
 | Gaps | Experience shortfall or missing mandatory skills | Explains why a candidate may need improvement before applying. |
 
-*Table 27. Recommendation explanation output types.*
+*Table 27. Fit explanation output types.*
 
 ## 6.11 AI Analyzer Sequence
 

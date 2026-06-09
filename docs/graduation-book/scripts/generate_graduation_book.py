@@ -178,7 +178,7 @@ FIGURES = [
     ("Figure 24", "Fine-tuned BERT NER architecture.", "assets/diagrams/24_fine_tuned_bert_ner_architecture.png"),
     ("Figure 25", "Detailed NER training pipeline.", "assets/diagrams/25_detailed_training_pipeline.png"),
     ("Figure 26", "Matching formula and penalty flow.", "assets/diagrams/26_matching_formula_flow.png"),
-    ("Figure 27", "Explainable AI recommendation output.", "assets/diagrams/27_explainable_ai_output.png"),
+    ("Figure 27", "Explainable AI fit output.", "assets/diagrams/27_explainable_ai_output.png"),
     ("Figure 28", "AI analyzer sequence diagram.", "assets/diagrams/28_ai_analyzer_sequence.png"),
     ("Figure 29", "Dataset evidence availability.", "assets/diagrams/29_dataset_evidence_availability.png"),
     ("Figure 30", "AI CV Analyzer smoke evaluation metrics.", "assets/diagrams/30_ai_cv_analyzer_smoke_metrics.png"),
@@ -247,7 +247,7 @@ TABLES = [
     ("Table 24", "Skill canonicalization example."),
     ("Table 25", "Dataset availability and transparency."),
     ("Table 26", "Seniority-aware matching weights."),
-    ("Table 27", "Recommendation explanation output types."),
+    ("Table 27", "Fit explanation output types."),
     ("Table 28", "Computational complexity overview."),
     ("Table 29", "Raw CV fragment extraction example."),
     ("Table 30", "Layer 2 interpretation example."),
@@ -1532,7 +1532,7 @@ def create_diagrams() -> None:
 
     save_diagram(
         "27_explainable_ai_output.png",
-        "Explainable AI Recommendation Output",
+        "Explainable AI Fit Output",
         [
             ("Matching Score", "Final percentage and qualified flag.", (80, 150, 380, 290), "#dbeafe"),
             ("Missing Mandatory Skills", "ConstraintValidator identifies required skills absent from CV.", (500, 150, 860, 290), "#fee2e2"),
@@ -3083,22 +3083,22 @@ MatchScorePercent = round(FinalScore * 100, 2)
 
 Constraint penalties are also code-derived. Missing mandatory skills subtract 15 percent each, capped at 50 percent. Experience shortfall subtracts a proportional penalty capped at 30 percent. Seniority mismatch subtracts 20 percent. Total validation penalty is capped at 80 percent. Bonus skills add 2 percent each, capped at 10 percent. The `/api/hybrid-match` endpoint additionally blends the Layer 3 semantic/adaptive result with TF-IDF when TF-IDF is available: 60 percent semantic/adaptive and 40 percent TF-IDF.
 
-## 6.10 Explainable AI Recommendation Output
+## 6.10 Explainable AI Fit Output
 
-The analyzer does not only return a single percentage. It also returns supporting evidence that can be shown to users and examiners: score breakdowns, missing mandatory skills, strengths, gaps, red flags, and a fit verdict. This is important academically because it makes the recommendation process inspectable rather than opaque.
+The analyzer does not only return a single percentage. It also returns supporting evidence that can be shown to users and examiners: score breakdowns, missing mandatory skills, strengths, gaps, red flags, and a fit verdict. This is important academically because it makes the fit-analysis process inspectable rather than opaque.
 
-{figure_markdown("Figure 27", "Explainable AI recommendation output.", "assets/diagrams/27_explainable_ai_output.png")}
+{figure_markdown("Figure 27", "Explainable AI fit output.", "assets/diagrams/27_explainable_ai_output.png")}
 
 | Output Type | Example | Why It Helps |
 |---|---|---|
 | Score | 78 percent | Gives a quick summary of estimated fit. |
-| Matched skills | Laravel, Docker, MySQL | Shows evidence supporting the recommendation. |
+| Matched skills | Laravel, Docker, MySQL | Shows evidence supporting the fit score. |
 | Missing skills | Kubernetes | Turns the gap into a learning target. |
 | Red flags | Significant seniority mismatch | Warns that a numeric score should not be read alone. |
 | Verdict | Strong Match or Potential Fit | Converts score ranges into readable guidance. |
 | Gaps | Experience shortfall or missing mandatory skills | Explains why a candidate may need improvement before applying. |
 
-*Table 27. Recommendation explanation output types.*
+*Table 27. Fit explanation output types.*
 
 ## 6.11 AI Analyzer Sequence
 
