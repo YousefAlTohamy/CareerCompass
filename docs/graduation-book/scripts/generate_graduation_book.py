@@ -354,9 +354,8 @@ def wrap_text(draw: ImageDraw.ImageDraw, text: str, font, max_width: int) -> lis
     return lines or [""]
 
 
-def rounded_box(draw, box, title, subtitle="", fill="#ffffff", outline="#94a3b8", text="#0f172a"):
+def rounded_box(draw, box, title, subtitle="", fill="#ffffff", outline="#1d4ed8", text="#0f172a"):
     x1, y1, x2, y2 = box
-    draw.rounded_rectangle((x1+4, y1+4, x2+4, y2+4), radius=18, fill="#e2e8f0")
     draw.rounded_rectangle(box, radius=18, fill=fill, outline=outline, width=3)
     title_font = load_font(24, True)
     sub_font = load_font(17)
@@ -384,27 +383,26 @@ def arrow(draw, start, end, color="#0f766e", width=4):
 
 
 def save_diagram(name: str, title: str, boxes: list[tuple[str, str, tuple[int, int, int, int], str]], arrows: list[tuple[tuple[int, int], tuple[int, int], str]]):
-    img = PILImage.new("RGB", (1600, 1000), "#ffffff")
+    img = PILImage.new("RGB", (1600, 1000), "#f8fafc")
     draw = ImageDraw.Draw(img)
-    draw.rectangle((0, 0, 1600, 96), fill="#1e293b")
+    draw.rectangle((0, 0, 1600, 96), fill="#0f172a")
     draw.text((44, 28), title, fill="white", font=load_font(34, True))
     for start, end, label in arrows:
         arrow(draw, start, end)
         if label:
             mx = (start[0] + end[0]) // 2
             my = (start[1] + end[1]) // 2
-            draw.rounded_rectangle((mx - 80, my - 18, mx + 80, my + 18), radius=8, fill="#f8fafc", outline="#cbd5e1")
-            draw.text((mx - 72, my - 11), label, fill="#334155", font=load_font(14, True))
+            draw.rounded_rectangle((mx - 80, my - 18, mx + 80, my + 18), radius=8, fill="#ecfeff", outline="#67e8f9")
+            draw.text((mx - 72, my - 11), label, fill="#155e75", font=load_font(14, True))
     for title_text, subtitle, box, color in boxes:
         rounded_box(draw, box, title_text, subtitle, fill=color)
-    draw.rectangle((0, 0, 1599, 999), outline="#cbd5e1", width=2)
     img.save(DIAGRAMS / name)
 
 
 def save_frontend_route_readable_diagram() -> None:
-    img = PILImage.new("RGB", (1800, 1100), "#ffffff")
+    img = PILImage.new("RGB", (1800, 1100), "#f8fafc")
     draw = ImageDraw.Draw(img)
-    draw.rectangle((0, 0, 1800, 100), fill="#1e293b")
+    draw.rectangle((0, 0, 1800, 100), fill="#0f172a")
     draw.text((50, 30), "Frontend Route and Layout Architecture", fill="white", font=load_font(34, True))
     draw.text(
         (70, 145),
@@ -423,7 +421,6 @@ def save_frontend_route_readable_diagram() -> None:
     ]
     for num, title, body, box, fill in cards:
         x1, y1, x2, y2 = box
-        draw.rounded_rectangle((x1+4, y1+4, x2+4, y2+4), radius=18, fill="#e2e8f0")
         draw.rounded_rectangle(box, radius=18, fill=fill, outline="#94a3b8", width=3)
         draw.ellipse((x1 + 18, y1 + 22, x1 + 58, y1 + 62), fill="#0f172a")
         draw.text((x1 + 31, y1 + 29), num, fill="white", font=load_font(20, True))
@@ -447,14 +444,13 @@ def save_frontend_route_readable_diagram() -> None:
         fill="#64748b",
         font=load_font(21),
     )
-    draw.rectangle((0, 0, 1799, 1099), outline="#cbd5e1", width=2)
     img.save(DIAGRAMS / "66_frontend_route_layout_architecture.png")
 
 
 def create_dataset_evidence_diagram() -> None:
-    img = PILImage.new("RGB", (1600, 1000), "#ffffff")
+    img = PILImage.new("RGB", (1600, 1000), "#f8fafc")
     draw = ImageDraw.Draw(img)
-    draw.rectangle((0, 0, 1600, 96), fill="#1e293b")
+    draw.rectangle((0, 0, 1600, 96), fill="#0f172a")
     draw.text((44, 28), "Dataset Evidence Availability", fill="white", font=load_font(34, True))
     cards = [
         ("Final NER Training Dataset", "Dataset content unavailable in committed Git evidence", "0 dataset files", "#fee2e2"),
@@ -466,14 +462,12 @@ def create_dataset_evidence_diagram() -> None:
     ]
     y = 160
     for title, body, badge, fill in cards:
-        draw.rounded_rectangle((110+4, y+4, 1490+4, y+120+4), radius=16, fill="#e2e8f0")
         draw.rounded_rectangle((110, y, 1490, y + 120), radius=16, fill=fill, outline="#94a3b8", width=2)
         draw.text((140, y + 22), title, fill="#0f172a", font=load_font(25, True))
         draw.text((140, y + 65), body, fill="#334155", font=load_font(19))
         draw.rounded_rectangle((1260, y + 35, 1450, y + 84), radius=12, fill="#ffffff", outline="#64748b", width=2)
         draw.text((1280, y + 49), badge, fill="#0f172a", font=load_font(18, True))
         y += 145
-    draw.rounded_rectangle((110+4, 890+4, 1490+4, 955+4), radius=14, fill="#e2e8f0")
     draw.rounded_rectangle((110, 890, 1490, 955), radius=14, fill="#e0f2fe", outline="#0284c7", width=2)
     draw.text(
         (140, 910),
@@ -481,7 +475,6 @@ def create_dataset_evidence_diagram() -> None:
         fill="#0c4a6e",
         font=load_font(20, True),
     )
-    draw.rectangle((0, 0, 1599, 999), outline="#cbd5e1", width=2)
     img.save(DIAGRAMS / "29_dataset_evidence_availability.png")
 
 
@@ -497,9 +490,9 @@ def create_smoke_metrics_diagram() -> None:
         ("Seniority", summary.get("seniority_match_rate", 0.0), "#dc2626"),
         ("Status", summary.get("parsing_status_match_rate", 0.0), "#0f766e"),
     ]
-    img = PILImage.new("RGB", (1600, 1000), "#ffffff")
+    img = PILImage.new("RGB", (1600, 1000), "#f8fafc")
     draw = ImageDraw.Draw(img)
-    draw.rectangle((0, 0, 1600, 96), fill="#1e293b")
+    draw.rectangle((0, 0, 1600, 96), fill="#0f172a")
     draw.text((44, 28), "AI CV Analyzer Smoke Evaluation Metrics", fill="white", font=load_font(34, True))
     axis_left, axis_bottom = 160, 790
     axis_top, axis_right = 180, 1460
@@ -1589,9 +1582,9 @@ def create_diagrams() -> None:
 
 def create_sequence_diagram(name: str, title: str, participants: list[str], messages: list[tuple[str, str, str]]):
     width, height = 1200, 1450
-    img = PILImage.new("RGB", (width, height), "#ffffff")
+    img = PILImage.new("RGB", (width, height), "#f8fafc")
     draw = ImageDraw.Draw(img)
-    draw.rectangle((0, 0, width, 88), fill="#1e293b")
+    draw.rectangle((0, 0, width, 88), fill="#0f172a")
     draw.text((36, 26), title, fill="white", font=load_font(30, True))
     participant_text = "Participants: " + " | ".join(participants)
     draw.text((54, 118), participant_text, fill="#475569", font=load_font(17, True))
@@ -1625,7 +1618,6 @@ def create_sequence_diagram(name: str, title: str, participants: list[str], mess
         y1 = y0 + row * (card_h + y_gap)
         x2, y2 = x1 + card_w, y1 + card_h
         centers.append(((x1 + x2) // 2, (y1 + y2) // 2))
-        draw.rounded_rectangle((x1+4, y1+4, x2+4, y2+4), radius=16, fill="#e2e8f0")
         draw.rounded_rectangle((x1, y1, x2, y2), radius=16, fill=fills[row % len(fills)], outline="#94a3b8", width=3)
         draw.ellipse((x1 + 16, y1 + 18, x1 + 54, y1 + 56), fill="#0f172a")
         draw.text((x1 + 27, y1 + 23), str(idx), fill="white", font=badge_font)
@@ -1651,14 +1643,13 @@ def create_sequence_diagram(name: str, title: str, participants: list[str], mess
         fill="#64748b",
         font=load_font(17, True),
     )
-    draw.rectangle((0, 0, width - 1, height - 1), outline="#cbd5e1", width=2)
     img.save(DIAGRAMS / name)
 
 
 def create_erd() -> None:
-    img = PILImage.new("RGB", (1800, 1250), "#ffffff")
+    img = PILImage.new("RGB", (1800, 1250), "#f8fafc")
     draw = ImageDraw.Draw(img)
-    draw.rectangle((0, 0, 1800, 96), fill="#1e293b")
+    draw.rectangle((0, 0, 1800, 96), fill="#0f172a")
     draw.text((44, 28), "ERD and Database Summary", fill="white", font=load_font(34, True))
     tables = [
         ("users", ["id PK", "name", "email", "password", "role", "is_banned"], (50, 145, 350, 350)),
@@ -1676,10 +1667,8 @@ def create_erd() -> None:
     ]
     for name, fields, box in tables:
         x1, y1, x2, y2 = box
-        draw.rounded_rectangle((x1+4, y1+4, x2+4, y2+4), radius=12, fill="#e2e8f0")
         draw.rounded_rectangle(box, radius=12, fill="#ffffff", outline="#94a3b8", width=3)
-        draw.rounded_rectangle((x1, y1, x2, y1 + 42), radius=12, fill="#e2e8f0")
-        draw.rectangle((x1, y1 + 10, x2, y1 + 42), fill="#e2e8f0")
+        draw.rectangle((x1, y1, x2, y1 + 42), fill="#dbeafe")
         draw.text((x1 + 14, y1 + 10), name, fill="#0f172a", font=load_font(20, True))
         y = y1 + 58
         for field in fields:
@@ -1700,7 +1689,6 @@ def create_erd() -> None:
     ]
     for s, e in rels:
         arrow(draw, s, e, color="#64748b", width=3)
-    draw.rectangle((0, 0, 1799, 1249), outline="#cbd5e1", width=2)
     img.save(DIAGRAMS / "08_erd.png")
 
 
@@ -1731,9 +1719,9 @@ def text_image(path: Path, title: str, lines: Iterable[str]) -> None:
 
 
 def evidence_table_image(path: Path, title: str, columns: list[str], rows: list[list[str]]) -> None:
-    img = PILImage.new("RGB", (1600, 1000), "#ffffff")
+    img = PILImage.new("RGB", (1600, 1000), "#f8fafc")
     draw = ImageDraw.Draw(img)
-    draw.rectangle((0, 0, 1600, 90), fill="#1e293b")
+    draw.rectangle((0, 0, 1600, 90), fill="#0f172a")
     draw.text((44, 28), title, fill="white", font=load_font(31, True))
     widths = [360, 250, 830] if len(columns) == 3 else [360] * len(columns)
     x_positions = [80]
@@ -1744,8 +1732,8 @@ def evidence_table_image(path: Path, title: str, columns: list[str], rows: list[
     for idx, column in enumerate(columns):
         x1 = x_positions[idx]
         x2 = x1 + widths[idx]
-        draw.rectangle((x1, header_y, x2, header_y + 54), fill="#1e293b", outline=border, width=2)
-        draw.text((x1 + 14, header_y + 15), column, fill="#ffffff", font=load_font(21, True))
+        draw.rectangle((x1, header_y, x2, header_y + 54), fill="#dbeafe", outline=border, width=2)
+        draw.text((x1 + 14, header_y + 15), column, fill="#0f172a", font=load_font(21, True))
     y = header_y + 54
     for row_idx, row in enumerate(rows[:9]):
         wrapped_cells: list[list[str]] = []
@@ -1773,7 +1761,6 @@ def evidence_table_image(path: Path, title: str, columns: list[str], rows: list[
         fill="#64748b",
         font=load_font(17),
     )
-    draw.rectangle((0, 0, 1599, 999), outline="#cbd5e1", width=2)
     img.save(path)
 
 
@@ -4907,7 +4894,6 @@ def set_cell_text(
     size: float = 8.5,
     align=WD_ALIGN_PARAGRAPH.LEFT,
     line_spacing: float = 1.05,
-    color: str | None = None,
 ) -> None:
     cell.text = ""
     para = cell.paragraphs[0]
@@ -4919,8 +4905,6 @@ def set_cell_text(
     run.font.name = "Calibri"
     run.font.size = Pt(size)
     run.bold = bold
-    if color:
-        run.font.color.rgb = RGBColor.from_string(color)
 
 
 def table_widths(headers: list[str], column_count: int) -> list[int]:
@@ -5047,17 +5031,12 @@ def add_md_table_docx(doc: Document, lines: list[str]) -> None:
             cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
             set_cell_width(cell, widths[c_idx])
             if r_idx == 0:
-                shade_cell(cell, "1E293B")
-                text_color = "FFFFFF"
-            else:
-                if r_idx % 2 == 1:
-                    shade_cell(cell, "F8FAFC")
-                text_color = "0F172A"
+                shade_cell(cell, "D9EAF7")
             short_cell = c_idx == 0 or clean_inline(value).lower() in {"passed", "not run manual", "skipped, pytest missing"}
             align = WD_ALIGN_PARAGRAPH.CENTER if short_cell else WD_ALIGN_PARAGRAPH.LEFT
             font_size = 7.8 if is_functional_requirements else (8.7 if is_software_requirements or is_security_controls else (8.1 if column_count >= 5 else 9.0))
             spacing = 1.0 if is_functional_requirements else (1.05 if is_software_requirements or is_security_controls else 1.1)
-            set_cell_text(cell, value, bold=(r_idx == 0), size=font_size, align=align, line_spacing=spacing, color=text_color)
+            set_cell_text(cell, value, bold=(r_idx == 0), size=font_size, align=align, line_spacing=spacing)
     spacer = doc.add_paragraph()
     spacer.paragraph_format.space_after = Pt(4)
 
@@ -5234,8 +5213,8 @@ def generate_docx() -> None:
     doc.save(DOCX_PATH)
 
 
-def para_style(name: str, size: int, leading: int | None = None, bold: bool = False, align=TA_LEFT, color: str | None = None):
-    style = ParagraphStyle(
+def para_style(name: str, size: int, leading: int | None = None, bold: bool = False, align=TA_LEFT):
+    return ParagraphStyle(
         name=name,
         fontName="Helvetica-Bold" if bold else "Helvetica",
         fontSize=size,
@@ -5243,9 +5222,6 @@ def para_style(name: str, size: int, leading: int | None = None, bold: bool = Fa
         alignment=align,
         spaceAfter=8,
     )
-    if color:
-        style.textColor = colors.HexColor(color)
-    return style
 
 
 def add_pdf_cover(story: list) -> None:
@@ -5263,8 +5239,8 @@ def add_pdf_cover(story: list) -> None:
     for line in [UNIVERSITY, FACULTY, DEPARTMENT, "Graduation Project Book", ACADEMIC_YEAR]:
         story.append(Paragraph(html.escape(line), center))
     story.append(Spacer(1, 1.0 * cm))
-    story.append(Paragraph(html.escape(PROJECT_TITLE), para_style("pdf-title", 24, leading=28, bold=True, align=TA_CENTER, color="#0f172a")))
-    story.append(Paragraph(html.escape(SHORT_NAME), para_style("pdf-short", 18, bold=True, align=TA_CENTER, color="#0ea5e9")))
+    story.append(Paragraph(html.escape(PROJECT_TITLE), para_style("pdf-title", 20, leading=25, bold=True, align=TA_CENTER)))
+    story.append(Paragraph(html.escape(SHORT_NAME), para_style("pdf-short", 16, bold=True, align=TA_CENTER)))
     story.append(Spacer(1, 1.0 * cm))
     story.append(Paragraph("Submitted by:", center))
     for student in STUDENTS:
@@ -5307,22 +5283,22 @@ def add_md_table_pdf(story: list, lines: list[str]) -> None:
         return
     max_cols = max(len(row) for row in rows)
     normalized = [row + [""] * (max_cols - len(row)) for row in rows]
-    data = [[Paragraph(html.escape(cell), para_style("tablecell", 7.5, leading=10, bold=(r == 0), color="#ffffff" if r == 0 else "#0f172a")) for cell in row] for r, row in enumerate(normalized)]
+    data = [[Paragraph(html.escape(cell), para_style("tablecell", 7.5, leading=10, bold=(r == 0))) for cell in row] for r, row in enumerate(normalized)]
     table = Table(data, repeatRows=1, hAlign="LEFT")
-    style_commands = [
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1e293b")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#ffffff")),
-        ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#cbd5e1")),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 6),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-    ]
-    for i in range(1, len(normalized)):
-        if i % 2 == 1:
-            style_commands.append(("BACKGROUND", (0, i), (-1, i), colors.HexColor("#f8fafc")))
-    table.setStyle(TableStyle(style_commands))
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#dbeafe")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
+                ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#94a3b8")),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ]
+        )
+    )
     story.append(table)
     story.append(Spacer(1, 0.25 * cm))
 
