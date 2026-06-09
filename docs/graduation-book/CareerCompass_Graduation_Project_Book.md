@@ -72,7 +72,7 @@ Ahmed Sobhy Mohamed Ali
 - [Figure 24. Fine-tuned BERT NER architecture.](#bm_figure_24)
 - [Figure 25. Detailed NER training pipeline.](#bm_figure_25)
 - [Figure 26. Matching formula and penalty flow.](#bm_figure_26)
-- [Figure 27. Explainable AI fit output.](#bm_figure_27)
+- [Figure 27. Explainable AI recommendation output.](#bm_figure_27)
 - [Figure 28. AI analyzer sequence diagram.](#bm_figure_28)
 - [Figure 29. Dataset evidence availability.](#bm_figure_29)
 - [Figure 30. AI CV Analyzer smoke evaluation metrics.](#bm_figure_30)
@@ -143,7 +143,7 @@ Ahmed Sobhy Mohamed Ali
 - [Table 24. Skill canonicalization example.](#bm_table_24)
 - [Table 25. Dataset availability and transparency.](#bm_table_25)
 - [Table 26. Seniority-aware matching weights.](#bm_table_26)
-- [Table 27. Fit explanation output types.](#bm_table_27)
+- [Table 27. Recommendation explanation output types.](#bm_table_27)
 - [Table 28. Computational complexity overview.](#bm_table_28)
 - [Table 29. Raw CV fragment extraction example.](#bm_table_29)
 - [Table 30. Layer 2 interpretation example.](#bm_table_30)
@@ -194,7 +194,7 @@ CareerCompass is a graduation/demo career guidance platform that helps students 
 
 The AI CV Analyzer is documented as a hybrid implementation rather than a single opaque model. It combines PDF/image text extraction, OCR fallback, section segmentation, a BERT-family token-classification path for named-entity recognition, rule-based contact/date/experience extraction, skill canonicalization, domain and seniority classification, sentence embeddings, and TF-IDF-style matching. The runtime code can load an exported local NER artifact when that ignored deployment folder is present, and a Colab-oriented training notebook documents how the artifact is produced. A user-provided exported Colab PDF now records the overall NER training metrics, while the cleaned dataset content and model weights remain outside Git; therefore, the report separates recorded training-run evidence from repository-alone reproducibility and production benchmark claims.
 
-The implementation is intentionally described as a graduation/demo system rather than a production product. The AI outputs are estimates, the job data depends on imported and demo sources, and the security posture is appropriate for demonstration but requires further production hardening. Validation was performed through Docker Compose configuration checks, backend/frontend evidence from earlier passes, Python syntax checks, containerized AI Job Miner tests, service health probes, a deterministic demo-source smoke check, and manual browser screenshots. Backend tests previously passed with 39 tests and 297 assertions, the AI Job Miner container test suite passed with 75 tests in the final cleanup pass, and frontend lint/build evidence remains recorded from the earlier validation pass. The AI CV Analyzer pytest suite was not rerun in this cleanup pass, while Python syntax compilation passed.
+The implementation is intentionally described as a graduation/demo system rather than a production product. The AI outputs are estimates, the job data depends on imported and demo sources, and the security posture is appropriate for demonstration but requires further production hardening. Validation was performed through Docker Compose configuration checks, backend/frontend evidence from earlier passes, Python syntax checks, containerized AI Job Miner tests, service health probes, a deterministic demo-source smoke check, and manual browser screenshots. Backend tests previously passed with 39 tests and 297 assertions, the AI Job Miner container test suite passed with 75 tests in the final Phase 1 documentation-fix pass, and frontend lint/build evidence remains recorded from the earlier validation pass. The AI CV Analyzer pytest suite was not rerun in this Phase 1 documentation-fix pass, while Python syntax compilation passed.
 
 \pagebreak
 
@@ -314,11 +314,11 @@ CareerCompass implements two practical roles. The student role can register, log
 | FR-04 | Parse CV and extract profile/skills. | `CvProcessingService` must call AI CV Analyzer `/api/parse-cv`, persist successful structured profile, skill, experience, and analysis metadata, and preserve explicit timeout/error/no-text statuses. |
 | FR-05 | Display normalized profile and skills. | The user dashboard/profile must display persisted profile, skills, experience, predicted role, seniority, domain, completeness, and parsing status from Laravel resources and React pages. |
 | FR-06 | Import and display jobs. | The backend must store usable imported/demo jobs, deduplicate by URL and title/company constraints, expose paginated listings/details, and support admin/user job views through `JobController`, `ScrapedJobController`, and AI Job Miner integration. |
-| FR-07 | Estimate job recommendations with Laravel scoring. | `/api/v1/jobs/recommended` must rank up to 50 usable jobs using predicted role/profile title matching, required-skill overlap, and seniority hints in `JobController::getRecommended`. This recommendation list is not the semantic/TF-IDF matcher. |
-| FR-08 | Analyze skill gaps with AI fallback. | Gap analysis for a selected job or role must compare stored user data with job requirements; `GapAnalysisService` calls AI CV Analyzer `/api/hybrid-match` for semantic/adaptive plus TF-IDF matching when available and falls back to database skill matching when unavailable. |
-| FR-09 | Track applications. | Authenticated students must save a job once, update status/notes with allowed values, view counts/lists, and delete tracked opportunities through `ApplicationController`, `ApplicationTrackerService`, and the Applications page. |
-| FR-10 | Provide admin dashboards and operations. | Admin-only routes must expose dashboard statistics, user review, job management, scraping source diagnostics, and target role management while rejecting normal users. |
-| FR-11 | Provide health, readiness, and metrics endpoints. | The system must expose liveness/readiness/status/metrics endpoints for local demonstration and monitoring through `HealthController`, `MetricsController`, Docker Compose, Prometheus, and Grafana configuration. |
+| FR-07 | Estimate job recommendations with Laravel scoring. | `/api/v1/jobs/recommended` ranks up to 50 usable jobs using predicted role/profile title matching, required-skill overlap, and seniority hints in `JobController::getRecommended`. This recommendation list is not the semantic/TF-IDF matcher. |
+| FR-08 | Analyze skill gaps with AI fallback. | Gap analysis for a selected job or role compares stored user data with job requirements; `GapAnalysisService` calls AI CV Analyzer `/api/hybrid-match` for semantic/adaptive plus TF-IDF matching when available and falls back to database skill matching when unavailable. |
+| FR-09 | Track applications. | ApplicationController, ApplicationTrackerService, Applications page. |
+| FR-10 | Provide admin dashboards. | Admin Dashboard, Jobs, Sources, Targets pages and admin API routes. |
+| FR-11 | Provide health and metrics endpoints. | HealthController, MetricsController, Prometheus/Grafana compose services. |
 
 *Table 2. Functional requirements summary.*
 
@@ -1246,28 +1246,28 @@ MatchScorePercent = round(FinalScore * 100, 2)
 
 Constraint penalties are also code-derived. Missing mandatory skills subtract 15 percent each, capped at 50 percent. Experience shortfall subtracts a proportional penalty capped at 30 percent. Seniority mismatch subtracts 20 percent. Total validation penalty is capped at 80 percent. Bonus skills add 2 percent each, capped at 10 percent. The `/api/hybrid-match` endpoint additionally blends the Layer 3 semantic/adaptive result with TF-IDF when TF-IDF is available: 60 percent semantic/adaptive and 40 percent TF-IDF.
 
-## 6.10 Explainable AI Fit Output
+## 6.10 Explainable AI Recommendation Output
 
-The analyzer does not only return a single percentage. It also returns supporting evidence that can be shown to users and examiners: score breakdowns, missing mandatory skills, strengths, gaps, red flags, and a fit verdict. This is important academically because it makes the job-fit and gap-analysis process inspectable rather than opaque.
+The analyzer does not only return a single percentage. It also returns supporting evidence that can be shown to users and examiners: score breakdowns, missing mandatory skills, strengths, gaps, red flags, and a fit verdict. This is important academically because it makes the recommendation process inspectable rather than opaque.
 
-![Explainable AI fit output.](assets/diagrams/27_explainable_ai_output.png)
+![Explainable AI recommendation output.](assets/diagrams/27_explainable_ai_output.png)
 
-*Figure 27. Explainable AI fit output.*
+*Figure 27. Explainable AI recommendation output.*
 
 | Output Type | Example | Why It Helps |
 |---|---|---|
 | Score | 78 percent | Gives a quick summary of estimated fit. |
-| Matched skills | Laravel, Docker, MySQL | Shows evidence supporting the fit score. |
+| Matched skills | Laravel, Docker, MySQL | Shows evidence supporting the recommendation. |
 | Missing skills | Kubernetes | Turns the gap into a learning target. |
 | Red flags | Significant seniority mismatch | Warns that a numeric score should not be read alone. |
 | Verdict | Strong Match or Potential Fit | Converts score ranges into readable guidance. |
 | Gaps | Experience shortfall or missing mandatory skills | Explains why a candidate may need improvement before applying. |
 
-*Table 27. Fit explanation output types.*
+*Table 27. Recommendation explanation output types.*
 
 ## 6.11 AI Analyzer Sequence
 
-The analyzer is synchronous during CV upload: Laravel calls FastAPI and receives a structured parse result before updating the returned user resource. The stored profile, skills, experiences, CV analysis, and private file metadata then support later dashboard, Laravel recommendation, and AI-backed gap-analysis requests.
+The analyzer is synchronous during CV upload: Laravel calls FastAPI and receives a structured parse result before updating the returned user resource. The stored profile, skills, experiences, CV analysis, and private file metadata then support later dashboard, recommendation, and gap-analysis requests.
 
 ![AI analyzer sequence diagram.](assets/diagrams/28_ai_analyzer_sequence.png)
 
@@ -1749,15 +1749,15 @@ The testing strategy combined automated tests, build checks, configuration check
 
 ## 8.3 Backend Testing
 
-Backend test evidence exists in the repository and in previously recorded validation notes. The recorded backend container validation included `php artisan config:clear`, `php artisan route:list`, migrations, and `php artisan test`; the route list confirmed 131 routes and the Laravel test suite passed with 39 tests and 297 assertions. These numbers are retained as previously recorded evidence. In the current Phase 1 documentation-fix shell, backend tests were not freshly rerun because `php` is not available on the host PATH and no source code was changed.
+Backend validation was executed inside the backend container. Composer dependencies were already installed. `php artisan config:clear`, `php artisan route:list`, migrations, and tests passed. The route list confirmed 131 routes. The Laravel test suite passed with 39 tests and 297 assertions.
 
 ## 8.4 Frontend Testing
 
-Frontend lint/build evidence is also retained from the previous validation pass. That recorded pass used existing frontend dependencies and reported ESLint passing with 9 warnings and 0 errors, plus a Vite production build that transformed 2904 modules. The warnings were related to React fast-refresh export conventions and hook dependency notes. In the current Phase 1 documentation-fix shell, the frontend build was not freshly rerun.
+The frontend was validated using the existing `frontend/node_modules` and the bundled Node runtime. ESLint passed with 9 warnings and 0 errors. The warnings were related to React fast-refresh export conventions and hook dependency notes. The Vite production build passed and transformed 2904 modules.
 
 ## 8.5 Python Services Testing
 
-Python service evidence must be separated by source. Previous validation recorded syntax compilation for both AI services. The AI Job Miner pytest suite was previously run inside the `ai-job-miner` Docker container and passed with 75 tests and 1 warning. In the current Phase 1 documentation-fix shell, the bundled Python runtime does not include `pytest`, so Python pytest suites were not freshly rerun. The AI CV Analyzer pytest suite remains documented as existing tests plus smoke/Colab evidence, not a fresh current-shell result.
+Python syntax compilation passed for both AI services. The AI Job Miner pytest suite was rerun inside the running `ai-job-miner` Docker container and passed with 75 tests and 1 warning. The local bundled Python runtime still did not include pytest, so the successful pytest evidence is specifically container-based. The AI CV Analyzer pytest suite was not rerun in this Phase 1 documentation-fix pass; AI CV Analyzer syntax compilation passed, and earlier smoke/Colab evidence remains documented separately.
 
 ## 8.6 Docker and Integration Testing
 
@@ -1769,15 +1769,15 @@ Docker Desktop was initially unavailable to the shell, then was started through 
 
 ### 8.6.1 Module Validation Coverage Matrix
 
-The following matrix summarizes validation coverage by system area. Items marked as previously passed are preserved from the latest documented validation notes rather than claimed as fresh reruns in the current Phase 1 documentation-fix shell.
+The following matrix summarizes validation coverage by system area. Items marked as previously passed are preserved from the latest documented validation notes rather than claimed as fresh reruns in this backend/frontend/database polish pass.
 
 | System Area | Evidence | Latest Result | Limitation |
 |---|---|---|---|
-| Laravel backend | Container route list, migrations, and test suite evidence. | Previously passed: 131 routes and 39 tests / 297 assertions. | Not freshly rerun from the current shell because `php` is not available on host PATH and no source code changed. |
-| Database, migrations, and seeders | Migration inspection, ERD review, and backend migration/test evidence. | Schema relationships and constraints were re-reviewed against migrations for this documentation fix. | A destructive fresh migration reset was not performed in this pass. |
-| React frontend | ESLint and Vite production build evidence. | Previously passed with 9 lint warnings, 0 errors, and 2904 Vite modules transformed. | Frontend build/lint were not freshly rerun in this Phase 1 documentation-only pass. |
-| AI CV Analyzer | Existing API tests, Colab output PDF, model-analysis notes, and API examples. | Colab metrics and smoke evidence remain recorded evidence; no fresh pytest result is claimed here. | Current bundled Python lacks `pytest`; full training and live model inference were not rerun from repository files alone. |
-| AI Job Miner | Container pytest, compileall, service health, and deterministic demo scrape. | Previously recorded container result: 75 tests passed with 1 warning. | Current bundled Python lacks `pytest`; tests do not prove live external website availability. |
+| Laravel backend | Container route list, migrations, and test suite evidence. | Previously passed: 131 routes and 39 tests / 297 assertions. | Not rerun in this polish pass because application code was not changed. |
+| Database, migrations, and seeders | Migration inspection, ERD review, and backend migration/test evidence. | Schema relationships and constraints were re-reviewed against migrations. | A destructive fresh migration reset was not performed in this pass. |
+| React frontend | ESLint and Vite production build evidence. | Previously passed with 9 lint warnings, 0 errors, and 2904 Vite modules transformed. | Frontend source was inspected; build was not rerun unless noted in generation notes. |
+| AI CV Analyzer | `compileall`, Colab output PDF, model-analysis notes, and API examples. | Syntax compilation passed in this validation; Colab metrics remain recorded evidence. | Full training and live model inference were not rerun from repository files alone. |
+| AI Job Miner | Container pytest, compileall, service health, and deterministic demo scrape. | 75 tests passed with 1 warning in container validation. | Tests do not prove live external website availability. |
 | Docker runtime | Compose config and local health probes. | Compose config and local health endpoints passed in this validation pass. | Health checks prove availability, not business correctness or external-source success. |
 | API health/readiness | `/api/health`, `/api/ready`, `/status`, service health endpoints. | Returned 200 in this validation pass. | These are shallow liveness/readiness probes. |
 | PDF/DOCX generation | Generator run, structural checks, link/bookmark inspection, and PDF page count. | Revalidated after every documentation generation pass. | Visual manual review is still recommended for final submission. |
@@ -1852,7 +1852,7 @@ The mini CV evaluation is explicitly offline and deterministic. It uses fake CV 
 
 ## 8.13 Recommendation Mini Dataset Evaluation
 
-The recommendation mini evaluation ranks synthetic jobs for each synthetic CV using role/title relevance, skill overlap, and seniority-style bonuses, which mirrors the intent of the Laravel recommendation endpoint more closely than semantic/TF-IDF matching. This validates the recommendation concept and provides a repeatable regression check for report evidence. It is not a production recommender benchmark, and the report does not claim complete job-market coverage.
+The recommendation mini evaluation ranks synthetic jobs for each synthetic CV using skill overlap plus domain and seniority bonuses. This validates the recommendation concept and provides a repeatable regression check for report evidence. It is not a production recommender benchmark, and the report does not claim complete job-market coverage.
 
 ## 8.14 Gap Analysis Mini Dataset Evaluation
 
@@ -1936,13 +1936,13 @@ Skill precision measures how many extracted skills are expected labels. Skill re
 
 The smoke evaluation under `docs/graduation-book/evaluation/` uses five short, fake CV text samples: backend, data analyst, frontend, DevOps/cloud, and low-information/noisy input. It is deterministic and useful as a small reproducibility check. It does not run the full transformer NER model and must not be reported as final model accuracy.
 
-The script also probes the local documentation runtime. In this run, full analyzer import was unavailable because `ModuleNotFoundError: No module named 'pdfplumber'`. The pure Python TF-IDF matcher was available, with a backend-overlap probe score of `0.5101`.
+The script also probes the local documentation runtime. In this run, full analyzer import was unavailable because `ModuleNotFoundError: No module named 'numpy'`. The pure Python TF-IDF matcher was available, with a backend-overlap probe score of `0.5101`.
 
 | Package | Status |
 | --- | --- |
 | easyocr | Unavailable |
 | pdfplumber | Unavailable |
-| pydantic | Available |
+| pydantic | Unavailable |
 | sentence_transformers | Unavailable |
 | torch | Unavailable |
 | transformers | Unavailable |
@@ -1994,11 +1994,7 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 
 ## 8.20 Evaluation Limitations
 
-- This Phase 1 correction changed documentation only and did not rerun the full test suite.
-- In the current shell, Laravel tests were not freshly reproducible because `php` is not available on the host PATH.
-- In the current shell, bundled Python cannot run pytest because the `pytest` module is not installed.
-- Frontend lint/build evidence is retained from the previous validation pass and was not freshly rerun in this Phase 1 documentation-only pass.
-- The AI CV Analyzer pytest suite was not freshly executed; existing tests, smoke evidence, and Colab-recorded evidence are documented separately.
+- The AI CV Analyzer pytest suite was not executed because pytest was absent in that container.
 - The browser CV upload remains a smoke test, and the mini dataset is synthetic rather than statistically representative.
 - The AI CV Analyzer training notebook and exported Colab PDF were inspected, but full model training was not rerun because the cleaned training dataset and external generation keys are not committed and the workflow is designed for Colab GPU execution.
 - The Colab metrics are recorded training-run evidence on the notebook split, not a production benchmark on a large real-world CV dataset.
@@ -2014,13 +2010,13 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 | Docker config | `docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet` | Passed | Final cleanup command output |
 | Docker stack | `docker desktop start`; `docker compose up -d`; `docker compose ps` | Running; main app containers healthy after startup settled | Service availability evidence |
 | Backend routes | `php artisan route:list` | Previously passed, 131 routes | Earlier validation evidence retained |
-| Backend tests | `php artisan test` | Previously passed, 39 tests, 297 assertions | Earlier validation evidence retained; not freshly rerun in current shell because `php` is unavailable |
-| Frontend lint | ESLint | Previously passed, 9 warnings, 0 errors | Earlier validation evidence retained; not freshly rerun in Phase 1 documentation-only pass |
-| Frontend build | Vite build | Previously passed, 2904 modules transformed | Earlier validation evidence retained; not freshly rerun in Phase 1 documentation-only pass |
-| AI Job Miner tests | `docker compose exec -T ai-job-miner python -m pytest` | Previously passed, 75 tests, 1 warning | Earlier container evidence retained; current bundled Python lacks `pytest` |
+| Backend tests | `php artisan test` | Previously passed, 39 tests, 297 assertions | Previously recorded test pass, not freshly rerun from the Phase 1 documentation-fix shell |
+| Frontend lint | ESLint | Previously passed, 9 warnings, 0 errors | Previously recorded lint pass, retained from the earlier validation pass |
+| Frontend build | Vite build | Previously passed, 2904 modules transformed | Previously recorded build pass, retained from the earlier validation pass |
+| AI Job Miner tests | `docker compose exec -T ai-job-miner python -m pytest` | Passed, 75 tests, 1 warning | Fresh container command output |
 | AI Job Miner demo scrape | Protected `/scrape` call with demo/local source | SUCCESS; previewed 3, stored 3, failed URLs 0; smoke rows cleaned afterward | Validates demo adapter plus Laravel import path, not queue status polling |
 | AI CV Analyzer syntax | `python -m compileall ai-cv-analyzer` | Passed with non-fatal `.pytest_cache` listing warning | Final cleanup command output |
-| AI CV Analyzer pytest | Not freshly rerun | Current bundled Python lacks `pytest` | Colab/smoke evidence and existing test files retained separately |
+| AI CV Analyzer pytest | Not rerun | Skipped in Phase 1 documentation-fix pass | Colab/smoke evidence retained separately |
 | HTTP probes | `/api/health`, `/api/ready`, `/status`, `:8003/health`, `:8000/` | 200 responses after Docker startup settled | Service availability only, not external scraping success |
 
 *Table 55. Automated validation results.*
@@ -2987,17 +2983,8 @@ cd ..
 | scraping_sources | Admin-configured job source definitions. |
 | target_job_roles | Target role list for scraping and market exploration. |
 | scraping_jobs | Scraping batch execution state. |
-| job_role_statistics | Aggregate role-level job mining statistics, top skills, locations, salary range, and last scrape timestamp. |
 | scraping_failed_urls | Failed source URL diagnostics and retry marker records. |
 | scraping_proxies | Optional active proxy definitions protected by internal scraper token. |
-| personal_access_tokens | Sanctum token storage for authenticated API clients. |
-| jobs | Laravel queued job payloads. |
-| job_batches | Laravel batch queue metadata. |
-| failed_jobs | Laravel failed queue job records. |
-| cache | Laravel cache key/value storage. |
-| cache_locks | Laravel cache lock storage. |
-| sessions | Laravel session storage. |
-| password_reset_tokens | Password reset token storage keyed by email. |
 
 *Table 60. Database tables summary.*
 
@@ -3129,8 +3116,7 @@ This appendix summarizes the code audit that supports Sections 5.5, Chapter 6, a
 4. `CVOrchestrator` extracts ordered text, triggers OCR fallback when needed, segments sections, runs NER, extracts contacts and dates, canonicalizes skills, and validates the strict output schema.
 5. Layer 2 enriches the result with domain, seniority, and skill-category classification.
 6. Laravel persists normalized profile, skills, experiences, and analysis metadata.
-7. Laravel job recommendations reuse the stored profile/CV role, skills, and seniority through `JobController::getRecommended` title/skill/seniority scoring.
-8. Gap analysis reuses the stored profile and job requirements through `GapAnalysisService`, which calls Layer 3 `/api/hybrid-match` when available and falls back to database skill matching when unavailable.
+7. Job recommendations reuse the stored profile and skills with Laravel title/skill/seniority scoring. Gap analysis reuses the stored profile together with Layer 3 `/api/hybrid-match` and backend services.
 
 ### I.2 Function Inventory Summary
 

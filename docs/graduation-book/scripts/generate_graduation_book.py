@@ -1086,13 +1086,13 @@ def create_diagrams() -> None:
         [
             ("Student", "React UI", "Open Jobs page"),
             ("React UI", "Laravel API", "GET /jobs/recommended"),
-            ("Laravel API", "MySQL", "Read CV skills and imported jobs"),
-            ("Laravel API", "AI Matching", "Semantic + TF-IDF scoring"),
-            ("AI Matching", "Laravel API", "Estimated match scores"),
+            ("Laravel API", "MySQL", "Read profile, skills, and jobs"),
+            ("Laravel API", "Laravel API", "Title/skill/seniority scoring"),
             ("Laravel API", "React UI", "Return ranked jobs"),
             ("Student", "React UI", "Open gap analysis"),
             ("React UI", "Laravel API", "GET /gap-analysis/job/{id}"),
-            ("Laravel API", "MySQL", "Compare skills and job requirements"),
+            ("Laravel API", "AI Matching", "Semantic + TF-IDF via /hybrid-match"),
+            ("AI Matching", "Laravel API", "Match scores, gaps, roadmap"),
             ("Laravel API", "React UI", "Return matched skills and roadmap"),
             ("Laravel API", "Job Miner", "Optional scrape-if-missing flow"),
         ],
@@ -1654,7 +1654,7 @@ def create_erd() -> None:
     tables = [
         ("users", ["id PK", "name", "email", "password", "role", "is_banned"], (50, 145, 350, 350)),
         ("user_profiles", ["id PK", "user_id FK", "headline", "summary", "seniority", "primary_domain"], (440, 145, 760, 350)),
-        ("skills", ["id PK", "name", "type", "aliases"], (860, 145, 1140, 330)),
+        ("skills", ["id PK", "name", "type"], (860, 145, 1140, 330)),
         ("user_skills", ["id PK", "user_id FK", "skill_id FK", "confidence_score", "evidence"], (1250, 145, 1700, 350)),
         ("cv_analyses", ["id PK", "user_id FK", "parsing_status", "predicted_role", "confidence_score", "raw_json_output"], (50, 500, 430, 760)),
         ("user_experiences", ["id PK", "user_id FK", "title", "company", "start_date", "end_date", "technologies"], (520, 500, 860, 760)),
@@ -1662,8 +1662,8 @@ def create_erd() -> None:
         ("job_skills", ["id PK", "job_id FK", "skill_id FK", "required", "importance_score"], (1390, 500, 1720, 740)),
         ("applications", ["id PK", "user_id FK", "job_id FK", "status", "notes"], (960, 870, 1300, 1090)),
         ("scraping_sources", ["id PK", "name", "type", "adapter", "is_active"], (50, 910, 390, 1135)),
-        ("scraping_jobs", ["id PK", "source_id FK", "status", "jobs_found", "metadata"], (500, 910, 840, 1135)),
-        ("target_job_roles", ["id PK", "title", "keywords", "is_active"], (1390, 910, 1720, 1090)),
+        ("scraping_jobs", ["id PK", "job_title", "status", "type", "jobs_found"], (500, 910, 840, 1135)),
+        ("target_job_roles", ["id PK", "name", "search_query", "is_active"], (1390, 910, 1720, 1090)),
     ]
     for name, fields, box in tables:
         x1, y1, x2, y2 = box
@@ -2125,7 +2125,7 @@ CareerCompass is a graduation/demo career guidance platform that helps students 
 
 The AI CV Analyzer is documented as a hybrid implementation rather than a single opaque model. It combines PDF/image text extraction, OCR fallback, section segmentation, a BERT-family token-classification path for named-entity recognition, rule-based contact/date/experience extraction, skill canonicalization, domain and seniority classification, sentence embeddings, and TF-IDF-style matching. The runtime code can load an exported local NER artifact when that ignored deployment folder is present, and a Colab-oriented training notebook documents how the artifact is produced. A user-provided exported Colab PDF now records the overall NER training metrics, while the cleaned dataset content and model weights remain outside Git; therefore, the report separates recorded training-run evidence from repository-alone reproducibility and production benchmark claims.
 
-The implementation is intentionally described as a graduation/demo system rather than a production product. The AI outputs are estimates, the job data depends on imported and demo sources, and the security posture is appropriate for demonstration but requires further production hardening. Validation was performed through Docker Compose configuration checks, backend/frontend evidence from earlier passes, Python syntax checks, containerized AI Job Miner tests, service health probes, a deterministic demo-source smoke check, and manual browser screenshots. Backend tests previously passed with 39 tests and 297 assertions, the AI Job Miner container test suite passed with 75 tests in the final cleanup pass, and frontend lint/build evidence remains recorded from the earlier validation pass. The AI CV Analyzer pytest suite was not rerun in this cleanup pass, while Python syntax compilation passed.
+The implementation is intentionally described as a graduation/demo system rather than a production product. The AI outputs are estimates, the job data depends on imported and demo sources, and the security posture is appropriate for demonstration but requires further production hardening. Validation was performed through Docker Compose configuration checks, backend/frontend evidence from earlier passes, Python syntax checks, containerized AI Job Miner tests, service health probes, a deterministic demo-source smoke check, and manual browser screenshots. Backend tests previously passed with 39 tests and 297 assertions, the AI Job Miner container test suite passed with 75 tests in the final Phase 1 documentation-fix pass, and frontend lint/build evidence remains recorded from the earlier validation pass. The AI CV Analyzer pytest suite was not rerun in this Phase 1 documentation-fix pass, while Python syntax compilation passed.
 
 \\pagebreak
 
@@ -2237,16 +2237,16 @@ CareerCompass implements two practical roles. The student role can register, log
 
 ## 2.6 Functional Requirements
 
-| ID | Requirement | Implementation Evidence |
+| ID | Requirement | Measurable Acceptance / Implementation Evidence |
 |---|---|---|
-| FR-01 | Register and login users. | Laravel AuthController, RegisterRequest, LoginRequest, React Login/Register pages. |
-| FR-02 | Upload a CV file. | CvUploadRequest validates PDF/JPEG/PNG and max size; Dashboard appends file field `cv`. |
-| FR-03 | Store CV files privately. | CvStorageService and MinIO/S3-compatible disk configuration. |
-| FR-04 | Parse CV and extract profile/skills. | CvProcessingService and AI CV Analyzer `/api/parse-cv`. |
-| FR-05 | Display normalized profile and skills. | UserResource, Profile page, Dashboard AI insight components. |
-| FR-06 | Import and display jobs. | JobPosting model, ScrapedJobController, JobController, AI Job Miner. |
-| FR-07 | Estimate job recommendations. | JobController and GapAnalysisService use CV/profile data and matching service. |
-| FR-08 | Analyze skill gaps. | GapAnalysisController and GapAnalysis page. |
+| FR-01 | Register, login, and logout users. | The API must create users with unique email addresses, issue Sanctum tokens on login, reject invalid credentials, and expose the authenticated user to the React app through `AuthController`, `RegisterRequest`, `LoginRequest`, and Login/Register pages. |
+| FR-02 | Upload a CV file. | The API must accept only PDF/JPEG/PNG uploads through field `cv`, enforce the configured maximum file size, and return validation errors for invalid files through `CvUploadRequest` and the dashboard upload flow. |
+| FR-03 | Store CV files privately. | Uploaded CV binaries must be stored through `CvStorageService` on the configured private MinIO/S3-compatible disk while database rows store only metadata and object references. |
+| FR-04 | Parse CV and extract profile/skills. | `CvProcessingService` must call AI CV Analyzer `/api/parse-cv`, persist successful structured profile, skill, experience, and analysis metadata, and preserve explicit timeout/error/no-text statuses. |
+| FR-05 | Display normalized profile and skills. | The user dashboard/profile must display persisted profile, skills, experience, predicted role, seniority, domain, completeness, and parsing status from Laravel resources and React pages. |
+| FR-06 | Import and display jobs. | The backend must store usable imported/demo jobs, deduplicate by URL and title/company constraints, expose paginated listings/details, and support admin/user job views through `JobController`, `ScrapedJobController`, and AI Job Miner integration. |
+| FR-07 | Estimate job recommendations with Laravel scoring. | `/api/v1/jobs/recommended` ranks up to 50 usable jobs using predicted role/profile title matching, required-skill overlap, and seniority hints in `JobController::getRecommended`. This recommendation list is not the semantic/TF-IDF matcher. |
+| FR-08 | Analyze skill gaps with AI fallback. | Gap analysis for a selected job or role compares stored user data with job requirements; `GapAnalysisService` calls AI CV Analyzer `/api/hybrid-match` for semantic/adaptive plus TF-IDF matching when available and falls back to database skill matching when unavailable. |
 | FR-09 | Track applications. | ApplicationController, ApplicationTrackerService, Applications page. |
 | FR-10 | Provide admin dashboards. | Admin Dashboard, Jobs, Sources, Targets pages and admin API routes. |
 | FR-11 | Provide health and metrics endpoints. | HealthController, MetricsController, Prometheus/Grafana compose services. |
@@ -2255,24 +2255,42 @@ CareerCompass implements two practical roles. The student role can register, log
 
 ## 2.7 Non-Functional Requirements
 
-| Category | Requirement | CareerCompass Approach |
+| Category | Measurable Requirement | CareerCompass Approach |
 |---|---|---|
-| Usability | The UI should guide students through CV upload and recommendations. | React pages, dashboard cards, profile score, and action buttons. |
-| Maintainability | Code should be modular. | Controllers, requests, services, resources, models, React pages, and Python services are separated. |
-| Reliability | The system should degrade honestly if AI services fail. | CV processing returns timeout/error/no_text statuses and preserves prior data when appropriate. |
-| Security | Authentication, validation, private files, and admin role checks are required. | Sanctum tokens, request validation, admin middleware, signed URLs, service tokens. |
-| Observability | Health and metrics should be available. | `/api/health`, `/api/ready`, `/api/metrics`, Prometheus, Grafana. |
-| Portability | The demo should run locally. | Docker Compose services and environment examples. |
+| Usability | A student must be able to complete registration, login, CV upload, job browsing, gap analysis, and application tracking through visible React screens without direct API calls. | React dashboard/profile/jobs/gap-analysis/applications pages, status indicators, cards, and action buttons. |
+| Maintainability | Core business behavior must be separated by controllers, request validators, services, resources, models, and Python service modules rather than being embedded in a single UI or script. | Laravel controllers/requests/services/resources/models, React page components, and FastAPI service modules. |
+| Reliability | AI failures must not be reported as successful analysis; recoverable failures must return explicit statuses or deterministic fallbacks. | CV timeout/error/no-text statuses, preserved existing profile data, recommendation fallback to recent jobs, and gap-analysis fallback to DB skill matching. |
+| Security | Protected user routes must require authentication, admin routes must require admin role, internal scraper/metrics paths must require service tokens where configured, and uploaded CV files must not be publicly stored. | Sanctum tokens, request validation, admin middleware, signed URLs, private storage disk, and internal service tokens. |
+| Performance limits | User-facing list endpoints and expensive operations must apply practical demo limits to avoid unbounded processing. | CV max file validation, recommendation cap of 50 returned jobs after ranking up to 200 candidates, gap-analysis batch limit of 20 jobs, and paginated job listings. |
+| Observability | The local stack must expose health/readiness/status/metrics endpoints sufficient for demonstration. | `/api/health`, `/api/ready`, `/status`, `/api/metrics`, Prometheus, and Grafana. |
+| Portability | The project must be runnable as a local multi-service demo with documented environment variables. | Docker Compose services, `.env.example`-style configuration, MinIO/MySQL/Python/Laravel/React service wiring. |
 
 *Table 3. Non-functional requirements summary.*
 
-## 2.8 Hardware Requirements
+## 2.8 Requirement-to-Code/Test Traceability
+
+| Requirement | Main Code Evidence | Test / Evidence Status |
+|---|---|---|
+| FR-01 Authentication | `backend-api/routes/api.php`, `backend-api/app/Http/Controllers/Api/AuthController.php`, `backend-api/app/Http/Requests/Auth/RegisterRequest.php`, `backend-api/app/Http/Requests/Auth/LoginRequest.php`, `frontend/src/pages/Login.jsx`, `frontend/src/pages/Register.jsx` | Existing backend feature tests in `backend-api/tests/Feature/AuthApiTest.php`; previously recorded Laravel test pass, not freshly rerun in the current Phase 1 documentation shell. |
+| FR-02/FR-03 CV upload and private storage | `backend-api/app/Http/Requests/CvUploadRequest.php`, `backend-api/app/Http/Controllers/Api/CvController.php`, `backend-api/app/Services/CvStorageService.php`, `backend-api/config/filesystems.php`, `frontend/src/pages/user/Dashboard.jsx` | Existing `backend-api/tests/Feature/CvUploadTest.php`; manual upload screenshot evidence; current Phase 1 pass did not rerun PHP tests. |
+| FR-04/FR-05 CV parsing and profile display | `backend-api/app/Services/CvProcessingService.php`, `ai-cv-analyzer/main.py`, `backend-api/app/Services/SkillSyncService.php`, `backend-api/app/Http/Resources/UserResource.php`, profile/dashboard React pages | Existing AI CV Analyzer API tests and smoke evidence; recorded Colab/model evidence; live AI CV Analyzer pytest was not freshly reproducible from the current shell. |
+| FR-06 Job import/display | `backend-api/app/Http/Controllers/Api/JobController.php`, `backend-api/app/Http/Controllers/Api/ScrapedJobController.php`, `ai-job-miner/service_api.py`, `backend-api/database/migrations/2026_02_19_000002_create_all_jobs_table.php` | Existing `ScrapedJobImportTest.php`, scraper/orchestrator tests, and previously recorded AI Job Miner container pytest pass. |
+| FR-07 Job recommendations | `backend-api/app/Http/Controllers/Api/JobController.php::getRecommended`, `frontend/src/pages/user/Jobs.jsx`, `backend-api/database/migrations/2026_02_19_000003_create_job_skills_table.php` | Covered by code inspection and offline recommendation mini evaluation; the production endpoint uses Laravel title/skill/seniority scoring, not `/api/hybrid-match`. |
+| FR-08 Gap analysis | `backend-api/app/Http/Controllers/Api/GapAnalysisController.php`, `backend-api/app/Services/GapAnalysisService.php`, `ai-cv-analyzer/main.py` `/api/hybrid-match`, `frontend/src/pages/user/GapAnalysis.jsx` | Existing `backend-api/tests/Feature/GapAnalysisTest.php`, AI CV Analyzer API tests with fakes, and offline gap mini evaluation; current shell did not freshly rerun all tests. |
+| FR-09 Application tracker | `backend-api/app/Http/Controllers/Api/ApplicationController.php`, `backend-api/app/Services/ApplicationTrackerService.php`, `frontend/src/pages/user/Applications.jsx` | Existing `backend-api/tests/Feature/ApplicationTrackerTest.php` and manual screenshot evidence. |
+| FR-10 Admin operations | `backend-api/app/Http/Controllers/Api/Admin/*`, `frontend/src/pages/admin/*`, admin middleware/routes, scraping source and target role controllers | Existing scraper/admin-related tests plus manual admin screenshots; role rejection should be rechecked before final defense. |
+| FR-11 Health and metrics | `backend-api/app/Http/Controllers/Api/HealthController.php`, `backend-api/app/Http/Controllers/Api/MetricsController.php`, `docker-compose.yml`, Prometheus/Grafana configs | Existing `backend-api/tests/Feature/HealthAndMetricsTest.php`, recorded health-probe evidence, and Docker Compose configuration checks. |
+| NFR Security/reliability/performance | Request classes, middleware, private storage config, service-token checks, timeout/fallback logic, endpoint pagination/limits | Evidence is mixed: existing tests and code inspection support key controls, but a final clean-shell test rerun and browser security checks remain recommended. |
+
+*Table 3a. Requirement-to-code/test traceability matrix.*
+
+## 2.9 Hardware Requirements
 
 For local demonstration, a developer machine capable of running Docker Desktop and multiple containers is required. CV parsing and OCR-like processing can be CPU-intensive; therefore, enough memory should be available for the Laravel backend, MySQL, frontend, Python services, MinIO, Prometheus, and Grafana. GPU acceleration is not required for the demonstrated flow.
 
 \\pagebreak
 
-## 2.9 Software Requirements
+## 2.10 Software Requirements
 
 | Layer | Software |
 |---|---|
@@ -2285,11 +2303,11 @@ For local demonstration, a developer machine capable of running Docker Desktop a
 
 *Table 4. Software environment summary.*
 
-## 2.10 Input and Output Flow
+## 2.11 Input and Output Flow
 
 Primary inputs include user account data, uploaded CV files, imported job records, target role settings, and administrator source configurations. Primary outputs include normalized user profiles, skill lists, CV analysis metadata, estimated job matches, gap reports, application records, admin statistics, health checks, and monitoring metrics.
 
-## 2.11 Use Case Summary
+## 2.12 Use Case Summary
 
 The main use cases are shown in Figure 5. The system separates student and administrator responsibilities while sharing the same backend API and database.
 
@@ -2305,7 +2323,7 @@ CareerCompass is designed as a Dockerized multi-service application. This design
 
 ## 3.2 High-Level System Architecture
 
-The high-level architecture is shown in Figure 1. Browser users interact with the React frontend through Nginx. The frontend calls the Laravel API. Laravel persists records in MySQL, stores CV files in MinIO-compatible storage, calls the AI CV Analyzer for parsing, calls matching logic for recommendations/gaps, and receives job imports from the job miner. This diagram was reviewed during the final evidence pass and already represents the important deployment boundaries: React, Nginx, Laravel, MySQL, MinIO, AI CV Analyzer, AI Job Miner, and monitoring.
+The high-level architecture is shown in Figure 1. Browser users interact with the React frontend through Nginx. The frontend calls the Laravel API. Laravel persists records in MySQL, stores CV files in MinIO-compatible storage, calls the AI CV Analyzer for CV parsing and gap-analysis matching, ranks recommended jobs with Laravel title/skill/seniority scoring, and receives job imports from the job miner. This diagram was reviewed during the final evidence pass and already represents the important deployment boundaries: React, Nginx, Laravel, MySQL, MinIO, AI CV Analyzer, AI Job Miner, and monitoring.
 
 {figure_markdown("Figure 1", "High-level architecture of CareerCompass.", "assets/diagrams/01_high_level_architecture.png")}
 
@@ -2376,7 +2394,7 @@ The AI Job Miner is a FastAPI service with scraping and import support. It inclu
 
 ## 3.7 Database Design
 
-MySQL stores users, user profiles, skills, user-skill pivots, experience records, CV analyses, job postings, job-skill pivots, applications, scraping sources, target job roles, scraping jobs, failed URLs, and related metadata. MySQL is a relational database system documented by Oracle [8]. The Laravel migrations define schema constraints, indexes, foreign keys, and unique combinations such as job title/company uniqueness.
+MySQL stores users, user profiles, skills, user-skill pivots, experience records, CV analyses, job postings, job-skill pivots, applications, scraping sources, target job roles, scraping jobs, failed URLs, role statistics, optional scraping proxies, and Laravel runtime tables. MySQL is a relational database system documented by Oracle [8]. The Laravel migrations define schema constraints, indexes, foreign keys, and unique combinations such as job title/company uniqueness.
 
 Figure 66 explains the relationship rationale behind the schema. The database is deliberately normalized around users, reusable skills, job requirements, CV analysis evidence, and job-mining operations. This keeps matching logic explainable: the system can compare a user's normalized skills against job-required skills while preserving the CV and scraping evidence that produced those records.
 
@@ -2389,8 +2407,8 @@ Figure 66 explains the relationship rationale behind the schema. The database is
 | CV analysis | `cv_analyses` | Stores parsing status, extracted metadata, model evidence, and private file references. |
 | Jobs and requirements | `job_postings`, `job_skills` | Separates job records from reusable required skills. |
 | Applications | `applications` | Tracks saved/applied opportunities for each user and job. |
-| Job mining operations | `scraping_jobs`, `scraping_sources`, `scraping_failed_urls`, `target_job_roles` | Preserves operational scraping state, source configuration, target roles, and failure evidence. |
-| Runtime infrastructure | `jobs`, `job_batches`, `cache`, `sessions` | Supports queues, batches, cache, sessions, and repeatable local demonstration behavior. |
+| Job mining operations | `scraping_jobs`, `scraping_sources`, `scraping_failed_urls`, `target_job_roles`, `job_role_statistics`, `scraping_proxies` | Preserves operational scraping state, source configuration, target roles, role-level aggregate evidence, optional proxy definitions, and failure evidence. |
+| Runtime infrastructure | `jobs`, `job_batches`, `failed_jobs`, `cache`, `cache_locks`, `sessions`, `password_reset_tokens`, `personal_access_tokens` | Supports queues, failed-job tracking, batches, cache locks, sessions, password reset tokens, Sanctum tokens, and repeatable local demonstration behavior. |
 
 *Table 7. Database design rationale.*
 
@@ -2409,7 +2427,7 @@ Figure 66 explains the relationship rationale behind the schema. The database is
 
 ## 3.8 ERD
 
-Figure 8 summarizes the main database tables and relationships. It is not a complete replacement for migrations, but it provides a readable graduation-book view of the data model. The final diagram was reviewed against migrations and updated to show the actual `user_profiles`, `user_experiences`, `user_skills`, and `job_skills` relationships.
+Figure 8 summarizes the main application tables and relationships from the current Laravel migrations. It is not a complete replacement for migrations, and it intentionally keeps Laravel runtime tables such as queues, cache, sessions, password-reset tokens, and Sanctum tokens in Appendix C rather than overloading the ERD. The diagram was corrected to remove columns not present in migrations and to include the implemented job-mining support tables.
 
 {figure_markdown("Figure 8", "ERD and database summary diagram.", "assets/diagrams/08_erd.png")}
 
@@ -2424,6 +2442,8 @@ Figure 8 summarizes the main database tables and relationships. It is not a comp
 | `job_postings` -> `scraping_sources` | Imported jobs can reference their source configuration while remaining available if the source is later disabled. |
 | `scraping_jobs` -> `scraping_failed_urls` | Failed URLs can be associated with an operational scraping run for diagnostics. |
 | `target_job_roles` -> scraping workflows | Active target roles guide full scraping runs; they are operational configuration, not a direct job foreign key. |
+| `job_role_statistics` | Stores aggregate market/mining observations by `role_title`; it has no direct foreign key to jobs or target roles. |
+| `scraping_proxies` | Stores optional proxy connection settings for scraper operation; it is operational configuration rather than a domain relationship. |
 
 *Table 9. Main ERD relationship notes.*
 
@@ -2584,7 +2604,7 @@ The analyzer is implemented as layered Python code rather than one monolithic fu
 | Advanced NER | `advanced_ner.py` and optional ignored local model folder | Loads the exported local token-classification model when deployed; chunks long CVs and groups entity spans. | Skills, roles, education, certifications |
 | Rule engines | contact, experience, date, noise-filtering helpers | Extract contact details, experience blocks, dates, and remove title-like or noisy skill candidates. | Profile and experience persistence |
 | Canonicalization/classification | Layer 1 and Layer 2 modules | Normalize skills and infer primary domain plus seniority. | Dashboard identity card and matching |
-| Hybrid matching | Layer 3 matching modules | Combines semantic scores, skill text similarity, domain alignment, constraints, and TF-IDF fallback. | Recommendations and gap analysis |
+| Hybrid matching | Layer 3 matching modules | Combines semantic scores, skill text similarity, domain alignment, constraints, and TF-IDF fallback. | Gap analysis and fit explanation; not the `/jobs/recommended` list ranking endpoint |
 | Frontend display | `Dashboard.jsx`, `AiInsights.jsx` | Shows upload status, confidence-style signals, role/seniority, and extracted skills. | Student-facing CV feedback |
 
 *Table 11. AI CV Analyzer components.*
@@ -2743,7 +2763,7 @@ The AI CV Analyzer was audited as source code, not only as a running service. Th
 | FastAPI service | `main.py`, `Dockerfile`, `requirements.txt`, `.env.example` | Service startup, endpoints, container runtime, and documented configuration variables. |
 | Layer 1 understanding | `core/layer1_understanding/*.py`, `core/layer1_understanding/data/config.json` | PDF/image text extraction, OCR fallback, sectioning, NER, contact extraction, experience analysis, and canonicalization. |
 | Layer 2 classification | `core/layer2_classification/*.py`, `core/layer2_classification/data/taxonomy.json` | Domain, seniority, and skill-category enrichment. |
-| Layer 3 matching | `core/layer3_matching/*.py`, `core/layer3_matching/matching_config.json` | Job parsing, semantic/TF-IDF matching, constraints, fit explanation, and ranking. |
+| Layer 3 matching | `core/layer3_matching/*.py`, `core/layer3_matching/matching_config.json` | Job parsing, semantic/TF-IDF matching, constraints, fit explanation, and AI-side candidate ranking when explicitly invoked. |
 | Training workflow | `training/generate_tech_dataset.py`, `clean_dataset.py`, `train_ner.ipynb` | Synthetic labeled dataset generation, cleaning, token alignment, Trainer setup, metrics code, and export. |
 | Diagnostics and tests | `scripts/verify_phase*.py`, `tests/test_service_api.py`, `tests/trace_cv.py`, manual tests | Phase checks, service API tests with fakes, tracing, and manual validation helpers. |
 | Documentation | Layer README and EXPLAIN files | Developer explanations for analyzer layers and matching logic. |
@@ -2788,7 +2808,7 @@ The job miner exposes a FastAPI service and imports candidate jobs through confi
 
 ## 5.9 Job Recommendations
 
-The jobs page requests recommended jobs when no manual search query is active. Recommendations are based on CV/profile context when available. Matching combines normalized database data with semantic and TF-IDF-style comparison where available. TF-IDF represents text using term frequency and inverse document frequency weighting [19], while cosine similarity compares vector orientation [20].
+The jobs page requests `/api/v1/jobs/recommended` when no manual search query is active. In the current Laravel implementation, `JobController::getRecommended` uses the user's predicted role or profile title to select candidate job titles, then ranks up to 200 candidates by title similarity, required-skill overlap, and seniority hints before returning up to 50 jobs with an estimated `match_percentage`. This endpoint does not call the FastAPI semantic/TF-IDF matcher. Semantic/adaptive plus TF-IDF scoring belongs to the gap-analysis workflow through `/api/hybrid-match`.
 
 {figure_markdown("Figure 38", "Jobs recommendations page.", "assets/screenshots/08_jobs_recommendations.png")}
 
@@ -2824,7 +2844,7 @@ Health endpoints include live and readiness checks. The system status page prese
 
 ## 5.15 Error Handling and Fallbacks
 
-The code includes explicit handling for CV processing failures, AI gateway connection failures, validation errors, missing user data, empty job data, and unavailable services. The job recommendation and gap analysis code includes fallback behavior when AI services are not available.
+The code includes explicit handling for CV processing failures, AI gateway connection failures, validation errors, missing user data, empty job data, and unavailable services. Recommendations can fall back to recent usable jobs when no CV/profile title is available. Gap analysis can fall back from the AI `/api/hybrid-match` call to database-based skill matching when the AI matching service is unavailable.
 
 ## 5.16 Internationalization and UI Preview Modules
 
@@ -2860,7 +2880,7 @@ The AI CV Analyzer is one of the main technical contributions of CareerCompass. 
 
 ## 6.2 AI Design Philosophy
 
-CareerCompass does not use a pure NER model because CVs are noisy, multi-format documents. They can contain multiple columns, icons, section headers, table-like blocks, scanned pages, mixed date formats, and skill aliases. NER can extract entity candidates, but NER alone does not naturally explain seniority, primary technical domain, job-fit constraints, or recommendation reasons.
+CareerCompass does not use a pure NER model because CVs are noisy, multi-format documents. They can contain multiple columns, icons, section headers, table-like blocks, scanned pages, mixed date formats, and skill aliases. NER can extract entity candidates, but NER alone does not naturally explain seniority, primary technical domain, job-fit constraints, or gap-analysis reasons.
 
 The system also does not use a pure rule-based parser. Rules are deterministic and useful for validation, but fixed rules are brittle when skill names, job titles, section headings, and CV layouts vary. A rule set can recognize known patterns, but it struggles with semantic similarity, synonyms, and role/domain interpretation.
 
@@ -2878,7 +2898,7 @@ The implemented design is therefore hybrid. NER extracts structured candidates, 
 
 ## 6.3 Complete CV Processing Flow
 
-The end-to-end flow begins when the student uploads a PDF or image CV. The frontend validates the file before sending it to Laravel. Laravel sends the file to the FastAPI analyzer, stores the private CV object, persists successful structured outputs, and records parsing status. The analyzer first recovers text, then segments sections, extracts entities, estimates experience, canonicalizes skills, classifies the profile, and supports matching for recommendations and gap analysis.
+The end-to-end flow begins when the student uploads a PDF or image CV. The frontend validates the file before sending it to Laravel. Laravel sends the file to the FastAPI analyzer, stores the private CV object, persists successful structured outputs, and records parsing status. The analyzer first recovers text, then segments sections, extracts entities, estimates experience, canonicalizes skills, and classifies the profile. Its Layer 3 `/api/hybrid-match` endpoint supports detailed gap analysis; the separate job recommendation list is ranked inside Laravel with title, skill-overlap, and seniority scoring.
 
 {figure_markdown("Figure 20", "Complete CV processing flow.", "assets/diagrams/20_complete_cv_processing_flow.png")}
 
@@ -3550,7 +3570,7 @@ The frontend was validated using the existing `frontend/node_modules` and the bu
 
 ## 8.5 Python Services Testing
 
-Python syntax compilation passed for both AI services. The AI Job Miner pytest suite was rerun inside the running `ai-job-miner` Docker container and passed with 75 tests and 1 warning. The local bundled Python runtime still did not include pytest, so the successful pytest evidence is specifically container-based. The AI CV Analyzer pytest suite was not rerun in this cleanup pass; AI CV Analyzer syntax compilation passed, and earlier smoke/Colab evidence remains documented separately.
+Python syntax compilation passed for both AI services. The AI Job Miner pytest suite was rerun inside the running `ai-job-miner` Docker container and passed with 75 tests and 1 warning. The local bundled Python runtime still did not include pytest, so the successful pytest evidence is specifically container-based. The AI CV Analyzer pytest suite was not rerun in this Phase 1 documentation-fix pass; AI CV Analyzer syntax compilation passed, and earlier smoke/Colab evidence remains documented separately.
 
 ## 8.6 Docker and Integration Testing
 
@@ -3687,13 +3707,13 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 | Docker config | `docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet` | Passed | Final cleanup command output |
 | Docker stack | `docker desktop start`; `docker compose up -d`; `docker compose ps` | Running; main app containers healthy after startup settled | Service availability evidence |
 | Backend routes | `php artisan route:list` | Previously passed, 131 routes | Earlier validation evidence retained |
-| Backend tests | `php artisan test` | Previously passed, 39 tests, 297 assertions | Earlier validation evidence retained; backend code unchanged in cleanup pass |
-| Frontend lint | ESLint | Previously passed, 9 warnings, 0 errors | Earlier validation evidence retained; frontend code unchanged in cleanup pass |
-| Frontend build | Vite build | Previously passed, 2904 modules transformed | Earlier validation evidence retained; frontend code unchanged in cleanup pass |
+| Backend tests | `php artisan test` | Previously passed, 39 tests, 297 assertions | Previously recorded test pass, not freshly rerun from the Phase 1 documentation-fix shell |
+| Frontend lint | ESLint | Previously passed, 9 warnings, 0 errors | Previously recorded lint pass, retained from the earlier validation pass |
+| Frontend build | Vite build | Previously passed, 2904 modules transformed | Previously recorded build pass, retained from the earlier validation pass |
 | AI Job Miner tests | `docker compose exec -T ai-job-miner python -m pytest` | Passed, 75 tests, 1 warning | Fresh container command output |
 | AI Job Miner demo scrape | Protected `/scrape` call with demo/local source | SUCCESS; previewed 3, stored 3, failed URLs 0; smoke rows cleaned afterward | Validates demo adapter plus Laravel import path, not queue status polling |
 | AI CV Analyzer syntax | `python -m compileall ai-cv-analyzer` | Passed with non-fatal `.pytest_cache` listing warning | Final cleanup command output |
-| AI CV Analyzer pytest | Not rerun | Skipped in cleanup pass | Colab/smoke evidence retained separately |
+| AI CV Analyzer pytest | Not rerun | Skipped in Phase 1 documentation-fix pass | Colab/smoke evidence retained separately |
 | HTTP probes | `/api/health`, `/api/ready`, `/status`, `:8003/health`, `:8000/` | 200 responses after Docker startup settled | Service availability only, not external scraping success |
 
 *Table 55. Automated validation results.*
@@ -4105,7 +4125,7 @@ Validation error example:
 
 Method and URL: `GET /api/v1/jobs/recommended`
 
-Purpose: Return personalized job recommendations for an authenticated student when CV/profile context exists, otherwise return recent usable jobs.
+Purpose: Return personalized job recommendations for an authenticated student when CV/profile context exists, otherwise return recent usable jobs. The current Laravel code scores candidates with predicted role/profile-title matching, required-skill overlap, and seniority hints. It does not call `/api/hybrid-match`; semantic/adaptive and TF-IDF matching are documented under gap analysis.
 
 Request example:
 
@@ -4695,7 +4715,7 @@ This appendix summarizes the code audit that supports Sections 5.5, Chapter 6, a
 4. `CVOrchestrator` extracts ordered text, triggers OCR fallback when needed, segments sections, runs NER, extracts contacts and dates, canonicalizes skills, and validates the strict output schema.
 5. Layer 2 enriches the result with domain, seniority, and skill-category classification.
 6. Laravel persists normalized profile, skills, experiences, and analysis metadata.
-7. Recommendations and gap analysis reuse the stored profile together with Layer 3 matching and backend services.
+7. Job recommendations reuse the stored profile and skills with Laravel title/skill/seniority scoring. Gap analysis reuses the stored profile together with Layer 3 `/api/hybrid-match` and backend services.
 
 ### I.2 Function Inventory Summary
 
@@ -5713,6 +5733,10 @@ def main() -> None:
     generate_docx()
     fallback_page_count = generate_pdf()
     export_ok, export_output = export_pdf_from_docx_with_word()
+    if export_ok:
+        print(f"Word COM export succeeded: {export_output}")
+    else:
+        print(f"Word COM export failed: {export_output}")
     page_count = len(PdfReader(str(PDF_PATH)).pages)
     if export_ok:
         pdf_method = "exported from the generated DOCX using Microsoft Word COM automation"
@@ -5733,7 +5757,7 @@ def main() -> None:
         "FR-11",
         "Table 2. Functional requirements summary.",
         "2.7 Non-Functional Requirements",
-        "2.9 Software Requirements",
+        "2.10 Software Requirements",
         "Frontend",
         "Backend",
         "AI services",
@@ -5741,7 +5765,7 @@ def main() -> None:
         "Infrastructure",
         "Testing",
         "Table 4. Software environment summary.",
-        "2.10 Input and Output Flow",
+        "2.11 Input and Output Flow",
         "9.9 Demo Security Limitations",
         "Admin account",
         "CV files",
@@ -5764,20 +5788,20 @@ def main() -> None:
         f"2.6 heading, FR-01/FR-11 rows, and Table 2 caption appear on PDF page(s) {fr_pages or 'not detected'}; "
         f"2.7 starts on PDF page(s) {section_pages.get('2.7 Non-Functional Requirements', []) or 'not detected'} after the Table 2 caption"
     )
-    section_29_start = min(section_pages.get("2.9 Software Requirements", []) or [1])
-    section_210_start = min(section_pages.get("2.10 Input and Output Flow", []) or [section_29_start])
+    section_29_start = min(section_pages.get("2.10 Software Requirements", []) or [1])
+    section_210_start = min(section_pages.get("2.11 Input and Output Flow", []) or [section_29_start])
     table_4_body_pages = [page for page in section_pages.get("Table 4. Software environment summary.", []) if page >= section_29_start]
     software_row_pages = []
     for term in ["Frontend", "Backend", "AI services", "Data", "Infrastructure", "Testing"]:
         software_row_pages.extend(page for page in section_pages.get(term, []) if section_29_start <= page <= section_210_start)
     software_pages = sorted(set(
-        section_pages.get("2.9 Software Requirements", [])
+        section_pages.get("2.10 Software Requirements", [])
         + software_row_pages
         + table_4_body_pages
     ))
     software_layout_status = (
-        f"2.9 heading, Software Requirements rows, and Table 4 caption appear on PDF page(s) {software_pages or 'not detected'}; "
-        f"2.10 starts on PDF page(s) {section_pages.get('2.10 Input and Output Flow', []) or 'not detected'} after the Table 4 caption"
+        f"2.10 heading, Software Requirements rows, and Table 4 caption appear on PDF page(s) {software_pages or 'not detected'}; "
+        f"2.11 starts on PDF page(s) {section_pages.get('2.11 Input and Output Flow', []) or 'not detected'} after the Table 4 caption"
     )
     section_79_start = min(section_pages.get("9.9 Demo Security Limitations", []) or [1])
     section_710_start = min(section_pages.get("9.10 Future Production Hardening", []) or [section_79_start])

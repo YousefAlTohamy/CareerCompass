@@ -10,11 +10,11 @@
       "torch": false,
       "sentence_transformers": false,
       "easyocr": false,
-      "pydantic": true
+      "pydantic": false
     },
     "full_analyzer_import": {
       "ok": false,
-      "error": "ModuleNotFoundError: No module named 'pdfplumber'"
+      "error": "ModuleNotFoundError: No module named 'numpy'"
     },
     "tfidf_probe": {
       "ok": true,
