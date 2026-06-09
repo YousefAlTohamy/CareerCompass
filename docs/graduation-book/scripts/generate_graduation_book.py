@@ -421,7 +421,7 @@ def save_frontend_route_readable_diagram() -> None:
     ]
     for num, title, body, box, fill in cards:
         x1, y1, x2, y2 = box
-        draw.rounded_rectangle(box, radius=18, fill=fill, outline="#2563eb", width=3)
+        draw.rounded_rectangle(box, radius=18, fill=fill, outline="#94a3b8", width=3)
         draw.ellipse((x1 + 18, y1 + 22, x1 + 58, y1 + 62), fill="#0f172a")
         draw.text((x1 + 31, y1 + 29), num, fill="white", font=load_font(20, True))
         draw.text((x1 + 75, y1 + 25), title, fill="#0f172a", font=load_font(27, True))
@@ -1618,7 +1618,7 @@ def create_sequence_diagram(name: str, title: str, participants: list[str], mess
         y1 = y0 + row * (card_h + y_gap)
         x2, y2 = x1 + card_w, y1 + card_h
         centers.append(((x1 + x2) // 2, (y1 + y2) // 2))
-        draw.rounded_rectangle((x1, y1, x2, y2), radius=16, fill=fills[row % len(fills)], outline="#2563eb", width=3)
+        draw.rounded_rectangle((x1, y1, x2, y2), radius=16, fill=fills[row % len(fills)], outline="#94a3b8", width=3)
         draw.ellipse((x1 + 16, y1 + 18, x1 + 54, y1 + 56), fill="#0f172a")
         draw.text((x1 + 27, y1 + 23), str(idx), fill="white", font=badge_font)
         heading = f"{short_actor(src)} -> {short_actor(dst)}"
@@ -1667,7 +1667,7 @@ def create_erd() -> None:
     ]
     for name, fields, box in tables:
         x1, y1, x2, y2 = box
-        draw.rounded_rectangle(box, radius=12, fill="#ffffff", outline="#2563eb", width=3)
+        draw.rounded_rectangle(box, radius=12, fill="#ffffff", outline="#94a3b8", width=3)
         draw.rectangle((x1, y1, x2, y1 + 42), fill="#dbeafe")
         draw.text((x1 + 14, y1 + 10), name, fill="#0f172a", font=load_font(20, True))
         y = y1 + 58
@@ -4957,7 +4957,7 @@ def set_table_geometry(table, widths: list[int]) -> None:
     if margins is None:
         margins = OxmlElement("w:tblCellMar")
         tbl_pr.append(margins)
-    for side, width in [("top", 80), ("bottom", 80), ("start", 120), ("end", 120)]:
+    for side, width in [("top", 100), ("bottom", 100), ("start", 140), ("end", 140)]:
         elem = margins.find(qn(f"w:{side}"))
         if elem is None:
             elem = OxmlElement(f"w:{side}")
@@ -5034,8 +5034,8 @@ def add_md_table_docx(doc: Document, lines: list[str]) -> None:
                 shade_cell(cell, "D9EAF7")
             short_cell = c_idx == 0 or clean_inline(value).lower() in {"passed", "not run manual", "skipped, pytest missing"}
             align = WD_ALIGN_PARAGRAPH.CENTER if short_cell else WD_ALIGN_PARAGRAPH.LEFT
-            font_size = 7.3 if is_functional_requirements else (8.2 if is_software_requirements or is_security_controls else (7.6 if column_count >= 5 else 8.5))
-            spacing = 0.95 if is_functional_requirements else (1.0 if is_software_requirements or is_security_controls else 1.05)
+            font_size = 7.8 if is_functional_requirements else (8.7 if is_software_requirements or is_security_controls else (8.1 if column_count >= 5 else 9.0))
+            spacing = 1.0 if is_functional_requirements else (1.05 if is_software_requirements or is_security_controls else 1.1)
             set_cell_text(cell, value, bold=(r_idx == 0), size=font_size, align=align, line_spacing=spacing)
     spacer = doc.add_paragraph()
     spacer.paragraph_format.space_after = Pt(4)
@@ -5283,7 +5283,7 @@ def add_md_table_pdf(story: list, lines: list[str]) -> None:
         return
     max_cols = max(len(row) for row in rows)
     normalized = [row + [""] * (max_cols - len(row)) for row in rows]
-    data = [[Paragraph(html.escape(cell), para_style("tablecell", 7, leading=9, bold=(r == 0))) for cell in row] for r, row in enumerate(normalized)]
+    data = [[Paragraph(html.escape(cell), para_style("tablecell", 7.5, leading=10, bold=(r == 0))) for cell in row] for r, row in enumerate(normalized)]
     table = Table(data, repeatRows=1, hAlign="LEFT")
     table.setStyle(
         TableStyle(
@@ -5292,8 +5292,10 @@ def add_md_table_pdf(story: list, lines: list[str]) -> None:
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
                 ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#94a3b8")),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("LEFTPADDING", (0, 0), (-1, -1), 4),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
             ]
         )
     )
