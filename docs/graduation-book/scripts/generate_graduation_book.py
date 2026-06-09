@@ -57,7 +57,26 @@ SMOKE_EVAL_RESULTS = EVALUATION / "ai_cv_analyzer_smoke_results.json"
 SMOKE_EVAL_SUMMARY = EVALUATION / "ai_cv_analyzer_smoke_summary.md"
 
 PROJECT_TITLE = "CareerCompass: AI-Powered Career Guidance and Job Recommendation Platform"
+PROJECT_SUBTITLE = "AI-Powered Career Guidance and Job Recommendation Platform"
 SHORT_NAME = "CareerCompass"
+CC_LOGO_PATH = LOGOS / "CC_Logo.png"
+COVER_LOGO_WIDTH = Inches(1.38)
+PAGE_BREAK_BEFORE_HEADINGS = frozenset(
+    {
+        "1.6 Proposed Solution",
+        "2.7 Non-Functional Requirements",
+        "2.8 Requirement-to-Code/Test Traceability",
+        "3.7 Database Design",
+        "5.5.5 Layer 1: CV Understanding Pipeline",
+        "5.17 Dockerized Runtime Flow",
+        "6.4 Fault Tolerance and Recovery",
+        "Metric Definitions",
+        "Gap Analysis Pair Details",
+        "8.21 Summary of Results",
+        "Appendix D: Docker Services Summary",
+        "Appendix F: Test Cases",
+    }
+)
 UNIVERSITY = "Kafr El-Sheikh University"
 FACULTY = "Faculty of Computers and Information"
 DEPARTMENT = "Computer Science Department"
@@ -2941,8 +2960,6 @@ CareerCompass implements two practical roles. The student role can register, log
 
 For local demonstration, a developer machine capable of running Docker Desktop and multiple containers is required. CV parsing and OCR-like processing can be CPU-intensive; therefore, enough memory should be available for the Laravel backend, MySQL, frontend, Python services, MinIO, Prometheus, and Grafana. GPU acceleration is not required for the demonstrated flow.
 
-\\pagebreak
-
 ## 2.10 Software Requirements
 
 | Layer | Software |
@@ -2959,6 +2976,8 @@ For local demonstration, a developer machine capable of running Docker Desktop a
 ## 2.11 Input and Output Flow
 
 Primary inputs include user account data, uploaded CV files, imported job records, target role settings, and administrator source configurations. Primary outputs include normalized user profiles, skill lists, CV analysis metadata, estimated job matches, gap reports, application records, admin statistics, health checks, and monitoring metrics.
+
+\\pagebreak
 
 ## 2.12 Use Case Summary
 
@@ -2991,6 +3010,8 @@ Figure 63 shows how the route tree is divided. This separation matters because t
 The frontend API layer is located under `frontend/src/api`. Axios is configured in `client.js`, including base URL resolution, bearer token injection, request IDs, retry behavior for safe GET/HEAD requests, and 401 handling [43]. Authentication state is managed by `AuthContext.jsx`, which stores the user and token in local storage and refreshes the current user through `/user`. Route guards in `ProtectedRoute.jsx` and `GuestRoute.jsx` redirect unauthenticated users, keep admin-only routes behind role checks, and prevent logged-in users from returning to guest-only screens. Localization files exist under `frontend/src/locales`, and `i18n.js` uses browser language detection with English fallback.
 
 {figure_markdown("Figure 64", "Frontend API and authentication flow.", "assets/diagrams/67_frontend_api_auth_flow.png")}
+
+\\pagebreak
 
 ## 3.4 Backend API Architecture
 
@@ -3030,6 +3051,8 @@ Figure 65 summarizes the normal Laravel request lifecycle and the asynchronous b
 | Request tracing and debugging | Frontend request IDs and backend request-id middleware. | `client.js`, `RequestIdMiddleware` |
 
 *Table 6. Laravel validation and protection mapping.*
+
+\\pagebreak
 
 ## 3.5 AI CV Analyzer Architecture
 
@@ -3083,6 +3106,8 @@ Figure 66 explains the relationship rationale behind the schema. The database is
 Figure 8 summarizes the main application tables and relationships from the current Laravel migrations. It is not a complete replacement for migrations, and it intentionally keeps Laravel runtime tables such as queues, cache, sessions, password-reset tokens, and Sanctum tokens in Appendix C rather than overloading the ERD. The diagram was corrected to remove columns not present in migrations and to include the implemented job-mining support tables.
 
 {figure_markdown("Figure 8", "ERD and database summary diagram.", "assets/diagrams/08_erd.png")}
+
+\\pagebreak
 
 | Relationship | Meaning |
 |---|---|
@@ -3322,6 +3347,8 @@ If the file has little or no readable text, the OCR path renders PDF pages to im
 
 {figure_markdown("Figure 12", "Layer 1 CV understanding pipeline.", "assets/diagrams/12_layer1_understanding_pipeline.png")}
 
+\\pagebreak
+
 | Layer 1 Component | Main Files | Important Behavior | Risk or Fallback |
 |---|---|---|---|
 | API gateway | `main.py` | `/api/parse-cv`, `/api/hybrid-match`, timeout handling, health and metrics endpoints. | Timeout results are returned as explicit status dictionaries. |
@@ -3343,6 +3370,8 @@ Layer 2 enriches the extracted CV with a domain and seniority interpretation. Th
 {figure_markdown("Figure 13", "Layer 2 classification flow.", "assets/diagrams/13_layer2_classification_flow.png")}
 
 {figure_markdown("Figure 16", "Seniority decision logic.", "assets/diagrams/16_seniority_decision_logic.png")}
+
+\\pagebreak
 
 | Layer 2 Component | Main Files | Input | Output |
 |---|---|---|---|
@@ -3395,6 +3424,8 @@ The training notebook uses character-span annotations and converts them into tok
 
 {figure_markdown("Figure 15", "NER token processing and BIO tagging.", "assets/diagrams/15_ner_token_processing.png")}
 
+\\pagebreak
+
 | Simplified Text Token | BIO Label | Why It Matters |
 |---|---|---|
 | Experienced | O | Ordinary descriptive word, not extracted as an entity. |
@@ -3423,6 +3454,8 @@ The AI CV Analyzer was audited as source code, not only as a running service. Th
 | Ignored deployment assets | `.env`, `models/ner_weights/...` | Local secrets and model weights are intentionally ignored; only safe metadata was inspected locally. |
 
 *Table 20. AI CV Analyzer source inventory summary.*
+
+\\pagebreak
 
 | Algorithm or Workflow | Primary File(s) | Notes |
 |---|---|---|
@@ -3543,6 +3576,8 @@ The implemented design is therefore hybrid. NER extracts structured candidates, 
 
 {figure_markdown("Figure 19", "AI design philosophy for the layered hybrid analyzer.", "assets/diagrams/19_ai_design_philosophy.png")}
 
+\\pagebreak
+
 | Design Option | Advantage | Limitation | CareerCompass Decision |
 |---|---|---|---|
 | Pure NER | Learns entity patterns from data. | Does not solve file recovery, seniority, domain, matching, or explanation by itself. | Used only as one extraction component. |
@@ -3642,6 +3677,8 @@ The documentation pass also reviewed committed evaluation evidence and generated
 
 {figure_markdown("Figure 29", "Dataset evidence availability summary.", "assets/diagrams/29_dataset_evidence_availability.png")}
 
+\\pagebreak
+
 | Dataset Statistic | Status | Reason |
 |---|---|---|
 | Cleaned NER training samples | 45,911 rows recorded in Colab PDF | The PDF shows the generated rows loaded from `train_real_tech_cleaned.json`; the dataset content itself is not committed. |
@@ -3661,6 +3698,8 @@ The documentation pass also reviewed committed evaluation evidence and generated
 The team exported the Google Colab notebook `train_ner.ipynb` as a PDF with visible output cells. This PDF was copied into `docs/graduation-book/model-analysis/colab_train_ner_results.pdf` after inspection. It is treated as supporting training evidence for the NER fine-tuning process. The PDF shows the notebook title `train_ner.ipynb - Colab`, timestamp `6/7/26, 3:55 AM`, the heading `CareerCompass AI Engine: Global Skill NER training (Autonomous)`, and a synthetic data augmentation strategy. It also shows the cleaned dataset path `train_real_tech_cleaned.json`, 11 BIO labels, train/test row counts, tokenization completion, model initialization from `bert-base-cased`, training arguments, and epoch-level metrics.
 
 These numbers improve the academic evidence for the training workflow, but they should be interpreted carefully. They are Colab-run validation outputs for the generated/synthetic dataset and notebook split visible in the PDF. They are not production accuracy, not a large real-world CV benchmark, and not reproducible from the repository alone unless the same dataset, runtime, and exported model artifacts are supplied.
+
+\\pagebreak
 
 | Parameter | Value from Colab PDF | Source |
 |---|---|---|
@@ -3744,6 +3783,8 @@ The analyzer does not only return a single percentage. It also returns supportin
 
 {figure_markdown("Figure 27", "Explainable AI fit output.", "assets/diagrams/27_explainable_ai_output.png")}
 
+\\pagebreak
+
 | Output Type | Example | Why It Helps |
 |---|---|---|
 | Score | 78 percent | Gives a quick summary of estimated fit. |
@@ -3760,6 +3801,8 @@ The analyzer does not only return a single percentage. It also returns supportin
 The analyzer is synchronous during CV upload: Laravel calls FastAPI and receives a structured parse result before updating the returned user resource. The stored profile, skills, experiences, CV analysis, and private file metadata then support later dashboard, recommendation, and gap-analysis requests.
 
 {figure_markdown("Figure 28", "AI analyzer sequence diagram.", "assets/diagrams/28_ai_analyzer_sequence.png")}
+
+\\pagebreak
 
 ## 6.12 Computational Complexity Overview
 
@@ -3906,6 +3949,8 @@ Example job: Junior Backend Developer requiring Laravel, MySQL, Docker, and REST
 
 Direct LLM analysis can be powerful, especially for summarizing complex CVs and producing natural-language feedback. CareerCompass still avoids a direct LLM-only runtime because the graduation/demo system must be reproducible, inspectable, containerized, and privacy-aware. The Gemini-based code is used for synthetic training-data generation, not for sending private uploaded CVs to an external LLM during the normal runtime flow. The runtime analyzer is decomposed into layers so each part can be tested, explained, and improved independently.
 
+\\pagebreak
+
 | Direct LLM-Only Approach | CareerCompass Hybrid Analyzer |
 |---|---|
 | Requires an external inference service for each private CV unless self-hosted. | Runs the analyzer locally/containerized in the demo stack. |
@@ -3952,6 +3997,8 @@ The implementation separates responsibilities deliberately. Laravel remains the 
 
 {figure_markdown("Figure 53", "Job mining design philosophy.", "assets/diagrams/32_job_mining_design_philosophy.png")}
 
+\\pagebreak
+
 | Design Question | CareerCompass Decision | Reason |
 |---|---|---|
 | Why job mining? | Use imported job descriptions to support recommendations, gap analysis, and market context. | Static seed data becomes stale and cannot represent changing skill demand. |
@@ -3967,6 +4014,8 @@ The implementation separates responsibilities deliberately. Laravel remains the 
 The deployed runtime uses Docker Compose service separation. The AI Job Miner service is named `cc-job-miner`, maps host port `8003` to container port `8000`, and exposes `/health`. Laravel reaches it through `SCRAPER_SERVICE_URL`, while the scraper calls Laravel callback endpoints through `LARAVEL_API_BASE_URL`. The production overlay also defines `backend-worker-scraping`, which runs the database queue with the `scraping` queue name and a longer timeout than ordinary request work.
 
 {figure_markdown("Figure 54", "AI Job Miner runtime architecture.", "assets/diagrams/34_scraping_runtime_architecture.png")}
+
+\\pagebreak
 
 | Component | Implementation Evidence | Runtime Role |
 |---|---|---|
@@ -3996,6 +4045,8 @@ On-demand scraping is implemented in `JobController`. `scrapeAndStore` accepts a
 
 {figure_markdown("Figure 57", "Scraping job lifecycle.", "assets/diagrams/36_scraping_job_lifecycle.png")}
 
+\\pagebreak
+
 | Status | Meaning | User/Admin Behavior |
 |---|---|---|
 | pending | The `ScrapingJob` record exists and is waiting for a worker. | Poll status and keep the UI non-blocking. |
@@ -4012,6 +4063,8 @@ Admin source management is implemented through `ScrapingSourceController`, `Scra
 Target roles are implemented through `TargetJobRoleController`, `TargetJobRole`, and `AdminTargets.jsx`. A full scraping run combines active target roles with active/runnable sources. Unsupported sources and sources missing required credentials are skipped instead of being counted as successful.
 
 {figure_markdown("Figure 58", "Source management and target-role flow.", "assets/diagrams/37_source_management_flow.png")}
+
+\\pagebreak
 
 | Control | Code Evidence | Purpose |
 |---|---|---|
@@ -4032,6 +4085,8 @@ The import pipeline is centered in `ScrapedJobController::import`. It runs insid
 
 {figure_markdown("Figure 59", "Job import and deduplication flow.", "assets/diagrams/38_job_import_deduplication_flow.png")}
 
+\\pagebreak
+
 | Deduplication Stage | Evidence | Reason |
 |---|---|---|
 | URL match | `Job::where('url', ...)` | Strongest available unique source identity. |
@@ -4049,6 +4104,8 @@ The current duplicate strategy is appropriate for a demo system, but a stronger 
 The failure path uses `ScrapingFailedUrl` records as a lightweight dead-letter style store. AI Job Miner reports failed source URLs to `POST /api/v1/jobs/import/failed`; Laravel validates the payload with `ReportScrapingFailureRequest` and stores URL, optional source/job IDs, error message, retried flag, and failed timestamp. Admin dashboard routes expose failed URLs for a scraping job.
 
 {figure_markdown("Figure 60", "Failed URL and retry flow.", "assets/diagrams/39_scraping_failure_dlq_flow.png")}
+
+\\pagebreak
 
 | Failure Type | Handling | User/Admin Visibility |
 |---|---|---|
@@ -4090,6 +4147,8 @@ Scraping uses multiple security boundaries. User and admin actions go through au
 ## 7.11 Job Mining API Contracts
 
 The scraping API surface has three groups: authenticated user endpoints, protected internal scraper endpoints, and admin endpoints. Detailed examples are included in Appendix A so maintainers can reuse them without exposing real tokens. The examples follow an OpenAPI-style documentation pattern [39].
+
+\\pagebreak
 
 | Group | Method and Path | Auth / Middleware | Purpose |
 |---|---|---|---|
@@ -4161,6 +4220,8 @@ The strongest current scraping evidence is architectural and test evidence, not 
 | Admin diagnostics screenshots | Figures 44-47. | Admin UI supports source, job, dashboard, and target-role operations. | Point-in-time demo evidence. |
 
 *Table 44. Scraping validation evidence.*
+
+\\pagebreak
 
 The final smoke test used a direct protected `/scrape` request to validate the deterministic demo adapter and Laravel import path. A full authenticated `/jobs/scrape-if-missing` queue lifecycle with browser polling remains a recommended final demonstration check because it exercises the user-facing queue trigger and status-polling path rather than only the internal scraper contract.
 
@@ -4292,6 +4353,8 @@ The table below documents expected extraction behavior from the inspected NER la
 
 The semantic matching path could not be executed locally during this documentation update because sentence-transformer dependencies were unavailable in the bundled Python environment. The pure Python TF-IDF matcher was executed directly as a small deterministic fallback check. It gave a positive score for overlapping backend skills and zero for an unrelated mobile-role comparison.
 
+\\pagebreak
+
 | Pair | Semantic Path Status | TF-IDF Fallback Result | Interpretation |
 |---|---|---|---|
 | CV: `Laravel Docker MySQL REST APIs`; Job: `Backend developer with Laravel Docker MySQL` | Not executed locally; dependencies unavailable. | 0.4316 | Keyword overlap confirms a backend-oriented match signal. |
@@ -4387,6 +4450,8 @@ The local Docker stack is heavy because it runs frontend, backend, multiple Lara
 | M-10 | Status | Open system status page | Passed | Figure 43 |
 
 *Table 56. Manual functional evaluation matrix.*
+
+\\pagebreak
 
 | Test ID | Expected vs Actual Observation |
 |---|---|
@@ -4835,6 +4900,8 @@ Content-Type: application/json
 }}
 ```
 
+\\pagebreak
+
 Successful response example:
 
 ```json
@@ -4898,6 +4965,8 @@ Queued response example:
 }}
 ```
 
+\\pagebreak
+
 Method and URL: `GET /api/v1/scraping-status/{{jobId}}`
 
 Status response example:
@@ -4948,6 +5017,8 @@ Content-Type: application/json
 }}
 ```
 
+\\pagebreak
+
 Response example:
 
 ```json
@@ -4955,6 +5026,8 @@ Response example:
   "exists": false
 }}
 ```
+
+\\pagebreak
 
 Method and URL: `POST /api/v1/jobs/import`
 
@@ -5429,10 +5502,11 @@ def set_doc_defaults(doc: Document) -> None:
     section = doc.sections[0]
     section.page_width = Cm(21)
     section.page_height = Cm(29.7)
-    section.top_margin = Cm(2.2)
-    section.bottom_margin = Cm(2.2)
+    section.top_margin = Cm(1.0)
+    section.bottom_margin = Cm(0.75)
     section.left_margin = Cm(2.2)
     section.right_margin = Cm(2.2)
+    section.footer_distance = Cm(0.51)
     styles = doc.styles
     styles["Normal"].font.name = "Times New Roman"
     styles["Normal"].font.size = Pt(11)
@@ -5487,21 +5561,26 @@ def add_cover(doc: Document) -> None:
         run.bold = bold
 
     doc.add_paragraph()
+    if CC_LOGO_PATH.exists():
+        logo_para = doc.add_paragraph()
+        logo_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        logo_para.add_run().add_picture(str(CC_LOGO_PATH), width=COVER_LOGO_WIDTH)
+
     title = doc.add_paragraph()
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = title.add_run(PROJECT_TITLE)
+    run = title.add_run(SHORT_NAME)
     run.font.name = "Calibri"
     run.font.size = Pt(22)
     run.bold = True
     run.font.color.rgb = RGBColor(15, 23, 42)
 
-    short = doc.add_paragraph()
-    short.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = short.add_run(SHORT_NAME)
+    subtitle = doc.add_paragraph()
+    subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = subtitle.add_run(PROJECT_SUBTITLE)
     run.font.name = "Calibri"
-    run.font.size = Pt(18)
-    run.bold = True
-    run.font.color.rgb = RGBColor(14, 165, 233)
+    run.font.size = Pt(14)
+    run.bold = False
+    run.font.color.rgb = RGBColor(51, 65, 85)
 
     doc.add_paragraph()
     submitted = doc.add_paragraph()
@@ -5678,6 +5757,7 @@ def add_md_table_docx(doc: Document, lines: list[str]) -> None:
     is_security_controls = header_key[:3] == ["area", "current demo control", "production hardening needed"]
     table = doc.add_table(rows=len(rows), cols=column_count)
     table.style = "Table Grid"
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
     widths = table_widths(rows[0], column_count)
     set_table_geometry(table, widths)
     for r_idx, row in enumerate(rows):
@@ -5753,6 +5833,7 @@ def add_internal_hyperlink(paragraph, text: str, anchor: str) -> None:
 def add_code_block_docx(doc: Document, code_lines: list[str]) -> None:
     table = doc.add_table(rows=1, cols=1)
     table.style = "Table Grid"
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
     set_table_geometry(table, [9300])
     cell = table.cell(0, 0)
     set_cell_width(cell, 9300)
@@ -5778,6 +5859,7 @@ def generate_docx() -> None:
     set_doc_defaults(doc)
     add_cover(doc)
     caption_bookmarks_seen: set[str] = set()
+    last_block: str | None = None
     lines = MD_PATH.read_text(encoding="utf-8").splitlines()
     i = 0
     while i < len(lines) and lines[i] != "\\pagebreak":
@@ -5791,6 +5873,7 @@ def generate_docx() -> None:
             continue
         if line == "\\pagebreak":
             doc.add_page_break()
+            last_block = None
             i += 1
             continue
         if line.startswith("```"):
@@ -5802,6 +5885,7 @@ def generate_docx() -> None:
             if i < len(lines) and lines[i].startswith("```"):
                 i += 1
             add_code_block_docx(doc, code_lines)
+            last_block = "code"
             continue
         if i == 0 and line.startswith("# "):
             i += 1
@@ -5812,6 +5896,7 @@ def generate_docx() -> None:
                 table_lines.append(lines[i])
                 i += 1
             add_md_table_docx(doc, table_lines)
+            last_block = "table"
             continue
         image_match = re.match(r"!\[(.*?)\]\((.*?)\)", line)
         if image_match:
@@ -5829,22 +5914,30 @@ def generate_docx() -> None:
             elif bookmark_name:
                 caption_bookmarks_seen.add(bookmark_name)
             add_image_docx(doc, rel_path, caption, bookmark_name)
+            last_block = "image"
             continue
         if line.startswith("# "):
             title = clean_inline(line[2:])
             para = doc.add_heading(title, level=1)
             para.paragraph_format.keep_with_next = True
             add_bookmark(para, heading_anchor(title))
+            last_block = "heading"
         elif line.startswith("## "):
             title = clean_inline(line[3:])
+            if title in PAGE_BREAK_BEFORE_HEADINGS:
+                doc.add_page_break()
             para = doc.add_heading(title, level=2)
             para.paragraph_format.keep_with_next = True
             add_bookmark(para, heading_anchor(title))
+            last_block = "heading"
         elif line.startswith("### "):
             title = clean_inline(line[4:])
+            if title in PAGE_BREAK_BEFORE_HEADINGS:
+                doc.add_page_break()
             para = doc.add_heading(title, level=3)
             para.paragraph_format.keep_with_next = True
             add_bookmark(para, heading_anchor(title))
+            last_block = "heading"
         elif line.startswith("- "):
             link = re.fullmatch(r"\[([^\]]+)\]\(#([^)]+)\)", line[2:].strip())
             para = doc.add_paragraph(style="List Bullet")
@@ -5852,8 +5945,10 @@ def generate_docx() -> None:
                 add_internal_hyperlink(para, link.group(1), link.group(2))
             else:
                 para.add_run(clean_inline(line[2:]))
+            last_block = "list"
         elif re.match(r"^\d+\. ", line):
             doc.add_paragraph(clean_inline(re.sub(r"^\d+\. ", "", line)), style="List Number")
+            last_block = "list"
         elif line.startswith("*Figure") or line.startswith("*Table"):
             caption = clean_inline(line.strip("*"))
             p = doc.add_paragraph(caption)
@@ -5864,8 +5959,10 @@ def generate_docx() -> None:
                 caption_bookmarks_seen.add(bookmark_name)
             for run in p.runs:
                 run.italic = True
+            last_block = "caption"
         else:
             doc.add_paragraph(clean_inline(line))
+            last_block = "text"
         i += 1
     doc.save(DOCX_PATH)
 
@@ -5895,9 +5992,12 @@ def add_pdf_cover(story: list) -> None:
     center = para_style("center", 13, bold=True, align=TA_CENTER)
     for line in [UNIVERSITY, FACULTY, DEPARTMENT, "Graduation Project Book", ACADEMIC_YEAR]:
         story.append(Paragraph(html.escape(line), center))
-    story.append(Spacer(1, 1.0 * cm))
-    story.append(Paragraph(html.escape(PROJECT_TITLE), para_style("pdf-title", 20, leading=25, bold=True, align=TA_CENTER)))
-    story.append(Paragraph(html.escape(SHORT_NAME), para_style("pdf-short", 16, bold=True, align=TA_CENTER)))
+    story.append(Spacer(1, 0.6 * cm))
+    if CC_LOGO_PATH.exists():
+        story.append(Image(str(CC_LOGO_PATH), width=3.5 * cm, height=3.5 * cm))
+        story.append(Spacer(1, 0.5 * cm))
+    story.append(Paragraph(html.escape(SHORT_NAME), para_style("pdf-title", 20, leading=25, bold=True, align=TA_CENTER)))
+    story.append(Paragraph(html.escape(PROJECT_SUBTITLE), para_style("pdf-subtitle", 13, leading=18, align=TA_CENTER)))
     story.append(Spacer(1, 1.0 * cm))
     story.append(Paragraph("Submitted by:", center))
     for student in STUDENTS:
@@ -6065,10 +6165,10 @@ def generate_pdf() -> int:
     doc = SimpleDocTemplate(
         str(PDF_PATH),
         pagesize=A4,
-        rightMargin=2.0 * cm,
-        leftMargin=2.0 * cm,
-        topMargin=1.8 * cm,
-        bottomMargin=1.8 * cm,
+        rightMargin=2.2 * cm,
+        leftMargin=2.2 * cm,
+        topMargin=1.0 * cm,
+        bottomMargin=0.75 * cm,
     )
     doc.build(story, onFirstPage=add_page_number, onLaterPages=add_page_number)
     return len(PdfReader(str(PDF_PATH)).pages)
