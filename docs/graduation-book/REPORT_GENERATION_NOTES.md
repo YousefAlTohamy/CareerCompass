@@ -33,7 +33,7 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 
 ## Counts
 
-- PDF pages: 124
+- PDF pages: 125
 - Screenshots/evidence images: 19
 - Diagrams: 47
 
@@ -43,15 +43,15 @@ The supervisor-provided previous graduation books were copied into `reference-bo
 - Front matter order: Cover -> Table of Contents -> List of Figures -> List of Tables -> Acknowledgment -> Abstract -> Abbreviations -> Chapter 1
 - Abbreviations placement: standalone page after Abstract and before Chapter 1
 - DOCX TOC status: 17 custom manual TOC entries contain internal hyperlinks to bookmarked major headings
-- DOCX List of Figures status: 66 List of Figures entries link to bookmarked figure captions
-- DOCX List of Tables status: 62 List of Tables entries link to bookmarked table captions
-- PDF TOC status: PDF contains 142 link annotations after export
+- DOCX List of Figures status: 80 List of Figures entries link to bookmarked figure captions
+- DOCX List of Tables status: 63 List of Tables entries link to bookmarked table captions
+- PDF TOC status: PDF contains 157 link annotations after export
 - Table formatting status: data tables use fixed DXA widths, wrapped text, repeated header rows, smaller table fonts, and split wide manual test observations into narrower tables; cover layout tables are intentionally excluded from repeated-header checks
-- Figure caption status: explicit italic caption lines are the single visible figure-caption source; Markdown image alt text is not rendered as a visible figure caption
+- Figure caption status: explicit italic caption lines with chapter-based numbering (Figure X.Y / Table X.Y) are the single visible figure/table-caption source; Markdown image alt text is not rendered as a visible caption
 - Table caption status: formal table captions are rendered below their corresponding tables and remain linked from the List of Tables
-- Section 2.6/2.7 layout status: 2.6 heading, FR-01/FR-11 rows, and Table 2 caption appear on PDF page(s) [12, 14, 15]; 2.7 starts on PDF page(s) [13] after the Table 2 caption
-- Section 2.9/2.10 layout status: 2.10 heading, Software Requirements rows, and Table 4 caption appear on PDF page(s) [15]; 2.11 starts on PDF page(s) [15] after the Table 4 caption
-- Section 9.9/9.10 layout status: 9.9 heading, security-control rows, and Table 58 caption appear on PDF page(s) [93]; 9.10 starts on PDF page(s) [93] after the Table 58 caption
+- Section 2.6/2.7 layout status: 2.6 heading, FR-01/FR-11 rows, and Table 2 caption appear on PDF page(s) [12, 14, 15]; 2.7 starts on PDF page(s) [13] after the table caption
+- Section 2.9/2.10 layout status: 2.10 heading, Software Requirements rows, and Table 2 caption appear on PDF page(s) [15]; 2.11 starts on PDF page(s) [15] after the table caption
+- Section 9.9/9.10 layout status: 9.9 heading, security-control rows, and Table 9 caption appear on PDF page(s) [94]; 9.10 starts on PDF page(s) [94] after the table caption
 
 ## Caption, Link, and Layout Verification Method
 
@@ -154,7 +154,7 @@ The mini dataset evaluation was added under `evaluation/` and uses fake syntheti
 - Branch check passed on `docs/graduation-book`; the only unrelated untracked file remained `docs/REVERSE_ENGINEERING_SYSTEM_WALKTHROUGH.md`.
 - `git diff --check` and `git diff --cached --check` completed without whitespace errors; Git reported line-ending normalization warnings only.
 - Report generation ran successfully with the bundled Python runtime and produced Markdown, DOCX, and PDF artifacts.
-- Generated PDF page count: 124; generated PDF link annotations: PDF contains 142 link annotations after export.
+- Generated PDF page count: 125; generated PDF link annotations: PDF contains 157 link annotations after export.
 - DOCX structural scan found internal hyperlinks/bookmarks for the custom TOC/List of Figures/List of Tables with no missing anchors after figure/table anchor checks.
 - JSON code-fence validation parsed 36 JSON blocks successfully.
 - All ten scraping diagrams and the four new backend/frontend/database diagrams exist and are referenced by the generated Markdown.

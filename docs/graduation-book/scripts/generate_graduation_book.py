@@ -331,11 +331,21 @@ def table_anchor(number: str) -> str:
     return f"bm_table_{number.split()[-1]}"
 
 
-def caption_anchor(caption: str) -> str | None:
-    match = re.match(r"^(Figure|Table)\s+(\d+)\.", caption)
+def caption_anchor(caption: str, anchor_map: dict[str, str] | None = None) -> str | None:
+    # Try chapter-based format first: "Figure 2.1. ..." or "Table A.3. ..."
+    ch_match = re.match(r"^(Figure|Table)\s+([A-Z0-9]+\.\d+)\.", caption)
+    if ch_match:
+        label = f"{ch_match.group(1)} {ch_match.group(2)}"
+        if anchor_map and label in anchor_map:
+            return anchor_map[label]
+        # Fallback: synthesize anchor from chapter-based label
+        return f"bm_{ch_match.group(1).lower()}_{ch_match.group(2).replace('.', '_')}"
+    # Old format: "Figure 5." or "Table 3a."
+    match = re.match(r"^(Figure|Table)\s+(\d+[a-z]?)\.", caption)
     if not match:
         return None
     return f"bm_{match.group(1).lower()}_{match.group(2)}"
+
 
 
 def toc_markdown() -> str:
@@ -2729,6 +2739,305 @@ The script also probes the local documentation runtime. In this run, full analyz
 
 def figure_markdown(number: str, caption: str, rel_path: str) -> str:
     return f"![{caption}]({rel_path})\n\n*{number}. {caption}*"
+
+
+# ---------------------------------------------------------------------------
+# Post-generation chapter-based numbering pass
+# ---------------------------------------------------------------------------
+
+# Regex for italic figure/table caption lines in the generated Markdown.
+# Matches: *Figure 5. UML use case diagram.* or *Table 3a. Traceability...*
+_FIGURE_CAPTION_RE = re.compile(r"^\*(Figure\s+(\d+[a-z]?))\.\s+(.+)\*$")
+_TABLE_CAPTION_RE = re.compile(r"^\*(Table\s+(\d+[a-z]?))\.\s+(.+)\*$")
+
+# Regex for chapter / appendix boundary lines.
+_CHAPTER_RE = re.compile(r"^#\s+Chapter\s+(\d+):")
+_APPENDIX_SECTION_RE = re.compile(r"^##\s+Appendix\s+([A-Z]):")
+_APPENDIX_TOP_RE = re.compile(r"^#\s+Appendices\s*$")
+
+# Regex for List of Figures / List of Tables heading lines.
+_LOF_HEADING_RE = re.compile(r"^#\s+List of Figures\s*$")
+_LOT_HEADING_RE = re.compile(r"^#\s+List of Tables\s*$")
+
+
+def apply_chapter_based_numbering(md: str) -> tuple[str, dict[str, str], dict[str, str], dict[str, str]]:
+    """Apply chapter-based numbering to all figure/table captions.
+
+    Returns (new_markdown, figure_map, table_map) where figure_map and
+    table_map map old visible labels to new ones, e.g.
+    ``{"Figure 5": "Figure 2.1", "Figure 1": "Figure 2.2", ...}``.
+    """
+    lines = md.split("\n")
+
+    # ---- Pass 1: discover chapter boundaries and assign numbers ----------
+    current_chapter: str | None = None  # "2", "3", ... or "A", "B", ...
+    in_appendices = False
+    fig_counter = 0
+    tbl_counter = 0
+
+    # old label -> new label
+    fig_map: dict[str, str] = {}
+    tbl_map: dict[str, str] = {}
+
+    # ordered list of (new_label, caption_text, old_bookmark_anchor) for
+    # rebuilding List of Figures / List of Tables
+    fig_list_entries: list[tuple[str, str, str]] = []
+    tbl_list_entries: list[tuple[str, str, str]] = []
+
+    # Map new visible caption label -> old bookmark ID
+    # e.g. "Figure 2.1" -> "bm_figure_5"
+    new_caption_to_old_anchor: dict[str, str] = {}
+
+    in_code_fence = False
+
+    for line in lines:
+        stripped = line.rstrip()
+
+        # Track code fences so we never treat code content as captions
+        if stripped.startswith("```"):
+            in_code_fence = not in_code_fence
+            continue
+        if in_code_fence:
+            continue
+
+        # Detect chapter boundaries
+        ch_match = _CHAPTER_RE.match(stripped)
+        if ch_match:
+            current_chapter = ch_match.group(1)
+            fig_counter = 0
+            tbl_counter = 0
+            continue
+
+        app_top = _APPENDIX_TOP_RE.match(stripped)
+        if app_top:
+            in_appendices = True
+            # Default appendix letter until we see a specific ## Appendix X:
+            current_chapter = "A"
+            fig_counter = 0
+            tbl_counter = 0
+            continue
+
+        app_match = _APPENDIX_SECTION_RE.match(stripped)
+        if app_match:
+            letter = app_match.group(1)
+            if current_chapter != letter:
+                current_chapter = letter
+                fig_counter = 0
+                tbl_counter = 0
+            continue
+
+        if current_chapter is None:
+            continue  # front matter — no figures/tables to number
+
+        # Detect figure captions
+        fig_match = _FIGURE_CAPTION_RE.match(stripped)
+        if fig_match:
+            old_label = fig_match.group(1)    # "Figure 5"
+            old_id = fig_match.group(2)       # "5"
+            caption_text = fig_match.group(3) # "UML use case diagram."
+            fig_counter += 1
+            new_label = f"Figure {current_chapter}.{fig_counter}"
+            fig_map[old_label] = new_label
+            old_anchor = f"bm_figure_{old_id}"
+            fig_list_entries.append((new_label, caption_text, old_anchor))
+            new_caption_to_old_anchor[new_label] = old_anchor
+            continue
+
+        # Detect table captions
+        tbl_match = _TABLE_CAPTION_RE.match(stripped)
+        if tbl_match:
+            old_label = tbl_match.group(1)    # "Table 3" or "Table 3a"
+            old_id = tbl_match.group(2)       # "3" or "3a"
+            caption_text = tbl_match.group(3)
+            tbl_counter += 1
+            new_label = f"Table {current_chapter}.{tbl_counter}"
+            tbl_map[old_label] = new_label
+            old_anchor = f"bm_table_{old_id}"
+            tbl_list_entries.append((new_label, caption_text, old_anchor))
+            new_caption_to_old_anchor[new_label] = old_anchor
+            continue
+
+    # ---- Pass 2: rebuild List of Figures / List of Tables ----------------
+    new_fig_list_md = "\n".join(
+        f"- [{label}. {caption}](#{anchor})"
+        for label, caption, anchor in fig_list_entries
+    )
+    new_tbl_list_md = "\n".join(
+        f"- [{label}. {caption}](#{anchor})"
+        for label, caption, anchor in tbl_list_entries
+    )
+
+    # ---- Pass 3: replace captions, lists, and in-text references ---------
+
+    # Build combined replacement map for in-text references.
+    # Use longest-first to avoid "Figure 1" matching inside "Figure 10".
+    all_refs: dict[str, str] = {}
+    all_refs.update(fig_map)
+    all_refs.update(tbl_map)
+    sorted_old_labels = sorted(all_refs.keys(), key=len, reverse=True)
+
+    # Build the regex for in-text references.  We need word boundaries but
+    # must also handle "Figures 44-47" range references specially.
+    # First, build individual reference regex (handles "Figure 5" but not
+    # inside "bm_figure_5" or image paths).
+    def _single_ref_pattern(label: str) -> str:
+        """Return regex pattern for a single reference like 'Figure 5'."""
+        # Escape for regex safety
+        return re.escape(label)
+
+    # Build range reference patterns: "Figures N-M" or "Figures N–M"
+    _FIGURE_RANGE_RE = re.compile(
+        r"\bFigures\s+(\d+[a-z]?)\s*[-–]\s*(\d+[a-z]?)\b"
+    )
+    _TABLE_RANGE_RE = re.compile(
+        r"\bTables\s+(\d+[a-z]?)\s*[-–]\s*(\d+[a-z]?)\b"
+    )
+
+    def _replace_range(match: re.Match, mapping: dict[str, str], kind: str) -> str:
+        start_id = match.group(1)
+        end_id = match.group(2)
+        start_label = f"{kind} {start_id}"
+        end_label = f"{kind} {end_id}"
+        new_start = mapping.get(start_label, start_label)
+        new_end = mapping.get(end_label, end_label)
+        # Extract just the number part from new labels
+        new_start_num = new_start.split(" ", 1)[1] if " " in new_start else new_start
+        new_end_num = new_end.split(" ", 1)[1] if " " in new_end else new_end
+        # Check if all items in the range are in the same chapter
+        start_chapter = new_start_num.split(".")[0] if "." in new_start_num else ""
+        end_chapter = new_end_num.split(".")[0] if "." in new_end_num else ""
+        if start_chapter and start_chapter == end_chapter:
+            return f"{kind}s {new_start_num}–{new_end_num}"
+        else:
+            # Cross-chapter: expand explicitly
+            return f"{new_start} to {new_end}"
+
+    # Process lines
+    result_lines: list[str] = []
+    in_code_fence_2 = False
+    in_lof = False  # inside List of Figures section
+    in_lot = False  # inside List of Tables section
+    lof_replaced = False
+    lot_replaced = False
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.rstrip()
+
+        # Track code fences — never modify content inside them
+        if stripped.startswith("```"):
+            in_code_fence_2 = not in_code_fence_2
+            result_lines.append(line)
+            i += 1
+            continue
+        if in_code_fence_2:
+            result_lines.append(line)
+            i += 1
+            continue
+
+        # Detect List of Figures heading and replace the entire list
+        if _LOF_HEADING_RE.match(stripped):
+            result_lines.append(line)
+            i += 1
+            # Skip blank lines
+            while i < len(lines) and not lines[i].strip():
+                result_lines.append(lines[i])
+                i += 1
+            # Skip old list entries (lines starting with "- [")
+            while i < len(lines) and lines[i].strip().startswith("- ["):
+                i += 1
+            # Insert new list
+            result_lines.append(new_fig_list_md)
+            result_lines.append("")
+            lof_replaced = True
+            continue
+
+        # Detect List of Tables heading and replace the entire list
+        if _LOT_HEADING_RE.match(stripped):
+            result_lines.append(line)
+            i += 1
+            while i < len(lines) and not lines[i].strip():
+                result_lines.append(lines[i])
+                i += 1
+            while i < len(lines) and lines[i].strip().startswith("- ["):
+                i += 1
+            result_lines.append(new_tbl_list_md)
+            result_lines.append("")
+            lot_replaced = True
+            continue
+
+        # Replace figure caption lines
+        fig_cap = _FIGURE_CAPTION_RE.match(stripped)
+        if fig_cap:
+            old_label = fig_cap.group(1)
+            caption_text = fig_cap.group(3)
+            new_label = fig_map.get(old_label, old_label)
+            result_lines.append(f"*{new_label}. {caption_text}*")
+            i += 1
+            continue
+
+        # Replace table caption lines
+        tbl_cap = _TABLE_CAPTION_RE.match(stripped)
+        if tbl_cap:
+            old_label = tbl_cap.group(1)
+            caption_text = tbl_cap.group(3)
+            new_label = tbl_map.get(old_label, old_label)
+            result_lines.append(f"*{new_label}. {caption_text}*")
+            i += 1
+            continue
+
+        # For other lines: replace in-text references safely.
+        # Skip lines that are image markdown, link targets, or JSON.
+        is_image_line = stripped.startswith("![")
+        is_link_target = stripped.startswith("- [") and "](#" in stripped
+        # Don't replace inside markdown link targets (anchor URLs)
+        # but DO replace the visible text of regular prose.
+
+        if is_image_line:
+            # Never modify image lines — paths contain figure numbers
+            result_lines.append(line)
+            i += 1
+            continue
+
+        modified = line
+
+        # Replace range references first (before individual refs)
+        modified = _FIGURE_RANGE_RE.sub(
+            lambda m: _replace_range(m, fig_map, "Figure"), modified
+        )
+        modified = _TABLE_RANGE_RE.sub(
+            lambda m: _replace_range(m, tbl_map, "Table"), modified
+        )
+
+        # Replace individual references, longest-first.
+        # Use negative lookbehind/lookahead to avoid replacing inside:
+        #   - bookmark anchors: bm_figure_5, #bm_table_3
+        #   - already-replaced chapter-based: Figure 2.1
+        #   - image filenames / paths
+        for old_label in sorted_old_labels:
+            if old_label not in modified:
+                continue
+            new_label = all_refs[old_label]
+            # Build a safe pattern: word boundary before "Figure"/"Table",
+            # and after the number, avoid replacing if preceded by "_" or
+            # "#bm_" or followed by "." + digit (already chapter-based) or
+            # preceded by "/" (path).
+            kind_word = old_label.split()[0]  # "Figure" or "Table"
+            num_part = old_label.split()[1]   # "5" or "3a"
+            pattern = (
+                r"(?<!_)(?<!/)(?<!\w)"  # not preceded by _, /, or word char
+                + re.escape(old_label)
+                + r"(?!\.\d)"  # not followed by .digit (chapter-based)
+                + r"(?!_)"     # not followed by _ (bookmark ID)
+            )
+            modified = re.sub(pattern, new_label, modified)
+
+        result_lines.append(modified)
+        i += 1
+
+    new_md = "\n".join(result_lines)
+    return new_md, fig_map, tbl_map, new_caption_to_old_anchor
 
 
 def report_markdown(mini_results: dict, smoke_results: dict) -> str:
@@ -5494,8 +5803,13 @@ def write_references() -> None:
     REFERENCES_PATH.write_text(references_markdown(), encoding="utf-8")
 
 
-def write_markdown(mini_results: dict, smoke_results: dict) -> None:
-    MD_PATH.write_text(report_markdown(mini_results, smoke_results), encoding="utf-8")
+def write_markdown(mini_results: dict, smoke_results: dict) -> dict[str, str]:
+    raw_md = report_markdown(mini_results, smoke_results)
+    numbered_md, fig_map, tbl_map, anchor_map = apply_chapter_based_numbering(raw_md)
+    MD_PATH.write_text(numbered_md, encoding="utf-8")
+    print(f"Chapter-based numbering applied: {len(fig_map)} figures, {len(tbl_map)} tables renumbered")
+    return anchor_map
+
 
 
 def set_doc_defaults(doc: Document) -> None:
@@ -5854,6 +6168,28 @@ def add_code_block_docx(doc: Document, code_lines: list[str]) -> None:
     spacer.paragraph_format.space_after = Pt(4)
 
 
+def _build_anchor_map_from_markdown(lines: list[str]) -> dict[str, str]:
+    """Pre-scan the generated Markdown to build a mapping from chapter-based
+    caption labels to old bookmark IDs by inspecting List of Figures/Tables
+    entries.  Each entry looks like:
+
+        - [Figure 2.1. UML use case diagram.](#bm_figure_5)
+        - [Table 2.4. Requirement-to-code/test traceability matrix.](#bm_table_3a)
+
+    Returns e.g. {"Figure 2.1": "bm_figure_5", "Table 2.4": "bm_table_3a"}.
+    """
+    anchor_map: dict[str, str] = {}
+    # Match list entries with internal bookmark links
+    link_re = re.compile(r"^-\s+\[((Figure|Table)\s+[A-Z0-9]+\.\d+)\.\s+.*\]\(#(bm_(?:figure|table)_\w+)\)")
+    for line in lines:
+        m = link_re.match(line.strip())
+        if m:
+            label = m.group(1)   # "Figure 2.1"
+            anchor = m.group(3)  # "bm_figure_5"
+            anchor_map[label] = anchor
+    return anchor_map
+
+
 def generate_docx() -> None:
     doc = Document()
     set_doc_defaults(doc)
@@ -5861,6 +6197,10 @@ def generate_docx() -> None:
     caption_bookmarks_seen: set[str] = set()
     last_block: str | None = None
     lines = MD_PATH.read_text(encoding="utf-8").splitlines()
+
+    # Pre-scan: build anchor map for chapter-based caption resolution
+    docx_anchor_map = _build_anchor_map_from_markdown(lines)
+
     i = 0
     while i < len(lines) and lines[i] != "\\pagebreak":
         i += 1
@@ -5908,7 +6248,7 @@ def generate_docx() -> None:
                 i = next_index
             else:
                 i += 1
-            bookmark_name = caption_anchor(caption)
+            bookmark_name = caption_anchor(caption, docx_anchor_map)
             if bookmark_name in caption_bookmarks_seen:
                 bookmark_name = None
             elif bookmark_name:
@@ -5953,7 +6293,7 @@ def generate_docx() -> None:
             caption = clean_inline(line.strip("*"))
             p = doc.add_paragraph(caption)
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            bookmark_name = caption_anchor(caption)
+            bookmark_name = caption_anchor(caption, docx_anchor_map)
             if bookmark_name and bookmark_name not in caption_bookmarks_seen:
                 add_bookmark(p, bookmark_name)
                 caption_bookmarks_seen.add(bookmark_name)
@@ -5965,6 +6305,7 @@ def generate_docx() -> None:
             last_block = "text"
         i += 1
     doc.save(DOCX_PATH)
+
 
 
 def para_style(name: str, size: int, leading: int | None = None, bold: bool = False, align=TA_LEFT):
@@ -6486,7 +6827,7 @@ def main() -> None:
     create_diagrams()
     create_terminal_evidence()
     write_references()
-    write_markdown(mini_results, smoke_results)
+    anchor_map = write_markdown(mini_results, smoke_results)
     generate_docx()
     fallback_page_count = generate_pdf()
     export_ok, export_output = export_pdf_from_docx_with_word()
@@ -6507,12 +6848,25 @@ def main() -> None:
     tables_docx_status = f"{docx_link_counts['tables']} List of Tables entries link to bookmarked table captions"
     toc_pdf_status = f"PDF contains {link_count} link annotations after export" if link_count else "PDF link preservation could not be confirmed from annotations"
     table_status = "data tables use fixed DXA widths, wrapped text, repeated header rows, smaller table fonts, and split wide manual test observations into narrower tables; cover layout tables are intentionally excluded from repeated-header checks"
-    caption_status = "explicit italic caption lines are the single visible figure-caption source; Markdown image alt text is not rendered as a visible figure caption"
+    caption_status = "explicit italic caption lines with chapter-based numbering (Figure X.Y / Table X.Y) are the single visible figure/table-caption source; Markdown image alt text is not rendered as a visible caption"
+
+    # Discover the new chapter-based table captions from the generated
+    # Markdown so that pdf_pages_for_terms can search for the correct
+    # strings after renumbering (e.g. "Table 2.2." instead of "Table 2.").
+    md_text = MD_PATH.read_text(encoding="utf-8")
+    # Find the chapter-based caption for old Table 2 (functional requirements)
+    tbl2_match = re.search(r"\*Table (\d+\.\d+)\. Functional requirements summary\.\*", md_text)
+    tbl2_caption = f"Table {tbl2_match.group(1)}. Functional requirements summary." if tbl2_match else "Table 2. Functional requirements summary."
+    tbl4_match = re.search(r"\*Table (\d+\.\d+)\. Software environment summary\.\*", md_text)
+    tbl4_caption = f"Table {tbl4_match.group(1)}. Software environment summary." if tbl4_match else "Table 4. Software environment summary."
+    tbl58_match = re.search(r"\*Table (\d+\.\d+)\. Security and privacy controls\.\*", md_text)
+    tbl58_caption = f"Table {tbl58_match.group(1)}. Security and privacy controls." if tbl58_match else "Table 58. Security and privacy controls."
+
     section_pages = pdf_pages_for_terms([
         "2.6 Functional Requirements",
         "FR-01",
         "FR-11",
-        "Table 2. Functional requirements summary.",
+        tbl2_caption,
         "2.7 Non-Functional Requirements",
         "2.10 Software Requirements",
         "Frontend",
@@ -6521,7 +6875,7 @@ def main() -> None:
         "Data",
         "Infrastructure",
         "Testing",
-        "Table 4. Software environment summary.",
+        tbl4_caption,
         "2.11 Input and Output Flow",
         "9.9 Demo Security Limitations",
         "Admin account",
@@ -6530,11 +6884,11 @@ def main() -> None:
         "Scraper service",
         "Monitoring",
         "Privacy",
-        "Table 58. Security and privacy controls.",
+        tbl58_caption,
         "9.10 Future Production Hardening",
     ])
     section_26_start = min(section_pages.get("2.6 Functional Requirements", []) or section_pages.get("FR-01", []) or [1])
-    table_2_body_pages = [page for page in section_pages.get("Table 2. Functional requirements summary.", []) if page >= section_26_start]
+    table_2_body_pages = [page for page in section_pages.get(tbl2_caption, []) if page >= section_26_start]
     fr_pages = sorted(set(
         section_pages.get("2.6 Functional Requirements", [])
         + section_pages.get("FR-01", [])
@@ -6542,12 +6896,12 @@ def main() -> None:
         + table_2_body_pages
     ))
     requirements_layout_status = (
-        f"2.6 heading, FR-01/FR-11 rows, and Table 2 caption appear on PDF page(s) {fr_pages or 'not detected'}; "
-        f"2.7 starts on PDF page(s) {section_pages.get('2.7 Non-Functional Requirements', []) or 'not detected'} after the Table 2 caption"
+        f"2.6 heading, FR-01/FR-11 rows, and {tbl2_caption.split('.')[0]} caption appear on PDF page(s) {fr_pages or 'not detected'}; "
+        f"2.7 starts on PDF page(s) {section_pages.get('2.7 Non-Functional Requirements', []) or 'not detected'} after the table caption"
     )
     section_29_start = min(section_pages.get("2.10 Software Requirements", []) or [1])
     section_210_start = min(section_pages.get("2.11 Input and Output Flow", []) or [section_29_start])
-    table_4_body_pages = [page for page in section_pages.get("Table 4. Software environment summary.", []) if page >= section_29_start]
+    table_4_body_pages = [page for page in section_pages.get(tbl4_caption, []) if page >= section_29_start]
     software_row_pages = []
     for term in ["Frontend", "Backend", "AI services", "Data", "Infrastructure", "Testing"]:
         software_row_pages.extend(page for page in section_pages.get(term, []) if section_29_start <= page <= section_210_start)
@@ -6557,12 +6911,12 @@ def main() -> None:
         + table_4_body_pages
     ))
     software_layout_status = (
-        f"2.10 heading, Software Requirements rows, and Table 4 caption appear on PDF page(s) {software_pages or 'not detected'}; "
-        f"2.11 starts on PDF page(s) {section_pages.get('2.11 Input and Output Flow', []) or 'not detected'} after the Table 4 caption"
+        f"2.10 heading, Software Requirements rows, and {tbl4_caption.split('.')[0]} caption appear on PDF page(s) {software_pages or 'not detected'}; "
+        f"2.11 starts on PDF page(s) {section_pages.get('2.11 Input and Output Flow', []) or 'not detected'} after the table caption"
     )
     section_79_start = min(section_pages.get("9.9 Demo Security Limitations", []) or [1])
     section_710_start = min(section_pages.get("9.10 Future Production Hardening", []) or [section_79_start])
-    table_39_body_pages = [page for page in section_pages.get("Table 58. Security and privacy controls.", []) if page >= section_79_start]
+    table_39_body_pages = [page for page in section_pages.get(tbl58_caption, []) if page >= section_79_start]
     security_row_pages = []
     for term in ["Admin account", "CV files", "Tokens", "Scraper service", "Monitoring", "Privacy"]:
         security_row_pages.extend(page for page in section_pages.get(term, []) if section_79_start <= page <= section_710_start)
@@ -6572,8 +6926,8 @@ def main() -> None:
         + table_39_body_pages
     ))
     security_layout_status = (
-        f"9.9 heading, security-control rows, and Table 58 caption appear on PDF page(s) {security_pages or 'not detected'}; "
-        f"9.10 starts on PDF page(s) {section_pages.get('9.10 Future Production Hardening', []) or 'not detected'} after the Table 58 caption"
+        f"9.9 heading, security-control rows, and {tbl58_caption.split('.')[0]} caption appear on PDF page(s) {security_pages or 'not detected'}; "
+        f"9.10 starts on PDF page(s) {section_pages.get('9.10 Future Production Hardening', []) or 'not detected'} after the table caption"
     )
     write_notes(
         page_count,
@@ -6593,6 +6947,7 @@ def main() -> None:
     print(f"Generated PDF: {PDF_PATH}")
     print(f"PDF pages: {page_count}")
     print(toc_pdf_status)
+
 
 
 if __name__ == "__main__":

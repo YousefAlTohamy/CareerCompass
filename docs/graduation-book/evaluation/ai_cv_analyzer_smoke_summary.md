@@ -5,7 +5,7 @@ This is a small deterministic smoke evaluation for the graduation book. It is no
 ## Runtime Boundary
 
 - Full analyzer import: unavailable
-- Full analyzer import error: `ModuleNotFoundError: No module named 'numpy'`
+- Full analyzer import error: `ModuleNotFoundError: No module named 'pdfplumber'`
 - TF-IDF probe: available; score=0.5101
 
 ## Summary Metrics
