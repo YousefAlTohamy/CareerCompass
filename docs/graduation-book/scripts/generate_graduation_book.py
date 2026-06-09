@@ -356,15 +356,15 @@ def wrap_text(draw: ImageDraw.ImageDraw, text: str, font, max_width: int) -> lis
 
 def rounded_box(draw, box, title, subtitle="", fill="#ffffff", outline="#1d4ed8", text="#0f172a"):
     x1, y1, x2, y2 = box
-    draw.rounded_rectangle(box, radius=18, fill=fill, outline=outline, width=3)
-    title_font = load_font(24, True)
-    sub_font = load_font(17)
-    draw.text((x1 + 18, y1 + 18), title, fill=text, font=title_font)
+    draw.rounded_rectangle(box, radius=12, fill=fill, outline=outline, width=2)
+    title_font = load_font(22, True)
+    sub_font = load_font(16)
+    draw.text((x1 + 16, y1 + 14), title, fill=text, font=title_font)
     if subtitle:
-        y = y1 + 52
-        for line in wrap_text(draw, subtitle, sub_font, x2 - x1 - 36):
-            draw.text((x1 + 18, y), line, fill="#334155", font=sub_font)
-            y += 22
+        y = y1 + 46
+        for line in wrap_text(draw, subtitle, sub_font, x2 - x1 - 32):
+            draw.text((x1 + 16, y), line, fill="#334155", font=sub_font)
+            y += 21
 
 
 def arrow(draw, start, end, color="#0f766e", width=4):
@@ -382,18 +382,396 @@ def arrow(draw, start, end, color="#0f766e", width=4):
     draw.polygon(points, fill=color)
 
 
+INK = "#0f172a"
+MUTED = "#475569"
+GRID = "#94a3b8"
+BLUE = "#2563eb"
+GREEN = "#15803d"
+TEAL = "#0f766e"
+ORANGE = "#b45309"
+RED = "#b91c1c"
+PURPLE = "#6d28d9"
+BG = "#f8fafc"
+PAPER = "#ffffff"
+
+
+def draw_diagram_title(draw: ImageDraw.ImageDraw, width: int, title: str, subtitle: str | None = None) -> None:
+    draw.rectangle((0, 0, width, 86), fill=INK)
+    draw.text((38, 24), title, fill="white", font=load_font(30, True))
+    if subtitle:
+        draw.text((40, 96), subtitle, fill=MUTED, font=load_font(17))
+
+
+def draw_wrapped(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    box: tuple[int, int, int, int],
+    font,
+    *,
+    fill: str = INK,
+    align: str = "left",
+    line_gap: int = 5,
+) -> int:
+    x1, y1, x2, y2 = box
+    lines = wrap_text(draw, text, font, max(20, x2 - x1))
+    line_height = draw.textbbox((0, 0), "Ag", font=font)[3] + line_gap
+    y = y1
+    for line in lines:
+        if y + line_height > y2 + line_height:
+            break
+        text_w = draw.textbbox((0, 0), line, font=font)[2]
+        if align == "center":
+            x = x1 + max(0, (x2 - x1 - text_w) // 2)
+        elif align == "right":
+            x = x2 - text_w
+        else:
+            x = x1
+        draw.text((x, y), line, fill=fill, font=font)
+        y += line_height
+    return y
+
+
+def draw_centered_wrapped(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    box: tuple[int, int, int, int],
+    font,
+    *,
+    fill: str = INK,
+    line_gap: int = 5,
+) -> None:
+    x1, y1, x2, y2 = box
+    lines = wrap_text(draw, text, font, max(20, x2 - x1))
+    line_height = draw.textbbox((0, 0), "Ag", font=font)[3] + line_gap
+    total_h = len(lines) * line_height - line_gap
+    y = y1 + max(0, (y2 - y1 - total_h) // 2)
+    for line in lines:
+        text_w = draw.textbbox((0, 0), line, font=font)[2]
+        draw.text((x1 + max(0, (x2 - x1 - text_w) // 2), y), line, fill=fill, font=font)
+        y += line_height
+
+
+def draw_dashed_line(
+    draw: ImageDraw.ImageDraw,
+    start: tuple[int, int],
+    end: tuple[int, int],
+    *,
+    fill: str = GRID,
+    width: int = 2,
+    dash: int = 12,
+    gap: int = 8,
+) -> None:
+    sx, sy = start
+    ex, ey = end
+    dx, dy = ex - sx, ey - sy
+    length = max(1, int((dx * dx + dy * dy) ** 0.5))
+    step = dash + gap
+    for offset in range(0, length, step):
+        t1 = offset / length
+        t2 = min(offset + dash, length) / length
+        p1 = (int(sx + dx * t1), int(sy + dy * t1))
+        p2 = (int(sx + dx * t2), int(sy + dy * t2))
+        draw.line([p1, p2], fill=fill, width=width)
+
+
+def draw_arrowhead(
+    draw: ImageDraw.ImageDraw,
+    start: tuple[int, int],
+    end: tuple[int, int],
+    *,
+    fill: str = TEAL,
+    size: int = 14,
+) -> None:
+    sx, sy = start
+    ex, ey = end
+    dx, dy = ex - sx, ey - sy
+    if abs(dx) >= abs(dy):
+        sign = 1 if dx >= 0 else -1
+        points = [(ex, ey), (ex - sign * size, ey - size // 2), (ex - sign * size, ey + size // 2)]
+    else:
+        sign = 1 if dy >= 0 else -1
+        points = [(ex, ey), (ex - size // 2, ey - sign * size), (ex + size // 2, ey - sign * size)]
+    draw.polygon(points, fill=fill)
+
+
+def academic_arrow(
+    draw: ImageDraw.ImageDraw,
+    start: tuple[int, int],
+    end: tuple[int, int],
+    label: str = "",
+    *,
+    color: str = TEAL,
+    width: int = 3,
+    dashed: bool = False,
+    label_pos: float = 0.5,
+    label_offset: int = -28,
+    font_size: int = 16,
+) -> None:
+    if dashed:
+        draw_dashed_line(draw, start, end, fill=color, width=width)
+    else:
+        draw.line([start, end], fill=color, width=width)
+    draw_arrowhead(draw, start, end, fill=color, size=15)
+    if label:
+        sx, sy = start
+        ex, ey = end
+        lx = int(sx + (ex - sx) * label_pos)
+        ly = int(sy + (ey - sy) * label_pos) + label_offset
+        font = load_font(font_size, True)
+        bbox = draw.textbbox((0, 0), label, font=font)
+        pad_x, pad_y = 8, 4
+        box = (lx - (bbox[2] - bbox[0]) // 2 - pad_x, ly - pad_y, lx + (bbox[2] - bbox[0]) // 2 + pad_x, ly + (bbox[3] - bbox[1]) + pad_y)
+        draw.rounded_rectangle(box, radius=6, fill=PAPER, outline="#bae6fd", width=1)
+        draw.text((box[0] + pad_x, box[1] + pad_y - 1), label, fill=INK, font=font)
+
+
+def academic_polyline_arrow(
+    draw: ImageDraw.ImageDraw,
+    points: list[tuple[int, int]],
+    label: str = "",
+    *,
+    color: str = TEAL,
+    width: int = 3,
+    dashed: bool = False,
+    label_at: tuple[int, int] | None = None,
+    font_size: int = 15,
+) -> None:
+    if len(points) < 2:
+        return
+    for start, end in zip(points, points[1:]):
+        if dashed:
+            draw_dashed_line(draw, start, end, fill=color, width=width)
+        else:
+            draw.line([start, end], fill=color, width=width)
+    draw_arrowhead(draw, points[-2], points[-1], fill=color, size=15)
+    if label:
+        lx, ly = label_at or points[len(points) // 2]
+        font = load_font(font_size, True)
+        bbox = draw.textbbox((0, 0), label, font=font)
+        pad_x, pad_y = 8, 4
+        box = (lx - (bbox[2] - bbox[0]) // 2 - pad_x, ly - pad_y, lx + (bbox[2] - bbox[0]) // 2 + pad_x, ly + (bbox[3] - bbox[1]) + pad_y)
+        draw.rounded_rectangle(box, radius=6, fill=PAPER, outline="#bae6fd", width=1)
+        draw.text((box[0] + pad_x, box[1] + pad_y - 1), label, fill=INK, font=font)
+
+
+def flow_node(
+    draw: ImageDraw.ImageDraw,
+    box: tuple[int, int, int, int],
+    title: str,
+    body: str = "",
+    *,
+    fill: str = PAPER,
+    outline: str = BLUE,
+    kind: str = "process",
+) -> None:
+    x1, y1, x2, y2 = box
+    if kind == "terminator":
+        draw.rounded_rectangle(box, radius=(y2 - y1) // 2, fill=fill, outline=outline, width=2)
+    elif kind == "decision":
+        cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+        draw.polygon([(cx, y1), (x2, cy), (cx, y2), (x1, cy)], fill=fill, outline=outline)
+        draw.line([(cx, y1), (x2, cy), (cx, y2), (x1, cy), (cx, y1)], fill=outline, width=2)
+    elif kind == "data":
+        draw.rectangle(box, fill=fill, outline=outline, width=2)
+        draw.line((x1 + 22, y1, x1 + 22, y2), fill=outline, width=2)
+    else:
+        draw.rounded_rectangle(box, radius=10, fill=fill, outline=outline, width=2)
+    title_font = load_font(20, True)
+    body_font = load_font(15)
+    if body:
+        draw_centered_wrapped(draw, title, (x1 + 14, y1 + 10, x2 - 14, y1 + 42), title_font)
+        draw_wrapped(draw, body, (x1 + 16, y1 + 48, x2 - 16, y2 - 12), body_font, fill="#334155", align="center")
+    else:
+        draw_centered_wrapped(draw, title, (x1 + 12, y1 + 8, x2 - 12, y2 - 8), title_font)
+
+
+def c4_box(
+    draw: ImageDraw.ImageDraw,
+    box: tuple[int, int, int, int],
+    title: str,
+    stereotype: str,
+    body: str,
+    *,
+    fill: str = PAPER,
+    outline: str = BLUE,
+) -> None:
+    x1, y1, x2, y2 = box
+    draw.rounded_rectangle(box, radius=8, fill=fill, outline=outline, width=2)
+    draw.rectangle((x1, y1, x2, y1 + 36), fill="#e0f2fe", outline=outline, width=2)
+    draw.text((x1 + 14, y1 + 8), title, fill=INK, font=load_font(19, True))
+    draw.text((x1 + 14, y1 + 43), stereotype, fill=MUTED, font=load_font(14, True))
+    draw_wrapped(draw, body, (x1 + 14, y1 + 68, x2 - 14, y2 - 12), load_font(14), fill="#334155")
+
+
+def c4_boundary(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], label: str, *, outline: str = GRID) -> None:
+    draw.rounded_rectangle(box, radius=16, outline=outline, width=2)
+    x1, y1, _, _ = box
+    draw.rounded_rectangle((x1 + 16, y1 - 18, x1 + 16 + max(190, len(label) * 10), y1 + 18), radius=8, fill=BG, outline=outline, width=1)
+    draw.text((x1 + 28, y1 - 10), label, fill=MUTED, font=load_font(16, True))
+
+
+def dfd_external(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], label: str, body: str = "") -> None:
+    x1, y1, x2, y2 = box
+    draw.rectangle(box, fill="#ffffff", outline=INK, width=2)
+    draw_centered_wrapped(draw, label, (x1 + 10, y1 + 10, x2 - 10, y1 + 48), load_font(20, True))
+    if body:
+        draw_wrapped(draw, body, (x1 + 14, y1 + 55, x2 - 14, y2 - 10), load_font(14), fill=MUTED, align="center")
+
+
+def dfd_process(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], number: str, label: str, body: str = "") -> None:
+    x1, y1, x2, y2 = box
+    draw.rounded_rectangle(box, radius=28, fill="#ecfdf5", outline=GREEN, width=3)
+    draw.ellipse((x1 + 16, y1 + 15, x1 + 58, y1 + 57), fill=PAPER, outline=GREEN, width=2)
+    draw_centered_wrapped(draw, number, (x1 + 16, y1 + 18, x1 + 58, y1 + 55), load_font(17, True), fill=GREEN)
+    draw_centered_wrapped(draw, label, (x1 + 68, y1 + 12, x2 - 16, y1 + 58), load_font(20, True))
+    if body:
+        draw_wrapped(draw, body, (x1 + 28, y1 + 70, x2 - 28, y2 - 14), load_font(14), fill=MUTED, align="center")
+
+
+def dfd_store(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], code: str, label: str) -> None:
+    x1, y1, x2, y2 = box
+    draw.rectangle(box, fill="#fff7ed", outline=ORANGE, width=2)
+    draw.line((x1 + 46, y1, x1 + 46, y2), fill=ORANGE, width=2)
+    draw.text((x1 + 12, y1 + 18), code, fill=ORANGE, font=load_font(18, True))
+    draw_centered_wrapped(draw, label, (x1 + 58, y1 + 12, x2 - 12, y2 - 12), load_font(16, True))
+
+
+def draw_actor(draw: ImageDraw.ImageDraw, cx: int, top: int, label: str) -> tuple[int, int]:
+    head_r = 22
+    draw.ellipse((cx - head_r, top, cx + head_r, top + 2 * head_r), outline=INK, width=3)
+    body_top = top + 2 * head_r
+    body_bottom = body_top + 70
+    draw.line((cx, body_top, cx, body_bottom), fill=INK, width=3)
+    draw.line((cx - 42, body_top + 22, cx + 42, body_top + 22), fill=INK, width=3)
+    draw.line((cx, body_bottom, cx - 38, body_bottom + 54), fill=INK, width=3)
+    draw.line((cx, body_bottom, cx + 38, body_bottom + 54), fill=INK, width=3)
+    draw_centered_wrapped(draw, label, (cx - 80, body_bottom + 62, cx + 80, body_bottom + 108), load_font(18, True))
+    return (cx, body_top + 30)
+
+
+def draw_use_case(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], label: str) -> None:
+    draw.ellipse(box, fill="#ffffff", outline=BLUE, width=3)
+    draw_centered_wrapped(draw, label, (box[0] + 18, box[1] + 14, box[2] - 18, box[3] - 14), load_font(17, True))
+
+
+def relation_line(
+    draw: ImageDraw.ImageDraw,
+    start: tuple[int, int],
+    end: tuple[int, int],
+    label: str = "",
+    *,
+    color: str = "#475569",
+    dashed: bool = False,
+) -> None:
+    if dashed:
+        draw_dashed_line(draw, start, end, fill=color, width=2)
+    else:
+        draw.line([start, end], fill=color, width=2)
+    if label:
+        sx, sy = start
+        ex, ey = end
+        mx, my = (sx + ex) // 2, (sy + ey) // 2
+        font = load_font(14, True)
+        bbox = draw.textbbox((0, 0), label, font=font)
+        draw.rectangle((mx - (bbox[2] - bbox[0]) // 2 - 5, my - 14, mx + (bbox[2] - bbox[0]) // 2 + 5, my + 10), fill=BG)
+        draw.text((mx - (bbox[2] - bbox[0]) // 2, my - 13), label, fill=color, font=font)
+
+
+def erd_table(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], name: str, fields: list[tuple[str, str]]) -> None:
+    x1, y1, x2, y2 = box
+    draw.rectangle(box, fill="#ffffff", outline=INK, width=2)
+    draw.rectangle((x1, y1, x2, y1 + 40), fill="#dbeafe", outline=INK, width=2)
+    draw.text((x1 + 12, y1 + 9), name, fill=INK, font=load_font(19, True))
+    y = y1 + 52
+    for marker, field in fields:
+        if y > y2 - 24:
+            draw.text((x1 + 14, y), "...", fill=MUTED, font=load_font(14, True))
+            break
+        if marker:
+            badge_w = max(30, draw.textbbox((0, 0), marker, font=load_font(12, True))[2] + 10)
+            draw.rounded_rectangle((x1 + 10, y - 2, x1 + 10 + badge_w, y + 18), radius=5, fill="#f1f5f9", outline=GRID, width=1)
+            draw.text((x1 + 15, y), marker, fill=INK, font=load_font(12, True))
+            tx = x1 + 20 + badge_w
+        else:
+            tx = x1 + 16
+        draw.text((tx, y - 1), field, fill="#334155", font=load_font(15))
+        y += 25
+
+
+def erd_card_label_position(point: tuple[int, int], other: tuple[int, int], role: str) -> tuple[int, int]:
+    x, y = point
+    dx = other[0] - x
+    dy = other[1] - y
+    if abs(dx) >= abs(dy):
+        if dx >= 0:
+            return (x + 8, y - 22) if role == "start" else (x - 44, y - 22)
+        return (x - 44, y - 22) if role == "start" else (x + 8, y - 22)
+    if dy >= 0:
+        return (x + 8, y + 4) if role == "start" else (x + 8, y - 24)
+    return (x + 8, y - 24) if role == "start" else (x + 8, y + 4)
+
+
+def erd_relationship(
+    draw: ImageDraw.ImageDraw,
+    start: tuple[int, int],
+    end: tuple[int, int],
+    start_card: str,
+    end_card: str,
+    label: str = "",
+    *,
+    dashed: bool = False,
+) -> None:
+    color = "#334155"
+    if dashed:
+        draw_dashed_line(draw, start, end, fill=color, width=2)
+    else:
+        draw.line([start, end], fill=color, width=2)
+    sx, sy = start
+    ex, ey = end
+    font = load_font(13, True)
+    draw.text(erd_card_label_position(start, end, "start"), start_card, fill=color, font=font)
+    draw.text(erd_card_label_position(end, start, "end"), end_card, fill=color, font=font)
+    if label:
+        mx, my = (sx + ex) // 2, (sy + ey) // 2
+        bbox = draw.textbbox((0, 0), label, font=font)
+        draw.rectangle((mx - (bbox[2] - bbox[0]) // 2 - 5, my - 16, mx + (bbox[2] - bbox[0]) // 2 + 5, my + 8), fill=BG)
+        draw.text((mx - (bbox[2] - bbox[0]) // 2, my - 15), label, fill=color, font=font)
+
+
+def erd_polyline_relationship(
+    draw: ImageDraw.ImageDraw,
+    points: list[tuple[int, int]],
+    start_card: str,
+    end_card: str,
+    label: str = "",
+    *,
+    dashed: bool = False,
+    label_at: tuple[int, int] | None = None,
+) -> None:
+    if len(points) < 2:
+        return
+    color = "#334155"
+    for start, end in zip(points, points[1:]):
+        if dashed:
+            draw_dashed_line(draw, start, end, fill=color, width=2)
+        else:
+            draw.line([start, end], fill=color, width=2)
+    font = load_font(14, True)
+    draw.text(erd_card_label_position(points[0], points[1], "start"), start_card, fill=color, font=font)
+    draw.text(erd_card_label_position(points[-1], points[-2], "end"), end_card, fill=color, font=font)
+    if label:
+        lx, ly = label_at or points[len(points) // 2]
+        bbox = draw.textbbox((0, 0), label, font=font)
+        draw.rectangle((lx - (bbox[2] - bbox[0]) // 2 - 5, ly - 16, lx + (bbox[2] - bbox[0]) // 2 + 5, ly + 8), fill=BG)
+        draw.text((lx - (bbox[2] - bbox[0]) // 2, ly - 15), label, fill=color, font=font)
+
+
 def save_diagram(name: str, title: str, boxes: list[tuple[str, str, tuple[int, int, int, int], str]], arrows: list[tuple[tuple[int, int], tuple[int, int], str]]):
     img = PILImage.new("RGB", (1600, 1000), "#f8fafc")
     draw = ImageDraw.Draw(img)
-    draw.rectangle((0, 0, 1600, 96), fill="#0f172a")
-    draw.text((44, 28), title, fill="white", font=load_font(34, True))
+    draw_diagram_title(draw, 1600, title)
     for start, end, label in arrows:
-        arrow(draw, start, end)
-        if label:
-            mx = (start[0] + end[0]) // 2
-            my = (start[1] + end[1]) // 2
-            draw.rounded_rectangle((mx - 80, my - 18, mx + 80, my + 18), radius=8, fill="#ecfeff", outline="#67e8f9")
-            draw.text((mx - 72, my - 11), label, fill="#155e75", font=load_font(14, True))
+        academic_arrow(draw, start, end, label, color=TEAL, width=3, font_size=14)
     for title_text, subtitle, box, color in boxes:
         rounded_box(draw, box, title_text, subtitle, fill=color)
     img.save(DIAGRAMS / name)
@@ -445,6 +823,304 @@ def save_frontend_route_readable_diagram() -> None:
         font=load_font(21),
     )
     img.save(DIAGRAMS / "66_frontend_route_layout_architecture.png")
+
+
+def create_high_level_architecture() -> None:
+    img = PILImage.new("RGB", (1900, 1150), BG)
+    draw = ImageDraw.Draw(img)
+    draw_diagram_title(draw, 1900, "CareerCompass High-Level Architecture", "C4-style container view with client, application, AI, storage, and observability boundaries.")
+    c4_boundary(draw, (370, 150, 1490, 800), "CareerCompass platform")
+    c4_boundary(draw, (370, 850, 1490, 1060), "Data and storage")
+    c4_boundary(draw, (1535, 150, 1835, 800), "External systems")
+    c4_boundary(draw, (1535, 850, 1835, 1060), "Observability")
+
+    c4_box(draw, (70, 240, 310, 380), "Student/Admin", "[Person]", "Uses browser UI for CV analysis, jobs, gaps, and administration.", fill="#f8fafc", outline=INK)
+    c4_box(draw, (410, 300, 660, 460), "Nginx", "[Container]", "Public HTTP gateway and reverse proxy.", fill="#e0f2fe")
+    c4_box(draw, (760, 190, 1080, 360), "React + Vite", "[Container]", "Student, admin, status, and preview route groups.", fill="#dbeafe")
+    c4_box(draw, (760, 470, 1080, 650), "Laravel API", "[Container]", "Auth, CV upload, jobs, applications, gap analysis, admin APIs.", fill="#ecfdf5", outline=GREEN)
+    c4_box(draw, (1180, 330, 1440, 500), "AI CV Analyzer", "[Container]", "FastAPI service for parsing, extraction, classification, and hybrid matching.", fill="#fce7f3", outline=PURPLE)
+    c4_box(draw, (1180, 570, 1440, 735), "AI Job Miner", "[Container]", "FastAPI/Scrapy service for adapters, quality gates, and import callbacks.", fill="#ede9fe", outline=PURPLE)
+    c4_box(draw, (410, 885, 680, 1030), "MySQL", "[Database]", "Users, profiles, skills, jobs, applications, sources, and analyses.", fill="#fff7ed", outline=ORANGE)
+    c4_box(draw, (770, 885, 1010, 1030), "MinIO", "[Object store]", "Private uploaded CV objects.", fill="#cffafe", outline=TEAL)
+    c4_box(draw, (1100, 885, 1410, 1030), "Queue Workers", "[Container]", "Background CV, email, and scraping work.", fill="#dcfce7", outline=GREEN)
+    c4_box(draw, (1565, 350, 1810, 510), "Job Sources", "[External]", "Demo/API/HTML sources used by the miner.", fill="#fef3c7", outline=ORANGE)
+    c4_box(draw, (1565, 900, 1810, 1030), "Prometheus + Grafana", "[Monitoring]", "Metrics collection and dashboards.", fill="#e0f2fe", outline=BLUE)
+
+    academic_arrow(draw, (310, 310), (410, 380), "HTTPS")
+    academic_arrow(draw, (660, 350), (760, 275), "static UI")
+    academic_arrow(draw, (920, 360), (920, 470), "API calls")
+    academic_arrow(draw, (1080, 535), (1180, 410), "parse / match")
+    academic_arrow(draw, (1080, 605), (1180, 650), "scrape jobs")
+    academic_arrow(draw, (915, 650), (545, 885), "SQL")
+    academic_arrow(draw, (960, 650), (890, 885), "CV files")
+    academic_arrow(draw, (1080, 585), (1255, 885), "dispatch", color=GREEN)
+    academic_arrow(draw, (1440, 655), (1565, 430), "fetch")
+    academic_arrow(draw, (1440, 445), (1565, 960), "metrics", dashed=True, color=BLUE, label_pos=0.64)
+    academic_arrow(draw, (1080, 515), (1565, 960), "metrics", dashed=True, color=BLUE, label_pos=0.68)
+    img.save(DIAGRAMS / "01_high_level_architecture.png")
+
+
+def create_docker_deployment_diagram() -> None:
+    img = PILImage.new("RGB", (1900, 1150), BG)
+    draw = ImageDraw.Draw(img)
+    draw_diagram_title(draw, 1900, "Docker Compose Deployment View", "Container and volume relationships inside the local deployment network.")
+    c4_boundary(draw, (50, 150, 1850, 815), "Docker Compose application network")
+    c4_boundary(draw, (50, 855, 1850, 1065), "Stateful services and observability")
+    c4_box(draw, (95, 285, 330, 430), "nginx", "[edge container]", "Host port 80 reverse proxy.", fill="#e0f2fe")
+    c4_box(draw, (450, 205, 700, 350), "frontend", "[static container]", "Built React assets.", fill="#dbeafe")
+    c4_box(draw, (825, 205, 1095, 350), "backend-api", "[Laravel PHP-FPM]", "HTTP API and application logic.", fill="#ecfdf5", outline=GREEN)
+    c4_box(draw, (1215, 205, 1515, 350), "backend workers", "[queue workers]", "default, high, AI, email, and scraping queues.", fill="#dcfce7", outline=GREEN)
+    c4_box(draw, (450, 560, 735, 710), "ai-cv-analyzer", "[FastAPI]", "CV parse and hybrid-match endpoints.", fill="#fce7f3", outline=PURPLE)
+    c4_box(draw, (855, 560, 1140, 710), "ai-job-miner", "[FastAPI]", "Scraping adapters and import callbacks.", fill="#ede9fe", outline=PURPLE)
+    c4_box(draw, (1260, 560, 1515, 710), "external web/API", "[outside Docker]", "Job boards and demo sources.", fill="#fef3c7", outline=ORANGE)
+    c4_box(draw, (115, 900, 365, 1035), "db", "[MySQL 8.0]", "Relational system of record.", fill="#fff7ed", outline=ORANGE)
+    c4_box(draw, (485, 900, 735, 1035), "minio", "[S3-compatible]", "Private CV object storage.", fill="#cffafe", outline=TEAL)
+    c4_box(draw, (855, 900, 1115, 1035), "prometheus", "[metrics]", "Scrapes runtime metrics.", fill="#e0f2fe", outline=BLUE)
+    c4_box(draw, (1235, 900, 1495, 1035), "grafana", "[dashboards]", "Reads Prometheus data.", fill="#e0f2fe", outline=BLUE)
+
+    academic_arrow(draw, (330, 355), (450, 280), "serve")
+    academic_arrow(draw, (700, 280), (825, 280), "API")
+    academic_arrow(draw, (1095, 280), (1215, 280), "queue jobs", color=GREEN)
+    academic_arrow(draw, (960, 350), (590, 560), "parse CV")
+    academic_arrow(draw, (980, 350), (1000, 560), "scrape")
+    academic_arrow(draw, (1140, 635), (1260, 635), "fetch")
+    academic_arrow(draw, (960, 350), (240, 900), "SQL", label_pos=0.35)
+    academic_arrow(draw, (990, 350), (610, 900), "S3")
+    academic_arrow(draw, (1515, 280), (990, 560), "run")
+    academic_arrow(draw, (985, 710), (985, 900), "metrics", dashed=True, color=BLUE)
+    academic_arrow(draw, (1115, 965), (1235, 965), "query", color=BLUE)
+    img.save(DIAGRAMS / "02_docker_deployment.png")
+
+
+def create_dfd_level_0() -> None:
+    img = PILImage.new("RGB", (1800, 1100), BG)
+    draw = ImageDraw.Draw(img)
+    draw_diagram_title(draw, 1800, "DFD Level 0 Context Diagram", "External entities exchange data flows with the CareerCompass system boundary.")
+    draw.rounded_rectangle((485, 185, 1265, 900), radius=18, outline=GRID, width=2)
+    draw.text((510, 200), "CareerCompass system boundary", fill=MUTED, font=load_font(17, True))
+    dfd_external(draw, (90, 260, 370, 420), "Student", "CV, profile actions, job and gap requests")
+    dfd_external(draw, (90, 620, 370, 780), "Administrator", "Job/source/user operations and diagnostics")
+    dfd_process(draw, (620, 390, 1125, 650), "0", "CareerCompass Platform", "Processes CVs, stores profiles, ranks jobs, analyzes gaps, imports jobs, and reports status.")
+    dfd_external(draw, (1410, 240, 1695, 405), "External Job Sources", "API, HTML, and demo job data")
+    dfd_external(draw, (1410, 635, 1695, 800), "AI Services", "CV parsing and hybrid match support")
+    dfd_store(draw, (700, 745, 1045, 830), "D", "Persistent data stores")
+
+    academic_arrow(draw, (370, 315), (620, 455), "CV/profile/job requests")
+    academic_arrow(draw, (620, 545), (370, 370), "recommendations, gaps, status")
+    academic_arrow(draw, (370, 700), (620, 575), "admin commands")
+    academic_arrow(draw, (620, 625), (370, 760), "dashboards, results")
+    academic_arrow(draw, (1125, 455), (1410, 320), "source queries")
+    academic_arrow(draw, (1410, 365), (1125, 520), "job data")
+    academic_arrow(draw, (1125, 600), (1410, 705), "parse/match requests")
+    academic_arrow(draw, (1410, 750), (1125, 640), "analysis results")
+    academic_arrow(draw, (875, 650), (875, 745), "read/write")
+    img.save(DIAGRAMS / "03_dfd_level_0.png")
+
+
+def create_dfd_level_1() -> None:
+    img = PILImage.new("RGB", (1900, 1250), BG)
+    draw = ImageDraw.Draw(img)
+    draw_diagram_title(draw, 1900, "DFD Level 1 Process Diagram", "Major CareerCompass processes, data stores, and labeled data flows.")
+    draw.rounded_rectangle((350, 145, 1555, 1060), radius=18, outline=GRID, width=2)
+    draw.text((375, 160), "CareerCompass system boundary", fill=MUTED, font=load_font(17, True))
+
+    dfd_external(draw, (60, 290, 280, 430), "Student", "Authenticated user")
+    dfd_external(draw, (60, 705, 280, 845), "Admin", "Operator")
+    dfd_external(draw, (1630, 260, 1840, 405), "AI Analyzer", "Parse and match")
+    dfd_external(draw, (1630, 720, 1840, 865), "Job Sources", "Public/demo sources")
+
+    dfd_process(draw, (430, 230, 720, 390), "1.0", "Authenticate and Manage Profile", "Tokens, roles, profile bootstrap.")
+    dfd_process(draw, (820, 230, 1130, 390), "2.0", "Process CV", "Validate upload, store object, call analyzer, normalize evidence.")
+    dfd_process(draw, (1210, 230, 1485, 390), "3.0", "Rank Jobs", "Laravel title, skill-overlap, and seniority scoring.")
+    dfd_process(draw, (820, 520, 1130, 690), "4.0", "Analyze Skill Gap", "Gap service calls /api/hybrid-match when available.")
+    dfd_process(draw, (1210, 720, 1485, 890), "5.0", "Import Jobs", "Queue scraping, validate payload, deduplicate, sync skills.")
+    dfd_process(draw, (430, 720, 720, 890), "6.0", "Track Applications", "Save and update job application status.")
+
+    dfd_store(draw, (455, 1010, 730, 1095), "D1", "Users and profiles")
+    dfd_store(draw, (785, 1010, 1065, 1095), "D2", "CV analyses and skills")
+    dfd_store(draw, (1115, 1010, 1395, 1095), "D3", "Jobs, sources, roles")
+    dfd_store(draw, (1425, 1010, 1665, 1095), "D4", "Applications")
+
+    academic_arrow(draw, (280, 350), (430, 310), "credentials / profile")
+    academic_arrow(draw, (720, 300), (820, 300), "authorized upload")
+    academic_arrow(draw, (975, 390), (975, 520), "profile evidence")
+    academic_arrow(draw, (1130, 605), (1630, 335), "/api/hybrid-match")
+    academic_arrow(draw, (1630, 365), (1130, 655), "scores and gaps", dashed=True)
+    academic_arrow(draw, (1130, 305), (1210, 305), "stored profile + jobs")
+    academic_polyline_arrow(draw, [(1485, 305), (1540, 305), (1540, 205), (240, 205), (240, 360), (280, 360)], "ranked jobs", dashed=True, label_at=(820, 205))
+    academic_polyline_arrow(draw, [(280, 775), (345, 775), (345, 935), (1210, 935), (1210, 805)], "run/test sources", label_at=(720, 935))
+    academic_arrow(draw, (1485, 805), (1630, 790), "source request")
+    academic_arrow(draw, (1630, 835), (1485, 860), "job payloads")
+    academic_arrow(draw, (720, 805), (820, 640), "selected job")
+    academic_arrow(draw, (280, 805), (430, 805), "save/update")
+    academic_arrow(draw, (575, 890), (575, 1010), "read/write")
+    academic_arrow(draw, (975, 690), (925, 1010), "analysis data")
+    academic_arrow(draw, (1350, 890), (1260, 1010), "imported jobs")
+    academic_polyline_arrow(draw, [(575, 890), (575, 960), (1545, 960), (1545, 1010)], "application record", label_at=(1270, 960))
+    img.save(DIAGRAMS / "04_dfd_level_1.png")
+
+
+def create_use_case_diagram() -> None:
+    img = PILImage.new("RGB", (1800, 1100), BG)
+    draw = ImageDraw.Draw(img)
+    draw_diagram_title(draw, 1800, "UML Use Case Diagram", "Actors interact with use cases inside the CareerCompass system boundary.")
+    student_anchor = draw_actor(draw, 185, 250, "Student")
+    admin_anchor = draw_actor(draw, 185, 680, "Admin")
+    draw.rectangle((415, 155, 1335, 965), outline=INK, width=3)
+    draw.rectangle((415, 155, 690, 197), fill=BG, outline=INK, width=2)
+    draw.text((438, 166), "CareerCompass", fill=INK, font=load_font(21, True))
+
+    use_cases = {
+        "Register / login": (500, 225, 760, 315),
+        "Upload CV": (815, 225, 1075, 315),
+        "View parsed profile": (500, 370, 760, 460),
+        "View job list": (815, 370, 1075, 460),
+        "Track applications": (500, 515, 760, 605),
+        "Analyze skill gap": (815, 515, 1075, 605),
+        "Manage jobs": (500, 705, 760, 795),
+        "Manage sources / targets": (815, 705, 1115, 795),
+        "Monitor dashboard": (500, 850, 760, 940),
+        "Import scraped jobs": (885, 850, 1190, 940),
+    }
+    for label, box in use_cases.items():
+        draw_use_case(draw, box, label)
+
+    dfd_external(draw, (1480, 290, 1710, 420), "AI CV Analyzer", "External service")
+    dfd_external(draw, (1480, 515, 1710, 645), "AI Matching", "/api/hybrid-match")
+    dfd_external(draw, (1480, 745, 1710, 875), "Job Sources", "External data")
+
+    for end in [(500, 270), (815, 270), (500, 415), (815, 415), (500, 560), (815, 560)]:
+        relation_line(draw, student_anchor, end)
+    for end in [(500, 750), (815, 750), (500, 895), (885, 895)]:
+        relation_line(draw, admin_anchor, end)
+    relation_line(draw, (1075, 270), (1480, 355), "<<include>> parse", dashed=True)
+    relation_line(draw, (1075, 560), (1480, 580), "<<include>> match", dashed=True)
+    relation_line(draw, (1190, 895), (1480, 810), "fetches", dashed=True)
+    relation_line(draw, (1115, 750), (1480, 810), "configures", dashed=True)
+    img.save(DIAGRAMS / "05_use_case_diagram.png")
+
+
+def create_frontend_route_layout_architecture() -> None:
+    img = PILImage.new("RGB", (1800, 1100), BG)
+    draw = ImageDraw.Draw(img)
+    draw_diagram_title(draw, 1800, "Frontend Route and Layout Architecture", "React Router tree grouped by layout shell and guard behavior.")
+    c4_boundary(draw, (80, 155, 1720, 970), "frontend/src/App.jsx route tree")
+    c4_box(draw, (160, 230, 460, 385), "App Shell", "[RouterProvider]", "Theme, auth provider, navbar/footer layout, and route outlet.", fill="#e0f2fe")
+    c4_box(draw, (610, 170, 940, 315), "Public Layout", "[public routes]", "Home, login, register, status, policies, and landing content.", fill="#dbeafe")
+    c4_box(draw, (610, 380, 940, 535), "Student Layout", "[ProtectedRoute]", "Dashboard, CV upload, jobs, job detail, gap analysis, applications, profile.", fill="#ecfdf5", outline=GREEN)
+    c4_box(draw, (610, 590, 940, 745), "Preview Modules", "[future/demo routes]", "CV builder, mock interview, learning paths, planner, tools hub.", fill="#fff7ed", outline=ORANGE)
+    c4_box(draw, (610, 800, 940, 925), "Admin Layout", "[AdminRoute]", "Dashboard, jobs, users, sources, target roles, diagnostics.", fill="#ede9fe", outline=PURPLE)
+    c4_box(draw, (1120, 275, 1450, 430), "Route Guards", "[GuestRoute / ProtectedRoute]", "Redirects unauthenticated users and prevents role leakage.", fill="#fee2e2", outline=RED)
+    c4_box(draw, (1120, 540, 1450, 700), "Shared UI Layer", "[components/hooks/i18n]", "Reusable cards, forms, tables, localization strings, and loading/error states.", fill="#cffafe", outline=TEAL)
+    c4_box(draw, (1120, 785, 1450, 920), "Evidence Screens", "[screenshots]", "Student, admin, status, and preview figures referenced in Chapter 5.", fill="#f8fafc", outline=GRID)
+
+    academic_arrow(draw, (460, 305), (610, 240), "routes")
+    academic_arrow(draw, (460, 305), (610, 455), "auth")
+    academic_arrow(draw, (460, 305), (610, 665), "preview")
+    academic_arrow(draw, (460, 305), (610, 860), "admin")
+    academic_arrow(draw, (940, 455), (1120, 350), "guard")
+    academic_arrow(draw, (940, 860), (1120, 350), "role guard", label_pos=0.40)
+    academic_arrow(draw, (940, 455), (1120, 620), "components")
+    academic_arrow(draw, (940, 860), (1120, 620), "components")
+    academic_arrow(draw, (1285, 700), (1285, 785), "rendered evidence", color=BLUE)
+    img.save(DIAGRAMS / "66_frontend_route_layout_architecture.png")
+
+
+def create_frontend_api_auth_flow() -> None:
+    img = PILImage.new("RGB", (1800, 1100), BG)
+    draw = ImageDraw.Draw(img)
+    draw_diagram_title(draw, 1800, "Frontend API and Authentication Flow", "Layered API client path from page state to Laravel response handling.")
+    c4_boundary(draw, (80, 150, 900, 930), "React frontend")
+    c4_boundary(draw, (1020, 150, 1620, 930), "Laravel API")
+    flow_node(draw, (150, 230, 420, 350), "Page / Component", "Calls endpoint modules and updates local UI state.", fill="#dbeafe")
+    flow_node(draw, (560, 230, 830, 350), "API Wrappers", "jobsAPI, cvAPI, authAPI, adminAPI centralize paths.", fill="#ecfdf5")
+    flow_node(draw, (560, 480, 830, 625), "Axios Client", "Base URL, JSON headers, request ID, bearer token, retry rules.", fill="#fef3c7")
+    flow_node(draw, (150, 480, 420, 625), "AuthContext", "Login/register persist token and user; refreshUser reloads /user.", fill="#cffafe")
+    flow_node(draw, (150, 750, 420, 865), "Browser Storage", "Auth token and user snapshot for session continuity.", fill="#f8fafc", kind="data")
+    flow_node(draw, (1085, 250, 1385, 380), "Route + Middleware", "/api and /api/v1 groups apply auth, admin, throttle, and scraper token guards.", fill="#ede9fe")
+    flow_node(draw, (1085, 520, 1385, 655), "Controller / Resource", "Validates, delegates to services, and returns JSON resources.", fill="#ecfdf5")
+    flow_node(draw, (1085, 770, 1385, 885), "JSON Response", "Data, validation errors, or 401/403 status.", fill="#fee2e2")
+
+    academic_arrow(draw, (420, 290), (560, 290), "call endpoint")
+    academic_arrow(draw, (695, 350), (695, 480), "request config")
+    academic_arrow(draw, (560, 550), (420, 550), "401 clears state", dashed=True, color=RED)
+    academic_arrow(draw, (285, 480), (285, 350), "user/token")
+    academic_arrow(draw, (285, 625), (285, 750), "persist")
+    academic_arrow(draw, (830, 552), (1085, 315), "HTTP + bearer")
+    academic_arrow(draw, (1235, 380), (1235, 520), "dispatch")
+    academic_arrow(draw, (1235, 655), (1235, 770), "format")
+    academic_arrow(draw, (1085, 830), (830, 560), "JSON/401", dashed=True, color=RED, label_pos=0.55)
+    img.save(DIAGRAMS / "67_frontend_api_auth_flow.png")
+
+
+def create_laravel_backend_request_lifecycle() -> None:
+    img = PILImage.new("RGB", (1800, 1100), BG)
+    draw = ImageDraw.Draw(img)
+    draw_diagram_title(draw, 1800, "Laravel Backend Request Lifecycle", "Request pipeline with synchronous response path and asynchronous worker branch.")
+    c4_boundary(draw, (80, 150, 1660, 765), "Synchronous API path")
+    c4_boundary(draw, (520, 815, 1660, 1015), "Asynchronous branch")
+    steps = [
+        ((125, 305, 345, 430), "HTTP Request", "Browser, scraper service, health probe, or admin action.", "#dbeafe"),
+        ((455, 305, 675, 430), "Routes", "/api and /api/v1 route groups.", "#ecfdf5"),
+        ((785, 305, 1005, 430), "Middleware", "Sanctum auth, admin, scraper token, throttle, request ID.", "#fee2e2"),
+        ((1115, 305, 1335, 430), "Form Request", "Input validation and authorization rules.", "#fef3c7"),
+        ((1445, 305, 1625, 430), "Controller", "Coordinates endpoint behavior.", "#ede9fe"),
+        ((1115, 560, 1335, 690), "Service Layer", "CV, gaps, applications, scraper client, skill sync.", "#cffafe"),
+        ((785, 560, 1005, 690), "Model / IO", "Eloquent, MySQL, MinIO, AI services.", "#dcfce7"),
+        ((455, 560, 675, 690), "JSON Resource", "Shapes response payload.", "#e0f2fe"),
+    ]
+    for box, title, body, fill in steps:
+        flow_node(draw, box, title, body, fill=fill)
+    flow_node(draw, (605, 860, 875, 970), "Queue Job", "CV processing, scraping, email, or retryable background work.", fill="#dcfce7")
+    flow_node(draw, (1035, 860, 1305, 970), "Worker", "Runs queued job with timeout and retry policy.", fill="#dcfce7")
+    flow_node(draw, (1450, 860, 1615, 970), "Status / Events", "Persisted counters and pollable completion state.", fill="#f8fafc", kind="data")
+
+    for start, end, label in [
+        ((345, 368), (455, 368), "match"),
+        ((675, 368), (785, 368), "guard"),
+        ((1005, 368), (1115, 368), "validate"),
+        ((1335, 368), (1445, 368), "invoke"),
+        ((1535, 430), (1225, 560), "delegate"),
+        ((1115, 625), (1005, 625), "persist/call"),
+        ((785, 625), (675, 625), "resource"),
+        ((455, 625), (235, 430), "JSON"),
+    ]:
+        academic_arrow(draw, start, end, label)
+    academic_arrow(draw, (1225, 690), (740, 860), "dispatch long work", color=GREEN)
+    academic_arrow(draw, (875, 915), (1035, 915), "queue:work", color=GREEN)
+    academic_arrow(draw, (1305, 915), (1450, 915), "update", color=GREEN)
+    academic_arrow(draw, (1535, 860), (900, 690), "poll/read", dashed=True, color=BLUE, label_pos=0.35)
+    img.save(DIAGRAMS / "68_laravel_backend_request_lifecycle.png")
+
+
+def create_database_relationship_rationale() -> None:
+    img = PILImage.new("RGB", (1800, 1100), BG)
+    draw = ImageDraw.Draw(img)
+    draw_diagram_title(draw, 1800, "Database Relationship Rationale", "Normalized groups preserve explainability for profile, skill, job, application, and scraping evidence.")
+    c4_boundary(draw, (80, 160, 540, 850), "Identity and profile evidence")
+    c4_boundary(draw, (650, 160, 1190, 850), "Reusable skill graph")
+    c4_boundary(draw, (1300, 160, 1715, 850), "Jobs and operations")
+    c4_box(draw, (135, 235, 455, 385), "users", "[root identity]", "Owns authentication role and account state.", fill="#dbeafe")
+    c4_box(draw, (135, 475, 455, 625), "user_profiles / experiences", "[profile evidence]", "Stores headline, seniority, domain, contact info, and experience records.", fill="#ecfdf5", outline=GREEN)
+    c4_box(draw, (135, 700, 455, 815), "cv_analyses", "[analysis evidence]", "Stores CV file metadata, parsing status, predicted role, and raw output.", fill="#fce7f3", outline=PURPLE)
+    c4_box(draw, (740, 250, 1060, 400), "skills", "[canonical terms]", "Shared technical and soft skill vocabulary.", fill="#fff7ed", outline=ORANGE)
+    c4_box(draw, (700, 540, 900, 690), "user_skills", "[pivot]", "Links users to skills with confidence and evidence.", fill="#f8fafc", outline=GRID)
+    c4_box(draw, (960, 540, 1160, 690), "job_skills", "[pivot]", "Links jobs to required or nice-to-have skills.", fill="#f8fafc", outline=GRID)
+    c4_box(draw, (1360, 240, 1660, 395), "job_postings", "[opportunities]", "Imported or seeded jobs; references source when known.", fill="#ede9fe", outline=PURPLE)
+    c4_box(draw, (1360, 500, 1660, 650), "applications", "[tracking]", "User-job status, notes, and applied timestamp.", fill="#cffafe", outline=TEAL)
+    c4_box(draw, (1360, 735, 1660, 835), "scraping_* / target roles", "[operations]", "Sources, jobs, failures, and search-intent configuration.", fill="#fee2e2", outline=RED)
+
+    academic_arrow(draw, (455, 310), (700, 615), "1 to many skills", color=GREEN)
+    academic_arrow(draw, (900, 615), (740, 340), "FK skill_id", color=ORANGE)
+    academic_arrow(draw, (1060, 340), (1160, 615), "FK skill_id", color=ORANGE)
+    academic_arrow(draw, (1160, 615), (1360, 320), "job requirements", color=PURPLE)
+    academic_arrow(draw, (455, 548), (700, 615), "profile evidence", color=GREEN, dashed=True)
+    academic_arrow(draw, (455, 758), (740, 340), "extracted terms", color=PURPLE, dashed=True, label_pos=0.35)
+    academic_arrow(draw, (455, 310), (1360, 575), "user applies to job", color=TEAL, label_pos=0.70)
+    academic_arrow(draw, (1510, 395), (1510, 500), "1 to many")
+    academic_arrow(draw, (1510, 735), (1510, 650), "imports / diagnostics", color=RED)
+    draw.text((105, 915), "Rationale: identity is separated from extracted evidence; skills are reusable pivots; scraping operations remain operational metadata, not user profile data.", fill=MUTED, font=load_font(19, True))
+    img.save(DIAGRAMS / "69_database_relationship_rationale.png")
 
 
 def create_dataset_evidence_diagram() -> None:
@@ -642,77 +1318,10 @@ def create_colab_ner_loss_curve_diagram() -> None:
 
 
 def create_frontend_backend_database_diagrams() -> None:
-    save_frontend_route_readable_diagram()
-
-    save_diagram(
-        "67_frontend_api_auth_flow.png",
-        "Frontend API and Authentication Flow",
-        [
-            ("React Page", "Page/component calls endpoint wrappers such as jobsAPI, cvAPI, or adminAPI.", (70, 150, 360, 290), "#dbeafe"),
-            ("API Wrapper", "frontend/src/api/endpoints.js and related modules keep request paths centralized.", (500, 150, 790, 290), "#ecfdf5"),
-            ("Axios Client", "client.js resolves base URL, adds JSON defaults, request ID, and bearer token.", (930, 150, 1230, 290), "#fef3c7"),
-            ("Laravel Route", "/api and /api/v1 routes apply middleware, validation, controllers, and resources.", (930, 430, 1230, 590), "#ede9fe"),
-            ("Response Handling", "JSON data updates page state; 401 clears auth storage and redirects to login.", (500, 430, 790, 590), "#fee2e2"),
-            ("AuthContext", "Login/register persist token and user; refreshUser reloads /user data after changes.", (70, 430, 360, 590), "#cffafe"),
-            ("Safe Retry", "GET/HEAD requests retry up to two times on network/server errors.", (500, 700, 790, 840), "#dcfce7"),
-        ],
-        [
-            ((360, 220), (500, 220), "call"),
-            ((790, 220), (930, 220), "request"),
-            ((1080, 290), (1080, 430), "HTTP"),
-            ((930, 510), (790, 510), "JSON/401"),
-            ((500, 510), (360, 510), "state"),
-            ((645, 590), (645, 700), "GET retry"),
-        ],
-    )
-
-    save_diagram(
-        "68_laravel_backend_request_lifecycle.png",
-        "Laravel Backend Request Lifecycle",
-        [
-            ("HTTP Request", "Browser, scraper service, health probe, or admin action.", (70, 120, 350, 250), "#dbeafe"),
-            ("Route Groups", "/api and /api/v1 expose public, guest, auth, admin, and internal scraper routes.", (470, 120, 780, 250), "#ecfdf5"),
-            ("Middleware", "auth:sanctum, admin, scraper.token, throttle, signed URLs, request ID/logging.", (900, 120, 1230, 250), "#fee2e2"),
-            ("Form Request", "LoginRequest, CvUploadRequest, StoreApplicationRequest, scrape/import requests.", (470, 360, 780, 510), "#fef3c7"),
-            ("Controller", "Auth, CV, jobs, gaps, applications, admin, scraping import, health.", (900, 360, 1230, 510), "#ede9fe"),
-            ("Service Layer", "CV processing/storage, gap analysis, application tracker, scraper client, skill sync.", (470, 640, 780, 790), "#cffafe"),
-            ("Persistence/IO", "Eloquent/MySQL, MinIO, queues, AI CV Analyzer, AI Job Miner.", (900, 640, 1230, 790), "#dcfce7"),
-            ("JSON Resource", "UserResource, JobResource, GapAnalysisResource, ApplicationResource.", (1270, 360, 1530, 510), "#e0f2fe"),
-        ],
-        [
-            ((350, 185), (470, 185), "route"),
-            ((780, 185), (900, 185), "guard"),
-            ((1065, 250), (625, 360), "validate"),
-            ((780, 435), (900, 435), "handle"),
-            ((1230, 435), (1270, 435), "format"),
-            ((1065, 510), (625, 640), "services"),
-            ((780, 715), (900, 715), "persist"),
-            ((1065, 640), (1065, 510), "async/status"),
-        ],
-    )
-
-    save_diagram(
-        "69_database_relationship_rationale.png",
-        "Database Relationship Rationale",
-        [
-            ("Identity", "users plus personal_access_tokens hold account identity and API tokens.", (70, 130, 360, 260), "#dbeafe"),
-            ("Profile Evidence", "user_profiles, user_experiences, cv_analyses preserve parsed CV evidence.", (470, 130, 820, 300), "#ecfdf5"),
-            ("Skill Graph", "skills links to users through user_skills and to jobs through job_skills.", (930, 130, 1270, 300), "#fef3c7"),
-            ("Jobs", "job_postings stores imported/seeded jobs and references scraping_sources when known.", (930, 430, 1270, 590), "#ede9fe"),
-            ("Applications", "applications links a user to saved/applied/interviewing job opportunities.", (470, 430, 820, 590), "#cffafe"),
-            ("Job Mining Ops", "scraping_jobs, scraping_sources, scraping_failed_urls, target_job_roles track operations.", (70, 430, 360, 620), "#fee2e2"),
-            ("Integrity", "Foreign keys, unique pivots, URL/title-company uniqueness, indexes, and private object metadata.", (470, 720, 1270, 870), "#dcfce7"),
-        ],
-        [
-            ((360, 195), (470, 195), "1:1/many"),
-            ((820, 215), (930, 215), "skills"),
-            ((1100, 300), (1100, 430), "required"),
-            ((930, 510), (820, 510), "tracked"),
-            ((470, 510), (360, 520), "operations"),
-            ((645, 590), (645, 720), "constraints"),
-            ((1100, 590), (1100, 720), "indexes"),
-        ],
-    )
+    create_frontend_route_layout_architecture()
+    create_frontend_api_auth_flow()
+    create_laravel_backend_request_lifecycle()
+    create_database_relationship_rationale()
 
 
 def create_job_mining_diagrams() -> None:
@@ -950,117 +1559,11 @@ def create_job_mining_diagrams() -> None:
 
 
 def create_diagrams() -> None:
-    save_diagram(
-        "01_high_level_architecture.png",
-        "CareerCompass High-Level Architecture",
-        [
-            ("React + Vite Frontend", "Student, admin, status, and preview modules.", (80, 180, 380, 330), "#dbeafe"),
-            ("Nginx Gateway", "Routes browser traffic to frontend and Laravel API.", (520, 180, 820, 330), "#e0f2fe"),
-            ("Laravel API", "Authentication, CV upload, recommendations, admin APIs.", (960, 180, 1280, 330), "#ecfdf5"),
-            ("MySQL", "Users, profiles, skills, jobs, applications, sources.", (1180, 470, 1500, 620), "#fef3c7"),
-            ("AI CV Analyzer", "FastAPI service for PDF/image text extraction and skill inference.", (80, 470, 430, 640), "#fce7f3"),
-            ("AI Job Miner", "FastAPI/Scrapy service for job source adapters and imports.", (520, 470, 860, 640), "#ede9fe"),
-            ("MinIO", "Private S3-compatible storage for uploaded CV files.", (960, 700, 1280, 850), "#cffafe"),
-            ("Prometheus + Grafana", "Operational metrics and dashboards.", (80, 720, 430, 870), "#dcfce7"),
-        ],
-        [
-            ((380, 255), (520, 255), "HTTP"),
-            ((820, 255), (960, 255), "API"),
-            ((1120, 330), (1290, 470), "SQL"),
-            ((960, 285), (430, 540), "parse"),
-            ((1120, 330), (700, 470), "mine"),
-            ((1120, 330), (1120, 700), "files"),
-            ((960, 330), (360, 720), "metrics"),
-        ],
-    )
-
-    save_diagram(
-        "02_docker_deployment.png",
-        "Docker Compose Deployment View",
-        [
-            ("nginx", "Public port 80 reverse proxy.", (70, 170, 330, 300), "#dbeafe"),
-            ("frontend", "Built React static assets.", (430, 170, 690, 300), "#e0f2fe"),
-            ("backend-api", "Laravel PHP-FPM application.", (790, 170, 1090, 300), "#ecfdf5"),
-            ("workers", "Queue workers: default, high, AI, emails, scraping.", (1200, 170, 1530, 300), "#ecfdf5"),
-            ("db", "MySQL 8.0 database.", (150, 490, 430, 620), "#fef3c7"),
-            ("ai-cv-analyzer", "FastAPI CV parsing service on port 8000.", (530, 490, 840, 620), "#fce7f3"),
-            ("ai-job-miner", "FastAPI scraper service on port 8003.", (940, 490, 1250, 620), "#ede9fe"),
-            ("minio", "S3-compatible CV object storage.", (1320, 490, 1540, 620), "#cffafe"),
-            ("prometheus", "Metrics collection.", (330, 760, 610, 890), "#dcfce7"),
-            ("grafana", "Dashboards on port 3000.", (750, 760, 1030, 890), "#dcfce7"),
-        ],
-        [
-            ((330, 235), (430, 235), ""),
-            ((690, 235), (790, 235), ""),
-            ((1090, 235), (1200, 235), "queues"),
-            ((940, 300), (290, 490), "SQL"),
-            ((940, 300), (680, 490), "CV"),
-            ((940, 300), (1095, 490), "jobs"),
-            ((1090, 300), (1430, 490), "S3"),
-            ((940, 300), (470, 760), "metrics"),
-            ((610, 825), (750, 825), ""),
-        ],
-    )
-
-    save_diagram(
-        "03_dfd_level_0.png",
-        "DFD Level 0",
-        [
-            ("Student", "Registers, uploads CV, views jobs and gaps.", (80, 250, 360, 430), "#dbeafe"),
-            ("Administrator", "Reviews jobs, sources, users, and system health.", (80, 560, 360, 740), "#dbeafe"),
-            ("CareerCompass System", "Processes CVs, stores profiles, imports jobs, calculates recommendations.", (560, 350, 1040, 640), "#ecfdf5"),
-            ("External Job Sources", "Demo/API/HTML job sources used by the miner.", (1240, 250, 1520, 430), "#fef3c7"),
-            ("AI Services", "CV analyzer and semantic matching support.", (1240, 560, 1520, 740), "#fce7f3"),
-        ],
-        [
-            ((360, 340), (560, 455), "requests"),
-            ((560, 535), (360, 650), "views"),
-            ((1040, 455), (1240, 340), "jobs"),
-            ((1040, 535), (1240, 650), "analysis"),
-        ],
-    )
-
-    save_diagram(
-        "04_dfd_level_1.png",
-        "DFD Level 1",
-        [
-            ("1. Auth", "Sanctum tokens, roles, profile bootstrap.", (60, 160, 340, 290), "#dbeafe"),
-            ("2. CV Processing", "Validate, store, parse, normalize.", (430, 160, 750, 290), "#fce7f3"),
-            ("3. Job Import", "Source adapters, quality gates, import.", (840, 160, 1160, 290), "#ede9fe"),
-            ("4. Matching", "Skills, semantic similarity, TF-IDF fallback.", (1250, 160, 1540, 290), "#ecfdf5"),
-            ("User/Profile DB", "Users, profiles, skills, analyses.", (230, 520, 560, 670), "#fef3c7"),
-            ("Job DB", "Job postings, sources, applications.", (700, 520, 1030, 670), "#fef3c7"),
-            ("Admin/Monitoring", "Health, stats, source diagnostics.", (1170, 520, 1510, 670), "#dcfce7"),
-        ],
-        [
-            ((340, 225), (430, 225), ""),
-            ((750, 225), (840, 225), ""),
-            ((1160, 225), (1250, 225), ""),
-            ((590, 290), (395, 520), "profile"),
-            ((1000, 290), (865, 520), "jobs"),
-            ((1390, 290), (1340, 520), "health"),
-            ((560, 595), (700, 595), "skills"),
-            ((1030, 595), (1170, 595), "stats"),
-        ],
-    )
-
-    save_diagram(
-        "05_use_case_diagram.png",
-        "UML Use Case Diagram",
-        [
-            ("Student", "Register, login, upload CV, view recommendations, analyze gaps, save applications.", (80, 240, 420, 520), "#dbeafe"),
-            ("Admin", "Login, review dashboard, manage jobs, test sources, manage target roles.", (80, 620, 420, 870), "#dbeafe"),
-            ("CareerCompass Use Cases", "Authenticate; Parse CV; Recommend Jobs; Analyze Skill Gap; Track Application; Monitor System; Diagnose Sources.", (600, 250, 1120, 760), "#ecfdf5"),
-            ("AI Services", "CV parsing and hybrid matching support.", (1280, 340, 1530, 520), "#fce7f3"),
-            ("Job Sources", "Provide imported job records.", (1280, 640, 1530, 820), "#fef3c7"),
-        ],
-        [
-            ((420, 380), (600, 420), "uses"),
-            ((420, 720), (600, 620), "uses"),
-            ((1120, 430), (1280, 430), "calls"),
-            ((1120, 650), (1280, 730), "imports"),
-        ],
-    )
+    create_high_level_architecture()
+    create_docker_deployment_diagram()
+    create_dfd_level_0()
+    create_dfd_level_1()
+    create_use_case_diagram()
 
     create_sequence_diagram(
         "06_sequence_cv_upload_analysis.png",
@@ -1085,16 +1588,20 @@ def create_diagrams() -> None:
         ["Student", "React UI", "Laravel API", "AI Matching", "MySQL", "Job Miner"],
         [
             ("Student", "React UI", "Open Jobs page"),
-            ("React UI", "Laravel API", "GET /jobs/recommended"),
+            ("React UI", "Laravel API", "GET /api/v1/jobs/recommended"),
             ("Laravel API", "MySQL", "Read profile, skills, and jobs"),
             ("Laravel API", "Laravel API", "Title/skill/seniority scoring"),
             ("Laravel API", "React UI", "Return ranked jobs"),
             ("Student", "React UI", "Open gap analysis"),
             ("React UI", "Laravel API", "GET /gap-analysis/job/{id}"),
-            ("Laravel API", "AI Matching", "Semantic + TF-IDF via /hybrid-match"),
+            ("Laravel API", "AI Matching", "Semantic + TF-IDF via /api/hybrid-match"),
             ("AI Matching", "Laravel API", "Match scores, gaps, roadmap"),
             ("Laravel API", "React UI", "Return matched skills and roadmap"),
             ("Laravel API", "Job Miner", "Optional scrape-if-missing flow"),
+        ],
+        notes=[
+            ("Recommendation path", "/api/v1/jobs/recommended uses Laravel title, skill-overlap, and seniority scoring."),
+            ("Gap-analysis path", "/api/hybrid-match is used for semantic/adaptive plus TF-IDF gap analysis."),
         ],
     )
 
@@ -1580,115 +2087,176 @@ def create_diagrams() -> None:
     create_job_mining_diagrams()
 
 
-def create_sequence_diagram(name: str, title: str, participants: list[str], messages: list[tuple[str, str, str]]):
-    width, height = 1200, 1450
-    img = PILImage.new("RGB", (width, height), "#f8fafc")
+def create_sequence_diagram(
+    name: str,
+    title: str,
+    participants: list[str],
+    messages: list[tuple[str, str, str]],
+    notes: list[tuple[str, str]] | None = None,
+):
+    n = len(participants)
+    width = max(1600, 260 + max(1, n - 1) * 215)
+    if n >= 8:
+        width = max(width, 2200)
+    note_height = 0 if not notes else 92 * len(notes) + 20
+    height = max(1120, 330 + len(messages) * 92 + note_height)
+    img = PILImage.new("RGB", (width, height), BG)
     draw = ImageDraw.Draw(img)
-    draw.rectangle((0, 0, width, 88), fill="#0f172a")
-    draw.text((36, 26), title, fill="white", font=load_font(30, True))
-    participant_text = "Participants: " + " | ".join(participants)
-    draw.text((54, 118), participant_text, fill="#475569", font=load_font(17, True))
+    draw_diagram_title(draw, width, title, "UML sequence notation: participants, lifelines, calls, returns, and activation bars.")
 
-    cols = 2
-    card_w, card_h = 465, 150
-    x0, y0 = 70, 180
-    x_gap, y_gap = 120, 48
-    fills = ["#dbeafe", "#ecfdf5", "#fef3c7", "#ede9fe"]
-    title_font = load_font(25, True)
-    body_font = load_font(27)
-    badge_font = load_font(20, True)
-    centers: list[tuple[int, int]] = []
+    aliases = {
+        "React Frontend": "React UI",
+        "Laravel Backend": "Laravel API",
+        "FastAPI Analyzer": "AI Analyzer",
+        "AI Job Miner": "Job Miner",
+        "External Source": "Source",
+        "ScrapingJob": "Scraping Job",
+        "Queue Worker": "Worker",
+        "Persistence": "DB",
+        "AI Matching": "AI Match",
+    }
+    labels = [aliases.get(p, p) for p in participants]
+    x_margin = 105
+    spacing = (width - 2 * x_margin) // max(1, n - 1)
+    xs = {p: x_margin + idx * spacing for idx, p in enumerate(participants)}
+    header_y = 145
+    header_h = 62
+    lifeline_top = header_y + header_h
+    lifeline_bottom = height - 130 - note_height
+    header_w = min(205, max(130, spacing - 22))
 
-    def short_actor(actor: str) -> str:
-        return {
-            "React Frontend": "React UI",
-            "Laravel Backend": "Laravel API",
-            "FastAPI Analyzer": "AI Analyzer",
-            "AI Job Miner": "Job Miner",
-            "External Source": "Source",
-            "ScrapingJob": "Scraping Job",
-            "Queue Worker": "Worker",
-            "Persistence": "DB",
-        }.get(actor, actor)
+    for participant, label in zip(participants, labels):
+        x = xs[participant]
+        box = (x - header_w // 2, header_y, x + header_w // 2, header_y + header_h)
+        draw.rounded_rectangle(box, radius=8, fill="#ffffff", outline=INK, width=2)
+        draw_centered_wrapped(draw, label, (box[0] + 8, box[1] + 8, box[2] - 8, box[3] - 8), load_font(16, True))
+        draw_dashed_line(draw, (x, lifeline_top), (x, lifeline_bottom), fill="#64748b", width=2, dash=13, gap=10)
 
-    for idx, (src, dst, label) in enumerate(messages, 1):
-        row = (idx - 1) // cols
-        col = (idx - 1) % cols
-        x1 = x0 + col * (card_w + x_gap)
-        y1 = y0 + row * (card_h + y_gap)
-        x2, y2 = x1 + card_w, y1 + card_h
-        centers.append(((x1 + x2) // 2, (y1 + y2) // 2))
-        draw.rounded_rectangle((x1, y1, x2, y2), radius=16, fill=fills[row % len(fills)], outline="#2563eb", width=3)
-        draw.ellipse((x1 + 16, y1 + 18, x1 + 54, y1 + 56), fill="#0f172a")
-        draw.text((x1 + 27, y1 + 23), str(idx), fill="white", font=badge_font)
-        heading = f"{short_actor(src)} -> {short_actor(dst)}"
-        draw.text((x1 + 68, y1 + 21), heading, fill="#0f172a", font=title_font)
-        yy = y1 + 75
-        for line in wrap_text(draw, label, body_font, card_w - 44)[:2]:
-            draw.text((x1 + 24, yy), line, fill="#334155", font=body_font)
-            yy += 34
+    def message_label(text: str, cx: int, y: int, max_w: int) -> None:
+        font = load_font(15, True)
+        lines = wrap_text(draw, text, font, max(160, min(max_w, 360)))[:3]
+        line_h = 20
+        text_w = max(draw.textbbox((0, 0), line, font=font)[2] for line in lines)
+        box = (cx - text_w // 2 - 8, y - 41, cx + text_w // 2 + 8, y - 41 + len(lines) * line_h + 8)
+        draw.rounded_rectangle(box, radius=5, fill="#ffffff", outline="#bfdbfe", width=1)
+        ty = box[1] + 4
+        for line in lines:
+            tw = draw.textbbox((0, 0), line, font=font)[2]
+            draw.text((cx - tw // 2, ty), line, fill=INK, font=font)
+            ty += line_h
 
-    for idx in range(len(centers) - 1):
-        current_row = idx // cols
-        next_row = (idx + 1) // cols
-        if current_row != next_row:
+    def activation(x: int, y: int, *, fill: str = "#ffffff") -> None:
+        draw.rectangle((x - 7, y - 26, x + 7, y + 34), fill=fill, outline=INK, width=2)
+
+    for idx, (src, dst, label) in enumerate(messages):
+        if src not in xs or dst not in xs:
             continue
-        x1, y1 = centers[idx]
-        x2, y2 = centers[idx + 1]
-        arrow(draw, (x1 + card_w // 2 - 16, y1), (x2 - card_w // 2 + 16, y2), color="#0f766e", width=4)
+        y = lifeline_top + 58 + idx * 82
+        sx, dx = xs[src], xs[dst]
+        if src == dst:
+            loop_w = min(90, max(55, spacing // 2))
+            points = [(sx + 8, y), (sx + loop_w, y), (sx + loop_w, y + 34), (sx + 12, y + 34)]
+            draw.line(points, fill=TEAL, width=3)
+            draw_arrowhead(draw, (sx + loop_w, y + 34), (sx + 12, y + 34), fill=TEAL, size=13)
+            activation(sx, y + 16)
+            message_label(label, sx + loop_w // 2, y, loop_w + 180)
+            continue
+        direction = 1 if dx > sx else -1
+        start = (sx + direction * 10, y)
+        end = (dx - direction * 18, y)
+        is_return = dx < sx
+        if is_return:
+            draw_dashed_line(draw, start, end, fill=BLUE, width=3, dash=13, gap=8)
+            draw_arrowhead(draw, start, end, fill=BLUE, size=14)
+        else:
+            draw.line([start, end], fill=TEAL, width=3)
+            draw_arrowhead(draw, start, end, fill=TEAL, size=14)
+        activation(dx, y, fill="#eff6ff" if not is_return else "#ffffff")
+        message_label(label, (start[0] + end[0]) // 2, y, abs(end[0] - start[0]) - 16)
 
-    draw.text(
-        (70, 1395),
-        "Numbered cards preserve request/response order; detailed endpoint and persistence behavior is explained in the chapter text.",
-        fill="#64748b",
-        font=load_font(17, True),
-    )
+    legend_y = lifeline_bottom + 26
+    draw.line((90, legend_y, 190, legend_y), fill=TEAL, width=3)
+    draw_arrowhead(draw, (90, legend_y), (190, legend_y), fill=TEAL, size=12)
+    draw.text((205, legend_y - 13), "Call", fill=MUTED, font=load_font(15, True))
+    draw_dashed_line(draw, (285, legend_y), (385, legend_y), fill=BLUE, width=3)
+    draw_arrowhead(draw, (285, legend_y), (385, legend_y), fill=BLUE, size=12)
+    draw.text((400, legend_y - 13), "Return / response", fill=MUTED, font=load_font(15, True))
+    draw.rectangle((570, legend_y - 25, 584, legend_y + 25), fill="#eff6ff", outline=INK, width=2)
+    draw.text((602, legend_y - 13), "Activation", fill=MUTED, font=load_font(15, True))
+
+    if notes:
+        y = lifeline_bottom + 86
+        for note_title, note_body in notes:
+            draw.rectangle((90, y, width - 90, y + 72), fill="#fff7ed", outline=ORANGE, width=2)
+            draw.text((110, y + 12), f"note: {note_title}", fill=ORANGE, font=load_font(17, True))
+            draw_wrapped(draw, note_body, (110, y + 38, width - 115, y + 64), load_font(15), fill="#334155")
+            y += 92
     img.save(DIAGRAMS / name)
 
 
 def create_erd() -> None:
-    img = PILImage.new("RGB", (1800, 1250), "#f8fafc")
+    img = PILImage.new("RGB", (1900, 1250), "#f8fafc")
     draw = ImageDraw.Draw(img)
-    draw.rectangle((0, 0, 1800, 96), fill="#0f172a")
-    draw.text((44, 28), "ERD and Database Summary", fill="white", font=load_font(34, True))
+    draw_diagram_title(draw, 1900, "ERD and Database Summary", "Migration-backed entities with PK/FK/UQ markers and readable cardinality labels.")
+    c4_boundary(draw, (45, 135, 705, 955), "Student profile evidence")
+    c4_boundary(draw, (720, 135, 1365, 700), "Reusable skill graph")
+    c4_boundary(draw, (1390, 135, 1815, 890), "Jobs and applications")
+    c4_boundary(draw, (390, 940, 1815, 1210), "Scraping operations")
     tables = [
-        ("users", ["id PK", "name", "email", "password", "role", "is_banned"], (50, 145, 350, 350)),
-        ("user_profiles", ["id PK", "user_id FK", "headline", "summary", "seniority", "primary_domain"], (440, 145, 760, 350)),
-        ("skills", ["id PK", "name", "type"], (860, 145, 1140, 330)),
-        ("user_skills", ["id PK", "user_id FK", "skill_id FK", "confidence_score", "evidence"], (1250, 145, 1700, 350)),
-        ("cv_analyses", ["id PK", "user_id FK", "parsing_status", "predicted_role", "confidence_score", "raw_json_output"], (50, 500, 430, 760)),
-        ("user_experiences", ["id PK", "user_id FK", "title", "company", "start_date", "end_date", "technologies"], (520, 500, 860, 760)),
-        ("job_postings", ["id PK", "scraping_source_id FK", "title", "company", "description", "url"], (960, 500, 1300, 760)),
-        ("job_skills", ["id PK", "job_id FK", "skill_id FK", "required", "importance_score"], (1390, 500, 1720, 740)),
-        ("applications", ["id PK", "user_id FK", "job_id FK", "status", "notes"], (960, 870, 1300, 1090)),
-        ("scraping_sources", ["id PK", "name", "type", "adapter", "is_active"], (50, 910, 390, 1135)),
-        ("scraping_jobs", ["id PK", "job_title", "status", "type", "jobs_found"], (500, 910, 840, 1135)),
-        ("target_job_roles", ["id PK", "name", "search_query", "is_active"], (1390, 910, 1720, 1090)),
+        ("users", [("PK", "id"), ("UQ", "email"), ("", "name"), ("", "role"), ("", "is_banned")], (85, 450, 345, 635)),
+        ("user_profiles", [("PK", "id"), ("FK", "user_id"), ("UQ", "user_id"), ("", "headline"), ("", "seniority"), ("", "primary_domain")], (85, 185, 345, 390)),
+        ("cv_analyses", [("PK", "id"), ("FK", "user_id"), ("UQ", "user_id"), ("", "cv_path"), ("", "parsing_status"), ("", "predicted_role")], (410, 185, 680, 410)),
+        ("user_experiences", [("PK", "id"), ("FK", "user_id"), ("", "title"), ("", "company"), ("", "start_date"), ("", "technologies")], (85, 720, 345, 930)),
+        ("skills", [("PK", "id"), ("UQ", "name"), ("", "type")], (790, 185, 1055, 335)),
+        ("user_skills", [("PK", "id"), ("FK", "user_id"), ("FK", "skill_id"), ("UQ", "user_id + skill_id"), ("", "confidence_score")], (790, 450, 1055, 655)),
+        ("job_skills", [("PK", "id"), ("FK", "job_id"), ("FK", "skill_id"), ("UQ", "job_id + skill_id"), ("", "required"), ("", "importance_score")], (1095, 450, 1350, 655)),
+        ("job_postings", [("PK", "id"), ("FK", "scraping_source_id"), ("UQ", "url"), ("UQ", "title + company"), ("", "title"), ("", "company"), ("", "skills JSON")], (1430, 255, 1745, 520)),
+        ("applications", [("PK", "id"), ("FK", "user_id"), ("FK", "job_id"), ("", "status"), ("", "notes"), ("", "applied_at")], (1430, 670, 1745, 880)),
+        ("target_job_roles", [("PK", "id"), ("UQ", "name"), ("", "search_query"), ("", "is_active")], (425, 985, 690, 1165)),
+        ("scraping_jobs", [("PK", "id"), ("", "job_title"), ("", "status"), ("", "type"), ("", "jobs_found"), ("", "failed_count")], (790, 985, 1055, 1195)),
+        ("scraping_failed_urls", [("PK", "id"), ("FK", "scraping_source_id"), ("FK", "scraping_job_id"), ("", "url"), ("", "error_message"), ("", "retried")], (1120, 985, 1400, 1195)),
+        ("scraping_sources", [("PK", "id"), ("", "name"), ("", "endpoint"), ("", "type"), ("", "mode"), ("", "status")], (1470, 985, 1745, 1195)),
     ]
-    for name, fields, box in tables:
-        x1, y1, x2, y2 = box
-        draw.rounded_rectangle(box, radius=12, fill="#ffffff", outline="#2563eb", width=3)
-        draw.rectangle((x1, y1, x2, y1 + 42), fill="#dbeafe")
-        draw.text((x1 + 14, y1 + 10), name, fill="#0f172a", font=load_font(20, True))
-        y = y1 + 58
-        for field in fields:
-            draw.text((x1 + 18, y), field, fill="#334155", font=load_font(16))
-            y += 26
-    rels = [
-        ((350, 245), (440, 245)),
-        ((350, 285), (1250, 245)),
-        ((1140, 235), (1250, 245)),
-        ((200, 350), (200, 500)),
-        ((350, 325), (520, 625)),
-        ((350, 335), (960, 975)),
-        ((1300, 600), (1390, 600)),
-        ((1140, 280), (1390, 600)),
-        ((1130, 760), (1130, 870)),
-        ((220, 910), (960, 620)),
-        ((390, 1020), (500, 1020)),
+    for table_name, fields, box in tables:
+        erd_table(draw, box, table_name, fields)
+
+    erd_relationship(draw, (215, 390), (215, 450), "0..1", "1", "profile")
+    erd_polyline_relationship(draw, [(345, 535), (375, 535), (375, 300), (410, 300)], "1", "0..1", "analysis", label_at=(378, 420))
+    erd_relationship(draw, (215, 635), (215, 720), "1", "0..*", "experience")
+    erd_relationship(draw, (345, 542), (790, 542), "1", "0..*", "user skills")
+    erd_relationship(draw, (925, 335), (925, 450), "1", "0..*", "skill")
+    erd_relationship(draw, (925, 335), (1218, 450), "1", "0..*", "skill")
+    erd_relationship(draw, (1350, 542), (1430, 400), "0..*", "1", "job requirements")
+    erd_polyline_relationship(
+        draw,
+        [(345, 575), (365, 575), (365, 1215), (1588, 1215), (1588, 880)],
+        "1",
+        "0..*",
+        "applications",
+        label_at=(900, 1215),
+    )
+    erd_relationship(draw, (1588, 520), (1588, 670), "1", "0..*", "job")
+    erd_polyline_relationship(draw, [(1745, 388), (1810, 388), (1810, 950), (1608, 950), (1608, 985)], "0..*", "0..1", "source", label_at=(1810, 800))
+    erd_relationship(draw, (690, 1075), (790, 1075), "0..*", "0..*", "search intent", dashed=True)
+    erd_relationship(draw, (1055, 1082), (1120, 1082), "1", "0..*", "run failures")
+    erd_relationship(draw, (1470, 1082), (1400, 1082), "1", "0..*", "failed URL")
+
+    draw.rectangle((410, 725, 680, 930), fill="#ffffff", outline=GRID, width=2)
+    draw.text((430, 748), "Notes", fill=INK, font=load_font(18, True))
+    draw_wrapped(draw, "CV analysis creates normalized profile evidence; user_skills and job_skills compare reusable skill rows. target_job_roles drives search intent but has no FK to scraping_jobs.", (430, 785, 660, 915), load_font(15), fill=MUTED)
+
+    draw.rectangle((80, 980, 345, 1165), fill="#ffffff", outline=GRID, width=2)
+    draw.text((105, 952), "Integrity notes", fill=INK, font=load_font(19, True))
+    notes = [
+        "PK = primary key",
+        "FK = foreign key",
+        "UQ = unique constraint",
+        "1, 0..1, and 0..* mark cardinality",
     ]
-    for s, e in rels:
-        arrow(draw, s, e, color="#64748b", width=3)
+    y = 1024
+    for note in notes:
+        draw.text((105, y), "- " + note, fill=MUTED, font=load_font(16))
+        y += 34
     img.save(DIAGRAMS / "08_erd.png")
 
 
@@ -2245,7 +2813,7 @@ CareerCompass implements two practical roles. The student role can register, log
 | FR-04 | Parse CV and extract profile/skills. | `CvProcessingService` must call AI CV Analyzer `/api/parse-cv`, persist successful structured profile, skill, experience, and analysis metadata, and preserve explicit timeout/error/no-text statuses. |
 | FR-05 | Display normalized profile and skills. | The user dashboard/profile must display persisted profile, skills, experience, predicted role, seniority, domain, completeness, and parsing status from Laravel resources and React pages. |
 | FR-06 | Import and display jobs. | The backend must store usable imported/demo jobs, deduplicate by URL and title/company constraints, expose paginated listings/details, and support admin/user job views through `JobController`, `ScrapedJobController`, and AI Job Miner integration. |
-| FR-07 | Estimate job recommendations with Laravel scoring. | `/api/v1/jobs/recommended` ranks up to 50 usable jobs using predicted role/profile title matching, required-skill overlap, and seniority hints in `JobController::getRecommended`. This recommendation list is not the semantic/TF-IDF matcher. |
+| FR-07 | Estimate job recommendations with Laravel scoring. | `/api/v1/jobs/recommended` ranks up to 50 usable jobs using predicted role/profile title matching, required-skill overlap, and seniority hints in `JobController::getRecommended`. The job list ranker is separate from the AI gap-analysis matcher. |
 | FR-08 | Analyze skill gaps with AI fallback. | Gap analysis for a selected job or role compares stored user data with job requirements; `GapAnalysisService` calls AI CV Analyzer `/api/hybrid-match` for semantic/adaptive plus TF-IDF matching when available and falls back to database skill matching when unavailable. |
 | FR-09 | Track applications. | ApplicationController, ApplicationTrackerService, Applications page. |
 | FR-10 | Provide admin dashboards. | Admin Dashboard, Jobs, Sources, Targets pages and admin API routes. |
@@ -2604,7 +3172,7 @@ The analyzer is implemented as layered Python code rather than one monolithic fu
 | Advanced NER | `advanced_ner.py` and optional ignored local model folder | Loads the exported local token-classification model when deployed; chunks long CVs and groups entity spans. | Skills, roles, education, certifications |
 | Rule engines | contact, experience, date, noise-filtering helpers | Extract contact details, experience blocks, dates, and remove title-like or noisy skill candidates. | Profile and experience persistence |
 | Canonicalization/classification | Layer 1 and Layer 2 modules | Normalize skills and infer primary domain plus seniority. | Dashboard identity card and matching |
-| Hybrid matching | Layer 3 matching modules | Combines semantic scores, skill text similarity, domain alignment, constraints, and TF-IDF fallback. | Gap analysis and fit explanation; not the `/jobs/recommended` list ranking endpoint |
+| Hybrid matching | Layer 3 matching modules | Combines semantic scores, skill text similarity, domain alignment, constraints, and TF-IDF fallback. | Gap analysis and fit explanation; the job-list ranking endpoint is separate. |
 | Frontend display | `Dashboard.jsx`, `AiInsights.jsx` | Shows upload status, confidence-style signals, role/seniority, and extracted skills. | Student-facing CV feedback |
 
 *Table 11. AI CV Analyzer components.*
@@ -2808,7 +3376,9 @@ The job miner exposes a FastAPI service and imports candidate jobs through confi
 
 ## 5.9 Job Recommendations
 
-The jobs page requests `/api/v1/jobs/recommended` when no manual search query is active. In the current Laravel implementation, `JobController::getRecommended` uses the user's predicted role or profile title to select candidate job titles, then ranks up to 200 candidates by title similarity, required-skill overlap, and seniority hints before returning up to 50 jobs with an estimated `match_percentage`. This endpoint does not call the FastAPI semantic/TF-IDF matcher. Semantic/adaptive plus TF-IDF scoring belongs to the gap-analysis workflow through `/api/hybrid-match`.
+The jobs page requests `/api/v1/jobs/recommended` when no manual search query is active. In the current Laravel implementation, `JobController::getRecommended` uses the user's predicted role or profile title to select candidate job titles, then ranks up to 200 candidates by title similarity, required-skill overlap, and seniority hints before returning up to 50 jobs with an estimated `match_percentage`.
+
+This endpoint does not call `/api/hybrid-match`. Semantic/adaptive plus TF-IDF scoring belongs to the gap-analysis workflow through `/api/hybrid-match`.
 
 {figure_markdown("Figure 38", "Jobs recommendations page.", "assets/screenshots/08_jobs_recommendations.png")}
 
@@ -4125,7 +4695,9 @@ Validation error example:
 
 Method and URL: `GET /api/v1/jobs/recommended`
 
-Purpose: Return personalized job recommendations for an authenticated student when CV/profile context exists, otherwise return recent usable jobs. The current Laravel code scores candidates with predicted role/profile-title matching, required-skill overlap, and seniority hints. It does not call `/api/hybrid-match`; semantic/adaptive and TF-IDF matching are documented under gap analysis.
+Purpose: Return a personalized job list for an authenticated student when CV/profile context exists, otherwise return recent usable jobs. The current Laravel code scores candidates with predicted role/profile-title matching, required-skill overlap, and seniority hints.
+
+It does not call `/api/hybrid-match`. Semantic/adaptive and TF-IDF matching are documented under gap analysis.
 
 Request example:
 

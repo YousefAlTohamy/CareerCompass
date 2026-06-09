@@ -314,7 +314,7 @@ CareerCompass implements two practical roles. The student role can register, log
 | FR-04 | Parse CV and extract profile/skills. | `CvProcessingService` must call AI CV Analyzer `/api/parse-cv`, persist successful structured profile, skill, experience, and analysis metadata, and preserve explicit timeout/error/no-text statuses. |
 | FR-05 | Display normalized profile and skills. | The user dashboard/profile must display persisted profile, skills, experience, predicted role, seniority, domain, completeness, and parsing status from Laravel resources and React pages. |
 | FR-06 | Import and display jobs. | The backend must store usable imported/demo jobs, deduplicate by URL and title/company constraints, expose paginated listings/details, and support admin/user job views through `JobController`, `ScrapedJobController`, and AI Job Miner integration. |
-| FR-07 | Estimate job recommendations with Laravel scoring. | `/api/v1/jobs/recommended` ranks up to 50 usable jobs using predicted role/profile title matching, required-skill overlap, and seniority hints in `JobController::getRecommended`. This recommendation list is not the semantic/TF-IDF matcher. |
+| FR-07 | Estimate job recommendations with Laravel scoring. | `/api/v1/jobs/recommended` ranks up to 50 usable jobs using predicted role/profile title matching, required-skill overlap, and seniority hints in `JobController::getRecommended`. The job list ranker is separate from the AI gap-analysis matcher. |
 | FR-08 | Analyze skill gaps with AI fallback. | Gap analysis for a selected job or role compares stored user data with job requirements; `GapAnalysisService` calls AI CV Analyzer `/api/hybrid-match` for semantic/adaptive plus TF-IDF matching when available and falls back to database skill matching when unavailable. |
 | FR-09 | Track applications. | ApplicationController, ApplicationTrackerService, Applications page. |
 | FR-10 | Provide admin dashboards. | Admin Dashboard, Jobs, Sources, Targets pages and admin API routes. |
@@ -707,7 +707,7 @@ The analyzer is implemented as layered Python code rather than one monolithic fu
 | Advanced NER | `advanced_ner.py` and optional ignored local model folder | Loads the exported local token-classification model when deployed; chunks long CVs and groups entity spans. | Skills, roles, education, certifications |
 | Rule engines | contact, experience, date, noise-filtering helpers | Extract contact details, experience blocks, dates, and remove title-like or noisy skill candidates. | Profile and experience persistence |
 | Canonicalization/classification | Layer 1 and Layer 2 modules | Normalize skills and infer primary domain plus seniority. | Dashboard identity card and matching |
-| Hybrid matching | Layer 3 matching modules | Combines semantic scores, skill text similarity, domain alignment, constraints, and TF-IDF fallback. | Gap analysis and fit explanation; not the `/jobs/recommended` list ranking endpoint |
+| Hybrid matching | Layer 3 matching modules | Combines semantic scores, skill text similarity, domain alignment, constraints, and TF-IDF fallback. | Gap analysis and fit explanation; the job-list ranking endpoint is separate. |
 | Frontend display | `Dashboard.jsx`, `AiInsights.jsx` | Shows upload status, confidence-style signals, role/seniority, and extracted skills. | Student-facing CV feedback |
 
 *Table 11. AI CV Analyzer components.*
@@ -931,7 +931,9 @@ The job miner exposes a FastAPI service and imports candidate jobs through confi
 
 ## 5.9 Job Recommendations
 
-The jobs page requests `/api/v1/jobs/recommended` when no manual search query is active. In the current Laravel implementation, `JobController::getRecommended` uses the user's predicted role or profile title to select candidate job titles, then ranks up to 200 candidates by title similarity, required-skill overlap, and seniority hints before returning up to 50 jobs with an estimated `match_percentage`. This endpoint does not call the FastAPI semantic/TF-IDF matcher. Semantic/adaptive plus TF-IDF scoring belongs to the gap-analysis workflow through `/api/hybrid-match`.
+The jobs page requests `/api/v1/jobs/recommended` when no manual search query is active. In the current Laravel implementation, `JobController::getRecommended` uses the user's predicted role or profile title to select candidate job titles, then ranks up to 200 candidates by title similarity, required-skill overlap, and seniority hints before returning up to 50 jobs with an estimated `match_percentage`.
+
+This endpoint does not call `/api/hybrid-match`. Semantic/adaptive plus TF-IDF scoring belongs to the gap-analysis workflow through `/api/hybrid-match`.
 
 ![Jobs recommendations page.](assets/screenshots/08_jobs_recommendations.png)
 
@@ -2470,7 +2472,9 @@ Validation error example:
 
 Method and URL: `GET /api/v1/jobs/recommended`
 
-Purpose: Return personalized job recommendations for an authenticated student when CV/profile context exists, otherwise return recent usable jobs. The current Laravel code scores candidates with predicted role/profile-title matching, required-skill overlap, and seniority hints. It does not call `/api/hybrid-match`; semantic/adaptive and TF-IDF matching are documented under gap analysis.
+Purpose: Return a personalized job list for an authenticated student when CV/profile context exists, otherwise return recent usable jobs. The current Laravel code scores candidates with predicted role/profile-title matching, required-skill overlap, and seniority hints.
+
+It does not call `/api/hybrid-match`. Semantic/adaptive and TF-IDF matching are documented under gap analysis.
 
 Request example:
 
