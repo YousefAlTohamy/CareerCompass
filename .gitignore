@@ -57,6 +57,9 @@ Thumbs.db
 /.env
 /.env.local
 
+docs/graduation-book/*.manual_word_edits_backup.docx
+docs/graduation-book/*.pre_manual_edits.docx
+
 # Training Data
 ai-cv-analyzer/training/train_real_tech.json
 ai-cv-analyzer/training/train_real_tech_cleaned.json
