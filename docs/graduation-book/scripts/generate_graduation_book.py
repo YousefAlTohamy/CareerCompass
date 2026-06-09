@@ -402,6 +402,21 @@ def draw_diagram_title(draw: ImageDraw.ImageDraw, width: int, title: str, subtit
         draw.text((40, 96), subtitle, fill=MUTED, font=load_font(17))
 
 
+def wrapped_text_height(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    font,
+    max_width: int,
+    *,
+    line_gap: int = 5,
+) -> int:
+    lines = wrap_text(draw, text, font, max(20, max_width))
+    if not lines:
+        return 0
+    line_height = draw.textbbox((0, 0), "Ag", font=font)[3] + line_gap
+    return len(lines) * line_height
+
+
 def draw_wrapped(
     draw: ImageDraw.ImageDraw,
     text: str,
@@ -1124,10 +1139,19 @@ def create_database_relationship_rationale() -> None:
 
 
 def create_dataset_evidence_diagram() -> None:
-    img = PILImage.new("RGB", (1600, 1000), "#f8fafc")
-    draw = ImageDraw.Draw(img)
-    draw.rectangle((0, 0, 1600, 96), fill="#0f172a")
-    draw.text((44, 28), "Dataset Evidence Availability", fill="white", font=load_font(34, True))
+    width = 1600
+    margin_x = 110
+    content_right = 1490
+    inner_pad_x = 30
+    inner_pad_y = 22
+    badge_right = 1450
+    badge_min_width = 150
+    body_max_width = 1100
+
+    title_font = load_font(25, True)
+    body_font = load_font(19)
+    badge_font = load_font(18, True)
+    decision_font = load_font(20, True)
     cards = [
         ("Final NER Training Dataset", "Dataset content unavailable in committed Git evidence", "0 dataset files", "#fee2e2"),
         ("Training Notebook Logic", "Available: labels, token alignment, 90/10 split", "workflow", "#dbeafe"),
@@ -1136,21 +1160,82 @@ def create_dataset_evidence_diagram() -> None:
         ("AI CV Smoke Dataset", "Available: 5 deterministic fake CV text samples", "5 samples", "#ecfdf5"),
         ("Per-Label NER Metrics", "Unavailable in the PDF: no classification report or confusion matrix", "not claimed", "#fef3c7"),
     ]
-    y = 160
-    for title, body, badge, fill in cards:
-        draw.rounded_rectangle((110, y, 1490, y + 120), radius=16, fill=fill, outline="#94a3b8", width=2)
-        draw.text((140, y + 22), title, fill="#0f172a", font=load_font(25, True))
-        draw.text((140, y + 65), body, fill="#334155", font=load_font(19))
-        draw.rounded_rectangle((1260, y + 35, 1450, y + 84), radius=12, fill="#ffffff", outline="#64748b", width=2)
-        draw.text((1280, y + 49), badge, fill="#0f172a", font=load_font(18, True))
-        y += 145
-    draw.rounded_rectangle((110, 890, 1490, 955), radius=14, fill="#e0f2fe", outline="#0284c7", width=2)
-    draw.text(
-        (140, 910),
-        "Decision: use Colab overall metrics; no per-label distribution chart because label support counts are not visible.",
-        fill="#0c4a6e",
-        font=load_font(20, True),
+    decision_text = (
+        "Decision: use Colab overall metrics; no per-label distribution chart because label support counts are not visible."
     )
+
+    measure_img = PILImage.new("RGB", (width, 10))
+    measure_draw = ImageDraw.Draw(measure_img)
+    title_line_h = measure_draw.textbbox((0, 0), "Ag", font=title_font)[3] + 8
+    body_line_h = measure_draw.textbbox((0, 0), "Ag", font=body_font)[3] + 6
+    badge_pad_y = 12
+    decision_line_h = measure_draw.textbbox((0, 0), "Ag", font=decision_font)[3] + 8
+    card_gap = 24
+    decision_gap = 36
+
+    card_layouts: list[dict] = []
+    for title, body, badge, fill in cards:
+        body_lines = wrap_text(measure_draw, body, body_font, body_max_width)
+        body_h = len(body_lines) * body_line_h
+        badge_h = measure_draw.textbbox((0, 0), badge, font=badge_font)[3] + badge_pad_y * 2
+        content_h = title_line_h + 10 + body_h
+        card_h = inner_pad_y * 2 + max(content_h, badge_h)
+        card_layouts.append(
+            {
+                "title": title,
+                "body_lines": body_lines,
+                "badge": badge,
+                "fill": fill,
+                "height": card_h,
+                "badge_h": badge_h,
+            }
+        )
+
+    decision_lines = wrap_text(measure_draw, decision_text, decision_font, content_right - margin_x - inner_pad_x * 2)
+    decision_h = inner_pad_y * 2 + len(decision_lines) * decision_line_h
+
+    header_h = 96
+    top_margin = 64
+    bottom_margin = 56
+    cards_total = sum(card["height"] for card in card_layouts) + card_gap * (len(card_layouts) - 1)
+    total_h = header_h + top_margin + cards_total + decision_gap + decision_h + bottom_margin
+
+    img = PILImage.new("RGB", (width, total_h), BG)
+    draw = ImageDraw.Draw(img)
+    draw.rectangle((0, 0, width, header_h), fill=INK)
+    draw.text((44, 28), "Dataset Evidence Availability", fill="white", font=load_font(34, True))
+
+    y = header_h + top_margin
+    for index, card in enumerate(card_layouts):
+        card_top = y
+        card_bottom = y + card["height"]
+        draw.rounded_rectangle((margin_x, card_top, content_right, card_bottom), radius=16, fill=card["fill"], outline=GRID, width=2)
+        text_y = card_top + inner_pad_y
+        draw.text((margin_x + inner_pad_x, text_y), card["title"], fill=INK, font=title_font)
+        text_y += title_line_h + 10
+        for line in card["body_lines"]:
+            draw.text((margin_x + inner_pad_x, text_y), line, fill="#334155", font=body_font)
+            text_y += body_line_h
+        badge_w = max(badge_min_width, measure_draw.textbbox((0, 0), card["badge"], font=badge_font)[2] + 36)
+        badge_x1 = badge_right - badge_w
+        badge_y1 = card_top + (card["height"] - card["badge_h"]) // 2
+        draw.rounded_rectangle(
+            (badge_x1, badge_y1, badge_right, badge_y1 + card["badge_h"]),
+            radius=12,
+            fill=PAPER,
+            outline="#64748b",
+            width=2,
+        )
+        draw.text((badge_x1 + 18, badge_y1 + badge_pad_y - 2), card["badge"], fill=INK, font=badge_font)
+        y = card_bottom + (card_gap if index < len(card_layouts) - 1 else 0)
+
+    decision_top = y + decision_gap
+    decision_bottom = decision_top + decision_h
+    draw.rounded_rectangle((margin_x, decision_top, content_right, decision_bottom), radius=14, fill="#e0f2fe", outline="#0284c7", width=2)
+    text_y = decision_top + inner_pad_y
+    for line in decision_lines:
+        draw.text((margin_x + inner_pad_x, text_y), line, fill="#0c4a6e", font=decision_font)
+        text_y += decision_line_h
     img.save(DIAGRAMS / "29_dataset_evidence_availability.png")
 
 
