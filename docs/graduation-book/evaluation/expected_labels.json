@@ -1,0 +1,41 @@
+{
+  "recommendation_labels": {
+    "cv_backend_laravel": ["job_laravel_backend", "job_php_api", "job_full_stack_web", "job_devops_docker"],
+    "cv_frontend_react": ["job_react_frontend", "job_full_stack_web"],
+    "cv_data_ml": ["job_data_analyst", "job_nlp_assistant"],
+    "cv_full_stack": ["job_full_stack_web", "job_laravel_backend", "job_php_api", "job_react_frontend", "job_devops_docker"],
+    "cv_qa_testing": ["job_qa_intern", "job_nlp_assistant"]
+  },
+  "gap_pairs": [
+    {
+      "cv_sample_id": "cv_backend_laravel",
+      "job_id": "job_laravel_backend",
+      "expected_matched_skills": ["PHP", "Laravel", "MySQL", "REST API", "Docker", "Git"],
+      "expected_missing_skills": []
+    },
+    {
+      "cv_sample_id": "cv_frontend_react",
+      "job_id": "job_full_stack_web",
+      "expected_matched_skills": ["React"],
+      "expected_missing_skills": ["Laravel", "MySQL", "Docker", "REST API", "Git"]
+    },
+    {
+      "cv_sample_id": "cv_data_ml",
+      "job_id": "job_nlp_assistant",
+      "expected_matched_skills": ["Python", "NLP", "scikit-learn", "data analysis"],
+      "expected_missing_skills": ["testing"]
+    },
+    {
+      "cv_sample_id": "cv_qa_testing",
+      "job_id": "job_qa_intern",
+      "expected_matched_skills": ["testing", "test cases", "pytest", "API testing", "bug reporting"],
+      "expected_missing_skills": []
+    },
+    {
+      "cv_sample_id": "cv_full_stack",
+      "job_id": "job_react_frontend",
+      "expected_matched_skills": ["React"],
+      "expected_missing_skills": ["JavaScript", "Vite", "HTML", "CSS", "API integration"]
+    }
+  ]
+}

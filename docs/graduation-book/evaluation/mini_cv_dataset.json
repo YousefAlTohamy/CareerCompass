@@ -1,0 +1,62 @@
+[
+  {
+    "sample_id": "cv_backend_laravel",
+    "candidate_name": "Omar Hassan",
+    "target_role": "Backend Laravel Developer",
+    "seniority": "junior",
+    "domain": "backend_web",
+    "cv_text": "Junior backend developer focused on PHP and Laravel. Built REST API modules with MySQL, Docker, Git, queue jobs, validation, and authentication. Comfortable documenting endpoints and debugging Laravel services.",
+    "expected_skills": ["PHP", "Laravel", "MySQL", "REST API", "Docker", "Git"],
+    "expected_role": "Backend Laravel Developer",
+    "expected_seniority": "junior",
+    "expected_domain": "backend_web"
+  },
+  {
+    "sample_id": "cv_frontend_react",
+    "candidate_name": "Nour Adel",
+    "target_role": "Frontend React Developer",
+    "seniority": "intern",
+    "domain": "frontend_web",
+    "cv_text": "Frontend intern with React, JavaScript, Vite, HTML, CSS, responsive UI work, API integration, reusable components, and browser debugging experience.",
+    "expected_skills": ["React", "JavaScript", "Vite", "HTML", "CSS", "API integration"],
+    "expected_role": "Frontend React Developer",
+    "expected_seniority": "intern",
+    "expected_domain": "frontend_web"
+  },
+  {
+    "sample_id": "cv_data_ml",
+    "candidate_name": "Mariam Said",
+    "target_role": "Data and ML Student",
+    "seniority": "student",
+    "domain": "data_ml",
+    "cv_text": "Computer science student interested in data analysis and NLP. Uses Python, pandas, scikit-learn, text preprocessing, notebooks, metrics, and simple machine learning models.",
+    "expected_skills": ["Python", "pandas", "scikit-learn", "NLP", "data analysis"],
+    "expected_role": "Data and ML Student",
+    "expected_seniority": "student",
+    "expected_domain": "data_ml"
+  },
+  {
+    "sample_id": "cv_full_stack",
+    "candidate_name": "Karim Fathy",
+    "target_role": "Full Stack Developer",
+    "seniority": "junior",
+    "domain": "full_stack_web",
+    "cv_text": "Full stack junior developer using Laravel, React, MySQL, Docker, REST API design, authentication flows, Git, frontend forms, backend controllers, and deployment scripts.",
+    "expected_skills": ["Laravel", "React", "MySQL", "Docker", "REST API", "Git"],
+    "expected_role": "Full Stack Developer",
+    "expected_seniority": "junior",
+    "expected_domain": "full_stack_web"
+  },
+  {
+    "sample_id": "cv_qa_testing",
+    "candidate_name": "Salma Yasser",
+    "target_role": "QA Testing Engineer",
+    "seniority": "intern",
+    "domain": "quality_assurance",
+    "cv_text": "QA intern who writes test cases, reports bugs, runs API testing, uses pytest for small automation checks, documents expected and actual results, and verifies fixes.",
+    "expected_skills": ["testing", "test cases", "pytest", "API testing", "bug reporting"],
+    "expected_role": "QA Testing Engineer",
+    "expected_seniority": "intern",
+    "expected_domain": "quality_assurance"
+  }
+]
