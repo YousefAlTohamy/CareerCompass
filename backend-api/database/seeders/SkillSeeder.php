@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\Skill;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Schema;
 
 class SkillSeeder extends Seeder
 {
@@ -13,11 +13,15 @@ class SkillSeeder extends Seeder
      */
     public function run(): void
     {
-        $now = Carbon::now();
+        if (!Schema::hasTable('skills')) {
+            $this->command->warn('Skipping SkillSeeder: skills table does not exist.');
+            return;
+        }
 
         $technicalSkills = [
             // Programming Languages
             'PHP',
+            'PHP 8',
             'Python',
             'JavaScript',
             'Java',
@@ -29,9 +33,18 @@ class SkillSeeder extends Seeder
             'Swift',
             'Kotlin',
             'Scala',
+            'Dart',
 
             // Web Frameworks
             'Laravel',
+            'Laravel 10',
+            'Laravel 11',
+            'Laravel 12',
+            'Eloquent ORM',
+            'Blade',
+            'Livewire',
+            'Filament',
+            'Inertia.js',
             'Django',
             'Flask',
             'FastAPI',
@@ -44,6 +57,8 @@ class SkillSeeder extends Seeder
             'ASP.NET',
             'Next.js',
             'Nuxt.js',
+            'MVC',
+            'MVVM',
 
             // Databases
             'MySQL',
@@ -55,10 +70,14 @@ class SkillSeeder extends Seeder
             'SQL Server',
             'MariaDB',
             'Elasticsearch',
+            'Firestore',
 
             // DevOps & Tools
             'Docker',
+            'Docker Compose',
             'Kubernetes',
+            'Nginx',
+            'Linux',
             'Git',
             'GitHub',
             'GitLab',
@@ -67,6 +86,7 @@ class SkillSeeder extends Seeder
             'AWS',
             'Azure',
             'Google Cloud',
+            'DigitalOcean',
             'Terraform',
             'Ansible',
 
@@ -78,21 +98,57 @@ class SkillSeeder extends Seeder
             'Tailwind CSS',
             'jQuery',
             'Webpack',
+            'Vite',
+            'Responsive UI',
+            'UI/UX',
+            'UI/UX basics',
 
             // Mobile
             'React Native',
             'Flutter',
             'iOS',
             'Android',
+            'Firebase',
+            'Firebase Auth',
+            'Push Notifications',
+            'Dio',
+            'Provider',
+            'Riverpod',
+            'Bloc',
+            'Cubit',
+            'GetX',
+            'State Management',
+            'App Deployment',
+            'Google Play Console',
 
-            // Other
+            // APIs, auth, testing, and architecture
             'REST API',
+            'REST APIs',
+            'REST API Design',
+            'API Authentication',
             'GraphQL',
             'Microservices',
             'OAuth',
+            'OAuth2',
             'JWT',
+            'Sanctum',
+            'Queues',
+            'Jobs',
+            'Events',
+            'Listeners',
+            'Notifications',
+            'PHPUnit',
+            'Pest',
+            'Feature Testing',
             'Unit Testing',
             'TDD',
+            'Feature Flags',
+            'Payment Integration',
+            'Payment Gateways',
+            'Clean Architecture',
+            'SOLID Principles',
+            'Design Patterns',
+            'Repository Pattern',
             'Agile',
             'Scrum'
         ];
@@ -115,32 +171,28 @@ class SkillSeeder extends Seeder
             'Conflict Resolution',
             'Presentation Skills',
             'Analytical Skills',
-            'Self-Motivation'
+            'Self-Motivation',
+            'Learning Agility'
         ];
 
-        // Prepare technical skills data
-        $technicalSkillsData = array_map(function ($skill) use ($now) {
-            return [
-                'name' => $skill,
-                'type' => 'technical',
-                'created_at' => $now,
-                'updated_at' => $now,
-            ];
-        }, $technicalSkills);
+        $technicalCount = 0;
+        foreach (array_values(array_unique($technicalSkills)) as $skill) {
+            Skill::updateOrCreate(
+                ['name' => $skill],
+                ['type' => 'technical']
+            );
+            $technicalCount++;
+        }
 
-        // Prepare soft skills data
-        $softSkillsData = array_map(function ($skill) use ($now) {
-            return [
-                'name' => $skill,
-                'type' => 'soft',
-                'created_at' => $now,
-                'updated_at' => $now,
-            ];
-        }, $softSkills);
+        $softCount = 0;
+        foreach (array_values(array_unique($softSkills)) as $skill) {
+            Skill::updateOrCreate(
+                ['name' => $skill],
+                ['type' => 'soft']
+            );
+            $softCount++;
+        }
 
-        // Insert all skills, ignoring duplicates
-        DB::table('skills')->insertOrIgnore(array_merge($technicalSkillsData, $softSkillsData));
-
-        $this->command->info('Successfully seeded ' . count($technicalSkills) . ' technical skills and ' . count($softSkills) . ' soft skills.');
+        $this->command->info("Seeded/updated {$technicalCount} technical skills and {$softCount} soft skills.");
     }
 }
