@@ -19,6 +19,7 @@
 
 <p align="center">
   <a href="#features">Features</a> •
+  <a href="#screenshots">Screenshots</a> •
   <a href="#architecture">Architecture</a> •
   <a href="#tech-stack">Tech Stack</a> •
   <a href="#quick-start">Quick Start</a> •
@@ -32,6 +33,43 @@
 CareerCompass is a graduation project built to help job seekers turn a CV into actionable career guidance. A user uploads a CV, receives a structured profile and skills analysis, discovers relevant jobs, identifies missing skills for a role, and tracks saved opportunities in one place.
 
 The project is designed as a **Docker-first, service-based application**: Laravel coordinates business workflows and APIs, FastAPI services handle CV analysis and job-mining tasks, and separate queue workers process asynchronous workloads.
+
+---
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <strong>Landing Page</strong><br /><br />
+      <img src="assets/screenshots/landing.png" alt="CareerCompass landing page" width="100%" />
+    </td>
+    <td width="50%" align="center">
+      <strong>Career Dashboard</strong><br /><br />
+      <img src="assets/screenshots/dashboard-profile.png" alt="CareerCompass dashboard with profile completeness and career readiness" width="100%" />
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <strong>Job Matching</strong><br /><br />
+      <img src="assets/screenshots/job-matching.png" alt="CareerCompass job matching and missing skills view" width="100%" />
+    </td>
+    <td width="50%" align="center">
+      <strong>Skill-Gap Report</strong><br /><br />
+      <img src="assets/screenshots/skill-gap-report.png" alt="CareerCompass detailed skill-gap report" width="100%" />
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <strong>Application Tracker</strong><br /><br />
+      <img src="assets/screenshots/application-tracker.png" alt="CareerCompass application tracking workspace" width="100%" />
+    </td>
+    <td width="50%" align="center">
+      <strong>Market Insights</strong><br /><br />
+      <img src="assets/screenshots/market-insights.png" alt="CareerCompass market insights and top skills" width="100%" />
+    </td>
+  </tr>
+</table>
 
 ---
 
@@ -139,6 +177,7 @@ flowchart LR
 
 ```text
 .
+├── assets/screenshots/   # Product interface screenshots used in this README
 ├── backend-api/          # Laravel API, database, queues, services, resources, tests
 ├── frontend/             # React + Vite application
 ├── ai-cv-analyzer/       # FastAPI CV parsing and hybrid matching service
