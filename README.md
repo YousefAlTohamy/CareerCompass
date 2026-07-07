@@ -20,7 +20,7 @@
 <p align="center">
   <a href="#features">Features</a> •
   <a href="#architecture">Architecture</a> •
-  <a href="#my-contribution">My Contribution</a> •
+  <a href="#tech-stack">Tech Stack</a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#documentation">Documentation</a>
 </p>
@@ -118,18 +118,6 @@ flowchart LR
 | **Database Queues** | Separate asynchronous processing lanes for AI, scraping, email, high-priority, and default work. |
 | **MinIO / S3-Compatible Storage** | Private object storage for CV files and signed access flows. |
 | **Prometheus + Grafana** | Local production-style observability and dashboards. |
-
----
-
-## My Contribution
-
-My primary contribution to CareerCompass was the **backend architecture and core platform workflows**. My work included:
-
-- Building Laravel API workflows for authentication, CV upload and analysis persistence, user profiles, skills, job recommendations, gap analysis, applications, market data, and admin operations.
-- Integrating FastAPI services for CV parsing, OCR fallback, structured profile extraction, and hybrid job matching.
-- Designing asynchronous processing around database queues, dedicated workers, scheduled jobs, and long-running AI/scraping tasks.
-- Dockerizing the project stack and configuring services for Laravel, React, FastAPI, MySQL, Nginx, storage, workers, monitoring, and local team handoff.
-- Creating GitHub Actions workflows for automated validation, including Laravel tests with MySQL, frontend lint/build, Python service checks, Docker Compose validation, manual smoke testing, and deployment workflow scaffolding.
 
 ---
 
@@ -280,5 +268,5 @@ For deeper operational and project documentation, see:
 ---
 
 <p align="center">
-  Built as a graduation project with a focus on backend architecture, AI-assisted career workflows, and reliable service integration.
+  Built as a graduation project focused on backend architecture, AI-assisted career workflows, and reliable service integration.
 </p>
