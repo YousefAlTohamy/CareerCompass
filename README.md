@@ -1,186 +1,179 @@
-# CareerCompass
+<h1 align="center">CareerCompass</h1>
 
-CareerCompass is an AI-driven career guidance platform that analyzes CVs, extracts skills and experience, recommends jobs, tracks applications, compares users against job requirements, and helps administrators monitor job-mining sources and market data.
+<p align="center">
+  <strong>AI-Powered Career Guidance Platform</strong>
+</p>
 
-The project is now Docker-first on `main`. The previous `setup-docker` branch and its checkpoint tags are historical stabilization references only; teammates should start from `main`.
+<p align="center">
+  Transforming a CV into a structured career profile, job recommendations, skill-gap insights, and an application tracker.
+</p>
 
-## Current Status
+<p align="center">
+  <img src="https://img.shields.io/badge/Laravel%2012-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel 12" />
+  <img src="https://img.shields.io/badge/React%20%2B%20Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="React and Vite" />
+  <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL" />
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
+  <img src="https://img.shields.io/badge/GitHub%20Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white" alt="GitHub Actions" />
+</p>
 
-- `main` contains the Docker-first production-style stack from PR #75 and all follow-up hardening through PR #79.
-- Pull request CI is intentionally lightweight: backend, frontend, Python services, Docker Compose validation, selected image builds, and non-blocking security scans.
-- Heavy full-stack Docker smoke validation lives in the manual `Full Docker Smoke` GitHub Actions workflow.
-- The local/team handoff path is Docker Compose, not host-installed PHP, Composer, Node, Python, Scrapy, or MySQL.
-- The app is demo-usable from `http://localhost/` after the Docker quickstart.
+<p align="center">
+  <a href="#features">Features</a> •
+  <a href="#architecture">Architecture</a> •
+  <a href="#my-contribution">My Contribution</a> •
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#documentation">Documentation</a>
+</p>
 
-## What CareerCompass Does
+---
 
-CareerCompass covers the core journey from a raw CV to actionable career guidance:
+## Overview
 
-1. A user registers and logs in with Laravel Sanctum authentication.
-2. The user uploads a CV from the dashboard.
-3. Laravel stores the CV and sends it to the Python AI CV Analyzer service.
-4. The AI service extracts structured profile data, contact info, skills, experience, role/domain signals, and completeness signals.
-5. Laravel persists the CV analysis, profile fields, user skills, experience rows, and signed CV access metadata.
-6. The Jobs page recommends jobs from the user's predicted role or profile title.
-7. The user can search jobs manually, inspect details, save opportunities, and track applications.
-8. Gap analysis compares the user's skills/CV against a selected job using AI hybrid matching with a database fallback.
-9. If role market data is missing, Laravel can trigger on-demand scraping through the Python job miner.
-10. Admin pages expose job/source/user/target-role management and source diagnostics.
-11. Prometheus and Grafana are available for local production-style monitoring.
+CareerCompass is a graduation project built to help job seekers turn a CV into actionable career guidance. A user uploads a CV, receives a structured profile and skills analysis, discovers relevant jobs, identifies missing skills for a role, and tracks saved opportunities in one place.
+
+The project is designed as a **Docker-first, service-based application**: Laravel coordinates business workflows and APIs, FastAPI services handle CV analysis and job-mining tasks, and separate queue workers process asynchronous workloads.
+
+---
+
+## Features
+
+### CV Analysis & Profile Building
+
+- Secure user registration, login, logout, and protected routes using Laravel Sanctum.
+- CV upload for supported PDF and image formats.
+- FastAPI-powered CV parsing that extracts profile details, skills, experience, predicted role, seniority signals, and completeness data.
+- OCR fallback and clear parsing statuses for cases such as timeout, empty files, and unreadable text.
+- Private CV storage with signed-access metadata.
+
+### Job Discovery & Career Insights
+
+- Personalized job recommendations based on the user’s predicted role, profile title, or headline.
+- Manual job search and job-detail exploration.
+- Hybrid job matching using semantic signals alongside TF-IDF matching.
+- Skill-gap analysis that highlights matched and missing skills for a selected job or target role.
+- Market intelligence and role-based demand insights.
+
+### Application Tracking & Admin Operations
+
+- Save jobs and track application status from a dedicated applications workspace.
+- Duplicate-save protection and clear tracker state for saved opportunities.
+- Admin operations for users, jobs, scraping sources, target roles, diagnostics, and retry controls.
+- On-demand job scraping when role-specific market data is missing.
+
+### Reliability & Engineering Workflow
+
+- Database-backed queues with dedicated lanes for default, high-priority, scraping, AI, and email workloads.
+- Docker Compose environment with Nginx, MySQL, MinIO, Prometheus, and Grafana.
+- GitHub Actions workflows for backend tests, frontend lint/build, Python service checks, Docker validation, security scans, and manual full-stack smoke testing.
+
+---
+
+## How It Works
+
+1. A user creates an account and uploads a CV.
+2. Laravel stores the file and sends it to the FastAPI CV Analyzer.
+3. The analyzer returns structured profile data, skills, experience, and role signals.
+4. Laravel saves the analysis and uses it to generate job recommendations and skill-gap insights.
+5. The user saves suitable jobs, tracks applications, and explores market data for target roles.
+
+---
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  Browser["Browser at http://localhost"] --> Nginx["Nginx reverse proxy"]
-  Nginx --> Frontend["React + Vite frontend"]
-  Nginx --> Backend["Laravel 12 API"]
-  Backend --> MySQL["MySQL"]
-  Backend --> Storage["MinIO / S3-compatible storage"]
-  Backend --> Queue["Database queue tables"]
-  WorkerDefault["backend-worker default"] --> Queue
-  WorkerHigh["backend-worker-high"] --> Queue
-  WorkerScraping["backend-worker-scraping"] --> Queue
-  WorkerAI["backend-worker-ai"] --> Queue
-  WorkerEmails["backend-worker-emails"] --> Queue
-  Scheduler["backend-scheduler"] --> Backend
-  Backend --> Analyzer["AI CV Analyzer FastAPI"]
-  Backend --> Miner["AI Job Miner FastAPI + Scrapy"]
-  Miner --> Backend
-  Prometheus["Prometheus"] --> Backend
-  Prometheus --> Analyzer
-  Prometheus --> Miner
-  Grafana["Grafana"] --> Prometheus
+    User[Job Seeker] --> Web[React + Vite Frontend]
+    Web --> Nginx[Nginx Reverse Proxy]
+    Nginx --> API[Laravel 12 API]
+
+    API --> DB[(MySQL)]
+    API --> Storage[MinIO / S3-Compatible Storage]
+    API --> Queues[(Database Queues)]
+    API --> Analyzer[FastAPI CV Analyzer]
+    API --> Miner[FastAPI Job Miner + Scrapy]
+
+    WorkerDefault[Default Worker] --> Queues
+    WorkerHigh[High-Priority Worker] --> Queues
+    WorkerAI[AI Worker] --> Queues
+    WorkerScraping[Scraping Worker] --> Queues
+    WorkerEmails[Email Worker] --> Queues
+    Scheduler[Laravel Scheduler] --> API
+
+    Prometheus[Prometheus] --> API
+    Prometheus --> Analyzer
+    Prometheus --> Miner
+    Grafana[Grafana] --> Prometheus
 ```
 
 ### Main Components
 
-- Browser: uses the React application served through Nginx.
-- Nginx: routes frontend traffic and `/api` requests, uses Docker DNS resolver support so recreated containers do not leave stale upstream IPs.
-- Frontend: React + Vite application with public, user, and admin routes.
-- Backend API: Laravel 12 API with Sanctum auth, services, requests, resources, policies/middleware, queues, scheduler, health, metrics, CV storage, and integrations.
-- MySQL: primary relational database.
-- Database queues: queue backend for default, high, scraping, AI, and email lanes.
-- AI CV Analyzer: Python FastAPI service for CV parsing and hybrid job matching.
-- AI Job Miner: Python FastAPI wrapper around Scrapy job-mining workflows.
-- MinIO/S3: local S3-compatible object storage for production-style private CV storage and signed URLs.
-- Prometheus/Grafana: local monitoring stack.
-- GitHub Actions: CI workflows for backend, frontend, Python services, Docker validation, security, deploy, and manual full Docker smoke.
+| Component | Responsibility |
+| --- | --- |
+| **React + Vite** | User-facing and admin interfaces. |
+| **Nginx** | Serves frontend traffic and proxies API requests. |
+| **Laravel 12 API** | Authentication, core business logic, REST APIs, validation, policies, storage, queue dispatching, and admin operations. |
+| **MySQL** | Primary relational data store for users, profiles, jobs, applications, and platform data. |
+| **FastAPI CV Analyzer** | CV parsing, OCR fallback, structured profile extraction, and hybrid matching. |
+| **FastAPI Job Miner + Scrapy** | Job-mining workflows and internal job import pipeline. |
+| **Database Queues** | Separate asynchronous processing lanes for AI, scraping, email, high-priority, and default work. |
+| **MinIO / S3-Compatible Storage** | Private object storage for CV files and signed access flows. |
+| **Prometheus + Grafana** | Local production-style observability and dashboards. |
 
-## Service Map
+---
 
-| Compose service | Container | Purpose | Host port | Health URL |
-| --- | --- | --- | --- | --- |
-| `nginx` | `cc-nginx` | Reverse proxy for frontend and Laravel API | `80` | `http://localhost/api/health` |
-| `frontend` | `cc-frontend` | React/Vite UI, served directly for dev and through Nginx | `5173` | `http://localhost:5173` |
-| `backend-api` | `cc-backend` | Laravel API over PHP-FPM behind Nginx | internal `9000` | `http://localhost/api/health` |
-| `backend-worker` | `cc-backend-worker` | Default queue worker | none | `docker compose ps` |
-| `backend-worker-high` | `cc-backend-worker-high` | High-priority queue worker | none | `docker compose ps` |
-| `backend-worker-scraping` | `cc-backend-worker-scraping` | Long-running scraping queue worker | none | `docker compose ps` |
-| `backend-worker-ai` | `cc-backend-worker-ai` | AI queue worker | none | `docker compose ps` |
-| `backend-worker-emails` | `cc-backend-worker-emails` | Email queue worker | none | `docker compose ps` |
-| `backend-scheduler` | `cc-backend-scheduler` | Laravel scheduler daemon | none | `docker compose ps` |
-| `db` | `cc-db` | MySQL 8.0 | `3306` | Docker healthcheck |
-| `ai-cv-analyzer` | `cc-cv-analyzer` | FastAPI CV parser and hybrid matcher | `8000` | `http://localhost:8000/` |
-| `ai-job-miner` | `cc-job-miner` | FastAPI Scrapy wrapper | `8003` -> container `8000` | `http://localhost:8003/health` |
-| `minio` | generated | S3-compatible object storage | `9000`, `9001` | `http://localhost:9000/minio/health/live` |
-| `prometheus` | generated | Metrics collection | `9090` | `http://localhost:9090/-/ready` |
-| `grafana` | generated | Metrics dashboards | `3000` | `http://localhost:3000/api/health` |
+## My Contribution
+
+My primary contribution to CareerCompass was the **backend architecture and core platform workflows**. My work included:
+
+- Building Laravel API workflows for authentication, CV upload and analysis persistence, user profiles, skills, job recommendations, gap analysis, applications, market data, and admin operations.
+- Integrating FastAPI services for CV parsing, OCR fallback, structured profile extraction, and hybrid job matching.
+- Designing asynchronous processing around database queues, dedicated workers, scheduled jobs, and long-running AI/scraping tasks.
+- Dockerizing the project stack and configuring services for Laravel, React, FastAPI, MySQL, Nginx, storage, workers, monitoring, and local team handoff.
+- Creating GitHub Actions workflows for automated validation, including Laravel tests with MySQL, frontend lint/build, Python service checks, Docker Compose validation, manual smoke testing, and deployment workflow scaffolding.
+
+---
+
+## Tech Stack
+
+| Area | Technologies |
+| --- | --- |
+| **Backend** | PHP, Laravel 12, Laravel Sanctum, Eloquent ORM, REST APIs, Policies, API Resources, Form Requests, Database Transactions |
+| **Frontend** | React, Vite, TypeScript |
+| **Database & Storage** | MySQL, MinIO / S3-Compatible Storage |
+| **AI Services** | Python, FastAPI, OCR fallback, semantic matching, TF-IDF |
+| **Async Processing** | Laravel Scheduler, Database Queues, dedicated queue workers |
+| **Infrastructure** | Docker Compose, Nginx, Prometheus, Grafana |
+| **Quality & Delivery** | PHPUnit, ESLint, Pytest, GitHub Actions, smoke tests |
+
+---
 
 ## Repository Structure
 
 ```text
 .
-|-- backend-api/          Laravel API, database, queues, services, resources
-|-- frontend/             React + Vite browser application
-|-- ai-cv-analyzer/       FastAPI CV parsing and hybrid matching service
-|-- ai-job-miner/         FastAPI + Scrapy job-mining service
-|-- docker/               Nginx, Prometheus, and Grafana configuration
-|-- docs/                 Operational, QA, production-readiness, and flow reports
-|-- scripts/smoke/        HTTP, queue, and Docker smoke scripts
-|-- .github/workflows/    CI/CD workflows
-|-- docker-compose.yml    Base local Docker Compose stack
-`-- docker-compose.prod.yml Production-style overrides for storage, monitoring, resources
+├── backend-api/          # Laravel API, database, queues, services, resources, tests
+├── frontend/             # React + Vite application
+├── ai-cv-analyzer/       # FastAPI CV parsing and hybrid matching service
+├── ai-job-miner/         # FastAPI + Scrapy job-mining service
+├── docker/               # Nginx, Prometheus, and Grafana configuration
+├── docs/                 # Team handoff, QA, troubleshooting, and operational documentation
+├── scripts/smoke/        # HTTP, queue, and Docker smoke scripts
+├── .github/workflows/    # CI/CD workflows
+├── docker-compose.yml    # Base Docker Compose stack
+└── docker-compose.prod.yml # Production-style local overrides
 ```
 
-## User Flow
+---
 
-### Authentication
-
-- Public users can register and log in.
-- Laravel Sanctum issues bearer tokens.
-- Protected frontend routes call `/api/v1/user` to hydrate the current account.
-- Logout revokes the current token.
-
-### CV Upload And Analysis
-
-- The Dashboard uploads CV files through `POST /api/v1/upload-cv`.
-- The frontend uses a CV-upload-specific timeout of `240000ms`.
-- If a timeout/network/gateway issue occurs but backend processing may still be running, the frontend shows a recovery state and polls current user/CV data for a short period.
-- Laravel stores the uploaded CV on the configured disk, calls the AI analyzer, and persists structured analysis.
-- AI parsing statuses include `success`, `ocr_fallback`, `timeout`, `error`, `empty_file`, and `no_text` where applicable.
-- Timeout/error results do not wipe existing profile or skills.
-- Successful parses with no skills preserve existing skills and log a warning.
-- Comma-delimited AI skill labels such as `PHP, LARAVEL` are split and canonicalized before syncing.
-
-### Profile And Skills
-
-- Profile pages display real backend/AI fields: predicted role, headline, primary domain, seniority, total experience, parsing status, completeness, contact links, skills, and experience timeline data.
-- Skills include confidence and evidence metadata when available.
-- Settings remains backend-compatible with the user/profile update payload.
-
-### Jobs And Recommendations
-
-- Without a manual search, the Jobs page calls the personalized `/api/v1/jobs/recommended` endpoint.
-- Recommendation context is based on CV `predicted_role`, profile title/headline, or user job title where available.
-- Manual search uses the normal `/api/v1/jobs` endpoint and does not mix stale recommendation context.
-- Match display normalizes backend `match_percentage` and `match_score` fields.
-
-### Save Opportunity And Applications
-
-- Saved jobs are tracked through the applications API.
-- The Jobs page hydrates saved job IDs from existing applications on load.
-- A saved opportunity remains saved after reload.
-- Duplicate saves show an "already in your tracker" message instead of misleading success copy.
-- The Applications page shows saved jobs and tracker status.
-
-### Gap Analysis
-
-- Gap analysis runs from a selected job or target role.
-- The backend uses `GapAnalysisService`, AI hybrid matching when available, and a database fallback when the AI service is unavailable.
-- Users with no CV/profile/skills receive a clear 422-style response instead of a misleading empty analysis.
-- The frontend ignores stale gap-analysis responses if the user switches jobs quickly.
-
-### Scrape-On-Demand
-
-- If job market data is missing for a role, Laravel can create a `ScrapingJob` and dispatch work to the `scraping` queue.
-- Duplicate active scrape jobs for the same role are avoided while one is pending, processing, or running.
-- The scraper service imports jobs through internal Laravel endpoints and reports failed URLs.
-- If a scrape stores zero jobs and reports failed URLs, the job is marked failed with an honest external-source message.
-
-## Admin Flow
-
-Admin routes are protected by user auth plus admin middleware. Normal users must not access admin pages.
-
-Admin features include:
-
-- Dashboard stats, health, batch progress, failed URL visibility, and retry controls.
-- Job listing, detail, and safe delete operations.
-- User listing, user detail, and ban toggle.
-- Scraping source listing, create/update/delete, active toggle, source status, and diagnostics.
-- Target role listing, create, active toggle, delete, and full scraping dispatch.
-- Source diagnostics now surface scraper output failures/DLQ signals instead of reporting false success.
-
-## Docker Quickstart
+## Quick Start
 
 ### Prerequisites
 
-- Git.
-- Docker Desktop.
-- At least 8-12 GB free disk space.
-- Enough Docker Desktop memory for the AI analyzer. The production override reserves up to 2 GB for that service.
+- Git
+- Docker Desktop
+- Sufficient Docker memory for the FastAPI analyzer and supporting services
 
-### Clone And Prepare
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/YousefAlTohamy/CareerCompass.git
@@ -189,7 +182,7 @@ git checkout main
 git pull origin main
 ```
 
-Copy environment templates:
+### 2. Create Local Environment Files
 
 ```bash
 cp .env.example .env
@@ -199,7 +192,8 @@ cp ai-cv-analyzer/.env.example ai-cv-analyzer/.env
 cp ai-job-miner/.env.example ai-job-miner/.env
 ```
 
-Windows PowerShell:
+<details>
+<summary>Windows PowerShell equivalent</summary>
 
 ```powershell
 Copy-Item .env.example .env
@@ -208,204 +202,83 @@ Copy-Item frontend/.env.example frontend/.env
 Copy-Item ai-cv-analyzer/.env.example ai-cv-analyzer/.env
 Copy-Item ai-job-miner/.env.example ai-job-miner/.env
 ```
+</details>
 
-Use placeholder secrets only for local development. Rotate every token/password before staging or production.
+Use placeholder values only for local development. Never commit real secrets, tokens, or API keys.
 
-### First Boot
+### 3. Build and Start Services
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.yml -f docker-compose.prod.yml exec backend-api php artisan migrate --force --no-interaction
 ```
 
-Windows shortcut:
+### 4. Open the Application
 
-```powershell
-.\start_all.bat
-```
+- Application: `http://localhost`
+- API health: `http://localhost/api/health`
+- AI CV Analyzer: `http://localhost:8000/`
+- Job Miner health: `http://localhost:8003/health`
+- Grafana: `http://localhost:3000`
 
-### Normal Boot
+---
 
-```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-```
-
-### Stop Without Data Loss
+## Validation
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml stop
-```
-
-Avoid these commands for routine work:
-
-```bash
-docker compose down -v
-docker system prune --volumes
-```
-
-They delete persistent Docker volumes such as MySQL data, MinIO files, Prometheus data, and Grafana data.
-
-## Day-To-Day Docker Rules
-
-- Code change: restart the affected service only.
-- Dependency change: rebuild the affected service only.
-- Dockerfile or Compose change: rebuild the affected service only.
-- Final validation: full rebuild only when needed.
-
-Examples:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml restart backend-api
-docker compose -f docker-compose.yml -f docker-compose.prod.yml restart frontend nginx
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build frontend
-docker compose -f docker-compose.yml -f docker-compose.prod.yml restart ai-cv-analyzer
-docker compose -f docker-compose.yml -f docker-compose.prod.yml restart ai-job-miner backend-worker-scraping
-```
-
-## Health URLs
-
-- App through Nginx: `http://localhost`
-- Backend health: `http://localhost/api/health`
-- Backend readiness: `http://localhost/api/ready`
-- API v1 health: `http://localhost/api/v1/health`
-- AI analyzer: `http://localhost:8000/`
-- Scraper service: `http://localhost:8003/health`
-- Prometheus: `http://localhost:9090/-/ready`
-- Grafana: `http://localhost:3000/api/health`
-- MinIO API health: `http://localhost:9000/minio/health/live`
-- MinIO console: `http://localhost:9001`
-
-## Common Commands
-
-### Compose And Logs
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet
-docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
-docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f backend-api
-docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f backend-worker-scraping
-docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f ai-cv-analyzer
-docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f ai-job-miner
-docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f nginx
-```
-
-### Backend
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.prod.yml exec backend-api php artisan migrate --force --no-interaction
-docker compose -f docker-compose.yml -f docker-compose.prod.yml exec backend-api php artisan route:list
-docker compose -f docker-compose.yml -f docker-compose.prod.yml exec backend-api php artisan optimize:clear
-docker compose -f docker-compose.yml -f docker-compose.prod.yml exec backend-api php artisan queue:failed
+# Laravel tests
 docker compose -f docker-compose.yml -f docker-compose.prod.yml exec backend-api php artisan test
-```
 
-### Frontend
+# Docker configuration validation
+docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet
 
-```bash
-cd frontend
-npm ci
-npm run lint
-npm run build
-cd ..
-```
+# Frontend validation
+cd frontend && npm ci && npm run lint && npm run build && cd ..
 
-### Python Services
-
-```bash
+# Python service checks
 python -m compileall ai-cv-analyzer ai-job-miner
-
-cd ai-cv-analyzer
-python -m pytest -q tests/test_service_api.py
-cd ..
-
-cd ai-job-miner
-python -m pytest -q tests/test_ai.py tests/test_service_api.py
-cd ..
 ```
 
-### Smoke Scripts
+The repository also includes HTTP, queue, and full Docker smoke scripts under [`scripts/smoke`](scripts/smoke/).
 
-```bash
-bash scripts/smoke/http-smoke.sh http://localhost
-bash scripts/smoke/queue-smoke.sh
-bash scripts/smoke/docker-smoke.sh
-```
-
-Windows PowerShell:
-
-```powershell
-.\scripts\smoke\http-smoke.ps1 http://localhost
-.\scripts\smoke\queue-smoke.ps1
-```
-
-The Docker smoke script is heavier and should be used for local validation or the manual CI workflow, not as a required lightweight PR check.
-
-## Testing And QA References
-
-- Backend tests: PHPUnit feature/API tests under `backend-api/tests`.
-- Frontend validation: ESLint and Vite build.
-- Python services: `compileall` plus service tests.
-- Docker validation: Compose config, health URLs, queue smoke, Docker smoke.
-- Browser QA: see `docs/QA_BROWSER_WALKTHROUGH.md`.
-- Product flow review through PR #79: see `docs/PRODUCT_FLOW_REVIEW.md`.
+---
 
 ## CI/CD
 
-GitHub Actions workflows:
+GitHub Actions workflows automate the project’s main validation paths:
 
-- `backend.yml`: backend install/test checks with CI-compatible PHP.
-- `frontend.yml`: frontend lint/build.
-- `python-services.yml`: Python compile/tests and legacy-test handling.
-- `docker.yml`: lightweight PR Docker validation and selected builds.
-- `full-docker-smoke.yml`: manual full-stack Docker smoke workflow.
-- `security.yml`: security scanning.
-- `deploy.yml`: deployment workflow scaffold.
+- **Backend CI:** installs Laravel dependencies, starts MySQL, runs migrations, and executes tests.
+- **Frontend CI:** runs lint and production builds.
+- **Python Services CI:** compiles Python code and runs service tests.
+- **Docker CI:** validates Compose configuration and selected image builds.
+- **Full Docker Smoke:** manually triggered full-stack validation for heavier end-to-end checks.
+- **Security & Deployment:** security scans and a deployment workflow scaffold for controlled release flows.
 
-## Important Documentation
+---
 
-- `docs/DOCKER_QUICKSTART.md`: teammate startup guide.
-- `docs/TEAM_HANDOFF.md`: branch, checkpoint, and Docker handoff notes.
-- `docs/TROUBLESHOOTING.md`: common runtime issues.
-- `docs/PRODUCTION_READINESS.md`: production-style hardening and remaining ops work.
-- `docs/FLOW_REVIEW.md`: logical-flow review from the earlier hardening pass.
-- `docs/QA_BROWSER_WALKTHROUGH.md`: full browser walkthrough results.
-- `docs/PRODUCT_FLOW_REVIEW.md`: product-flow polish and PR #79 behavior.
-- `docs/LOCAL_HOST_CLEANUP.md`: safe project-local cleanup guidance.
+## Documentation
 
-## Known Limitations
+For deeper operational and project documentation, see:
 
-- External scraping depends on third-party availability, blocking, page changes, and network behavior. The system now reports scraper failures honestly, but it cannot guarantee a third-party source will return jobs.
-- CV upload is still synchronous at the API level. It has a longer upload-specific timeout and recovery polling, but a future fully async upload/progress flow would be better.
-- Admin source diagnostics should become more source-specific so each configured source is tested through the exact matching spider/API path.
-- Some frontend lint warnings remain non-blocking, mainly Fast Refresh and hook dependency warnings.
-- The AI analyzer image is heavy because of ML, OCR, transformer, and PDF-processing dependencies.
-- The production-style Docker stack is suitable for local/team handoff and demo validation, but a real production deployment still needs secret management, backups, deployment automation, observability configuration, and load testing.
+- [Docker Quick Start](docs/DOCKER_QUICKSTART.md)
+- [Team Handoff Notes](docs/TEAM_HANDOFF.md)
+- [Troubleshooting Guide](docs/TROUBLESHOOTING.md)
+- [Browser QA Walkthrough](docs/QA_BROWSER_WALKTHROUGH.md)
+- [Production Readiness Notes](docs/PRODUCTION_READINESS.md)
+- [Product Flow Review](docs/PRODUCT_FLOW_REVIEW.md)
 
-## Production Warnings
+---
 
-Before using CareerCompass outside a local/demo environment:
+<details>
+<summary><strong>Known Limitations & Production Notes</strong></summary>
 
-- Rotate all `.env` secrets, internal scraper tokens, monitoring tokens, MinIO credentials, Grafana credentials, and any API keys.
-- Move secrets into a real secret manager.
-- Use managed MySQL or a backed-up database volume.
-- Use managed S3 or a hardened MinIO deployment with backups and lifecycle policies.
-- Restrict exposed ports with firewalls or private networks.
-- Configure Sentry and monitoring tokens intentionally.
-- Run load tests for CV upload, recommendations, scraper queues, and AI matching.
-- Review CORS, rate limits, upload limits, and token rotation policies.
-- Add backup and disaster recovery procedures for MySQL and object storage.
+- External job scraping depends on third-party availability, blocking behavior, site changes, and network conditions.
+- CV upload currently waits for analysis at the API level; a fully asynchronous progress-driven upload flow would be a future improvement.
+- The Docker stack is designed for local development, team handoff, and demo validation. A live production deployment would still require managed secrets, backups, hardened storage, intentional observability configuration, firewalling, and load testing.
+</details>
 
-## Rollback And Checkpoints
+---
 
-Historical Docker handoff tags are documented in `docs/TEAM_HANDOFF.md`. They are rollback references, not the default branch workflow.
-
-General rollback pattern:
-
-```bash
-git fetch origin --tags
-git checkout main
-git reset --hard <stable-checkpoint-tag>
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-```
-
-Use this only when you intentionally want to return to a known checkpoint. For normal development, branch from `main` and open pull requests.
+<p align="center">
+  Built as a graduation project with a focus on backend architecture, AI-assisted career workflows, and reliable service integration.
+</p>
