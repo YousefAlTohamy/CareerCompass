@@ -307,5 +307,5 @@ For deeper operational and project documentation, see:
 ---
 
 <p align="center">
-  Built as a graduation project focused on backend architecture, AI-assisted career workflows, and reliable service integration.
+  Built as a graduation project focused on backend architecture, AI-assisted career workflows, and reliable service integration
 </p>
